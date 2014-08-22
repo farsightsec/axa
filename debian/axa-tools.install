@@ -1,0 +1,7 @@
+usr/bin/radtool
+usr/bin/sratool
+usr/bin/sratunnel
+usr/share/man/man1/radtool.1
+usr/share/man/man1/sratool.1
+usr/share/man/man1/sratunnel.1
+etc/axa/fields
