@@ -1,0 +1,136 @@
+.\" Copyright (c) 2014 by Farsight Security, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"  http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.Dd current-date via make
+.Dt sratunnel 1 AXA
+.Os " "
+.Sh NAME
+.Nm sratunnel
+.Nd SIE Remote Access (SRA) Tunnel
+.Sh SYNOPSIS
+.Nm sratunnel
+.Op Fl Vd
+.Fl s Ar SRA-server
+.Op Fl u Ar user
+.Fl c Ar channel
+.Fl w Ar watch
+.Fl o Ar out-addr
+.Sh DESCRIPTION
+.Nm Sratunnel
+transfers selected Security Information Exchange (SIE) data
+from remote servers to the local network.
+The connection to the SRA server is created and restored after problems
+with binary exponential delays between retries.
+.Pp
+.Nm Sratunnel
+is a programming example for using the Advanced Exchange Access (AXA)
+applications programming interface, the AXA protocol.
+It also demonstrates the use of the AXA helper library,
+.Pa libaxa.a .
+.Ss OPTIONS
+The following arguments are available:
+.Bl -tag -width 3n
+.It Fl V
+displays the version of
+.Nm
+and its preferred version of the AXA protocol.
+.It Fl d
+turns on tracing and debugging reports.
+.It Fl s Ar SRA-server
+specifies the SRA server that is the source of the SIE data.
+The server can be specified with any of the following:
+.Bl -tag -width /uds/socket
+.It ssh Ar [user@]host Op -zArg
+A fix string
+.Em ssh
+before a host names server that will be contacted with the ssh protocol.
+In this case the SRA account name is provided by the ssh protocol.
+.Pp
+These connections usually use default
+ssh configuration files to specify the required public keys
+and optionally the fully qualified host name and user names associated
+with the public key.
+Ssh options that require embedded white space
+should be put in a default ssh configuration file
+or a special ssh configuration specified with
+.Sm off Fl F Ar configfile . Sm on
+If no ssh options are specified,
+.Nm
+uses
+.Sm off Fl o Ar StrictHostKeyChecking=no Sm on
+and
+.Sm off Fl o Ar CheckHostIP=no . Sm on
+.Pp
+Use
+.Fl dddd
+or
+.Fl s Ar user@host Ar -v
+to diagnose ssh connection problems.
+.It Ar host,port
+A host name and port number uses clear text over TCP/IP with
+the account name provided by the
+.Fl u Ar user
+argument.
+.It Ar /uds/socket
+The path name of UNIX domain socket connects to a local SRA server.
+.El
+.It Fl c Ar channel
+There must be at least one
+.Fl c
+argument naming an SIE channel that SRA server will watch for interesting
+.Em nmsg
+messages or IP packets.
+.Pp
+Channels are specified as
+.Ar chXX
+or
+.Ar all
+.It Fl w Ar watch
+There must be at least one
+.Fl w
+with SRA watch to specify the interesting SIE messages or
+dark channel IP packets.
+.so watch.man
+.El
+.It Fl o
+specifies
+the destination of the SIE date.
+It can be forwarded as
+.Em nmsg
+messages to a UDP or TCP port
+or as raw IP packets to a file, FIFO, or network interface.
+.so fwd.man
+.El
+.Sh EXAMPLES
+The following sends all new domain reports on channel 212
+seen by the SRA server at example.com
+to the local UDP port 8000 on 127.0.0.1:
+.Bd -literal -offset 4n
+sratunnel -s "ssh user@example.com" -o nmsg:127.1,8000 \\
+	-c ch212 -w ch=ch212
+.Ed
+.Pp
+Beware of specifying more data than will fit in the TCP/IP connections
+between the SRA server and
+.Nm .
+The following is likely to be only a network stress test:
+.Bd -literal -offset 4n
+sratunnel -s "ssh user@example.com" -o nmsg:127.1,8000 \\
+	-c all -w ip=128.0/1  -w ip=0/1
+.Ed
+.Sh SEE ALSO
+.Xr sratool 1 ,
+.Xr mkfifo 1 ,
+and
+.Xr nmsgtool 1 .

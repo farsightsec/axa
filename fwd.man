@@ -1,0 +1,51 @@
+.\" fwd.man
+.\" common text describing sratool and sratunnel output specifications
+.Bl -tag -width 4n
+.It Xo
+.Sm off
+.No nmsg:
+.Op tcp:|udp:
+.Ar host,port
+.Sm on
+.Xc
+sends
+.Em nmsg
+messages to the
+.Em tcp
+or
+.Em udp
+host name and port number
+.Ar host,port .
+Udp is the default
+.It Xo
+.Sm off
+.No pcap
+.Op -fifo
+.Ar :file
+.Sm on
+.Xc
+sends IP packets to a file or FIFO
+for examination with
+.Xr tcpdump 1
+or another packet tracing tool.
+An ordinary file is the default.
+.It Xo
+.Sm off
+.No pcap-if:
+.Op Ar dst /
+.Ar ifname
+.Sm on
+.Xc
+transmits IP packets on the network interface named
+.Ar ifname for examination with
+.Xr tcpdump 1
+or another packet tracing tool.
+.Ar dst
+optionally specifies a destination 48-bit Ethernet address other
+than all zero default.
+.Pp
+This output usually requires that
+.Nm
+be run by root.
+.El
+.\" end of fwd.man

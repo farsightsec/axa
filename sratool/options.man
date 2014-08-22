@@ -1,0 +1,31 @@
+.\" options.man
+.\" common text describing sratool and radtool options
+The following arguments are available:
+.Bl -tag -width 3n
+.It Fl V
+displays the version of
+.Nm
+and its preferred version of the AXA protocol.
+.It Fl d
+turns on tracing and debugging reports.
+Additional
+.Fl d
+turn on more messages.
+.It Fl F Ar fields
+overrides the default location of the
+.Pa fields
+file that defines relationships among and semantics among SIE message
+fields.
+.It Fl c Ar cfile
+reads commands from
+.Pa cfile
+as if the first command string on the command line were
+.Qq Ar source cfile .
+.It Ar commands
+are optional commands strings that are executed before
+.Nm
+starts accepting commands from the use.
+There can be more than one string of commands
+Multiple commands within a string are separated by semicolons.
+.El
+.\" end of options.man

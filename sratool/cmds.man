@@ -1,0 +1,88 @@
+.\" cmns.man
+.\" common text describing commands common to sratool and radtool
+.\" expects \*(SR to contain RAD or SRA
+.\" and \(TL to contain sratool or radtool
+.It Ic help Op command
+lists all commands or describes a single command.
+.It Ic exit
+ends
+.Nm .
+.It Ic error mode Op disconnect | off
+disconnects from the \*(SR server and exits
+when the server reports an error or the connection breaks.
+In the default mode
+.Em "error mode off" ,
+errors are only reported.
+.It Ic debug Op on | off N
+increases or decreases the debugging and tracing messages that are also
+controlled by
+.Fl d .
+.It Ic verbose Op on | off | N
+controls the length of SIE message and IP packet descriptions.
+The default,
+.Em "verbose off" ,
+generally displays one line summaries.
+.It Ic version
+displays the version of
+.Nm
+and its version of the AXA protocol.
+.It Ic source filename
+reads and executes commands from a file.
+.It Ic disconnect
+disconnects from the \*(SR server.
+.It Ic connect Brq Ar host,port | /uds/socket | ssh [user@]host [-zARG]
+connects to an \*(SR server at an IP address or UNIX domain socket or via SSH.
+.Pp
+Connections via
+.Xr ssh 1
+are indicated by the prefix "ssh".
+They usually use default ssh configuration files
+to specify the required public keys
+and optionally the fully qualified host names and user names associated
+with the public key.
+Ssh options that require embedded white space
+should be put in a default ssh configuration file
+or a special ssh configuration specified with
+.Sm off Fl F Ar configfile . Sm on
+If no ssh options are specified,
+.Nm
+uses
+.Sm off Fl o Ar CheckHostIP=no Sm on
+and
+.Sm off Fl o Ar StrictHostKeyChecking=no . Sm on
+.Pp
+Use the
+.Dl debug 4
+or
+.Dl connect ssh user@HOST -v
+commands to diagnose ssh connection problems.
+.It Ic count Op N | off
+sets terminal output to stop displaying packets after a
+number of packets (including immediately with a number of 0),
+show the currently remaining count,
+or turn off the packet count limit.
+.It Ic mode Op SRA | RAD
+Show the current command mode or
+expect to connect to an SRA or RAD server.
+The default command mode is set by the name of the program.
+.It Ic output
+specifies the destination of forwarded SIE data.
+It can be forwarded as nmsg messages to a UDP or TCP port
+or as raw IP packets to a file, FIFO, or network interface.
+.so fwd.man
+.It Ic nop
+sends a command to the server that does nothing but test the connection.
+.It Ic rate limit Oo
+.Op Ar -|MAX|per-sec op
+.Op Ar -|MAX|per-day
+.Op Ar -|NEVER|report-secs
+.Oc
+Ask the \*(SR server to reports its rate limits
+or set rate limits and the interval between rate limit reports.
+.It Ic pause
+Ask the \*(SR server to stop sending data.
+.It Ic go
+Ask the \*(SR server to resume sending data.
+.It Ic accounting
+Ask the server to report counts of packets seen, missed, sent, and lost.
+.\" end of cmds.man

@@ -1,0 +1,137 @@
+.\" Copyright (c) 2014 by Farsight Security, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"  http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.Dd current-date via make
+.Dt sratool 1 AXA
+.Os " "
+.ds SR SRA
+.Sh NAME
+.Nm sratool
+.Nd SIE Remote Access (SRA) tool
+.Sh SYNOPSIS
+.Nm sratool
+.Op Fl VdN
+.Op Fl F Ar fields
+.Op Fl c Ar cfile
+.Op commands
+.Sh DESCRIPTION
+.Nm Sratool
+connects and sends Advanced Exchange Access (AXA) protocol messages
+to SIE Remote Access (SRA) servers
+and displays the responses.
+It can also tunnel SIE data like
+.Xr sratunnel 1 .
+.Pp
+.Nm Sratool
+is a programming example for the Advanced Exchange Access (AXA)
+applications programming interface to \*(SR servers, the AXA protocol.
+It also demonstrates the use of the AXA helper library,
+.Pa libaxa.a .
+.Pp
+Start using
+.Nm
+with the
+.Ic connect
+command described below.
+Use one or more
+.Ic watch
+commands to specify interesting patterns of SIE messages or IP packets.
+Limit the number of packets or messages transmitted from the SRA server
+or displayed with the
+.Ic rate limit
+and
+.Ic count
+commands.
+Turn on one or more channels of messages or packets with the
+.Ic channel
+command.
+.Pp
+Unless more output is enabled with the
+.Ic verbose
+command,
+most messages or packets are displayed in two lines.
+The first line includes the channel number on which it was received,
+the SIE message vendor of the message,
+the name of the field that caused the message to be selected,
+and the contents of the field.
+The second line is a summary of the message or packet.
+.Pp
+When more verbose output is enabled or when
+.Nm
+does not understand the message,
+IP packets are printed in ASCII
+and SIE messages are printed in the standard
+.Ic nmsg
+presentation format also seen from
+.Xr nmsgtool 1 .
+.Ss OPTIONS
+.so options.man
+.Ss COMMANDS
+.Nm
+executes commands read from the standard input.
+Command history is available if the standard input is a terminal.
+Multiple commands can be specified at once by separating them with semicolons.
+The following commands are available:
+.Bl -tag -width 3n
+.so cmds.man
+.It Ar tag Ic watch Brq Ar ip=IP[/n] | dns=[*.]dom | ch=chN | errors
+Tell the \*(SR server to send nmsg messages or IP packets that are to,
+from, or contain the specified IP addresses,
+that contain the specified domain name,
+that arrived at the server on the specifed SIE channel,
+or are SIE messages or IP packets that could not be decoded.
+.Ar Tag
+is a number labeling the watch.
+.so watch.man
+.It \&
+.It error
+selects SIE messages or IP packets that could not be decoded.
+.El
+.It Oo Ar tag Oc Ic list watches
+With a tag (numeric label), list the specified watch.
+Without a tag, list all watches.
+.It Ic channel Bro Ar list | Bro Ar on|off Brc Bro Ar all|chN Brc Brc
+List available SRA channels or enable or disable
+one or all SIE channels.
+.El
+.Sh EXAMPLES
+The following captures and displays one SIE
+.Ic newdomain
+message.
+The "dns=*." watch or pattern was matched by the "ehost-services131.com"
+domain in DNS CNAME rdata.
+.Bd -literal -offset 4n
+% sratool
+> connect ssh uname@srvr.example.com
+ HELLO srad version 0.1.0 SRA protocol 1
+1 OK USER uname authorized
+> ch 211 on
+* OK CHANNEL ON/OFF channel ch211 on
+> 1 watch dns=*.
+1 OK WATCH started
+1 ch211 SIE newdomain rdata=CNAME ehost-services131.com
+www.naturalgassuppliers.org/CNAME: naturalgassuppliers.org
+.Ed
+.Sh FILES
+.Bl -tag -width fields
+.It fields
+defines relationships among and meanings of SIE message fields.
+Its contents should rarely if ever need to be changed.
+.El
+.Sh SEE ALSO
+.Xr sratool 1 ,
+.Xr sratunnel 1 ,
+.Xr mkfifo 1 ,
+and
+.Xr nmsgtool 1 .

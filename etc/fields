@@ -1,0 +1,79 @@
+# nmsg fields that contain domain names or ASCII IP address
+
+#   Each line must be in the following form:
+
+# vendor msgtype	field name	content		[helpers]
+#
+#   where
+#	content:
+#	    IP-dgram	    IP datagram
+#	    IP		    binary IP address
+#	    IP-ASCII	    ASCII IP address
+#	    domain	    domain name in uncompressed wire format
+#	    domain-ASCII    ASCII domain name
+#	    host	    ASCII domain name or IP address
+#	    rdata	    DNS rdata
+#	    json	    interesting named fields are specified
+#				with subfield
+#	    text	    ASCII text which we ignore
+#	helpers
+#	    rtype	    rtype=fname for the field fname with rdata dtype
+#	    class	    class=fname for the field fname with DNS class
+#	    oname	    oname=fname with the rdata owner domain
+#				The owner name field for an rdata field should
+#				not be specified if it appears on its own.
+#	    enum	    "enum=fname=fval" the main nmsg named field
+#				contains the specified content when the
+#				field "fname" contains "fval"
+#	    sfield	    sfield=sname=content says the sub-field with JSON
+#				or other ASCII name of "sname" has "content"
+#
+# vendor msgtype    field name	content	[{rtype|class|enum|sfield}=fname...]
+
+BASE	ipconn	    srcip	IP
+BASE	ipconn	    dstip	IP
+
+BASE	dns	    qname	domain	class=qclass
+BASE	dns	    rdata	rdata	class=rrclass rtype=rrtype oname=rrname
+
+BASE	dnsqr	    query_ip	IP
+BASE	dnsqr	    response_ip	IP
+BASE	dnsqr	    qname	domain	class=qclass
+#BASE	dnsqr	    query	dns
+#BASE	dnsqr	    response	dns
+
+BASE	email	    srcip	IP
+BASE	email	    srchost	domain-ASCII
+BASE	email	    helo	domain-ASCII
+
+BASE	http	    srcip	IP
+BASE	http	    srchost	host
+BASE	http	    dstip	IP
+
+BASE	ncap	    srcip	IP
+BASE	ncap	    dstip	IP
+
+BASE	encode	    payload	JSON	enum=type=JSON			\
+		sfield=vic_ip=IP-ASCII sfield=adns_ip=IP-ASCII		\
+		sfield=rdns_ip=IP-ASCII sfield=domain=domain-ASCII
+
+BASE	packet	    payload	IP-dgram enum=payload_type=IP
+
+SIE	dnsdedupe   response_ip	IP
+SIE	dnsdedupe   bailiwick	domain	class=rrclass
+SIE	dnsdedupe   rdata	rdata	class=rrclass rtype=rrtype oname=rrname
+#SIE	dnsdedupe   response	dns
+
+SIE	delay	    query_ip	IP
+SIE	delay	    response_ip	IP
+
+# newdomain messages always contain a domain name and a first seen time.
+# The zero or more (rrname,rrtype,rdata) tuples and bailiwick are optional
+# context for the sighting.
+SIE	newdomain   domain	domain	class=rrclass
+SIE	newdomain   response_ip	IP
+SIE	newdomain   bailiwick	domain	class=rrclass
+SIE	newdomain   rdata	rdata	class=rrclass rtype=rrtype oname=rrname
+#SIE	newdomain   response	dns
+
+#SIE	qr

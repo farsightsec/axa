@@ -1,0 +1,40 @@
+.\" watch.man
+.\" common text describing sratool and sratunnel watch specifications
+.\" does not include the terminal .El
+.Bl -tag -width dns=.*..dom -compact
+.It \&
+.It Xo
+.Sm off
+.No ip=
+.Ar IP
+.Op / Ar n
+.Sm on
+.Xc
+The IPv4 or IPv6 address
+.Ar IP
+specifies a host address
+unless a prefix length is specified.
+.It \&
+.It Xo
+.Sm off
+.No dns=
+.Op Ar *.
+.Ar dom
+.Sm on
+.Xc
+watches for the domain
+anywhere in the IP packets or SIE messages
+on the channels selected with
+.Fl c .
+A wild card watches for occurrences of the domain and all sub-domains.
+.It \&
+.It ch=all
+.It Xo
+.Sm off
+.No ch=ch
+.Ar N
+.Sm on
+.Xc
+selects any and all SIE messages or IP packets on the specified channel number
+or all channels.
+.\" end of watch.man
