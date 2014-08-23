@@ -356,6 +356,7 @@ to ensure that the TCP connection has not been closed or broken
  * helps the client choose a compatible AXA protocol version
  * tag is empty
  * carries this variable length data:
+
 ```C
     typedef uint64_t axa_p_clnt_id_t;
     typedef struct
@@ -366,6 +367,7 @@ to ensure that the TCP connection has not been closed or broken
         char            str[512];
     } axa_p_hello_t;
 ```
+
  * `axa_p_clnt_id_t`: a number unique to the current instance of the server
 used in bundling TCP connections 
  * `pvers_min`: minimum version of the AXA protocol that is acceptable
@@ -380,6 +382,7 @@ server (variable length string up to 512 bytes including terminating NULL)
  the AXA message header
  * tag is valid
  * carries this variable length data:
+
 ```C
     typedef struct
     {
@@ -387,6 +390,7 @@ server (variable length string up to 512 bytes including terminating NULL)
         char    str[512];
     } axa_p_result_t;
 ```
+
  * `op`: `AXA_P_OP_OK`
  * `str`: human readable string containing an error message of why the request
 failed (variable length string up to 512 bytes including terminating NULL)
@@ -398,6 +402,7 @@ failed (variable length string up to 512 bytes including terminating NULL)
  the AXA message header
  * tag is valid
  * carries this variable length data:
+
 ```C
     typedef struct
     {
@@ -405,6 +410,7 @@ failed (variable length string up to 512 bytes including terminating NULL)
         char    str[512];
     } axa_p_result_t;
 ```
+
  * `op`: `AXA_P_OP_ERROR`
  * `str`: human readable string containing an error message of why the request
 failed (variable length string up to 512 bytes including terminating NULL)
@@ -415,6 +421,7 @@ failed (variable length string up to 512 bytes including terminating NULL)
  * sent by the server
  * tag is valid
  * carries this fixed length data (subject to change):
+
 ```C
     typedef struct
     {
@@ -426,6 +433,7 @@ failed (variable length string up to 512 bytes including terminating NULL)
     }
     axa_p_missed_t;
 ```
+
  * `input_dropped`: the number of data lost or dropped by the server because it
  was too busy.  For an SRA server, it is the total nmsg and pcap messages lost 
 because the SRA server was too busy or because of network congestion between
@@ -444,6 +452,7 @@ because of per-day rate limiting
  * reports a "watch hit" or packet or nmsg message that matched an SRA watch
  * tag is valid
  * carries this fixed length data:
+
 ```C
 #define AXA_OP_CH_PREFIX "ch"
 #define AXA_OP_CH_ALL    0
@@ -511,6 +520,7 @@ typedef uint16_t axa_p_ch_t;    /* channel number with leading "ch" */
         } ip;
     } axa_p_whit_t;
 ```
+
  * `hdr`: this wordy beast (`axa_p_whit_hdr_t`) indicates the kind of packet 
 or nmsg message
  * `ts`: when the packet or nmsg message was received in little endian
@@ -528,6 +538,7 @@ values `field_id`x and `val_idx` are the relevant nmsg field and value indeces
  * tag is valid (carries the tag of the AXA_P_OP_WGET request in the AXA message
  header)
  * carries this variable length data:
+
 ```C
     typedef struct
     {
@@ -536,6 +547,7 @@ values `field_id`x and `val_idx` are the relevant nmsg field and value indeces
         axa_p_watch_t w;
     } axa_p_wlist_t;
 ```
+
  * `cur_tag`: the tag of the following watch
  * `w`: the watch (format described below)
 
