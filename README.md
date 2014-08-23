@@ -1,20 +1,25 @@
 # AXA (Advanced Exchange Access)
 -------------------------------
-The purpose of SRA is to make the capabilties of Farsight Security Information 
-Exchange (SIE) available within a subscriber's network rather than requirng a 
-direct connection to Farsight SIE. The SRA service is delivered via Farsight's
-Advanced Exchange Aces (AXA) protocol which allows SRA session initators to 
-select SIE chanels, to specify search paterns, and to control rate limits and 
-other AXA session level parameters. After SRA session paramaters have been 
-established, SIE data is encrypted and streamed to the SRA subscriber via 
-TCP/IP, using an SSH transport (similar to rsync or git).
+The purpose of Farsight's SRA (SIE Remote Access) toolkit is to bring the 
+capabilties of the Farsight Security Information Exchange (SIE) right to the 
+subscriber's network rather than requirng a direct connection to Farsight SIE. 
+The SRA service is delivered via Farsight's Advanced Exchange Access (AXA) 
+protocol which allows SRA session initators to control a number of parameters
+include:
+* select SIE channels
+* specify search paterns
+* control rate limits and packet counts
 
-The following tools are available to Farsight customers that subscribe to one
+After SRA session paramaters have been established, SIE data is encrypted and 
+streamed to the SRA subscriber via TCP/IP, using an SSH transport (similar to 
+applications like rsync or git).
+
+The following tools are provided to Farsight customers that subscribe to one
 or more SRA channels:
 
 * `libaxa`: middleware for AXA protocol including connection and 
 encapsulation/decapsulation
-* `sratunnel`: by which remote SIE data is made to appear on a local socket
+* `sratunnel`: a tool that enables remote SIE data appear on a local socket
 * `sratool`: a debuging interface capable of exercising and examining AXA
 
 The `sratunnel` source code is intended as a working example of caling 
@@ -55,7 +60,7 @@ include Python and Perl language bindings.
 
 This manual covers version `0.2.4`.
 
-## SRA Server
+## SRA server details
 -------------
 As of the time of this writing, the SRA service answers at he following address
 via the SSH transport:
@@ -73,7 +78,7 @@ Host *.sie-remote.net
 
 ## Building
 -----------
-`axa` has the following external dependencies:
+The `axa` suite has the following external dependencies:
 
 * C compiler (gcc or llvm seem to work wonderfully)
 * [nmsg](https://github.com/farsightsec/nmsg)
@@ -84,11 +89,12 @@ After satisfying the above, to build, try something like:
 
 `./autogen.sh` followed by `./configure` and then a nice `make` 
 
-Finally, to give `axa` a home, `sudo make install`
+Finally, to give the `axa` suite a home, `sudo make install`
 
-## Testing with sratool
------------------------
-What follows are a few examples of how to use `sratool`.
+## Tool examples
+---------------
+So let's have a peek at a few examples of how to use `sratool` and `sratunnel`.
+For all examples below, all user commands are prefaced with the `>` character.
 
 ### Show me five packets
 ------------------------
@@ -118,16 +124,18 @@ packet count limit exceeded
 > quit
 
 ```
-
-Discussion: here we connected to Farsight's SRA server using the SSH transport.
-SSH used its key ring to prove the user's identity, so there was no 'password:'
-prompt. In `HELLO`, the remote end tells us its version number and the 
-protocol level. We asked our `sratool` client to stop after five messages are 
-output. We then asked the remote end to listen to SIE channel 212 which was 
-`OK`'d by the server indicating that we are allowed to see this channel 
-according to our authentication and authorization level. We then asked to 
-watch all content on channel 212, which is a common choice for channel 212 
-since its volume is low.
+ 1. `> connect ssh sra-service@sra-eft.sie-remote.net`: we connected to 
+Farsight's SRA server using the SSH transport. SSH used its keyring to prove 
+the user's identity, so there was no 'password:' prompt. The `HELLO` response
+from the remote end tells us its version number and the protocol level. 
+ 2. `> count 5`: we asked our `sratool` client to stop after five messages are 
+output. 
+ 3. `> channel 212 on`: we then asked the remote end to listen to SIE channel 
+212 which was `OK`'d by the server indicating that we are allowed to see this 
+channel according to our authentication and authorization level. 
+ 4. `> 10 watch ch=212`: we then asked to watch all content on channel 212
+(with no rate limiting or filtering), which is a common choice for 212 since 
+its volume is low.
 
 ### In-line subcommanding and rate-limting
 ------------------------------------------
@@ -135,7 +143,7 @@ Next, we introduce in-line connections and show rate limiting of SIE channel
 204 (filtered passive DNS RRsets):
 
 ```
-$ ./sratool 'connect ssh sra-service@sra-eft.sie-remote.net'
+$ sratool 'connect ssh sra-service@sra-eft.sie-remote.net'
 * HELLO srad version 0.2.3 AXA protocol 1
 > count 5
 > limit 1
@@ -150,8 +158,8 @@ RATE LIMITS
 10 ch204  SIE dnsdedupe   EXPIRATION
   rdata=NS ns1.indoortenniscourt.com  rrname=indoortenniscourt.com
 * MISSED
-    lost 0input packets, dropped 0for congestion,
-    28201for per sec limit, 0for per day limit
+    lost 0 input packets, dropped 0 for congestion,
+    28201 for per sec limit, 0 for per day limit
     since 2014/08/22 15:35:39
 10 ch204  SIE dnsdedupe   EXPIRATION
   rdata=RRSIG  rrname=ga1qqse3dffik8o2no4j7ppvutfniig1.org
@@ -165,23 +173,23 @@ packet count limit exceeded
 > quit
 ```
 
-Discussion: here, we put our first `sratool` subcommand on the command line of 
-`sratool` itself. This is a shortcut that allows the first subcommand to come 
-from the command line, while subsequent subdomains wil come from the control
-terminal. We again asked for a limit of 5 total records and then we asked the
-remote end to limit our output to one mesage per second. We then saw one 
-message from channel 204, followed immediately by a loss marker showing that 
-about nine thousand (9065) messages could not be sent to us because of our rate
-limits. Note that loses due to rate limits are counted independently from 
-losses due to congestion. After four more messages containing channel 204 data,
-our packet count limit was reached, and we terminated `sratool`.
+1. `sratool 'connect ssh sra-service@sra-eft.sie-remote.net': `we put our 
+first `sratool` subcommand on the command line of `sratool` itself. This is a 
+shortcut that allows the first subcommand to come from the command line, while 
+subsequent subdomains wil come from the control terminal. 
+2. `> count 5`: we again asked for a limit of five total records 
+3. `> limit 1`: this time we asked the remote end to limit our output to one 
+mesage per second. 
+4. `> channel 204 on`: as before, switch on channel 204
+5. `> 10 watch ch=204`: as before, watch channel 204
+6. `* MISSED`: We then saw one message from channel 204, followed immediately 
+by a loss marker showing that about twenty eight thousand (28201) messages 
+could not be sent to us because of our ratelimits. Note that loses due to rate 
+limits are counted independently from losses due to congestion. After four 
+more messages containing channel 204 data, our packet count limit was reached, 
+and we terminated `sratool`.
 
-
-## Testing with sratunnel
------------------------
-What follows are a few examples of how to use `sratunnel`.
-
-### Introducing sratunnel, showing tcpdump and nmsgtool access:
+### sratunnel, tcpdump, and nmsgtool access:
 ---------------------------------------------------------------
 Here we introduce `sratunnel` and watch packet flow via `tcpdump`.
 
@@ -203,6 +211,8 @@ listening on lo, link-type EN10MB (Ethernet), capture size 65535 bytes
 6 packets received by filter
 0 packets dropped by kernel
 ```
+
+The `nmsgtool` can be used to receive and de-encapsulate the data:
 
 ```
 $ nmsgtool -V SIE -T newdomain -l 127.0.0.1/5000 -c 3
@@ -240,15 +250,20 @@ rdata: 195.20.34.2
 $ kill %sratunnel
 [2]- Exit 15 sratunnel ...
 ```
-Discussion: here, we started a background process to access remote SIE channel 
-212, and to deposit all received mesages in NMSG format using UDP on a local 
-socket (host 127.0.0.1, port 5000). As before, no IP address or DNS name
-filters were used, since channel 212 is known to be very low volume. We then 
-used the tcpdump command to show that packets were being received on the local 
-socket. We ran nmsgtool, specifying our input with the -V, -T, and –l options
-since the nmsgtool shortcut for channel notation (-C) only works for directly 
-conected SIE clients. nmsgtool displayed three mesages and exited. We then 
-killed the background `sratunnel` process, concluding the demo.
+
+1. `sratunnel -s 'ssh sra-service@sra-eft.sie-remote.net' -c ch212 -w 'ch=212' 
+-o nmsg:127.0.0.1,5000 &`: here, we started a background process to access 
+remote SIE channel 212, and to deposit all received mesages in NMSG format 
+using UDP on a local socket (host 127.0.0.1, port 5000). As before, no IP 
+address or DNS name filters were used, since channel 212 is known to be very 
+low volume. 
+2. `tcpdump -n -c 3 -i lo udp port 5000`: we then used the tcpdump command to 
+show that packets were being received on the local socket. 
+3. `nmsgtool -V SIE -T newdomain -l 127.0.0.1/5000 -c 3`: We ran `nmsgtool`, 
+specifying our input with the `-V`, `-T`, and `-l` options since the `nmsgtool` 
+shortcut for channel notation (`-C`) only works for directly conected SIE 
+clients. `nmsgtool` displayed three messages and exited. We then killed the 
+background `sratunnel` process, concluding the demo.
 
 ## API Workflow
 --------------
