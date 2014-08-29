@@ -28,10 +28,10 @@ MAN_PROCESS = $(AM_V_GEN) soelim -I. -I`dirname $<` -r $< | sed -e "s/^\.Dd.*/.D
 	    $(MAN_PROCESS)
 
 sratool/sratool.1: sratool/sratool.man \
-	fwd.man watch.man sratool/options.man sratool/cmds.man
+	fwd.man watch.man srawatch.man sratool/options.man sratool/cmds.man
 sratool/radtool.1: sratool/radtool.man \
-	fwd.man watch.man sratool/options.man sratool/cmds.man
-sratunnel/sratunnel.1: sratunnel/sratunnel.man fwd.man watch.man
+	fwd.man watch.man radwatch.man sratool/options.man sratool/cmds.man
+sratunnel/sratunnel.1: sratunnel/sratunnel.man fwd.man srawatch.man watch.man
 
 EXTRA_DIST += \
 	sratool/sratool.man \
@@ -39,6 +39,8 @@ EXTRA_DIST += \
 	sratunnel/sratunnel.man \
 	fwd.man \
 	watch.man \
+	srawatch.man \
+	radwatch.man \
 	sratool/options.man \
 	sratool/cmds.man
 
@@ -63,14 +65,16 @@ LIBAXA_AGE=0
 
 nobase_include_HEADERS = \
 	axa/axa.h \
-	axa/bit_funcs.h \
 	axa/bits.h \
 	axa/client.h \
 	axa/dns_walk.h \
+	axa/axa_endian.h \
 	axa/fields.h \
+	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/rad_mod.h \
 	axa/socket.h \
+	axa/trie.h \
 	axa/wire.h
 lib_LTLIBRARIES = axa/libaxa.la
 
@@ -80,10 +84,13 @@ axa_libaxa_la_SOURCES = \
 	axa/bits.h \
 	axa/client.h \
 	axa/dns_walk.h \
+	axa/axa_endian.h \
 	axa/fields.h \
+	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/rad_mod.h \
 	axa/socket.h \
+	axa/trie.h \
 	axa/wire.h \
 	axalib/bit_funcs.c \
 	axalib/client.c \
@@ -93,9 +100,11 @@ axa_libaxa_la_SOURCES = \
 	axalib/fields.c \
 	axalib/get_field_name.c \
 	axalib/hash_divisor.c \
+	axalib/open_nmsg_out.c \
 	axalib/parse_ch.c \
 	axalib/socket.c \
 	axalib/time.c \
+	axalib/trie.c \
 	axalib/wdns_res.c \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \

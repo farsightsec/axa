@@ -27,38 +27,71 @@
 #include <axa/wire.h>
 
 
+/* Only hdr.len and hdr.op are valid. hdr.len is in host byte-order.
+ * body is in wire format. */
+typedef struct axa_rad_p axa_rad_p_t;
+struct axa_rad_p {
+	axa_p_hdr_t	hdr;
+	axa_p_body_t	body;		/* variable size */
+};
+
+typedef struct axa_rad_parm axa_rad_parm_t;
+struct axa_rad_parm {
+	axa_rad_parm_t	*fwd;
+	axa_rad_p_t	p;
+};
+
+
+/*
+ * All of these function can be called concurrently by two or more RAD server
+ *	threads and so must protect themselves.
+ *
+ * When it is opened, the module is given
+ *	in_parms, a linked list of axa_rad_parm_t,
+ *	uparams, an ASCII string of parameters from the users file,
+ *	cparms, an ASCII string of parameters from the RAD client.
+ *	    *in_parms, *uparms, and *cparms are invalid after the open function
+ *	    returns.
+ *
+ * On a successful return, the module sets
+	*ctxt=a non-null context,
+ *	*out_parms=list of 0 or more axa_rad_parm_t
+ *	If necessary, *ctxt and *out_parms must be freed by the module
+ *	    when it is closed.
+ * false=fatal error with
+ *	*ctxt=NULL,
+ *	*out_parms=NULL,
+ *	*errmsg=NULL or an error message that will be freed by the caller. */
+typedef bool (axa_rad_open_t)(void **ctxt, char **errmsg,
+			      const axa_rad_parm_t **out_parms,
+			      const axa_rad_parm_t *in_parms,
+			      const char *uparms, const char *cparms);
+
+/*
+ * Say whether to forward a packet to the RAD client.
+ * -1=error, 0=no, 1=yes
+ */
+typedef int (axa_rad_whit_t)(void *ctxt, char **errmsg,
+			     const axa_p_whit_t *whit, size_t whit_len,
+			     const nmsg_message_t msg,
+			     const struct nmsg_ipdg *dgp);
+
+typedef void (axa_rad_close_t)(void *ctxt);
+
+
+#define AXA_RAD_CPARMS_ALLOWED	"+"	/* allow RAD client parameters */
+
+
 #define RAD_PREFIX "axa_rad_"
 
-/* The module is given, uparams, string of parameters from the users file, and
- *	cparms, a string of parameters from the RAD client.
- * On a successful return,
- *	If it needs one, the module creates and returns a pointer to a context.
- *	and sra_cmds, a string of SRA channels and watches, separated by ','
- *	ctxt and sra_cmds must be freed by the module when it is closed.
- *	Channels to be enabled are strings that match "chN".
- *	Watches are strings that match "ip=addr/prefix", "dns=[*]?example.com",
- *	    or "ch=chN".
- * false=fatal error with errmsg set to NULL or an error message
- *	that must be freed by the caller. */
-typedef bool (rad_open_t)(void **ctxt, char **errmsg,
-			  const char *uparms, const char *cparms,
-			  char **sra_cmds);
-
-/* -1=error, 0=no, 1=yes */
-typedef int (rad_whit_t)(void *ctxt, char **errmsg,
-			 axa_p_whit_t *whit, size_t whit_len);
-
-typedef void (rad_close_t)(void *ctxt, char *sra_cmds);
-
-
-#define RAD_CPARMS_OK	"+"		/* allow RAD client parameters */
-
-
-#ifdef RAD_MOD
-/* ensure that the exported functions have the right types */
-rad_open_t RAD_MOD_OPEN;
-rad_whit_t RAD_MOD_WHIT;
-rad_close_t RAD_MOD_CLOSE;
+#ifdef AXA_RAD_MOD
+/* Ensure that the exported functions have the right types.
+ *	AXA_RAD_MOD_OPEN, AXA_RAD_MOD_WHIT, and AXA_RAD_MOD_CLOSE are
+ *	defined in Makefile.inc to be the correct function names of the
+ *	modules. */
+axa_rad_open_t AXA_RAD_MOD_OPEN;
+axa_rad_whit_t AXA_RAD_MOD_WHIT;
+axa_rad_close_t AXA_RAD_MOD_CLOSE;
 #endif
 
 

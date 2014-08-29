@@ -20,7 +20,6 @@
 .Nm sratool
 .Nd SIE Remote Access (SRA) tool
 .Sh SYNOPSIS
-.Nm sratool
 .Op Fl VdN
 .Op Fl F Ar fields
 .Op Fl c Ar cfile
@@ -86,17 +85,14 @@ The following commands are available:
 .Bl -tag -width 3n
 .so cmds.man
 .It Ar tag Ic watch Brq Ar ip=IP[/n] | dns=[*.]dom | ch=chN | errors
-Tell the \*(SR server to send nmsg messages or IP packets that are to,
+Tell the SRA server to send nmsg messages or IP packets that are to,
 from, or contain the specified IP addresses,
 that contain the specified domain name,
 that arrived at the server on the specifed SIE channel,
 or are SIE messages or IP packets that could not be decoded.
 .Ar Tag
 is a number labeling the watch.
-.so watch.man
-.It \&
-.It error
-selects SIE messages or IP packets that could not be decoded.
+.so srawatch.man
 .El
 .It Oo Ar tag Oc Ic list watches
 With a tag (numeric label), list the specified watch.
@@ -124,14 +120,23 @@ domain in DNS CNAME rdata.
 www.naturalgassuppliers.org/CNAME: naturalgassuppliers.org
 .Ed
 .Sh FILES
-.Bl -tag -width fields
-.It fields
+.Bl -tag -width config
+.It Ar fields
 defines relationships among and meanings of SIE message fields.
 Its contents should rarely if ever need to be changed.
+.It Ar config
+is the
+.Xr ssh_config 5
+configuration file used with
+.Ar connect\ ssh\ ...
+connections.
+"Host" stanzas in the file can simplify connections to \*(SR servers.
 .El
 .Sh SEE ALSO
 .Xr sratool 1 ,
 .Xr sratunnel 1 ,
 .Xr mkfifo 1 ,
+.Xr nmsgtool 1 ,
+.Xr srad 8 ,
 and
-.Xr nmsgtool 1 .
+.Xr radd 8 .

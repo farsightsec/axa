@@ -36,8 +36,10 @@ extern uint verbose;
 #define NMSG_LEADER2 "   "
 
 
+typedef struct cmd_tbl_entry cmd_tbl_entry_t;
+
 /* -1=display help message, 0=command failed, 1=success */
-typedef int cmd_t (axa_tag_t tag, const char *arg);
+typedef int cmd_t (axa_tag_t tag, const char *arg, const cmd_tbl_entry_t *ce);
 
 extern void clear_prompt(void);
 

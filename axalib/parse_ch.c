@@ -23,7 +23,7 @@
 
 bool					/* false=bad */
 axa_parse_ch(axa_emsg_t *emsg,
-	     axa_p_ch_t *chp,		/* put channel number here */
+	     axa_p_ch_t *chp,		/* host byte order channel number here */
 	     const char *s, size_t s_len,
 	     bool all_ok,		/* "all" is allowed */
 	     bool number_ok)		/* recognize "202" as "ch202" */

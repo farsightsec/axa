@@ -19,18 +19,19 @@
 .Nm sratunnel
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
-.Nm sratunnel
-.Op Fl Vd
+.Op Fl VdOR
+.Op Fl r Ar rate-limit
 .Fl s Ar SRA-server
-.Op Fl u Ar user
+.br
 .Fl c Ar channel
 .Fl w Ar watch
+.Fl a Ar anomaly
 .Fl o Ar out-addr
 .Sh DESCRIPTION
 .Nm Sratunnel
 transfers selected Security Information Exchange (SIE) data
 from remote servers to the local network.
-The connection to the SRA server is created and restored after problems
+The connection to the server is created and restored after problems
 with binary exponential delays between retries.
 .Pp
 .Nm Sratunnel
@@ -47,48 +48,49 @@ displays the version of
 and its preferred version of the AXA protocol.
 .It Fl d
 turns on tracing and debugging reports.
-.It Fl s Ar SRA-server
-specifies the SRA server that is the source of the SIE data.
+.It Fl O
+turns on a spinning bar output indicator on stdout.
+.It Fl R
+switches from SRA to RAD mode.
+In SRA mode,
+.Fl a
+is not allowed
+and
+.Fl c
+is required.
+In RAD mode,
+.Fl a
+is required
+and
+.Fl c
+is not allowed.
+.It Fl r Ar rate-limit
+tells the server to send at most
+.Ar rate-limit
+SIE messages or raw IP packets per second.
+.It Fl s Ar server
+specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
-.Bl -tag -width /uds/socket
-.It ssh Ar [user@]host Op -zArg
-A fix string
-.Em ssh
-before a host names server that will be contacted with the ssh protocol.
-In this case the SRA account name is provided by the ssh protocol.
-.Pp
-These connections usually use default
-ssh configuration files to specify the required public keys
+.Bl -tag -width /ud/socket
+.It Sm off ssh: Oo Ar user No @ Oc Ar host Sm on
+The server will be contacted using the ssh protocol.
+These connections usually use default ssh
+.Xr ssh_config 1
+files to specify the required public keys
 and optionally the fully qualified host name and user names associated
 with the public key.
-Ssh options that require embedded white space
-should be put in a default ssh configuration file
-or a special ssh configuration specified with
-.Sm off Fl F Ar configfile . Sm on
-If no ssh options are specified,
-.Nm
-uses
-.Sm off Fl o Ar StrictHostKeyChecking=no Sm on
-and
-.Sm off Fl o Ar CheckHostIP=no . Sm on
-.Pp
 Use
 .Fl dddd
-or
-.Fl s Ar user@host Ar -v
 to diagnose ssh connection problems.
-.It Ar host,port
-A host name and port number uses clear text over TCP/IP with
-the account name provided by the
-.Fl u Ar user
-argument.
-.It Ar /uds/socket
-The path name of UNIX domain socket connects to a local SRA server.
+.It Sm off tcp: Ar user No @ Ar host,port Sm on
+A host name and port number uses clear text over TCP/IP.
+.It Sm off unix: Ar user No @ Ar /ud/socket Sm on
+The path name of UNIX domain socket connects to a local server.
 .El
 .It Fl c Ar channel
 There must be at least one
 .Fl c
-argument naming an SIE channel that SRA server will watch for interesting
+argument naming an SIE channel that server will watch for interesting
 .Em nmsg
 messages or IP packets.
 .Pp
@@ -99,17 +101,37 @@ or
 .It Fl w Ar watch
 There must be at least one
 .Fl w
-with SRA watch to specify the interesting SIE messages or
+with an SRA or RAD watch to specify the interesting SIE messages or
 dark channel IP packets.
-.so watch.man
+.so srawatch.man
 .El
-.It Fl o
+.Pp
+With
+.Fl R
+and so in RAD mode, channel and error watches are not permitted.
+In addition,
+.Ar (shared)
+can be appended to
+.Ar IP
+and
+.Ar
+dns
+watches to indicate addresses or domains that are not used exclusively.
+.It Fl a Ar anomaly Op parameters
+specifies an RAD anomaly detection module and its parameters with
+.Fl R
+and so in RAD mode.
+There must be at least one
+.Fl a
+in RAD mode.
+.It Fl o Ar out-addr
 specifies
-the destination of the SIE date.
+the destination of the SIE data.
 It can be forwarded as
 .Em nmsg
 messages to a UDP or TCP port
 or as raw IP packets to a file, FIFO, or network interface.
+.ds CT
 .so fwd.man
 .El
 .Sh EXAMPLES
@@ -122,15 +144,27 @@ sratunnel -s "ssh user@example.com" -o nmsg:127.1,8000 \\
 .Ed
 .Pp
 Beware of specifying more data than will fit in the TCP/IP connections
-between the SRA server and
+between the server and
 .Nm .
 The following is likely to be only a network stress test:
 .Bd -literal -offset 4n
 sratunnel -s "ssh user@example.com" -o nmsg:127.1,8000 \\
 	-c all -w ip=128.0/1  -w ip=0/1
 .Ed
+.Sh FILES
+.Bl -tag -width config
+.It Ar config
+is the
+.Xr ssh_config 5
+configuration file used with
+.Ar connect\ ssh\ ...
+connections.
+"Host" stanzas in the file can simplify connections to \*(SR servers.
+.El
 .Sh SEE ALSO
 .Xr sratool 1 ,
+.Xr radtool 1 ,
 .Xr mkfifo 1 ,
+.Xr nmsgtool 1 ,
 and
-.Xr nmsgtool 1 .
+.Xr srad 8 .

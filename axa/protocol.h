@@ -1,4 +1,4 @@
-/*
+/**
  * Advanced Exchange Access (AXA) protocol
  *	This protocol use network byte order to accomodate that SRA clients
  *	on a modest variety of 32-bit and 64-bit *BSD and Linux systems.
@@ -52,6 +52,8 @@
 typedef uint16_t	axa_tag_t;
 #define AXA_TAG_NONE	0
 #define AXA_TAG_MAX	((axa_tag_t)-1)
+#define AXA_P2H_TAG(t)	AXA_P2H16(t)
+#define AXA_H2P_TAG(t)	AXA_H2P16(t)
 
 
 /* Define old versions for eventual "#ifdef AXA_P_VERSx". */
@@ -62,27 +64,40 @@ typedef uint8_t		axa_p_pvers_t;
 #define AXA_P_PVERS_MAX	AXA_P_PVERS1
 
 
-/* Choose a generally little endian byte.
- * This must not affect some values such as UDP port numbers and
- * IPv4 addresses which must be big endian except when they are
- * manipulated as numbers.
- * Hence, AXA_H2Pxx() stands for "AXA Host to Protocol..." */
+/**
+ *  Choose a generally little endian protocol.
+ *  This must not affect some values such as UDP port numbers and
+ *  IPv4 addresses which must be big endian except when they are
+ *  manipulated as numbers.
+ *  Hence, AXA_H2Pxx() stands for "AXA Host to Protocol..."
+ */
+#if 1   /* 0=switch to big endian protocol for testing */
 #define AXA_H2P16(x)	htole16(x)
 #define AXA_H2P32(x)	htole32(x)
 #define AXA_H2P64(x)	htole64(x)
 #define AXA_P2H16(x)	le16toh(x)
 #define AXA_P2H32(x)	le32toh(x)
 #define AXA_P2H64(x)	le64toh(x)
+#else
+#define AXA_H2P16(x)    htobe16(x)
+#define AXA_H2P32(x)    htobe32(x)
+#define AXA_H2P64(x)    htobe64(x)
+#define AXA_P2H16(x)    be16toh(x)
+#define AXA_P2H32(x)    be32toh(x)
+#define AXA_P2H64(x)    be64toh(x)
+#endif
 
 
-/* room for more than 2 full sized UDP packets */
+/** room for more than 2 full sized UDP packets */
 #define AXA_P_MAX_BODY_LEN	(64*1024*3)
 
-/* clients must authenticate within many seconds after connect(). */
+/** clients must authenticate within many seconds after connect(). */
 #define AXA_AUTH_DELAY	30
 
-/* This header starts all items in either direction.
- *	At 8 bytes, it is alignment friendly. */
+/**
+ * This header starts all items in either direction.
+ * At 8 bytes, it is alignment friendly.
+ */
 typedef struct _PK {
 	uint32_t	len;		/* including this header */
 	axa_tag_t	tag;
@@ -90,44 +105,49 @@ typedef struct _PK {
 	uint8_t		op;
 } axa_p_hdr_t;
 
-/* Use a single address space of opcodes in both directions. */
+/** Use a single address space of opcodes in both directions. */
 typedef enum {
-	AXA_P_OP_NOP	    =0,		/* no data */
+	AXA_P_OP_NOP	    =0,		/** no data */
 
-	/* from SRA or RAD server to client */
-	AXA_P_OP_HELLO	    =1,		/* axa_p_hello_t */
-	AXA_P_OP_OK	    =2,		/* axa_p_result_t */
-	AXA_P_OP_ERROR	    =3,		/* axa_p_result_t */
-	AXA_P_OP_MISSED	    =4,		/* axa_p_missed_t */
-	AXA_P_OP_WHIT	    =5,		/* axa_p_whit_t */
-	AXA_P_OP_WLIST	    =6,		/* axa_p_wlist_t */
-	AXA_P_OP_AHIT	    =7,		/* axa_p_ahit_t */
-	AXA_P_OP_ALIST	    =8,		/* axa_p_alist_t */
-	AXA_P_OP_CLIST	    =9,		/* axa_p_clist_t */
+	/** from SRA or RAD server to client */
+	AXA_P_OP_HELLO	    =1,		/** axa_p_hello_t */
+	AXA_P_OP_OK	    =2,		/** axa_p_result_t */
+	AXA_P_OP_ERROR	    =3,		/** axa_p_result_t */
+	AXA_P_OP_MISSED	    =4,		/** axa_p_missed_t */
+	AXA_P_OP_WHIT	    =5,		/** axa_p_whit_t */
+	AXA_P_OP_WLIST	    =6,		/** axa_p_wlist_t */
+	AXA_P_OP_AHIT	    =7,		/** axa_p_ahit_t */
+	AXA_P_OP_ALIST	    =8,		/** axa_p_alist_t */
+	AXA_P_OP_CLIST	    =9,		/** axa_p_clist_t */
 
-	/* from client to SRA or RAD server */
-	AXA_P_OP_USER	    =129,	/* axa_p_user_t */
-	AXA_P_OP_JOIN	    =130,	/* no data */
-	AXA_P_OP_PAUSE	    =131,	/* no data */
-	AXA_P_OP_GO	    =132,	/* no data */
-	AXA_P_OP_WATCH	    =133,	/* axa_p_watch_t */
-	AXA_P_OP_WGET	    =134,	/* no data */
-	AXA_P_OP_ANOM	    =135,	/* axa_p_anom_t */
-	AXA_P_OP_AGET	    =136,	/* no data */
-	AXA_P_OP_STOP	    =137,	/* no data */
-	AXA_P_OP_ALL_STOP   =138,	/* no data */
-	AXA_P_OP_CHANNEL    =139,	/* axa_p_channel_t */
-	AXA_P_OP_CGET	    =140,	/* no data */
-	AXA_P_OP_OPT	    =141,	/* axa_p_opt_t */
-	AXA_P_OP_ACCT	    =142,	/* no data */
+	/** from client to SRA or RAD server */
+	AXA_P_OP_USER	    =129,	/** axa_p_user_t */
+	AXA_P_OP_JOIN	    =130,	/** no data */
+	AXA_P_OP_PAUSE	    =131,	/** no data */
+	AXA_P_OP_GO	    =132,	/** no data */
+	AXA_P_OP_WATCH	    =133,	/** axa_p_watch_t */
+	AXA_P_OP_WGET	    =134,	/** no data */
+	AXA_P_OP_ANOM	    =135,	/** axa_p_anom_t */
+	AXA_P_OP_AGET	    =136,	/** no data */
+	AXA_P_OP_STOP	    =137,	/** no data */
+	AXA_P_OP_ALL_STOP   =138,	/** no data */
+	AXA_P_OP_CHANNEL    =139,	/** axa_p_channel_t */
+	AXA_P_OP_CGET	    =140,	/** no data */
+	AXA_P_OP_OPT	    =141,	/** axa_p_opt_t */
+	AXA_P_OP_ACCT	    =142,	/** no data */
 } axa_p_op_t;
 
 
-/* RAD and SRA servers start the client-server conversation with a
- * AXA_P_OP_HELLO annoucing the protocol versions they understand,
- * a version string, and an ID unique among connections to a single server.
- * Clients can include those IDs in AXA_P_OP_JOIN messages to flag
- * connections that are part of a bundle. */
+/**
+ *  RAD and SRA servers start the client-server conversation with a
+ *  AXA_P_OP_HELLO annoucing the protocol versions that the server understands,
+ *  a version string, and an ID unique among connections to a single server.
+ *  Clients can include those IDs in AXA_P_OP_JOIN messages to flag
+ *  connections that are part of a bundle.
+ *  Because AXA_P_OP_HELLO is sent before the client has said anything and so
+ *  declared its protocol version,
+ *  AXA_P_OP_HELLO must remain the same in all protocol versions.
+ */
 typedef uint64_t axa_p_clnt_id_t;
 typedef struct _PK {
 	axa_p_clnt_id_t	id;
@@ -142,14 +162,15 @@ typedef struct _PK {
 
 typedef struct _PK {
 	uint8_t		op;		/* original axa_p_op_t */
-	char		str[512];	/* null terminated */
+#define	AXA_P_RESULT_LEN 512
+	char		str[AXA_P_RESULT_LEN];	/* null terminated */
 } axa_p_result_t;
 
 typedef struct _PK {
 	uint64_t	input_dropped;
 	uint64_t	dropped;
 	uint64_t	sec_rlimited;
-	uint64_t	day_rlimited;
+	uint64_t	unused;
 	uint32_t	last_reported;
 } axa_p_missed_t;
 
@@ -164,6 +185,9 @@ typedef uint16_t axa_p_ch_t;
 #define AXA_OP_CH_ALL	((axa_p_ch_t)-1)
 #define AXA_OP_CH_ALLSTR "all"
 #define AXA_OP_CH_MAX	4095
+#define AXA_P2H_CH(ch)	AXA_P2H16(ch)
+#define AXA_H2P_CH(ch)	AXA_H2P16(ch)
+
 
 typedef enum {
 	AXA_P_WHIT_NMSG =0,
@@ -180,6 +204,8 @@ typedef uint16_t		axa_nmsg_idx_t;
 #define AXA_NMSG_IDX_NONE	(AXA_NMSG_IDX_RSVD+1)
 #define AXA_NMSG_IDX_ERROR	(AXA_NMSG_IDX_RSVD+2)
 #define AXA_NMSG_IDX_ALL_CH	(AXA_NMSG_IDX_RSVD+3)
+#define AXA_P2H_IDX(idx)	AXA_P2H16(idx)
+#define AXA_H2P_IDX(idx)	AXA_H2P16(idx)
 typedef struct _PK {
 	axa_p_whit_hdr_t mhdr;
 	axa_nmsg_idx_t	field_idx;	/* triggering field index */
@@ -198,8 +224,8 @@ typedef struct _PK {
 	struct _PK {
 	    uint32_t	    tv_sec;
 	    uint32_t	    tv_usec;
-	} ts;
-	uint32_t	orig_len;	/* original length on the wire */
+	} tv;
+	uint32_t	ip_len;		/* packet length on the wire */
 } axa_p_whit_ip_hdr_t;
 
 typedef	struct _PK {
@@ -241,8 +267,11 @@ typedef union {
 typedef struct _PK {
 	uint8_t		type;		/* axa_p_watch_type_t */
 	uint8_t		prefix;		/* IP address only */
-	uint8_t		is_wild;
-	uint8_t		pad[1];		/* to 0 mod 4 */
+	uint8_t		flags;
+#define	 AXA_P_WATCH_FG_WILD	0x01	/* valid for domains only */
+#define	 AXA_P_WATCH_FG_SHARED	0x02
+#define	 AXA_P_WATCH_STR_SHARED "shared"
+	uint8_t		pad;		/* to 0 mod 4 */
 	axa_p_watch_pat_t pat;
 } axa_p_watch_t;
 
@@ -298,8 +327,8 @@ typedef uint64_t	axa_rlimit_t;
 typedef struct _PK {
 	axa_rlimit_t	max_pkts_per_sec;
 	axa_rlimit_t	cur_pkts_per_sec;
-	axa_rlimit_t	max_pkts_per_day;
-	axa_rlimit_t	cur_pkts_per_day;
+	axa_rlimit_t	unused1;
+	axa_rlimit_t	unused2;
 	axa_rlimit_t	report_secs;
 } axa_p_rlimit_t;
 

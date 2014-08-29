@@ -1,0 +1,13 @@
+.\" srawatch.man
+.\" text describing common features of sratool, radtool, and sratunnel  watches.
+.so watch.man
+.It \&
+.It ch=all
+.It Sm off No ch=ch Ar N Sm on
+selects SIE messages or IP packets on the specified channel number
+or all channels.
+.It \&
+.It error
+selects SIE messages or IP packets that could not be decoded.
+.\"
+.\" end of srawatch.man

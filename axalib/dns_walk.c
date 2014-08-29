@@ -180,8 +180,9 @@ walk_ip(void *ctxt, axa_walk_ops_t *ops,
 	p = *pp;
 	*pp += rdlength;
 	if (rdlength != len) {
-		error(ctxt, ops, "%s rdata of %zd bytes", "in", s,
-		      axa_rtype_to_str(tbuf, sizeof(tbuf), rtype), rdlength);
+		error(ctxt, ops, "%s rdata rdlength %zd != expected %zd", "in",
+		      s, axa_rtype_to_str(tbuf, sizeof(tbuf), rtype),
+		      rdlength, len);
 		return (true);
 	}
 	if (ops->ip == NULL)
