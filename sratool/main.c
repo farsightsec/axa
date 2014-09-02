@@ -2659,17 +2659,11 @@ print_nmsg_base_dnsqr(const nmsg_message_t msg, const char *eq, const char *val,
 		print_verbose_nmsg(msg, eq, val);
 		return;
 	}
-	switch ((Nmsg__Base__DnsQRType)dnsqr->type) {
-	case NMSG__BASE__DNS_QRTYPE__UDP_QUERY_ONLY:
-	case NMSG__BASE__DNS_QRTYPE__UDP_RESPONSE_ONLY:
-	case NMSG__BASE__DNS_QRTYPE__UDP_QUERY_RESPONSE:
-	case NMSG__BASE__DNS_QRTYPE__UDP_UNANSWERED_QUERY:
-	case NMSG__BASE__DNS_QRTYPE__UDP_UNSOLICITED_RESPONSE:
-		break;
-	case NMSG__BASE__DNS_QRTYPE__UDP_INVALID:
-	case NMSG__BASE__DNS_QRTYPE__TCP:
-	case NMSG__BASE__DNS_QRTYPE__ICMP:
-	default:
+	if (dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_QUERY_ONLY
+	    && dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_RESPONSE_ONLY
+	    && dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_QUERY_RESPONSE
+	    && dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_UNSOLICITED_RESPONSE
+	    && dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_UNANSWERED_QUERY) {
 		print_verbose_nmsg(msg, eq, val);
 		return;
 	}
