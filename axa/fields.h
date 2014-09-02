@@ -19,6 +19,9 @@
 #ifndef AXA_FIELDS_H
 #define AXA_FIELDS_H
 
+#ifdef __APPLE__
+#include "timespec.h"
+#endif
 #include <nmsg.h>
 
 #include <axa/protocol.h>
