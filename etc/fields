@@ -40,7 +40,7 @@ BASE	dnsqr	    query_ip	IP
 BASE	dnsqr	    response_ip	IP
 BASE	dnsqr	    qname	domain	class=qclass
 #BASE	dnsqr	    query	dns
-#BASE	dnsqr	    response	dns
+BASE	dnsqr	    response	dns	# for RAD/dns_binding
 
 BASE	email	    srcip	IP
 BASE	email	    srchost	domain-ASCII
@@ -54,8 +54,8 @@ BASE	ncap	    srcip	IP
 BASE	ncap	    dstip	IP
 
 BASE	encode	    payload	JSON	enum=type=JSON			\
-		sfield=vic_ip=IP-ASCII sfield=adns_ip=IP-ASCII		\
-		sfield=rdns_ip=IP-ASCII sfield=domain=domain-ASCII
+		sfield=vic_ip_ip4=IP-ASCII sfield=adns_ip_ip4=IP-ASCII	\
+		sfield=rdns_ip_ip4=IP-ASCII sfield=domain=domain-ASCII
 
 BASE	packet	    payload	IP-dgram enum=payload_type=IP
 

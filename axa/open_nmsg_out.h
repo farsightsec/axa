@@ -1,4 +1,4 @@
-/*
+/**
  *  Copyright (c) 2014 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,24 +14,14 @@
  *  limitations under the License.
  */
 
+#ifndef AXA_OPEN_NMSG_OUT_H
+#define AXA_OPEN_NMSG_OUT_H
+
 #include <axa/axa.h>
 
-#include <wdns.h>
+#include <nmsg.h>
 
-const char *
-axa_domain_to_str(const uint8_t *src, size_t src_len,
-		  char *dst, size_t dst_len)
-{
-	size_t len;
+extern int axa_open_nmsg_out(axa_emsg_t *emsg, nmsg_output_t *out_nmsg_output,
+			     int *out_sock_type, const char *addr);
 
-	len = wdns_domain_to_str(src, src_len, dst);
-	/* wdns_domain_to_str() should check
-	 * instead of assuming dst_len >= NS_MAXDNAME  */
-	AXA_ASSERT(len <= dst_len);
-
-	/* trim trailing '.' except from root */
-	if (len > 2)
-		dst[len -2] = '\0';
-
-	return (dst);
-}
+#endif /* AXA_OPEN_NMSG_OUT_H */

@@ -1,12 +1,14 @@
 .\" fwd.man
 .\" common text describing sratool and sratunnel output specifications
+.\" use .ds CT to set that string to either "" or "Op Ar count"
+.\"
 .Bl -tag -width 4n
 .It Xo
 .Sm off
 .No nmsg:
 .Op tcp:|udp:
 .Ar host,port
-.Sm on
+.Sm on \*(CT
 .Xc
 sends
 .Em nmsg
@@ -16,25 +18,44 @@ or
 .Em udp
 host name and port number
 .Ar host,port .
-Udp is the default
+UDP is the default.
+IP packets are converted to
+.Em nmsg
+messages.
+.It Xo
+.Sm off
+.No nmsg:file:
+.Ar path
+.Sm on \*(CT
+.Xc
+sends
+.Em nmsg
+messages to the
+.Ar file .
+IP packets are converted to
+.Em nmsg
+messages.
 .It Xo
 .Sm off
 .No pcap
-.Op -fifo
-.Ar :file
-.Sm on
+.Op -fifo :
+.Ar file
+.Sm on \*(CT
 .Xc
 sends IP packets to a file or FIFO
 for examination with
 .Xr tcpdump 1
 or another packet tracing tool.
 An ordinary file is the default.
+Only IP packets but not
+.Em nmsg
+messages are sent.
 .It Xo
 .Sm off
 .No pcap-if:
 .Op Ar dst /
 .Ar ifname
-.Sm on
+.Sm on \*(CT
 .Xc
 transmits IP packets on the network interface named
 .Ar ifname for examination with
@@ -42,10 +63,12 @@ transmits IP packets on the network interface named
 or another packet tracing tool.
 .Ar dst
 optionally specifies a destination 48-bit Ethernet address other
-than all zero default.
-.Pp
+than all 0:0:0:0:0:0 default.
 This output usually requires that
 .Nm
 be run by root.
+Only IP packets but not
+.Em nmsg
+messages are sent.
 .El
 .\" end of fwd.man

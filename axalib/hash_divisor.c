@@ -22,12 +22,14 @@
 
 
 
-/* Get a modulus for a hash function that is tolerably likely to be
- * relatively prime to most inputs.  We get a prime for for initial
- * values not larger than the square of the last prime.  We often get a prime
+/*
+ * Get a modulus for a hash function that is tolerably likely to be
+ * relatively prime to most inputs.  We get a prime for initial values
+ * not larger than the square of the last prime.  We often get a prime
  * after that.
  * This works well in practice for hash tables up to at least 100
- * times the square of the last prime and better than a multiplicative hash. */
+ * times the square of the last prime and better than a multiplicative hash.
+ */
 uint32_t
 axa_hash_divisor(uint32_t initial, bool smaller)
 {
@@ -95,4 +97,3 @@ axa_hash_divisor(uint32_t initial, bool smaller)
 #endif
 	return (result);
 }
-

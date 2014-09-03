@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-#include <axa/bit_funcs.h>
+#include <axa/bits.h>
 
 /*
  * Find the index of the first bit set in an array of 64-bit words.

@@ -16,19 +16,12 @@
  *  limitations under the License.
  */
 
+#include <axa/axa_endian.h>
 #include <axa/fields.h>
 
-#include <nmsg.h>
-
-#ifdef __linux
-#include <endian.h>
-#else
-#include <sys/endian.h>
-#endif
 #include <stdlib.h>
 
-
-bool					/* false=trouble */
+bool
 axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
 	      nmsg_message_t *msgp, axa_p_whit_t *whit, size_t whit_len)
 {
@@ -57,7 +50,7 @@ axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
 	if (n_msgs < 1 || n_msgs > 1) {
 		axa_pemsg(emsg, "impossible %zd messages to decode from "
 			 AXA_OP_CH_PREFIX"%d",
-			 n_msgs, whit->hdr.ch);
+			 n_msgs, AXA_P2H_CH(whit->hdr.ch));
 		while (n_msgs > 0)
 			nmsg_message_destroy(&msgs[--n_msgs]);
 		free(msgs);

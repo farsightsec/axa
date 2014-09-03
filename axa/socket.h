@@ -19,14 +19,15 @@
 #ifndef AXA_SOCKET_H
 #define AXA_SOCKET_H
 
+#include <axa/axa.h>
+
+#include <net/ethernet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <sys/un.h>
-
-#include <axa/axa.h>
 
 
 #ifdef __FreeBSD__
@@ -112,9 +113,9 @@ extern bool axa_ip_to_su(axa_socku_t *su, const void *ip, uint family);
 extern bool axa_str_to_su(axa_socku_t *su, const char *str);
 extern void axa_bits_to_mask(struct in6_addr *mask, int bits);
 extern int axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str);
-extern bool axa_get_srvr(axa_emsg_t *emsg, const char *line,
+extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 			 bool passive, struct addrinfo **resp);
-extern bool axa_set_sock(axa_emsg_t *emsg, int s, const char *addr,
+extern bool axa_set_sock(axa_emsg_t *emsg, int s, const char *label,
 			 bool nonblock);
 extern bool axa_bind_tcp_listen(axa_emsg_t *emsg, axa_lsock_t *lsocks,
 				uint *num_lsocks, uint max_lsocks,

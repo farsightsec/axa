@@ -29,59 +29,64 @@
 #endif
 #include <sysexits.h>
 #include <sys/wait.h>
-#include <sys/stat.h>
-#include <sys/time.h>
 #include <unistd.h>
 
 
-#define	MIN_BACKOFF    1
-#define	MAX_BACKOFF    60
+#define	MIN_BACKOFF_MS	(1*1000)
+#define	MAX_BACKOFF_MS	(60*1000)
 
 void
-axa_client_init(client_t *client)
+axa_client_init(axa_client_t *client)
 {
 	time_t backoff;
+	struct timeval retry;
 
+	/* Do not change the back-off state. */
 	backoff = client->backoff;
+	retry = client->retry;
+
 	memset(client, 0, sizeof(*client));
+	client->su.sa.sa_family = -1;
 	client->in_sock = -1;
 	client->out_sock = -1;
 	client->err_sock = -1;
 	client->ssh_pid = -1;
 	client->pvers = AXA_P_PVERS;
+
+	client->retry = retry;
 	client->backoff = backoff;
 }
 
 void
-axa_client_backoff(client_t *client)
+axa_client_backoff(axa_client_t *client)
 {
 	axa_client_close(client);
 
 	gettimeofday(&client->retry, NULL);
-	client->retry.tv_sec += client->backoff;
 
-	client->backoff = max(MIN_BACKOFF, client->backoff*2);
-	if (client->backoff > MAX_BACKOFF)
-		client->backoff = MAX_BACKOFF;
+	client->backoff = max(MIN_BACKOFF_MS, client->backoff*2);
+	if (client->backoff > MAX_BACKOFF_MS)
+		client->backoff = MAX_BACKOFF_MS;
 }
 
-/* Is it time to try connecting again? */
-time_t					/* <0 if yes */
-axa_client_again(client_t *client, struct timeval *now)
+
+time_t
+axa_client_again(axa_client_t *client, struct timeval *now)
 {
 	time_t ms;
 
-	gettimeofday(now, NULL);
 	if (client->retry.tv_sec == 0)
 		return (-1);
-	ms = MAX_BACKOFF - axa_tv_diff2ms(now, &client->retry);
-	if (ms <= 0 || ms > MAX_BACKOFF)   /* deal with time jump */
+
+	gettimeofday(now, NULL);
+	ms = client->backoff - axa_tv_diff2ms(now, &client->retry);
+	if (ms <= 0 || ms > client->backoff) /* deal with time jump */
 		return (-1);
 	return (ms);
 }
 
 void
-axa_client_flush(client_t *client)
+axa_client_flush(axa_client_t *client)
 {
 	if (client->recv_body != NULL) {
 		free(client->recv_body);
@@ -91,29 +96,31 @@ axa_client_flush(client_t *client)
 }
 
 void
-axa_client_close(client_t *client)
+axa_client_close(axa_client_t *client)
 {
 	int wstatus;
-	int i;
 
 	axa_client_flush(client);
+
+	if (client->buf.data != NULL) {
+		free(client->buf.data);
+		client->buf.data = NULL;
+	}
 
 	if (client->addr != NULL) {
 		free(client->addr);
 		client->addr = NULL;
 	}
-	for (i = 0; i < AXA_DIM(client->ssh_argv); ++i) {
-		if (client->ssh_argv[i] != NULL) {
-			free(client->ssh_argv[i]);
-			client->ssh_argv[i] = NULL;
-		}
+
+	if (client->hello != NULL) {
+		free(client->hello);
+		client->hello = NULL;
 	}
 
 	if (client->out_sock >= 0)
 		close(client->out_sock);
 	if (client->in_sock != client->out_sock)
 		close(client->in_sock);
-
 	if (client->err_sock != -1)
 		close(client->err_sock);
 
@@ -127,14 +134,10 @@ axa_client_close(client_t *client)
 	axa_client_init(client);
 }
 
-/* Connect, start connecting non-blocking,
- * or try to finish non-blocking connect. */
-bool					/* true=at least started */
-axa_client_connect(axa_emsg_t *emsg, client_t *client, bool nonblock)
+int
+axa_client_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 {
 	int i;
-
-	AXA_ASSERT(!client->is_ssh);
 
 	if (client->nonblock_connect) {
 		/* Require consistency with a previously started
@@ -143,7 +146,7 @@ axa_client_connect(axa_emsg_t *emsg, client_t *client, bool nonblock)
 		AXA_ASSERT(client->out_sock >= 0);
 
 	} else {
-		/* Start a connect. */
+		/* Start to connect. */
 		AXA_ASSERT(client->out_sock < 0);
 
 		client->out_sock = socket(client->su.sa.sa_family,
@@ -153,13 +156,13 @@ axa_client_connect(axa_emsg_t *emsg, client_t *client, bool nonblock)
 			axa_pemsg(emsg, "socket(%s): %s",
 				  client->addr, strerror(errno));
 			axa_client_backoff(client);
-			return (false);
+			return (-1);
 		}
 
 		if (!axa_set_sock(emsg, client->out_sock, client->addr,
 				  nonblock))  {
 			axa_client_backoff(client);
-			return (false);
+			return (-1);
 		}
 	}
 
@@ -168,13 +171,13 @@ axa_client_connect(axa_emsg_t *emsg, client_t *client, bool nonblock)
 		/* New blocking connection
 		 * or previously started blocking connection finished. */
 		client->nonblock_connect = false;
-		return (true);
+		return (1);
 	}
 
 	if (nonblock && AXA_CONN_WAIT_ERRORS()) {
 		/* Non-blocking connection unfinished. */
 		client->nonblock_connect = true;
-		return (true);
+		return (1);
 	}
 
 	/* Failed to connect. */
@@ -182,102 +185,173 @@ axa_client_connect(axa_emsg_t *emsg, client_t *client, bool nonblock)
 		  client->nonblock_connect ? "later " : "",
 		  client->addr, strerror(errno));
 	axa_client_backoff(client);
-	return (false);
+	return (0);
 }
 
-/* Parse a ssh server string */
-static bool
-ssh_parse(axa_emsg_t *emsg, client_t *client, const char *addr, uint debug)
+static int				/* -1=failed  0=retry  1=success */
+connect_ssh(axa_emsg_t *emsg, axa_client_t *client,
+	    const char *userhost, bool nonblock, bool debug)
 {
-	int argc, num_args;
-	/* server name possibly with "ssh user@" */
-	char arg[AXA_MAX_SRVRLEN];
-	const char *next;
+	int in_fildes[2], out_fildes[2], err_fildes[2];
 
-	argc = 0;
-	client->ssh_argv[argc++] = axa_strdup("ssh");
+	if (0 > pipe(in_fildes)) {
+		axa_pemsg(emsg, "pipe(%s): %s", client->addr, strerror(errno));
+		axa_client_backoff(client);
+		return (-1);
+	}
+	if (0 > pipe(out_fildes)) {
+		axa_pemsg(emsg, "pipe(%s): %s", client->addr, strerror(errno));
+		close(in_fildes[0]);
+		close(in_fildes[1]);
+		axa_client_backoff(client);
+		return (-1);
+	}
+	if (0 > pipe(err_fildes)) {
+		axa_pemsg(emsg, "pipe(%s): %s", client->addr, strerror(errno));
+		close(in_fildes[0]);
+		close(in_fildes[1]);
+		close(out_fildes[0]);
+		close(out_fildes[1]);
+		axa_client_backoff(client);
+		return (-1);
+	}
+	client->ssh_pid = fork();
+	if (client->ssh_pid == -1) {
+		axa_pemsg(emsg, "ssh fork(%s): %s",
+			  client->addr, strerror(errno));
+		close(in_fildes[0]);
+		close(in_fildes[1]);
+		close(out_fildes[0]);
+		close(out_fildes[1]);
+		close(err_fildes[0]);
+		close(err_fildes[1]);
+		axa_client_backoff(client);
+		return (-1);
+	}
+	if (client->ssh_pid == 0) {
+		/* Run ssh in the child process. */
+		signal(SIGPIPE, SIG_IGN);
+		signal(SIGHUP, SIG_IGN);
+		signal(SIGTERM, SIG_IGN);
+		signal(SIGINT, SIG_IGN);
+#ifdef SIGXFSZ
+		signal(SIGXFSZ, SIG_IGN);
+#endif
 
-	/* No psuedo-ttyp, no X11 forarding,
-	 * and no athentication agent connection. */
-	client->ssh_argv[argc++] = axa_strdup("-Tax");
-
-	/* Turn on ssh verbosity when debugging the connection. */
-	if (debug > AXA_DEBUG_TRACE)
-		client->ssh_argv[argc++] = axa_strdup("-v");
-
-	client->ssh_argv[argc++] = axa_strdup("-oBatchMode yes");
-
-	/* Allow args before and after the server name like the ssh command. */
-	num_args = 0;
-	next = addr;
-	while (*next != '\0') {
-		/* Reserve space for the terminal NULL. */
-		if (argc >= AXA_DIM(client->ssh_argv)-1) {
-			axa_pemsg(emsg, "too many ssh args in \"%s...\"",
-				  addr);
-			return (false);
+		if (0 > dup2(in_fildes[1], STDOUT_FILENO)
+		    || 0 > dup2(out_fildes[0], STDIN_FILENO)
+		    || 0 > dup2(err_fildes[1], STDERR_FILENO)) {
+			axa_error_msg("ssh dup2(%s): %s",
+				      client->addr, strerror(errno));
+			exit(EX_OSERR);
 		}
+		close(in_fildes[0]);
+		close(out_fildes[1]);
+		close(err_fildes[0]);
 
-		if (0 > axa_get_token(arg, sizeof(arg),
-				      &next, AXA_WHITESPACE"\\';'\"")) {
-			axa_pemsg(emsg, "ssh arg \"%s...\" too long", arg);
-			return (false);
-		}
-		if (strchr("\\';'\"", *(next-1)) != NULL) {
-			axa_pemsg(emsg,
-				  "illegal character \"%c\" in \"ssh %s\"",
-				  *(next-1), addr);
-			return (false);
-		}
-
-		if (arg[0] == '-') {
-			++num_args;
-		} else {
-			if (client->addr != NULL) {
-				axa_pemsg(emsg, "two ssh hosts in \"%s\"",
-					  addr);
-				return (false);
-			}
-			client->addr = axa_strdup(arg);
-		}
-		client->ssh_argv[argc] = axa_strdup(arg);
-		++argc;
+		if (debug)
+			execlp("ssh", "ssh", "-v",
+			       "-Tax", "-oBatchMode=yes",
+			       "-oStrictHostKeyChecking=no",
+			       "-oCheckHostIP=no",
+			       "-enone",
+			       userhost, NULL);
+		else
+			execlp("ssh", "ssh",
+			       "-Tax", "-oBatchMode=yes",
+			       "-oStrictHostKeyChecking=no",
+			       "-oCheckHostIP=no",
+			       "-enone",
+			       userhost, NULL);
+		axa_error_msg("exec(ssh): %s", strerror(errno));
+		exit(EX_OSERR);
 	}
 
-	if (client->addr == NULL) {
-		axa_pemsg(emsg, "missing ssh server name in \"%s\"", addr);
-		return (false);
+	/* Finish setting up links to ssh child in this the parent. */
+	client->in_sock = in_fildes[0];
+	client->out_sock = out_fildes[1];
+	client->err_sock = err_fildes[0];
+	close(in_fildes[1]);
+	close(out_fildes[0]);
+	close(err_fildes[1]);
+
+	if (!axa_set_sock(emsg, client->in_sock, client->addr,
+			  nonblock)
+	    || !axa_set_sock(emsg, client->out_sock, client->addr,
+			     nonblock)
+	    || !axa_set_sock(emsg, client->err_sock, client->addr,
+			     nonblock))  {
+		axa_client_backoff(client);
+		return (-1);
 	}
 
-	/* Assume these if there are no ssh args. */
-	if (num_args == 0) {
-		client->ssh_argv[argc++] = axa_strdup("-oStrictHostKeyChecking=no");
-		client->ssh_argv[argc++] = axa_strdup("-oCheckHostIP=no");
-	}
-
-	return (true);
+	return (1);
 }
 
-/*
- * Connect to an SRA or RAD server using TCP/IP, a UNIX domain socket,
- * or an ssh pipe.
- */
-bool
-axa_client_open(axa_emsg_t *emsg, client_t *client, const char *addr,
-		uint debug, bool nonblock)
+int
+axa_client_open(axa_emsg_t *emsg, axa_client_t *client,
+		const char *addr, bool debug, bool nonblock)
 {
-	struct stat sb;
 	struct addrinfo *ai;
-	size_t wlen;
+	const char *p;
+	int i;
 
 	axa_client_close(client);
+	gettimeofday(&client->retry, NULL);
 
-	memset(&client->su, 0, sizeof(client->su));
+	p = strpbrk(addr, AXA_WHITESPACE":");
+	if (p == NULL) {
+		axa_pemsg(emsg, "invalid AXA transport protocol \"%s\"", addr);
+		axa_client_backoff(client);
+		return (-1);
+	}
 
-	/* it is a UNIX domain socket if it is in the file system */
-	if (*addr == '/' || 0 <= stat(addr, &sb)) {
-		client->addr = axa_strdup(addr);
+	if (AXA_CLITCMP(addr, CLIENT_TYPE_UNIX_STR":")) {
+		client->type = CLIENT_TYPE_UNIX;
+	} else if (AXA_CLITCMP(addr, CLIENT_TYPE_TCP_STR":")) {
+		client->type = CLIENT_TYPE_TCP;
+	} else if (AXA_CLITCMP(addr, CLIENT_TYPE_SSH_STR":")
+		   || AXA_CLITCMP(addr, CLIENT_TYPE_SSH_STR" ")) {
+		/* allow "ssh ..." for upward compatibility for old sratool */
+		client->type = CLIENT_TYPE_SSH;
+	} else {
+		axa_pemsg(emsg, "invalid AXA transport protocol \"%s\"", addr);
+		axa_client_backoff(client);
+		return (-1);
+	}
+	addr = p + strspn(p, AXA_WHITESPACE":");
 
+	if (addr[0] == '-' || addr[0] == '\0') {
+		axa_pemsg(emsg, "invalid server \"%s\"", addr);
+		axa_client_backoff(client);
+		return (-1);
+	}
+
+	p = strchr(addr, '@');
+	if (p == NULL) {
+		i = 0;
+	} else {
+		i = p - addr;
+		if (i >= (int)sizeof(client->user.name)) {
+			axa_pemsg(emsg, "server user name \"%.*s\" too long",
+				  i, addr);
+			axa_client_backoff(client);
+			return (-1);
+		}
+		memcpy(client->user.name, addr, i);
+		++i;
+	}
+	if (addr[0] == '-' || addr[0] == '\0'
+	    || addr[i] == '-' || addr[i] == '\0') {
+		axa_pemsg(emsg, "invalid server name \"%s\"", addr);
+		axa_client_backoff(client);
+		return (-1);
+	}
+
+	client->addr = strdup(addr+i);
+
+	switch (client->type) {
+	case CLIENT_TYPE_UNIX:
 		client->su.sa.sa_family = AF_UNIX;
 		strlcpy(client->su.sun.sun_path, client->addr,
 			sizeof(client->su.sun.sun_path));
@@ -286,121 +360,34 @@ axa_client_open(axa_emsg_t *emsg, client_t *client, const char *addr,
 #endif
 		return (axa_client_connect(emsg, client, nonblock));
 
-	} else if (AXA_CLITCMP(addr, "ssh")
-		   && (wlen = strspn(addr+3, AXA_WHITESPACE)) != 0) {
-		/* It is "ssh server" if it starts with "ssh ". */
-		int in_fildes[2], out_fildes[2], err_fildes[2];
-
-		if (!ssh_parse(emsg, client, addr+3+wlen, debug))
-			return (false);
-
-		client->su.sa.sa_family = -1;
-		if (0 > pipe(in_fildes)) {
-			axa_pemsg(emsg, "pipe(%s): %s",
-				  client->addr, strerror(errno));
+	case CLIENT_TYPE_TCP:
+		if (!axa_get_srvr(emsg, client->addr, false, &ai)) {
 			axa_client_backoff(client);
-			return (false);
-		}
-		if (0 > pipe(out_fildes)) {
-			axa_pemsg(emsg, "pipe(%s): %s",
-				  client->addr, strerror(errno));
-			close(in_fildes[0]);
-			close(in_fildes[1]);
-			axa_client_backoff(client);
-			return (false);
-		}
-		if (0 > pipe(err_fildes)) {
-			axa_pemsg(emsg, "pipe(%s): %s",
-				  client->addr, strerror(errno));
-			close(in_fildes[0]);
-			close(in_fildes[1]);
-			close(out_fildes[0]);
-			close(out_fildes[1]);
-			axa_client_backoff(client);
-			return (false);
-		}
-		client->ssh_pid = fork();
-		if (client->ssh_pid == -1) {
-			axa_pemsg(emsg, "ssh fork(%s): %s",
-				  client->addr, strerror(errno));
-			close(in_fildes[0]);
-			close(in_fildes[1]);
-			close(out_fildes[0]);
-			close(out_fildes[1]);
-			close(err_fildes[0]);
-			close(err_fildes[1]);
-			axa_client_backoff(client);
-			return (false);
-		}
-		if (client->ssh_pid == 0) {
-			/* Run ssh in the child process. */
-			signal(SIGPIPE, SIG_IGN);
-			signal(SIGHUP, SIG_IGN);
-			signal(SIGTERM, SIG_IGN);
-			signal(SIGINT, SIG_IGN);
-#ifdef SIGXFSZ
-			signal(SIGXFSZ, SIG_IGN);
-#endif
-
-			if (0 > dup2(in_fildes[1], STDOUT_FILENO)
-			    || 0 > dup2(out_fildes[0], STDIN_FILENO)
-			    || 0 > dup2(err_fildes[1], STDERR_FILENO)) {
-				axa_error_msg("ssh dup2(): %s", strerror(errno));
-				exit(EX_OSERR);
-			}
-			close(in_fildes[0]);
-			close(out_fildes[1]);
-			close(err_fildes[0]);
-
-			execvp("ssh", client->ssh_argv);
-			axa_error_msg("exec(ssh): %s", strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		/* Finish setting up links to ssh child in this the parent. */
-		client->in_sock = in_fildes[0];
-		client->out_sock = out_fildes[1];
-		client->err_sock = err_fildes[0];
-		close(in_fildes[1]);
-		close(out_fildes[0]);
-		close(err_fildes[1]);
-
-		if (!axa_set_sock(emsg, client->in_sock, client->addr,
-				  false)
-		    || !axa_set_sock(emsg, client->out_sock, client->addr,
-				     false)) {
-			axa_client_backoff(client);
-			return (false);
-		}
-		/* Set STDERR from ssh non-blocking. */
-		if (!axa_set_sock(emsg, client->err_sock, client->addr,
-				  true))  {
-			axa_client_backoff(client);
-			return (false);
-		}
-
-	} else {
-		/* otherwise try to connect via TCP/IP to "hostname,port" */
-		if (!axa_get_srvr(emsg, addr, false, &ai)) {
-			axa_client_backoff(client);
-			return (false);
+			return (-1);
 		}
 		memcpy(&client->su.sa, ai->ai_addr, ai->ai_addrlen);
 		freeaddrinfo(ai);
 		client->addr = axa_strdup(addr);
-
 		return (axa_client_connect(emsg, client, nonblock));
-	}
 
-	return (true);
+	case CLIENT_TYPE_SSH:
+		return (connect_ssh(emsg, client, addr, nonblock, debug));
+
+	case CLIENT_TYPE_UNKN:
+	default:
+		break;
+	}
+	AXA_FAIL("impossible client type");
 }
 
-/*
- * Examine AXA protocol HELLO from server to pick a common protocol version.
- */
 void
-axa_client_hello(client_t *client, const axa_p_hello_t* hello)
+axa_client_hello(axa_client_t *client, const axa_p_hello_t *hello)
 {
+	if (client->hello != NULL)
+		free(client->hello);
+	client->hello = axa_strdup(hello->str);
+
+	/* Save bundle ID for AXA_P_OP_JOIN */
 	client->clnt_id = hello->id;
 	client->have_id = true;
 
@@ -414,6 +401,4 @@ axa_client_hello(client_t *client, const axa_p_hello_t* hello)
 		client->pvers = AXA_P_PVERS_MIN;
 	if (client->pvers > AXA_P_PVERS_MAX)
 		client->pvers = AXA_P_PVERS_MAX;
-
-	client->pvers_known = true;
 }

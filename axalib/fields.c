@@ -27,10 +27,10 @@
 
 const axa_nmsg_field_t axa_null_field = {
 	.idx = AXA_NMSG_IDX_RSVD,
-	.class = {.idx = AXA_NMSG_IDX_NONE, .inc = true},
-	.rtype = {.idx = AXA_NMSG_IDX_NONE, .inc = true},
-	.owner = {.idx = AXA_NMSG_IDX_NONE, .inc = true},
-	.enm = {.idx = AXA_NMSG_IDX_NONE, .inc = true},
+	.class = {.idx = AXA_NMSG_IDX_NONE},
+	.rtype = {.idx = AXA_NMSG_IDX_NONE},
+	.owner = {.idx = AXA_NMSG_IDX_NONE},
+	.enm = {.idx = AXA_NMSG_IDX_NONE},
 };
 
 
@@ -202,12 +202,6 @@ get_help_idx(axa_nmsg_help_t *help,	/* results here */
 	     const char *fname,		/* helper nmsg field name */
 	     uint line_num, const char *fields_file)
 {
-	if (strncmp("++", fname, 2) == 0) {
-		fname += 2;
-		help->inc = true;
-	} else {
-		help->inc = false;
-	}
 	help->idx = get_field_idx(mod, ftype, fname, line_num, fields_file);
 	return (help->idx < AXA_NMSG_IDX_RSVD);
 }
@@ -315,7 +309,7 @@ next_line:
 		if (line == NULL)
 			break;
 
-		field = axa_zalloc(sizeof(*field));
+		field = AXA_SALLOC(axa_nmsg_field_t);
 		*field = axa_null_field;
 		field->line_num = line_num;
 
@@ -435,7 +429,7 @@ next_line:
 			    && field->class.idx == AXA_NMSG_IDX_NONE
 			    && strcasecmp(subtype, "class") == 0) {
 				if (!get_help_idx(&field->class,
-						  mod, "class", subval,
+						  mod, subtype, subval,
 						  line_num, fields_file))
 					goto next_line;
 
@@ -443,7 +437,7 @@ next_line:
 				   && field->rtype.idx == AXA_NMSG_IDX_NONE
 				   && strcasecmp(subtype, "rtype") == 0) {
 				if (!get_help_idx(&field->rtype,
-						  mod, "rtype", subval,
+						  mod, subtype, subval,
 						  line_num, fields_file))
 					goto next_line;
 
@@ -451,7 +445,7 @@ next_line:
 				   && field->owner.idx == AXA_NMSG_IDX_NONE
 				   && strcasecmp(subtype, "oname") == 0) {
 				if (!get_help_idx(&field->owner,
-						  mod, "oname", subval,
+						  mod, subtype, subval,
 						  line_num, fields_file))
 					goto next_line;
 
@@ -459,7 +453,7 @@ next_line:
 				   && strcasecmp(subtype, "enum") == 0
 				   && (p = get_subsubval(subval)) != '\0') {
 				field->enm.idx = get_field_idx(mod,
-							"enum", subval,
+							subtype, subval,
 							line_num, fields_file);
 				if (field->enm.idx >= AXA_NMSG_IDX_RSVD)
 					goto next_line;
@@ -551,7 +545,7 @@ next_line:
 				continue;
 			}
 		} else {
-			vm = axa_zalloc(sizeof(*vm));
+			vm = AXA_SALLOC(vm_entry_t);
 			vm->vid = vid;
 			vm->msgtype = msgtype;
 			vm->mod = mod;
@@ -609,8 +603,6 @@ axa_get_helper(axa_emsg_t *emsg, const nmsg_message_t msg,
 		axa_pemsg(emsg, "invalid field index %#x", help->idx);
 		return (false);
 	}
-
-	if (!help->inc) val_idx = 0;
 
 	/* Be fast about repeated fetches of the helper values */
 	if (cache != NULL) {

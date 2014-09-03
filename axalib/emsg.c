@@ -36,15 +36,18 @@ uint axa_debug;
 
 
 
-typedef enum {SS_TRACE=0, SS_ERROR=1, SS_ACCT=2} ss_type_t;
 static struct {
-	int	priority;
+	int	priority;		/* syslog(3) facility|level */
 	bool	set;
 	bool	on;
-} ss[3];
+	bool	out_stdout;		/* send messages to stdout */
+	bool	out_stderr;		/* send messages to stderr */
+} ss[3];				/* AXA_SYSLOG_{TRACE,ERROR,ACCT} */
 
-char axa_prog_name[256] = "?";
-static char prog_name_msg[sizeof(axa_prog_name)+sizeof(": ")];
+static bool syslog_started;
+
+char axa_prog_name[256];
+
 struct pidfh *axa_pidfh = NULL;
 
 
@@ -69,21 +72,26 @@ axa_strdup(const char *s)
 	return (p);
 }
 
+void
+axa_vasprintf(char **bufp, const char *p, va_list args)
+{
+	int i;
+
+	i = vasprintf(bufp, p,  args);
+	AXA_ASSERT(i >= 0);
+}
+
 void AXA_PF(2,3)
 axa_asprintf(char **bufp, const char *p, ...)
 {
 	va_list args;
-	int i;
 
 	va_start(args, p);
-	i = vasprintf(bufp, p,  args);
+	axa_vasprintf(bufp, p,  args);
 	va_end(args);
-	AXA_ASSERT(i >= 0);
 }
 
-/*
- * Try to enable core files.
- */
+/* Try to enable core files. */
 void
 axa_set_core(void)
 {
@@ -100,7 +108,7 @@ axa_set_core(void)
 		fprintf(stderr, "getrlimit(RLIMIT_CORE) max = %ld\n",
 			(long)rl.rlim_max);
 	}
-	rl.rlim_cur = min(rl.rlim_max, 512*1024*1024);
+	rl.rlim_cur = RLIM_INFINITY;
 	if (0 > setrlimit(RLIMIT_CORE, &rl)) {
 		fprintf(stderr, "setrlimit(RLIMIT_CORE %ld %ld): %s\n",
 			(long)rl.rlim_cur, (long)rl.rlim_max, strerror(errno));
@@ -117,7 +125,6 @@ axa_set_me(const char *me)
 	if (p != NULL)
 		me = p+1;
 	strlcpy(axa_prog_name, me, sizeof(axa_prog_name));
-	snprintf(prog_name_msg, sizeof(prog_name_msg), "%s: ", me);
 }
 
 static int
@@ -187,25 +194,27 @@ parse_syslog_facility(const char *facility)
 
 /*
  * Parse
- *	{trace|error|acct},{off|FACILITY.LEVEL}
+ *	{trace|error|acct},{off|FACILITY.LEVEL}[,{none,stderr,stdout}]
  */
 bool
 axa_parse_log_opt(const char *arg)
 {
-	char type_buf[sizeof("error")];
-	char facility_buf[32];
-	const char *level_str, *facility_str, *str;
+	char type_buf[32], syslog_buf[32], syslog1_buf[32];
+	const char *arg1, *syslog2_str;
 	int facility, level;
-	ss_type_t type;
+	axa_syslog_type_t type;
+	bool on, out_stdout, out_stderr;
 
-	level_str = arg;
-	axa_get_token(type_buf, sizeof(type_buf), &level_str, ",");
+	AXA_ASSERT_MSG(syslog_started, "axa_syslog_init() not yet called");
+
+	arg1 = arg;
+	axa_get_token(type_buf, sizeof(type_buf), &arg1, ",");
 	if (strcasecmp(type_buf, "trace") == 0) {
-		type = SS_TRACE;
+		type = AXA_SYSLOG_TRACE;
 	} else if (strcasecmp(type_buf, "error") == 0) {
-		type = SS_ERROR;
+		type = AXA_SYSLOG_ERROR;
 	} else if (strcasecmp(type_buf, "acct") == 0) {
-		type = SS_ACCT;
+		type = AXA_SYSLOG_ACCT;
 	} else {
 		axa_error_msg("\"%s\" in \"-L %s\""
 			      " is neither \"trace\", \"error\", nor \"acct\"",
@@ -213,35 +222,22 @@ axa_parse_log_opt(const char *arg)
 		return (false);
 	}
 
-	if (strcasecmp(level_str, "off") == 0) {
-		ss[type].on = false;
+	axa_get_token(syslog_buf, sizeof(syslog_buf), &arg1, ",");
+	if (strcasecmp(syslog_buf, "off") == 0) {
+		on = false;
+		facility = 0;
+		level = 0;
 	} else {
-		facility_str = facility_buf;
-		if (0 > axa_get_token(facility_buf, sizeof(facility_buf),
-				      &level_str, ".,")
-		    || facility_str[0] == '\0') {
-			axa_error_msg("missing or bad facility in \"-L %s\"",
-				      arg);
-			return (false);
-		}
+		syslog2_str = syslog_buf;
+		axa_get_token(syslog1_buf, sizeof(syslog1_buf),
+			      &syslog2_str, ".");
 
-		if (level_str == NULL) {
-			axa_error_msg("missing syslog level in \"-L %s\"",
-				      arg);
-			return (false);
-		}
-
-		/* recognize both level.facility and facility.level */
-		facility = parse_syslog_facility(facility_str);
-		level = parse_syslog_level(level_str);
-		if (facility < 0 && level < 0
-		    && (parse_syslog_level(facility_str) >= 0
-			|| parse_syslog_facility(level_str) >= 0)) {
-			str = facility_str;
-			facility_str = level_str;
-			level_str = str;
-			facility = parse_syslog_facility(facility_str);
-			level = parse_syslog_level(level_str);
+		facility = parse_syslog_facility(syslog1_buf);
+		level = parse_syslog_level(syslog2_str);
+		if (facility < 0 && level < 0) {
+			/* Recognize both LEVEL.FACILITY and FACILITY.LEVEL */
+			facility = parse_syslog_facility(syslog2_str);
+			level = parse_syslog_level(syslog1_buf);
 		}
 		if (facility < 0) {
 			axa_error_msg("unrecognized syslog facility in \"%s\"",
@@ -253,10 +249,29 @@ axa_parse_log_opt(const char *arg)
 				      arg);
 			return (false);
 		}
-
-		ss[type].on = true;
-		ss[type].priority = facility | level;
+		on = true;
 	}
+
+	if (arg1[0] == '\0' || AXA_CLITCMP(arg1, "stderr")) {
+		out_stdout = false;
+		out_stderr = true;
+	} else if (AXA_CLITCMP(arg1, "none")) {
+		out_stdout = false;
+		out_stderr = false;
+	} else if (AXA_CLITCMP(arg1, "stdout")) {
+		out_stdout = true;
+		out_stderr = false;
+	} else {
+		axa_error_msg("\"%s\" in \"-L %s\" is neither"
+			      " NONE, STDERR, nor STDOUT",
+			      arg1, arg);
+		return (false);
+	}
+
+	ss[type].on = on;
+	ss[type].priority = facility | level;
+	ss[type].out_stdout = out_stdout;
+	ss[type].out_stderr = out_stderr;
 
 	if (ss[type].set)
 		axa_error_msg("warning: \"-L %s,...\" already set", type_buf);
@@ -268,21 +283,24 @@ axa_parse_log_opt(const char *arg)
 void
 axa_syslog_init(void)
 {
-	AXA_ASSERT_MSG(prog_name_msg[0] != '\0', "axa_set_me() not yet called");
-
+	AXA_ASSERT_MSG(axa_prog_name[0] != '\0', "axa_set_me() not yet called");
 	openlog(axa_prog_name, LOG_PID | LOG_NOWAIT, LOG_DAEMON);
-	if (!ss[SS_TRACE].set) {
-		axa_parse_log_opt("trace,LOG_DEBUG,LOG_DAEMON");
-		ss[SS_TRACE].set = false;
+
+	AXA_ASSERT_MSG(!syslog_started, "axa_syslog_init() already called");
+	syslog_started = true;
+
+	if (!ss[AXA_SYSLOG_TRACE].set) {
+		AXA_ASSERT(axa_parse_log_opt("trace,LOG_DEBUG.LOG_DAEMON"));
+		ss[AXA_SYSLOG_TRACE].set = false;
 	}
-	if (!ss[SS_ERROR].set) {
+	if (!ss[AXA_SYSLOG_ERROR].set) {
 		/* transposed facility and level to check axa_parse_log_opt() */
-		axa_parse_log_opt("error,LOG_DAEMON,LOG_ERR");
-		ss[SS_ERROR].set = false;
+		AXA_ASSERT(axa_parse_log_opt("error,LOG_DAEMON.LOG_ERR"));
+		ss[AXA_SYSLOG_ERROR].set = false;
 	}
-	if (!ss[SS_ACCT].set) {
-		axa_parse_log_opt("acct,LOG_NOTICE,LOG_AUTH");
-		ss[SS_ACCT].set = false;
+	if (!ss[AXA_SYSLOG_ACCT].set) {
+		AXA_ASSERT(axa_parse_log_opt("acct,LOG_NOTICE.LOG_AUTH,none"));
+		ss[AXA_SYSLOG_ACCT].set = false;
 	}
 }
 
@@ -303,28 +321,36 @@ clean_stdfd(int stdfd)
 	}
 }
 
-/* Add text to an error or other message buffer */
-bool AXA_PF(4,5)			/* false=no more room */
-axa_buf_print(char **bufp, size_t *buf_lenp, bool ellipsis, const char *p, ...)
+/*
+ * Add text to an error or other message buffer.
+ *	If we run out of room, add "...". */
+void AXA_PF(3,4)
+axa_buf_print(char **bufp, size_t *buf_lenp, const char *p, ...)
 {
-	size_t len;
+	size_t buf_len, len;
 	va_list args;
 
-	if (*buf_lenp == 0)
-		return (false);
+	buf_len = *buf_lenp;
+	if (buf_len < sizeof("...")) {
+		if (buf_len != 0) {
+			strlcpy(*bufp, "...", buf_len);
+			*bufp += buf_len-1;
+			*buf_lenp = 1;
+		}
+		return;
+	}
 
 	va_start(args, p);
 	len = vsnprintf(*bufp, *buf_lenp, p,  args);
 	va_end(args);
-	if ((ellipsis ? len+sizeof("...") : (len+1)) >= *buf_lenp) {
-		if (ellipsis && *buf_lenp >= sizeof("..."))
-			strcpy(*bufp+*buf_lenp-sizeof("..."), "...");
-		*buf_lenp = 0;
-		return (false);
+	if (len+sizeof("...") > buf_len) {
+		strcpy(*bufp+buf_len-sizeof("..."), "...");
+		*bufp += buf_len-1;
+		*buf_lenp = 1;
+	} else {
+		*buf_lenp -= len;
+		*bufp += len;
 	}
-	*buf_lenp -= len;
-	*bufp += len;
-	return (true);
 }
 
 
@@ -337,12 +363,17 @@ axa_clean_stdio(void)
 	clean_stdfd(STDERR_FILENO);
 }
 
-static void
-vlog_msg(ss_type_t type, bool fatal, const char *p, va_list args)
+void
+axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 {
 	char buf[512], *bufp;
 	size_t buf_len, n;
+	FILE *stdio;
 #	define FMSG "; fatal error"
+
+	/* We cannot use AXA_ASSERT_MSG(), because that would call here */
+	if (!syslog_started)
+		abort();
 
 	bufp = buf;
 	buf_len = sizeof(buf);
@@ -362,21 +393,30 @@ vlog_msg(ss_type_t type, bool fatal, const char *p, va_list args)
 		strlcat(buf, FMSG, sizeof(buf));
 	buf_len = strlen(buf);
 
-	if (type != SS_ACCT) {
-		fflush(stdout);		/* keep stderr and stdout straight */
-		if (prog_name_msg[0] != '\0')
-			fputs(prog_name_msg, stderr);
-		fwrite(buf, buf_len, 1, stderr);
-		fputc('\n', stderr);
-	}
+	/* keep stderr and stdout straight despite syslog output
+	 * to stdout or stderr */
+	fflush(stdout);
+	fflush(stderr);
+
+	if (ss[type].out_stderr)
+		stdio = stderr;
+	else if (ss[type].out_stdout)
+		stdio = stdout;
+	else
+		stdio = NULL;
+	if (stdio != NULL)
+		fprintf(stdio, "%s: %s\n", axa_prog_name, buf);
 
 	if (ss[type].on)
 		syslog(ss[type].priority, "%s", buf);
 
-	/* keep stderr and stdout straight despite syslog output
-	 * to stdout or stderr */
-	if (type == SS_ERROR)
-		fflush(stderr);
+	/* Error messges also go to the trace stream. */
+	if (type == AXA_SYSLOG_ERROR && ss[AXA_SYSLOG_TRACE].on
+	    && ss[AXA_SYSLOG_TRACE].priority != ss[AXA_SYSLOG_ERROR].priority)
+		syslog(ss[AXA_SYSLOG_TRACE].priority, "%s", buf);
+
+	fflush(stdout);
+	fflush(stderr);
 }
 
 /*
@@ -387,7 +427,7 @@ void
 axa_vpemsg(axa_emsg_t *emsg, const char *p, va_list args)
 {
 	if (emsg == NULL) {
-		vlog_msg(SS_ERROR, false, p, args);
+		axa_vlog_msg(AXA_SYSLOG_ERROR, false, p, args);
 	} else {
 		vsnprintf(emsg->c, sizeof(axa_emsg_t), p, args);
 	}
@@ -406,7 +446,7 @@ axa_pemsg(axa_emsg_t *emsg, const char *p, ...)
 void
 axa_verror_msg(const char *p, va_list args)
 {
-	vlog_msg(SS_ERROR, false, p, args);
+	axa_vlog_msg(AXA_SYSLOG_ERROR, false, p, args);
 }
 
 void AXA_PF(1,2)
@@ -415,7 +455,7 @@ axa_error_msg(const char *p, ...)
 	va_list args;
 
 	va_start(args, p);
-	vlog_msg(SS_ERROR, false, p, args);
+	axa_vlog_msg(AXA_SYSLOG_ERROR, false, p, args);
 	va_end(args);
 }
 
@@ -429,13 +469,10 @@ axa_io_error(const char *op, const char *src, ssize_t len)
 	}
 }
 
-/*
- * talk to stdout and to the system log
- */
 void
 axa_vtrace_msg(const char *p, va_list args)
 {
-	vlog_msg(SS_TRACE, false, p, args);
+	axa_vlog_msg(AXA_SYSLOG_TRACE, false, p, args);
 }
 
 void AXA_PF(1,2)
@@ -444,20 +481,19 @@ axa_trace_msg(const char *p, ...)
 	va_list args;
 
 	va_start(args, p);
-	vlog_msg(SS_TRACE, false, p, args);
+	axa_vlog_msg(AXA_SYSLOG_TRACE, false, p, args);
 	va_end(args);
 }
 
-/*
- * Things are so sick that we must bail out.
- */
 void AXA_NORETURN
 axa_vfatal_msg(int ex_code, const char *p, va_list args)
 {
-	vlog_msg(SS_ERROR, true, p, args);
+	axa_vlog_msg(AXA_SYSLOG_ERROR, true, p, args);
 
+#ifndef __APPLE__
 	if (axa_pidfh != NULL)
 		pidfile_remove(axa_pidfh);
+#endif
 	if (ex_code == 0 || ex_code == EX_SOFTWARE)
 		abort();
 	exit(ex_code);
@@ -475,49 +511,26 @@ axa_fatal_msg(int ex_code, const char *p, ...)
 	axa_vfatal_msg(ex_code, p, args);
 }
 
-/* Stash an account record */
-void AXA_PF(1,2)
-axa_accounting_rcd(const char *p, ...)
-{
-	va_list args;
-
-	va_start(args, p);
-	vlog_msg(SS_ACCT, false, p, args);
-	va_end(args);
-}
-
-void
-axa_pidfile(const char *rundir, const char *pidfile)
-{
-	char *path;
-	pid_t old_pid;
-	int i;
-
-	path = NULL;
-	if (pidfile != NULL && pidfile[0] == '/') {
-		axa_pidfh = pidfile_open(pidfile, 0644, &old_pid);
-	} else {
-		i = asprintf(&path, "%s/%s.pid", rundir, axa_prog_name);
-		AXA_ASSERT(0 <= i);
-		axa_pidfh = pidfile_open(path, 0644, &old_pid);
-	}
-
-	if (axa_pidfh == NULL) {
-		if (errno == EEXIST)
-			axa_fatal_msg(EX_OSERR, "%s already running with PID %d",
-				      axa_prog_name, old_pid);
-		else
-			axa_fatal_msg(EX_IOERR, "pidfile_open(%s): %s",
-				      path == NULL ? pidfile : path,
-				      strerror(errno));
-	}
-	if (path != NULL)
-		free(path);
-}
-
+/*
+ * Get a logical line from a stdio stream, with leading and trailing
+ * whitespace trimmed and "\\\n" deleted as a continuation.
+ *	The file name and line number must be provided for error messages.
+ *	The line number is updated.
+ *	The buffer can be NULL.
+ *	If the buffer is NULL or it is not big enough, it is freed and a new
+ *	    buffer is allocated.
+ *	The must be freed after the last use of this function.
+ *	Except at error or EOF, the start of the next line is returned,
+ *	    which might not be at the start of the buffer.
+ *	The return value is NULL and emsg->c[0]=='\0' at EOF.
+ *	The return value is NULL and emsg->c[0]!='\0' after an error.
+ */
 char *
-axa_fgetln(FILE *f, const char *file_name, uint *line_num,
-	   char **bufp, size_t *buf_sizep)
+axa_fgetln(FILE *f,			/* source */
+	   const char *file_name,	/* for error messages */
+	   uint *line_num,
+	   char **bufp,			/* destination must be freed */
+	   size_t *buf_sizep)
 {
 	char *buf, *p, *line;
 	size_t buf_size, len, delta;
