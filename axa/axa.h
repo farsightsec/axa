@@ -25,14 +25,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
-#ifdef __linux
-#include <bsd/libutil.h>
-#else					/* *BSD */
-#include <sys/param.h>
-#ifndef __APPLE__
-#include <libutil.h>
-#endif
-#endif
 
 
 /**
@@ -186,7 +178,6 @@ extern uint axa_debug;
 extern void axa_set_me(const char *me);
 
 extern char axa_prog_name[];
-extern struct pidfh *axa_pidfh;
 
 /**
  *  Parse log options string

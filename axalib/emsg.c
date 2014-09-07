@@ -48,8 +48,6 @@ static bool syslog_started;
 
 char axa_prog_name[256];
 
-struct pidfh *axa_pidfh = NULL;
-
 
 /* Crash immediately on malloc failures. */
 void *
@@ -490,10 +488,6 @@ axa_vfatal_msg(int ex_code, const char *p, va_list args)
 {
 	axa_vlog_msg(AXA_SYSLOG_ERROR, true, p, args);
 
-#ifndef __APPLE__
-	if (axa_pidfh != NULL)
-		pidfile_remove(axa_pidfh);
-#endif
 	if (ex_code == 0 || ex_code == EX_SOFTWARE)
 		abort();
 	exit(ex_code);
