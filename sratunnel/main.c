@@ -210,6 +210,10 @@ main(int argc, char **argv)
 			usage(NULL);
 		}
 	}
+	argc -= optind;
+	argv += optind;
+	if (argc != 0)
+		usage(argv[0]);
 
 	if (version) {
 		axa_trace_msg(AXA_PVERS_STR" AXA protocol %d", AXA_P_PVERS);
@@ -989,7 +993,8 @@ srvr_connect(void)
 		exit(EX_IOERR);
 	}
 
-	/* Trace on the server if debugging first to trace everything. */
+	/* Immediately start tracing on the server
+	 * to trace the tunnel commands. */
 	if (axa_debug != 0) {
 		memset(&opt, 0, sizeof(opt));
 		opt.type = AXA_P_OPT_DEBUG;

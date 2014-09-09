@@ -116,15 +116,13 @@ axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	${libpcap_LIBS} \
 	${libwdns_LIBS} \
 	${libnmsg_LIBS} \
-	${strlcpy_LIBS} \
-	${pidfile_LIBS}
+	${strlcpy_LIBS}
 axa_libaxa_la_CFLAGS = \
 	${AM_CFLAGS} \
 	${libpcap_CFLAGS} \
 	${libwdns_CFLAGS} \
 	${libnmsg_CFLAGS} \
-	${strlcpy_CFLAGS} \
-	${pidfile_CFLAGS}
+	${strlcpy_CFLAGS}
 
 pkgconfig_DATA = axa/libaxa.pc
 EXTRA_DIST += axa/libaxa.pc.in
@@ -156,8 +154,7 @@ sratool_sratool_LDADD = \
 	${libnmsg_LIBS} \
 	${libz_LIBS} \
 	${libwdns_LIBS} \
-	${libedit_LIBS} \
-	${pidfile_LIBS}
+	${libedit_LIBS}
 sratool_sratool_CFLAGS = \
 	${AM_CFLAGS} \
 	${libprotobuf_c_CFLAGS} \
@@ -165,8 +162,7 @@ sratool_sratool_CFLAGS = \
 	${libnmsg_CFLAGS} \
 	${libz_CFLAGS} \
 	${libwdns_CFLAGS} \
-	${libedit_CFLAGS} \
-	${pidfile_CFLAGS}
+	${libedit_CFLAGS}
 
 bin_PROGRAMS += sratool/radtool
 sratool_radtool_SOURCES = ${sratool_sratool_SOURCES}
