@@ -36,8 +36,6 @@ if test -n "$PKG_CONFIG"; then
     fi
 fi
 
-AC_C_BIGENDIAN
-
 MY_CHECK_LIBPCAP
 
 MY_CHECK_LIBPROTOBUF_C
