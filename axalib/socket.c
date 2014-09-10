@@ -409,7 +409,7 @@ axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
 		/* hope for the best despite this error */
 		axa_trace_msg("getsockopt(%s, SO_TYPE): %s",
 			      label, strerror(errno));
-	} else if (type != SOCK_STREAM) {
+	} else if (type != SOCK_STREAM && type != SOCK_DGRAM) {
 		return (true);
 	}
 

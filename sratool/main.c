@@ -777,7 +777,7 @@ usage(void)
 	exit(EX_USAGE);
 }
 
-int AXA_NORETURN
+int
 main(int argc, char **argv)
 {
 	const char *fields_file = FIELDS_FILE;
