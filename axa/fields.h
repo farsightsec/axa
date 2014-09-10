@@ -16,9 +16,10 @@
  *  limitations under the License.
  */
 
-#ifndef AXA_NMSG_H
-#define AXA_NMSG_H
+#ifndef AXA_FIELDS_H
+#define AXA_FIELDS_H
 
+#include <nmsg/timespec.h>		/* for OS X */
 #include <nmsg.h>
 
 #include <axa/protocol.h>
@@ -53,7 +54,6 @@ typedef struct vm_entry vm_entry_t;
 #define AXA_FIELD_NM_LEN    32
 typedef struct {
 	axa_nmsg_idx_t	idx;
-	bool		inc;		/* false=use val_idx=0 for class */
 } axa_nmsg_help_t;
 typedef struct axa_nmsg_field {
 	struct axa_nmsg_field *next;
@@ -92,6 +92,11 @@ extern bool axa_get_helper(axa_emsg_t *emsg, const nmsg_message_t msg,
 extern const axa_nmsg_field_t axa_null_field;
 extern const axa_nmsg_field_t *axa_msg_fields(const nmsg_message_t msg);
 extern void axa_unload_fields(void);
+/**
+ *  read the nmsg fields file to build the tables of known vendor IDs, message
+ *  types, and fields
+ *  \param fields_file const char * canonical name of nmsg fields file
+ */
 extern void axa_load_fields(const char *fields_file);
 
 
@@ -113,9 +118,19 @@ extern nmsg_res axa_nmsg_serialize(axa_emsg_t *emsg, nmsg_message_t msg,
 				   uint8_t **pbuf, size_t *buf_len);
 
 /* whit2msg.c */
+/**
+ *  Create an nmsg from a watch hit
+ *  \param[out] emsg error messages will go here if func fails
+ *  \param[in] nmsg_input nmsg_input_t
+ *  \param[in] msgp nmsg_message_t pointer the nmsg will
+ *  \param[in] whit axa_p_whit_t pointer
+ *  \param[in] whit_len size_t length of whit
+ *
+ *  \return true on success, false on failure
+ */
 extern bool axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
 			  nmsg_message_t *msgp,
 			  axa_p_whit_t *whit, size_t whit_len);
 
 
-#endif /* AXA_NMSG_H */
+#endif /* AXA_FIELDS_H */

@@ -19,6 +19,8 @@
 #include "sratool.h"
 #include <axa/dns_walk.h>
 #include <axa/client.h>
+#include <axa/axa_endian.h>
+#include <axa/open_nmsg_out.h>
 
 #include <nmsg/vendors.h>
 #include <nmsg/sie/defs.h>
@@ -40,9 +42,6 @@
 #include <string.h>
 #ifdef __linux
 #include <bsd/string.h>			/* for strlcpy() */
-#include <endian.h>
-#else
-#include <sys/endian.h>
 #endif
 #include <sysexits.h>
 #include <sys/stat.h>
@@ -51,18 +50,29 @@
 #include <histedit.h>
 
 
-static int in_fds[10] = {STDIN_FILENO};
-static int in_fd_cur = 0;
+#define MAX_IN_FILES 10
+static struct {
+	uint	    lineno;
+	FILE	    *f;
+	char	    *name;
+	char	    *buf;
+	size_t	    buf_size;
+} in_files[MAX_IN_FILES];
+static int in_file_cur = 0;
+
 static int packet_count;
+static int packet_count_total;
 static bool packet_counting;
+
 
 static nmsg_input_t nmsg_input;
 static nmsg_output_t nmsg_pres;
 
-/* Connection to the SRA server. */
-static client_t client;
 
-/* Output packets to this socket */
+/* Connection to the SRA server. */
+static axa_client_t client;
+
+/* Output or forward packets to this socket. */
 static bool out_on;
 static char *out_addr;
 static struct timeval time_out_flush;
@@ -71,6 +81,7 @@ static struct timeval out_complaint_last;
 static bool out_complaint_skipped;
 static int out_sock_type;
 static pcap_t *out_pcap;
+static int out_pcap_datalink;
 static pcap_dumper_t *out_pcap_dumper;
 static int out_fd;
 static struct {
@@ -84,13 +95,17 @@ static nmsg_output_t out_nmsg_output;
 static nmsg_msgmod_t out_nmsg_mod = NULL;
 static void *out_nmsg_clos;
 static bool out_nmsg_mod_checked = false;
+static int output_errno;
+static struct timeval output_errno_time;
+static int output_count;
+static int output_count_total;
+static bool output_counting;
 
 
 /* Use editline() instead of readline() to avoid GPL pollution. */
 static History *el_history;
 static HistEvent el_event;
 static EditLine *el_e = NULL;
-static const char *reprompt_str = "\x80";
 static bool cmd_started = false;
 static bool no_prompt = false;
 static struct timeval prompt_cleared;
@@ -113,8 +128,9 @@ static int srvr_send(axa_tag_t tag, axa_p_op_t op,
 static axa_emsg_t emsg;
 
 uint verbose = 0;
+static bool quiet;
 
-bool eclose = false;
+static bool eclose = false;
 
 
 static cmd_t help_cmd;
@@ -133,16 +149,18 @@ static cmd_t mode_cmd;
 static cmd_t sra_mode_cmd;
 static cmd_t rad_mode_cmd;
 static cmd_t user_cmd;
-static cmd_t watch_cmd;
+static cmd_t sra_watch_cmd;
+static cmd_t rad_watch_cmd;
 static cmd_t list_cmd;
 static cmd_t delete_cmd;
 static cmd_t ch_cmd;
-static cmd_t an_cmd;
+static cmd_t anom_cmd;
 static cmd_t rlimits_cmd;
 static cmd_t acct_cmd;
 static cmd_t pause_cmd;
 static cmd_t trace_cmd;
 static cmd_t go_cmd;
+static cmd_t sleep_cmd;
 
 typedef enum {NO, MB, YES} ternary_t;
 
@@ -150,7 +168,7 @@ typedef enum {SRA, RAD, BOTH} axa_mode_t;
 static axa_mode_t protocol_mode;
 
 /* -1=display help message, 0=command failed, 1=success */
-typedef struct {
+struct cmd_tbl_entry {
 	const char	*cmd;
 	cmd_t		(*fnc);
 	axa_mode_t	mode;
@@ -158,7 +176,7 @@ typedef struct {
 	ternary_t	need_sock;
 	const char	*help_str;
 	const char	*usage_str;
-} cmd_tbl_entry_t;
+};
 
 static const cmd_tbl_entry_t cmds_tbl[] = {
 {"help",		help_cmd,		BOTH,MB, NO,
@@ -179,31 +197,17 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " when the server reports an error or the connection breaks."
     " In the default mode, \"error mode off\", errors are only reported."},
 {"debug",		debug_cmd,		BOTH,MB, NO,
-    "debug [on | off | N]",
-    "increases or decreases the debugging and tracing messages"
-    " that are also controlled by -d."},
+    "debug [on | off | quiet | N]",
+    "increases, decreases, or shows the level of debugging and tracing messages"
+    " that is also controlled by -d."
+    "  \"Debug quiet\" turns off reports of successful AXA commands."},
 {"verbose",		verbose_cmd,		BOTH,MB, NO,
     "verbose [on | off | N]",
     "controls the length of SIE message and IP packet descriptions."
-    "The default, \"verbose off\", generally displays one line summaries."},
+    "  The default, \"verbose off\", generally displays one line summaries."},
 {"version",		version_cmd,		BOTH,NO, NO,
     "version",
     "shows the software and protocol version."},
-{"source",		source_cmd,		BOTH,YES,NO,
-    "source filename",
-    "Read and execute commands commands from a file"},
-{"disconnect",		disconnect_cmd,		BOTH,NO, YES,
-    "disconnect",
-    "Disconnect from the server"},
-{"connect",		connect_cmd,		BOTH,MB, NO,
-    "connect {host,port | /uds/socket | {ssh user@host [-zARG]}}",
-    "Connect to a server at an IP address or UNIX domain socket or via SSH"},
-{"count",		count_cmd,		BOTH,MB, NO,
-    "count [#packets | off]",
-    "Set terminal output to stop displaying packets after a"
-    " number of packets (including immediately with a number of 0),"
-    " show the currently remainint count,"
-    " or turn off the packet count limit."},
 {"mode",		mode_cmd,		BOTH,MB, MB,
     "mode [SRA | RAD]",
     "Show the current command mode or"
@@ -214,15 +218,34 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"radd",		rad_mode_cmd,		BOTH,MB, MB,
     NULL,
     NULL},
+{"source",		source_cmd,		BOTH,YES,NO,
+    "source filename",
+    "Read and execute commands commands from a file"},
+{"connect",		connect_cmd,		BOTH,MB, NO,
+    "connect [tcp:[user@]host,port | unix:[user@]/ud/socket | ssh:[user@]host]",
+    "Connect to a server at an IP address or UNIX domain socket or via SSH"
+    " or show the current connection."},
+{"disconnect",		disconnect_cmd,		BOTH,NO, YES,
+    "disconnect",
+    "Disconnect from the server"},
+{"count",		count_cmd,		BOTH,MB, NO,
+    "count [#packets | off]",
+    "Set terminal output to stop displaying packets after a"
+    " number of packets (including immediately with a number of 0),"
+    " show the currently remainint count,"
+    " or turn off the packet count limit."},
 {"output",		out_cmd,		BOTH,MB, NO,
-    "output [off | nmsg:[tcp:|udp:]host,port | pcap[-fifo]:file"
-    "\n               | pcap-if:[dst/]ifname]",
-    "Show the state of forwarding or start forwarding data received"
-    " from the server.  Received msg messages and IP packets can be"
-    " forwarded as nmsg messages to a TCP  or UDP port.  Received IP"
-    " packets can be forwarded as a pcap stream to a file or a fifo"
-    " created with `mkfio` or in Ethernet frames on a named network"
-    " interface to a specified 48-bit address (default 0)."},
+    "output [off | nmsg:[tcp:|udp:]host,port [count] | nmsg:file:path [count]\n"
+    "               | pcap[-fifo]:file [count] | pcap-if:[dst/]ifname] [count]",
+    "Start, stop or show the state of forwarding packets received from"
+    " the server."
+    "  Received msg messages and IP packets can be"
+    " forwarded as nmsg messages to a TCP or UDP port."
+    "  Received IP packets can be forwarded as a pcap stream"
+    " to a file, to a fifo created separately with `mkfio`,"
+    " or in Ethernet frames on a named network interface to a 48-bit address"
+    " (default 0)."
+    "  Stop forwarding after count messages."},
 {"forward",		out_cmd,		BOTH,MB, NO,
     NULL,
     NULL},
@@ -238,7 +261,7 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " a UNIX domain socket.\n"
     " SSH connections do not use this command but use the"
     " name negotiated with the ssh protocol."},
-{"watch",		watch_cmd,		SRA, MB, YES,
+{"watch",		sra_watch_cmd,		SRA, MB, YES,
     "tag watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
     " from, or contain the specified IP addresses,\n"
@@ -246,14 +269,13 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " that arrived at the server on the specifed SIE channel,\n"
     " or are SIE messages that could not be decoded.\n"
     " The \"tag\" is the number labeling the watch"},
-{"watches",		watch_cmd,		SRA, MB, YES,
-    "[tag] watch list",
-    "With a tag, list the specified watch.\n"
-    " Without a tag, list all watches."},
+{"watches",		sra_watch_cmd,		SRA, MB, YES,
+    NULL,
+    NULL},
 {"list watches",	list_cmd,		SRA, MB, YES,
     "[tag] list watch",
-    "With a tag, list the specified watch.  List all"
-    " watches without a tag"},
+    "With a tag, list the specified watch."
+    "  List all watches without a tag"},
 {"get watches",		list_cmd,		SRA, MB, YES,
     NULL,
     NULL},
@@ -263,9 +285,15 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"get channels",	list_cmd,		SRA, MB, YES,
     NULL,
     NULL},
-{"list anomaly",	list_cmd,		RAD, MB, YES,
+{"watch",		rad_watch_cmd,		RAD, MB, YES,
+    "tag watch {ip=IP[/n] | dns=[*.]dom}",
+    "Tell the RAD server about address and domains of interest.\n"},
+{"list anomaly",	list_cmd,		RAD, NO, YES,
     "[tag] list anomaly",
     "List a specified or all available anomaly detection modules. "},
+{"list anomalies",	list_cmd,		RAD, MB, YES,
+    NULL,
+    NULL},
 {"get anomaly",		list_cmd,		RAD, MB, YES,
     NULL,
     NULL},
@@ -287,16 +315,15 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     "channel {list | {on | off} {all | chN}}",
     "List available SRA channels or enable or disable"
     " one or all SIE channels."},
-{"channels",		ch_cmd,			RAD, YES,YES,
+{"channels",		ch_cmd,			SRA, YES,YES,
     "channel list",
     "List available SRA channels."},
-{"anomaly",		an_cmd,			RAD, YES,YES,
+{"anomaly",		anom_cmd,		RAD, YES,YES,
     "tag anomaly name [parameters]",
     "Start the named anomaly detector module.\n"
     " \"Tag\" is the number labeling the module."},
 {"rate limits",		rlimits_cmd,		BOTH,MB, YES,
-    "rate limits [- | MAX | per-sec] [- | MAX | per-day]"
-    "\n                   [- | NEVER | report-secs]",
+    "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
     "Ask the server to report its rate limits\n"
     " or set rate limits and the interval between rate limit reports."},
 {"rlimits",		rlimits_cmd,		BOTH,MB, YES,
@@ -307,10 +334,13 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     NULL},
 {"pause",		pause_cmd,		BOTH,NO, YES,
     "pause",
-    "Tell the SRA server to stop sending data."},
+    "Tell the server to stop sending data."},
 {"go",			go_cmd,			BOTH,NO, YES,
     "go",
-    "Tell the SRA server to resume sending data"},
+    "Tell the server to resume sending data"},
+{"sleep",		sleep_cmd,		BOTH,YES,NO,
+    "sleep x.y",
+    "Stop accepting commands or displaying server output for a while."},
 {"trace",		trace_cmd,		BOTH,YES,YES,
     "trace N",
     "Set server trace level"},
@@ -328,7 +358,7 @@ el_prompt(EditLine *e AXA_UNUSED)
 {
 	static const char null_prompt[] = "";
 	static const char std_prompt[] = "> ";
-	static const char out_prompt[] = "output > ";
+	static const char out_prompt[] = "output> ";
 	const char *prompt;
 
 	if (interrupted)
@@ -346,13 +376,40 @@ el_prompt(EditLine *e AXA_UNUSED)
 	return (prompt);
 }
 
+static int
+get_cols(void)
+{
+	int cols = 0;
+
+#ifdef TIOCGWINSZ
+	if (cols == 0) {
+		struct winsize ws;
+
+		if (ioctl(el->el_infd, TIOCGWINSZ, (void *)&ws) != -1)
+			col = ws.ws_col
+	}
+#endif
+#ifdef TIOCGSIZE
+	if (cols == 0) {
+		struct ttysize ts;
+		if (ioctl(el->el_infd, TIOCGSIZE, (void *)&ts) != -1)
+			cols = ts.ts_cols;
+	}
+#endif
+
+	if (cols == 0)
+		cols = 80;
+
+	return (cols);
+}
+
 /* Clear the prompt and any partial command to make room output from the
  * server. The history library will eventually be told to restore it. */
 void
 clear_prompt(void)
 {
 	const LineInfo *li;
-	int llen, i;
+	int cols, llen, i;
 
 	cmd_started = false;
 	gettimeofday(&last_output, NULL);
@@ -360,34 +417,70 @@ clear_prompt(void)
 	if (el_e == NULL)
 		return;
 
+	fflush(stderr);
+	fflush(stdout);
+
 	if (prompt_cleared.tv_sec == 0) {
-		/* user's partial command */
+		/* We do not catch SIGWINCH,
+		 * and so must always get the screen size. */
+		cols = get_cols();
+
+		/* get user's partial command */
 		li = el_line(el_e);
 		llen = li->lastchar - li->buffer;
 		llen += prompt_len;
+
 		if (llen > 0) {
-			/* Erase the prompt and the user's command using
-			 * backspaces and blanks instead of '\r' in case
-			 * they are longer than the screen width.
-			 *
-			 * First back up from the current cursor position to
-			 * the prompt and then to the start of the prompt. */
-			for (i = li->cursor - li->buffer + prompt_len;
+			/* Erase the prompt and the user's command.
+			 * '\b' generally does not wrap to the previous line,
+			 * so mess around with the window size. */
+			for (i = (li->cursor - li->buffer + prompt_len)/cols;
 			     i > 0;
-			     --i)
-				fputc('\b', stdout);
+			     --i) {
+				el_set(el_e, EL_ECHOTC, "up", NULL);
+			}
+			fputc('\r', stdout);
 			/* Cover everything with blanks. */
 			for (i = llen; i > 0; --i)
 				fputc(' ', stdout);
 			/* Back to the start of the (first) line. */
-			for (i = llen; i > 0; --i)
-				fputc('\b', stdout);
+			for (i = llen/cols; i > 0; --i) {
+				el_set(el_e, EL_ECHOTC, "up", NULL);
+			}
 		}
-		fputc('\r', stdout);	/* just in case */
+		fputc('\r', stdout);
+		fflush(stdout);
 	}
-	fflush(stderr);
-	fflush(stdout);
 	gettimeofday(&prompt_cleared, NULL);
+}
+
+static void
+reprompt(void)
+{
+	prompt_cleared.tv_sec = 0;
+	el_set(el_e, EL_REFRESH);
+}
+
+static void
+close_in_file_cur(void)
+{
+	AXA_ASSERT(in_file_cur > 0 && in_file_cur < MAX_IN_FILES);
+	free(in_files[in_file_cur].name);
+	in_files[in_file_cur].name = NULL;
+	if (in_files[in_file_cur].buf != NULL)
+		free(in_files[in_file_cur].buf);
+	in_files[in_file_cur].buf = NULL;
+	in_files[in_file_cur].buf_size = 0;
+	fclose(in_files[in_file_cur].f);
+	in_files[in_file_cur].f = NULL;
+	--in_file_cur;
+}
+
+static void
+close_in_files(void)
+{
+	while (in_file_cur > 0)
+		close_in_file_cur();
 }
 
 static void
@@ -400,6 +493,8 @@ static void
 sigterm(int sig AXA_UNUSED)
 {
 	interrupted = true;
+
+	/* SIGTERM ends the program. */
 	terminated = true;
 }
 
@@ -411,6 +506,7 @@ stop(int status)
 			history_end(el_history);
 		el_end(el_e);
 	}
+	close_in_files();
 	fflush(stderr);
 	fflush(stdout);
 	disconnect(false);
@@ -425,12 +521,21 @@ stop(int status)
 }
 
 static void
-eclose_fnc(void)
+error_close(bool cmd_error)
 {
 	if (eclose && client.out_sock >= 0) {
 		clear_prompt();
-		printf("disconnecting from %s after error\n", client.addr);
+		fprintf(stderr, "    disconnecting from %s after error\n",
+			client.addr);
 		disconnect(false);
+	}
+
+	if (cmd_error && in_file_cur > 0) {
+		AXA_ASSERT(in_files[in_file_cur].name != NULL);
+		fprintf(stderr, "    after line #%d in %s\n",
+			in_files[in_file_cur].lineno,
+			in_files[in_file_cur].name);
+		close_in_files();
 	}
 }
 
@@ -446,13 +551,14 @@ error_msg(const char *p, ...)
 	va_end(args);
 	fputc('\n', stderr);
 
-	eclose_fnc();
+	error_close(false);
 }
 
-static void error_help_cmd(axa_tag_t tag, const char *arg)
+static void
+error_help_cmd(axa_tag_t tag, const char *arg)
 {
-	eclose_fnc();
-	help_cmd(tag, arg);
+	error_close(true);
+	help_cmd(tag, arg, NULL);
 }
 
 static int				/* 0 or 1 input chars in buf */
@@ -465,9 +571,10 @@ cmd_rdy(char *buf)
 
 	gettimeofday(&input_start, NULL);
 	for (;;) {
-		if (in_fd_cur >= 0) {
+		if (in_file_cur >= 0) {
+			AXA_ASSERT(in_file_cur == 0);
 			/* We will poll the primary input. */
-			pollfds[0].fd = in_fds[in_fd_cur];
+			pollfds[0].fd = STDIN_FILENO;
 			pollfds[0].events = AXA_POLL_IN;
 		} else {
 			/* After EOF from the primary input,
@@ -489,19 +596,17 @@ cmd_rdy(char *buf)
 			poll_ms = 0;
 
 		} else if (client.in_sock < 0) {
-			if (prompt_cleared.tv_sec != 0) {
-				prompt_cleared.tv_sec = 0;
-				*buf = reprompt_str[0];
-				return (1);
-			}
-			/* Wait forever with only the user talking */
+			if (prompt_cleared.tv_sec != 0)
+				reprompt();
+			/* Wait forever when only the user is talking */
 			poll_ms = INFTIM;
 
 		} else {
 			/* Send a NOP after the user stops typing,
 			 * after we have not heard from the server
 			 *	to see if the connection is broken,
-			 * and at the start to declare our protocol version. */
+			 * and at the start
+			 *	to declare our protocol version. */
 			if (cmd_started)
 				cmd_ms = axa_tv_diff2ms(&now, &input_start);
 			else
@@ -527,9 +632,8 @@ cmd_rdy(char *buf)
 					ms = axa_elapsed_ms(&now,
 							&prompt_cleared);
 					if (ms > 200 || ms < 0) {
-					    prompt_cleared.tv_sec = 0;
-					    *buf = reprompt_str[0];
-					    return (1);
+					    ms = 0;
+					    reprompt();
 					}
 					ms = 200 - ms;
 					if (poll_ms > ms)
@@ -565,16 +669,20 @@ cmd_rdy(char *buf)
 			}
 		}
 
+		if (interrupted)
+			poll_ms = 0;
 		AXA_ASSERT(nfds <= AXA_DIM(pollfds));
-
 		i = poll(pollfds, nfds, poll_ms);
 		if (i < 0 && errno != EINTR)
-			axa_fatal_msg(EX_OSERR, "poll(listen socket): %s",
+			axa_fatal_msg(EX_OSERR, "poll(): %s",
 				      strerror(errno));
 		if (interrupted) {
 			if (terminated || el_e == NULL)
 				stop(1);
 			*buf = '\0';
+
+			/* Tell editline(3) to return immediately
+			 * so that the interrupt can be acknowledged. */
 			el_set(el_e, EL_UNBUFFERED, 1);
 			return (1);
 		}
@@ -589,17 +697,32 @@ cmd_rdy(char *buf)
 			continue;
 		}
 
-		/* Always listen to the user before the server. */
+		/* Listen to the user before the server except when
+		 * reading from a command file. */
+		if (in_file_cur > 0) {
+			/* Repeat anything the ssh process says */
+			if (client.err_poll_nfd >= 0
+			    && pollfds[client.err_poll_nfd].revents != 0)
+				sra_ssh_flush();
+
+			/* Process messages from the server. */
+			if (client.in_poll_nfd >= 0
+			    && pollfds[client.in_poll_nfd].revents != 0)
+				read_srvr();
+		}
+
 		if (pollfds[0].revents != 0) {
-			/* quit when both input and output die. */
-			if (in_fd_cur < 0)
+			if (in_file_cur < 0) {
+				/* in_file_cur<0 implies that pollfds[0]
+				 * is for output.
+				 * Quit when both input and output die. */
 				stop(EX_OK);
-			/* restore the prompt before echoing user's input */
-			if (prompt_cleared.tv_sec != 0) {
-				prompt_cleared.tv_sec = 0;
-				*buf = reprompt_str[0];
-				return (1);
 			}
+			/* restore the prompt before echoing user's input */
+			if (prompt_cleared.tv_sec != 0)
+				reprompt();
+			/* Return 0 to tell getcfn() to read a byte from the
+			 * terminal and return it to editline(3). */
 			return (0);
 		}
 
@@ -629,33 +752,38 @@ getcfn(EditLine *e AXA_UNUSED, char *buf)
 		/* After EOF from the input,
 		 * wait until the server connection breaks
 		 * or until we cannot output. */
-		if (in_fd_cur < 0) {
+		if (in_file_cur < 0) {
 			if (client.in_sock < 0)
 				stop(EX_OK);
 			continue;
 		}
 
-		i = read(in_fds[in_fd_cur], buf, 1);
+		AXA_ASSERT(in_file_cur == 0);
+		i = read(STDIN_FILENO, buf, 1);
 		if (i == 1) {
 			cmd_started = true;
 			return (1);
 		}
-		close(in_fds[in_fd_cur--]);
+		close(STDIN_FILENO);
+		--in_file_cur;
 	}
 }
 
 static void AXA_NORETURN
 usage(void)
 {
-	error_msg("[-VdN] [-F fields] [-c cfile] [commands]\n");
+	error_msg("%s: [-VdN] [-F fields] [-c cfile] [commands]\n",
+		  axa_prog_name);
 	exit(EX_USAGE);
 }
 
-int AXA_NORETURN
+int
 main(int argc, char **argv)
 {
 	const char *fields_file = FIELDS_FILE;
 	char cmd_buf[500];
+	const char *cmd;
+	int cmd_len;
 	bool version = false;
 	const char *cfile = NULL;
 	size_t n;
@@ -664,6 +792,7 @@ main(int argc, char **argv)
 	int i;
 
 	axa_set_me(argv[0]);
+	axa_syslog_init();
 	axa_set_core();
 	axa_client_init(&client);
 
@@ -692,7 +821,6 @@ main(int argc, char **argv)
 		el_set(el_e, EL_PROMPT, el_prompt);
 		el_set(el_e, EL_SIGNAL, 1);
 		el_set(el_e, EL_GETCFN, getcfn);
-		el_set(el_e, EL_BIND, reprompt_str, "ed-redisplay", NULL);
 	}
 
 	while ((i = getopt(argc, argv, "VdNF:c:")) != -1) {
@@ -729,7 +857,7 @@ main(int argc, char **argv)
 	argv += optind;
 
 	if (version) {
-		version_cmd(AXA_TAG_NONE, "");
+		version_cmd(AXA_TAG_NONE, "", NULL);
 		if (argc == 0)
 			stop(EX_OK);
 	}
@@ -741,8 +869,10 @@ main(int argc, char **argv)
 
 	AXA_DEBUG_TO_NMSG();
 	res = nmsg_init();
-	if (res != nmsg_res_success)
+	if (res != nmsg_res_success) {
 		error_msg("nmsg_init(): %s", nmsg_res_lookup(res));
+		exit(EX_SOFTWARE);
+	}
 	nmsg_input = nmsg_input_open_null();
 	AXA_ASSERT(nmsg_input != NULL);
 	nmsg_pres = nmsg_output_open_pres(STDOUT_FILENO);
@@ -764,7 +894,8 @@ main(int argc, char **argv)
 		if (el_e != NULL)
 			history(el_history, &el_event, H_ENTER, *argv);
 		if (!do_cmds(*argv)) {
-			fputs(" initial commands aborted\n", stderr);
+			fprintf(stderr, " initial command \"%s\" failed\n",
+				*argv);
 			break;
 		}
 
@@ -772,54 +903,70 @@ main(int argc, char **argv)
 		--argc;
 	}
 
-	/* Look for commands from stdin. */
 	for (;;) {
-		/* get a command line */
 		cmd_started = false;
 		fflush(stderr);
 		fflush(stdout);
-		if (el_e != NULL) {
-			const char *cmd;
-			int cmd_len;
 
-			cmd = el_gets(el_e, &cmd_len);
-			if (interrupted) {
-				interrupted = false;
-				el_set(el_e, EL_UNBUFFERED, 0);
-				el_reset(el_e);
-				fputs(" (int)\n", stdout);
-				if (prompt_cleared.tv_sec != 0) {
-					packet_counting = true;
-					packet_count = 0;
-				}
+		if (in_file_cur > 0) {
+			/* Get a command from a "sourced" file. */
+			cmd = axa_fgetln(in_files[in_file_cur].f,
+					 in_files[in_file_cur].name,
+					 &in_files[in_file_cur].lineno,
+					 &in_files[in_file_cur].buf,
+					 &in_files[in_file_cur].buf_size);
+			if (cmd == NULL) {
+				close_in_file_cur();
 				continue;
 			}
-			if (cmd == NULL) {
-				fputc('\n', stdout);
-				stop(EX_OK);
+			if (axa_debug != 0) {
+				printf("< %s\n", cmd);
+				fflush(stdout);
 			}
 
-			/* save nontrivial lines not sourced from files */
-			if (in_fd_cur == 0
-			    && *(cmd+strspn(cmd, AXA_WHITESPACE)) != '\0')
-				history(el_history, &el_event, H_ENTER, cmd);
+		} else if (el_e != NULL) {
+			/* Get a command from the terminal via editline(3). */
+			cmd = el_gets(el_e, &cmd_len);
+			if (!interrupted) {
+				if (cmd == NULL) {
+					fputc('\n', stdout);
+					stop(EX_OK);
+				}
 
-			strlcpy(cmd_buf, cmd, sizeof(cmd_buf));
+				/* Save nontrivial command lines. */
+				if (*(cmd+strspn(cmd, AXA_WHITESPACE)) != '\0')
+					history(el_history, &el_event,
+						H_ENTER, cmd);
+			}
 
 		} else {
+			/* Get a command from stdin. */
 			n = 0;
 			for (;;) {
 				getcfn(NULL, &cmd_buf[n]);
-				if (cmd_buf[n] == reprompt_str[0])
-					continue;
 				if (cmd_buf[n++] == '\n'
 				    || n >= sizeof(cmd_buf)-1)
 					break;
 			}
 			cmd_buf[n] = '\0';
+			cmd = cmd_buf;
 		}
 
-		if (!do_cmds(cmd_buf)) {
+		if (interrupted) {
+			interrupted = false;
+			el_set(el_e, EL_UNBUFFERED, 0);
+			el_reset(el_e);
+			if (prompt_cleared.tv_sec != 0) {
+				packet_counting = true;
+				packet_count = 0;
+				packet_count_total = 0;
+			}
+			close_in_files();
+			fputs(" (int)\n", stdout);
+			continue;
+		}
+
+		if (!do_cmds(cmd)) {
 			fputs(" ?\n", stderr);
 			fflush(stdout);
 		}
@@ -830,7 +977,7 @@ main(int argc, char **argv)
 static const char *			/* NULL or mismatch in user string */
 cmd_cmp(const char *user,		/* from the user */
 	const char *op,			/* from command table entry */
-	bool *iss)			/* exact initial substring match */
+	bool *iss)			/* mere initial substring match */
 {
 	char op_c, user_c;
 	int len;
@@ -908,18 +1055,24 @@ run_cmd(axa_tag_t tag, const char *op, const char *arg,
 	int i;
 
 	if (ce->need_sock == YES && client.out_sock <0) {
-		error_msg("\"%s\" requires a connection to a server",
-			  ce->cmd);
+		error_msg("\"%s\" requires a connection to a server", op);
 		return (0);
 	}
 
-	i = ce->fnc(tag, arg);
+	if ((ce->need_args == YES && *arg == '\0')
+	    || (ce->need_args == NO && *arg != '\0')) {
+		error_help_cmd(tag, op);
+		return (false);
+	}
+
+	i = ce->fnc(tag, arg, ce);
 	if (i > 0)
 		return (true);
 
-	eclose_fnc();
 	if (i < 0)
 		error_help_cmd(tag, op);
+	else
+		error_close(true);
 	return (false);
 }
 
@@ -930,9 +1083,11 @@ cmd(axa_tag_t tag, const char *op)
 	int j;
 	const cmd_tbl_entry_t *ce, *ce1;
 	bool iss;
+	int num_iss;
 
 	/* Look for the string as a command and execute it if we find it. */
 	ce1 = NULL;
+	num_iss = 0;
 	for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
 		if (ce->mode != protocol_mode && ce->mode != BOTH)
 			continue;
@@ -944,12 +1099,20 @@ cmd(axa_tag_t tag, const char *op)
 		 * matched, then infer a null argument. */
 		if (arg == NULL) {
 			if (iss) {
-				/* continue searching after the 1st or a
-				 * duplicate initial substring match */
-				if (ce1 == NULL || ce1->fnc == ce->fnc) {
+				++num_iss;
+
+				/* Continue searching after
+				 * the 1st initial substring match,
+				 * a duplicate initial substring match,
+				 * or a synonym initial substring match. */
+				if (ce1 == NULL) {
 					ce1 = ce;
 					continue;
 				}
+				if (ce1->fnc == ce->fnc)
+					continue;
+				if (ce->help_str == NULL)
+					continue;
 				error_help_cmd(tag, op);
 				return (false);
 			}
@@ -960,8 +1123,7 @@ cmd(axa_tag_t tag, const char *op)
 		}
 		/* If the command table entry is an initial substring of
 		 * the user's command, then the rest of the command must
-		 * start with white space.
-		 */
+		 * start with white space. */
 		j = strspn(arg, AXA_WHITESPACE);
 		if (j == 0) {
 			/* Handle blanks part of the command and before
@@ -979,11 +1141,11 @@ cmd(axa_tag_t tag, const char *op)
 		}
 	}
 	/* run an unambigious partial command */
-	if (ce1 != NULL)
+	if (ce1 != NULL && (ce1->help_str != NULL || num_iss <= 1))
 		return (run_cmd(tag, op, "", ce1));
 
 	if (op[0] == '?') {
-		help_cmd(tag, op+1);
+		help_cmd(tag, op+1, NULL);
 		return (true);
 	}
 	error_msg("unrecognized command \"%s\"", op);
@@ -1100,7 +1262,8 @@ help_usage_print(const cmd_tbl_entry_t *ce)
 }
 
 static int
-help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	 const cmd_tbl_entry_t *ce0 AXA_UNUSED)
 {
 	bool iss;
 	int found;			/* 0=partial ISS, 1=iss, 2=exact */
@@ -1109,7 +1272,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 	const cmd_tbl_entry_t *ce;
 	const cmd_tbl_entry_t *help_ce, *usage_ce;
 	int num_help;
-	char buf[120];
+	char buf[160];
 	size_t hlen, llen;
 	const char *p;
 
@@ -1216,13 +1379,15 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 }
 
 static int AXA_NORETURN
-exit_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED)
+exit_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	stop(EX_OK);
 }
 
 static int
-error_mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+error_mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	       const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	const char *setting;
 
@@ -1249,7 +1414,8 @@ error_mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 }
 
 static int
-debug_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+debug_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	  const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	const char *setting;
 	u_long l;
@@ -1257,31 +1423,42 @@ debug_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 
 	setting = arg;
 	if (setting[0] != '\0') {
-		if (word_cmp(&setting, "off")) {
+		if (word_cmp(&setting, "quiet")) {
 			axa_debug = 0;
+			quiet = true;
+		} else if (word_cmp(&setting, "off")) {
+			axa_debug = 0;
+			quiet = false;
 		} else if (word_cmp(&setting, "on")) {
+			quiet = false;
 			++axa_debug;
 		} else {
 			l = strtoul(setting, &p, 10);
 			if (*p != '\0')
 				return (-1);
 			axa_debug = l;
+			quiet = false;
 		}
 		AXA_DEBUG_TO_NMSG();
 	}
 	if (axa_debug > 1 || arg[0] == '\0') {
-		if (axa_debug == 0)
-			printf("    debug off\n");
-		else if (axa_debug == 1)
+		if (axa_debug == 0) {
+			if (quiet)
+				printf("    debug quiet\n");
+			else
+				printf("    debug off\n");
+		} else if (axa_debug == 1) {
 			printf("    debug on\n");
-		else
+		} else {
 			printf("    debug on+%d\n", axa_debug-1);
+		}
 	}
 	return (1);
 }
 
 static int
-verbose_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+verbose_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	const char *setting;
 	u_long l;
@@ -1312,7 +1489,8 @@ verbose_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 }
 
 static int
-version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED)
+version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED,
+	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	printf("%s "AXA_PVERS_STR" AXA protocol %d\n",
 	       axa_prog_name, AXA_P_PVERS);
@@ -1320,51 +1498,62 @@ version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED)
 }
 
 static int
-source_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+source_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	   const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	if (in_fd_cur+1 >= AXA_DIM(in_fds)) {
+	if (in_file_cur >= MAX_IN_FILES-1) {
 		error_msg("\"source\" nesting too deep");
 		return (0);
 	}
 
-	in_fds[in_fd_cur+1] = open(arg, O_RDONLY | O_CLOEXEC);
-	if (in_fds[in_fd_cur+1] < 0) {
-		error_msg("open(%s): %s", arg, strerror(errno));
+	in_files[in_file_cur+1].lineno = 0;
+	in_files[in_file_cur+1].f = fopen(arg, "r");
+	if (in_files[in_file_cur+1].f == NULL) {
+		error_msg("fopen(%s): %s", arg, strerror(errno));
 		return (0);
 	}
-	++in_fd_cur;
+	in_files[in_file_cur+1].name = axa_strdup(arg);
+	++in_file_cur;
+
 	return (1);
 }
 
 static void
 disconnect(bool announce)
 {
-	axa_client_close(&client);
-
 	sra_ssh_flush();
 
-	if (announce) {
+	if (announce && client.out_sock >= 0) {
 		clear_prompt();
 		printf("disconnected\n");
 	}
+	axa_client_close(&client);
 	out_close(announce && verbose > 0);
+
+	packet_counting = false;
 }
 
 static int
-disconnect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED)
+disconnect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
+	       const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	disconnect(true);
 	return (1);
 }
 
 static int
-connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
+	fd_set wfds, efds;
+	int i;
+
 	if (arg[0] == '\0') {
 		if (client.out_sock < 0) {
 			fputs("not connected to a server\n", stdout);
 		} else {
-			printf("connected to %s\n", client.addr);
+			printf("connected to \"%s\"\n    via %s\n",
+			       client.hello, client.addr);
 		}
 		return (1);
 	}
@@ -1374,15 +1563,45 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 
 	client.retry.tv_sec = 0;
 	client.backoff = 0;
-	if (!axa_client_open(&emsg, &client, arg, axa_debug, false)) {
+	if (0 >= axa_client_open(&emsg, &client, arg,
+				 axa_debug > AXA_DEBUG_TRACE, true)) {
 		error_msg("%s", emsg.c);
 		return (0);
+	}
+
+	/* Wait until the connection is complete or fails. */
+	while (client.nonblock_connect) {
+		FD_ZERO(&wfds);
+		FD_SET(client.out_sock, &wfds);
+		FD_ZERO(&efds);
+		FD_SET(client.out_sock, &efds);
+		select(client.out_sock+1, NULL, &wfds, &efds, NULL);
+		i = axa_client_connect(&emsg, &client, true);
+		if (i <= 0) {
+			error_msg("%s", emsg.c);
+			return (0);
+		}
 	}
 
 	/* Send a NOP immediately to tell the server our version of
 	 * the AXA protocol so that the server can say hello. */
 	client.alive.tv_sec = 0;
 
+	/* But instead of a NOP, send the user name if it is known. */
+	if (client.user.name[0] != '\0') {
+		switch (client.type) {
+		case CLIENT_TYPE_UNIX:
+		case CLIENT_TYPE_TCP:
+			return (srvr_send(tag, AXA_P_OP_USER,
+					  &client.user, sizeof(client.user)));
+		case CLIENT_TYPE_SSH:
+			/* The user name is handled by the ssh pipe. */
+			break;
+		case CLIENT_TYPE_UNKN:
+		default:
+			error_msg("impossible client type %d", client.type);
+		}
+	}
 	return (1);
 }
 
@@ -1579,8 +1798,9 @@ out_cmd_pcap_file(const char *addr, bool want_fifo)
 		return (0);
 	}
 
-	/* Cajole the pcap library into writing its header, but write the
-	 * packets themselves to allow non-blocking output to tcpdump. */
+	/* Cajole the pcap library into writing its header, but we will
+	 * write the packets themselves to allow non-blocking output
+	 * to tcpdump. */
 	if (0 > pcap_dump_flush(out_pcap_dumper)) {
 		error_msg("pcap_dump_flush(forward): %s",
 			  pcap_geterr(out_pcap));
@@ -1596,24 +1816,17 @@ out_cmd_pcap_if(const char *ifname)
 {
 	char ether[32];
 	char errbuf[PCAP_ERRBUF_SIZE];
+	const struct ether_addr *eaddr;
 	const char *p;
 	int i;
 
 	memset(&out_mac, 0, sizeof(out_mac));
 	p = strchr(ifname, '/');
+	memset(ether, 0, sizeof(ether));
 	if (p != NULL) {
-		memset(ether, 0, sizeof(ether));
-		memcpy(ether, ifname, min(sizeof(ether), p-ifname));
+		memcpy(ether, ifname, min(sizeof(ether), (size_t)(p-ifname)));
 		ifname = p+1;
-		if (ether_aton_r(ether, &out_mac.dst) == NULL
-		    && ether_hostton(ether, &out_mac.dst) != 0) {
-			error_msg("cannot convert \"%s\" to a MAC address;"
-				  " using 0", ether);
-			memset(&out_mac, 0, sizeof(out_mac));
-		}
 	}
-	out_mac.etype = htons(0x800);
-	memcpy(out_buf, &out_mac, sizeof(out_mac));
 
 	out_pcap = pcap_create(ifname, errbuf);
 	if (out_pcap == NULL) {
@@ -1629,16 +1842,51 @@ out_cmd_pcap_if(const char *ifname)
 		out_pcap = NULL;
 		return (0);
 	}
+	out_pcap_datalink = pcap_datalink(out_pcap);
+	switch (out_pcap_datalink) {
+	case DLT_EN10MB:
+		if (ether[0] != '\0') {
+			/* ether_aton_r() is not available on all systems,
+			 * and ether_aton() is safe here. */
+			eaddr = ether_aton(ether);
+			if (eaddr != NULL) {
+				out_mac.dst = *eaddr;
+			} else if (ether_hostton(ether, &out_mac.dst) != 0) {
+				error_msg("cannot convert \"%s\""
+					  " to an address; using 0:0:0:0:0:0",
+					  ether);
+				memset(&out_mac, 0, sizeof(out_mac));
+			}
+		}
+		out_mac.etype = htons(0x800);
+		memcpy(out_buf, &out_mac, sizeof(out_mac));
+		out_buf_base = sizeof(out_mac);
+		break;
+	case DLT_NULL:
+	case DLT_LOOP:
+		if (ether[0] != '\0')
+			error_msg("ignoring MAC address \"%s\""
+				  " for loopback interface %s",
+				  ether, ifname);
+		out_buf_base = sizeof(uint32_t);
+		break;
+	default:
+		error_msg("cannot output to %s"
+			  " with unknown datalink type %d",
+			  ifname, out_pcap_datalink);
+		pcap_close(out_pcap);
+		return (0);
+	}
 
 	return (1);
 }
 
 static int
-out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	const char *addr;
-	struct addrinfo *ai;
-	axa_socku_t su;
+	u_long l;
+	char *count, *p;
 	int result;
 
 	if (arg[0] == '\0') {
@@ -1657,83 +1905,40 @@ out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 
 	out_addr = axa_strdup(arg);
 
-	if (AXA_CLITCMP(out_addr, "pcap:")) {
-		result = out_cmd_pcap_file(out_addr + sizeof("pcap:")-1,
-					   false);
-
-	} else	if (AXA_CLITCMP(out_addr, "pcap-fifo:")) {
-		result = out_cmd_pcap_file(out_addr + sizeof("pcap-fifo:")-1,
-					   true);
-
-	} else	if (AXA_CLITCMP(out_addr, "pcap-if:")) {
-		result = out_cmd_pcap_if(out_addr + sizeof("pcap-if:")-1);
-
-	} else if (AXA_CLITCMP(out_addr, "nmsg:")) {
-		int s;
-
-		addr = out_addr + sizeof("nmsg:")-1;
-		if (AXA_CLITCMP(addr, "tcp:")) {
-			addr += sizeof("tcp:")-1;
-			out_sock_type = SOCK_STREAM;
-		} else if (AXA_CLITCMP(addr, "udp:")) {
-			addr += sizeof("udp:")-1;
-			out_sock_type = SOCK_DGRAM;
-		} else {
-			out_sock_type = SOCK_DGRAM;
-		}
-		if (*addr == '\0')
+	count = strpbrk(out_addr, AXA_WHITESPACE);
+	if (count != NULL) {
+		*count++ = '\0';
+		count += strspn(count, AXA_WHITESPACE);
+		l = strtoul(count, &p, 10);
+		if (p == count) {
+			out_close(false);
 			return (-1);
+		}
+		p += strspn(p, AXA_WHITESPACE);
+		if (*p != '\0') {
+			out_close(false);
+			return (-1);
+		}
+		output_counting = true;
+		output_count = l;
+		output_count_total = l;
+	}
+	output_errno = -1;
 
-		if (!axa_get_srvr(&emsg, addr, false, &ai)) {
+	if (AXA_CLITCMP(out_addr, "pcap:")) {
+		result = out_cmd_pcap_file(strchr(out_addr, ':')+1, false);
+	} else	if (AXA_CLITCMP(out_addr, "pcap-fifo:")) {
+		result = out_cmd_pcap_file(strchr(out_addr, ':')+1, true);
+	} else	if (AXA_CLITCMP(out_addr, "pcap-if:")) {
+		result = out_cmd_pcap_if(strchr(out_addr, ':')+1);
+	} else if (AXA_CLITCMP(out_addr, "nmsg:")) {
+		result = axa_open_nmsg_out(&emsg, &out_nmsg_output,
+					   &out_sock_type,
+					   strchr(out_addr, ':')+1);
+		if (result <= 0)
 			error_msg("%s", emsg.c);
-			return (0);
-		}
-		memset(&su, 0, sizeof(su));
-		memcpy(&su.sa, ai->ai_addr, ai->ai_addrlen);
-		freeaddrinfo(ai);
-
-		s = socket(su.sa.sa_family, out_sock_type, 0);
-		if (s < 0) {
-			error_msg("socket(%s): %s", addr, strerror(errno));
-			return (0);
-		}
-
-		if (0 > connect(s, &su.sa, AXA_SU_LEN(&su))) {
-			error_msg("connect(%s): %s", addr, strerror(errno));
-			close(s);
-			return (0);
-		}
-
-		if (!axa_set_sock(&emsg, s, addr, false)) {
-			error_msg("%s", emsg.c);
-			close(s);
-			return (0);
-		}
-
-		if (out_sock_type == SOCK_DGRAM) {
-			out_nmsg_output = nmsg_output_open_sock(s,
-							NMSG_WBUFSZ_ETHER);
-			if (out_nmsg_output == NULL) {
-				error_msg("nmsg_output_open_sock(%s): failed",
-					  addr);
-				close(s);
-				return (0);
-			}
-		} else {
-			out_nmsg_output = nmsg_output_open_file(s,
-							NMSG_WBUFSZ_MAX);
-			if (out_nmsg_output == NULL) {
-				error_msg("nmsg_output_open_file(%s) failed",
-					  addr);
-				close(s);
-				return (0);
-			}
-		}
-
-		result = 1;
-
 	} else {
-		return (-1);
+		result = -1;
 	}
 
 	if (result > 0) {
@@ -1745,14 +1950,18 @@ out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 }
 
 static int
-count_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+count_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	  const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	u_long l;
 	char *p;
 
 	if (arg[0] != '\0') {
 		if (word_cmp(&arg, "off")) {
-			packet_counting = false;
+			if (packet_counting) {
+				packet_counting = false;
+				packet_count = 0;
+			}
 		} else {
 			l = strtoul(arg, &p, 10);
 			if (p == arg)
@@ -1762,28 +1971,50 @@ count_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 				return (-1);
 			packet_counting = true;
 			packet_count = l;
+			packet_count_total = l;
 		}
 		return (1);
 	}
 
-	if (!packet_counting) {
-		printf("    packet output not limited by count\n");
-	} else if (packet_count < 0)
-	printf("    packet output stopped by \"count\" %d packets ago\n",
-	       0 - packet_count);
+	if (!packet_counting)
+		printf("    packet printing not limited by count\n"
+		       "        %d packets recently printed\n",
+		       0 - packet_count);
+	else if (packet_count < 0)
+		printf("    packet printing stopped by count %d packets ago\n",
+		       0 - packet_count);
 	else
-		printf("    %d packets remaining\n", packet_count);
+		printf("    %d packets remaining to print of %d total\n",
+		       packet_count, packet_count_total);
+
+	if (!out_on)
+		return (1);
+	if (!output_counting)
+		printf("    packet output or forwarding not limited by count\n"
+		       "        %d packets recently output\n",
+		       0 - output_count);
+	else if (output_count < 0)
+		printf("    packet output or forwarding stopped by count"
+		       " %d packets ago\n",
+		       0 - output_count);
+	else
+		printf("    %d packets remaining to output or forward of"
+		       " %d total\n",
+		       output_count, output_count_total);
+
 	return (1);
 }
 
 static int
-nop_cmd(axa_tag_t tag, const char *arg AXA_UNUSED)
+nop_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
+	const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	return (srvr_send(tag, AXA_P_OP_NOP, NULL, 0));
 }
 
 static int
-mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
+mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	const char *setting;
 
@@ -1821,25 +2052,28 @@ mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg)
 }
 
 static int
-sra_mode_cmd(axa_tag_t tag, const char *arg)
+sra_mode_cmd(axa_tag_t tag, const char *arg,
+	     const cmd_tbl_entry_t *ce)
 {
 	word_cmp(&arg, "mode");
 	if (arg[0] != '\0')
 		return (-1);
-	return (mode_cmd(tag, "sra"));
+	return (mode_cmd(tag, "sra", ce));
 }
 
 static int
-rad_mode_cmd(axa_tag_t tag, const char *arg)
+rad_mode_cmd(axa_tag_t tag, const char *arg,
+	     const cmd_tbl_entry_t *ce)
 {
 	word_cmp(&arg, "mode");
 	if (arg[0] != '\0')
 		return (-1);
-	return (mode_cmd(tag, "rad"));
+	return (mode_cmd(tag, "rad", ce));
 }
 
 static int
-user_cmd(axa_tag_t tag, const char *arg)
+user_cmd(axa_tag_t tag, const char *arg,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	axa_p_user_t user;
 
@@ -1852,7 +2086,8 @@ user_cmd(axa_tag_t tag, const char *arg)
 }
 
 static int
-watch_cmd(axa_tag_t tag, const char *arg)
+sra_watch_cmd(axa_tag_t tag, const char *arg,
+	      const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	axa_p_watch_t watch;
 	size_t watch_len;
@@ -1860,18 +2095,9 @@ watch_cmd(axa_tag_t tag, const char *arg)
 	if (arg[0] == '\0' || word_cmp(&arg, "get") || word_cmp(&arg, "list"))
 		return (srvr_send(tag, AXA_P_OP_WGET, NULL, 0));
 
-	if (protocol_mode != SRA)
-		return (-1);
-
 	if (tag == AXA_TAG_NONE) {
 		error_msg("\"watch\" requires a tag");
 		return (0);
-	}
-	if (word_cmp(&arg, "errors")) {
-		memset(&watch, 0, sizeof(watch));
-		watch.type = AXA_P_WATCH_ERRORS;
-		return (srvr_send(tag, AXA_P_OP_WATCH, &watch,
-				  sizeof(watch)-sizeof(watch.pat)));
 	}
 
 	if (axa_parse_watch(&emsg, &watch, &watch_len, arg))
@@ -1884,28 +2110,53 @@ watch_cmd(axa_tag_t tag, const char *arg)
 }
 
 static int
-list_cmd(axa_tag_t tag, const char *arg)
+rad_watch_cmd(axa_tag_t tag, const char *arg,
+	      const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	if (word_cmp(&arg, "watches"))
-		return (srvr_send(tag, AXA_P_OP_WGET, NULL, 0));
-	if (word_cmp(&arg, "channels"))
-		return (srvr_send(tag, AXA_P_OP_CGET, NULL, 0));
-	if (protocol_mode == RAD && (word_cmp(&arg, "anomaly"))) {
+	axa_p_watch_t watch;
+	size_t watch_len;
+
+	if (tag == AXA_TAG_NONE) {
+		error_msg("\"watch\" requires a tag");
+		return (0);
+	}
+
+	if (axa_parse_rad_watch(&emsg, &watch, &watch_len, arg))
+		return (srvr_send(tag, AXA_P_OP_WATCH, &watch, watch_len));
+
+	if (emsg.c[0] == '\0')
+		return (-1);
+	error_msg("%s", emsg.c);
+	return (0);
+}
+
+static int
+list_cmd(axa_tag_t tag, const char *arg, const cmd_tbl_entry_t *ce)
+{
+	if (protocol_mode == RAD) {
+		(void)word_cmp(&arg, "anomaly");
 		return (srvr_send(tag, AXA_P_OP_AGET, NULL, 0));
 	}
+
+	if (word_cmp(&arg, "watches")
+	    || (arg[0] == '\0'
+		&& ce != NULL && strcmp(ce->cmd, "list watches") == 0))
+		return (srvr_send(tag, AXA_P_OP_WGET, NULL, 0));
+	if (word_cmp(&arg, "channels")
+	    || (arg[0] == '\0'
+		&& ce != NULL && strcmp(ce->cmd, "list channels") == 0))
+		return (srvr_send(tag, AXA_P_OP_CGET, NULL, 0));
+
 	return (-1);
 }
 
 static int
-delete_cmd(axa_tag_t tag, const char *arg)
+delete_cmd(axa_tag_t tag, const char *arg,
+	   const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	const char *label;
-
 	if (protocol_mode == SRA) {
-		label = "watch";
 		(void)word_cmp(&arg, "watches");
 	} else {
-		label = "anomaly";
 		/* ignore "anomaly" but take "a" to mean "all" and so
 		 * do not match "a" as if it were "anomaly". */
 		if (strcasecmp(arg, "a") != 0)
@@ -1914,11 +2165,8 @@ delete_cmd(axa_tag_t tag, const char *arg)
 	if (word_cmp(&arg, "all"))
 		return (srvr_send(tag, AXA_P_OP_ALL_STOP, NULL, 0));
 	if (*arg == '\0') {
-		if (tag == AXA_TAG_NONE) {
-			error_msg("deleting a single %s requires a tag",
-				  label);
-			return (-1);
-		}
+		if (tag == AXA_TAG_NONE)
+			return (srvr_send(tag, AXA_P_OP_ALL_STOP, NULL, 0));
 		return (srvr_send(tag, AXA_P_OP_STOP, NULL, 0));
 	}
 	return (-1);
@@ -1934,21 +2182,20 @@ ch_on_off(axa_tag_t tag, const char *arg, bool on)
 		error_msg("%s", emsg.c);
 		return (0);
 	}
+	channel.ch = AXA_H2P_CH(channel.ch);
 	channel.on = on ? 1 : 0;
 	return (srvr_send(tag, AXA_P_OP_CHANNEL, &channel, sizeof(channel)));
 }
 
 static int
-ch_cmd(axa_tag_t tag, const char *arg)
+ch_cmd(axa_tag_t tag, const char *arg,
+       const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	axa_p_ch_buf_t arg1_buf, arg2_buf;
 	const char *arg1, *arg2;
 
 	if (arg[0] == '\0' || word_cmp(&arg, "get") || word_cmp(&arg, "list"))
 		return (srvr_send(tag, AXA_P_OP_CGET, NULL, 0));
-
-	if (protocol_mode != SRA)
-		return (-1);
 
 	memset(&arg1_buf, 0, sizeof(arg1_buf));
 	memset(&arg2_buf, 0, sizeof(arg2_buf));
@@ -1975,45 +2222,23 @@ ch_cmd(axa_tag_t tag, const char *arg)
 }
 
 static int
-an_cmd(axa_tag_t tag, const char *arg)
+anom_cmd(axa_tag_t tag, const char *arg,
+       const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	axa_p_anom_t anom;
-	size_t len;
-	const char *parms;
+	size_t anom_len;
 
 	if (tag == AXA_TAG_NONE) {
 		error_msg("\"anomaly\" requires a tag");
 		return (0);
 	}
 
-	/* look for "name [parameters]" */
-	if (arg[0] == '\0')
+	if (axa_parse_anom(&emsg, &anom, &anom_len, arg))
+		return (srvr_send(tag, AXA_P_OP_ANOM, &anom, anom_len));
+
+	if (emsg.c[0] == '\0')
 		return (-1);
-	parms = strchr(arg, ' ');
-	if (parms == NULL)
-		parms = arg+strlen(arg);
-
-	len = parms - arg;
-	if (len >= sizeof(anom.an)) {
-		error_msg("anomaly name \"%.*s\" too long",
-			  (int)len, arg);
-		return (0);
-	}
-
-	memset(&anom.an, 0, sizeof(anom));
-	memcpy(&anom.an, arg, len);
-
-	parms += strspn(parms, AXA_WHITESPACE);
-	len = strlen(parms);
-	if (len >= sizeof(anom.parms)) {
-		error_msg("anomaly parameters \"%.*s\" too long",
-			  (int)len, parms);
-		return (0);
-	}
-	memcpy(&anom.parms, parms, len);
-
-	return (srvr_send(tag, AXA_P_OP_ANOM, &anom,
-			  sizeof(anom) - sizeof(anom.parms) + len+1));
+	return (0);
 }
 
 static bool				/* false=bad value */
@@ -2040,10 +2265,10 @@ get_rlimit(axa_rlimit_t *rlimit, const char *word)
 }
 
 static int
-rlimits_cmd(axa_tag_t tag, const char *arg)
+rlimits_cmd(axa_tag_t tag, const char *arg,
+	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	char sec_buf[32];
-	char day_buf[32];
 	char report_secs_buf[32];
 	axa_p_opt_t opt;
 
@@ -2053,8 +2278,6 @@ rlimits_cmd(axa_tag_t tag, const char *arg)
 	word_cmp(&arg, "limits");
 	if (0 > axa_get_token(sec_buf, sizeof(sec_buf),
 			      &arg, AXA_WHITESPACE)
-	    || 0 > axa_get_token(day_buf, sizeof(day_buf),
-				 &arg, AXA_WHITESPACE)
 	    || 0 > axa_get_token(report_secs_buf, sizeof(report_secs_buf),
 				 &arg, AXA_WHITESPACE)
 	    || *arg != '\0')
@@ -2062,39 +2285,61 @@ rlimits_cmd(axa_tag_t tag, const char *arg)
 
 	if (!get_rlimit(&opt.u.rlimit.max_pkts_per_sec, sec_buf))
 		return (-1);
-	if (!get_rlimit(&opt.u.rlimit.max_pkts_per_day, day_buf))
-		return (-1);
+	/* Set per-day limit=no-limit for old servers. */
+	opt.u.rlimit.unused1 = AXA_RLIMIT_NA;
 	if (!get_rlimit(&opt.u.rlimit.report_secs, report_secs_buf))
 		return (-1);
 
 	opt.u.rlimit.cur_pkts_per_sec = AXA_RLIMIT_NA;
-	opt.u.rlimit.cur_pkts_per_day = AXA_RLIMIT_NA;
 	return (srvr_send(tag, AXA_P_OP_OPT, &opt,
 			  sizeof(opt) - sizeof(opt.u) + sizeof(opt.u.rlimit)));
 }
 
 static int
-pause_cmd(axa_tag_t tag, const char *arg AXA_UNUSED)
+pause_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
+	  const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	return (srvr_send(tag, AXA_P_OP_PAUSE, NULL, 0));
 }
 
 static int
-go_cmd(axa_tag_t tag, const char *arg AXA_UNUSED)
+go_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
+       const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	return (srvr_send(tag, AXA_P_OP_GO, NULL, 0));
 }
 
 static int
-trace_cmd(axa_tag_t tag, const char *arg)
+sleep_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	  const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	double s;
+	char *p;
+
+	s = strtod(arg, &p);
+	if (*p != '\0' || s < 0.001 || s > 1000)
+		return -1;
+	usleep((u_int)(s*1000000.0));
+	return 1;
+}
+
+static int
+trace_cmd(axa_tag_t tag, const char *arg,
+	  const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	axa_p_opt_t opt;
 	u_long l;
 	char *p;
 
 	l = strtoul(arg, &p, 10);
-	if (*p != '\0')
-		return (-1);
+	if (*p != '\0') {
+		if (strcasecmp(arg, "off") == 0)
+			l = 0;
+		else if (strcasecmp(arg, "on") == 0)
+			l = AXA_DEBUG_TRACE;
+		else
+			return (-1);
+	}
 	memset(&opt, 0, sizeof(opt));
 	opt.type = AXA_P_OPT_DEBUG;
 	opt.u.debug = l;
@@ -2103,7 +2348,8 @@ trace_cmd(axa_tag_t tag, const char *arg)
 }
 
 static int
-acct_cmd(axa_tag_t tag, const char *arg AXA_UNUSED)
+acct_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	return (srvr_send(tag, AXA_P_OP_ACCT, NULL, 0));
 }
@@ -2117,7 +2363,7 @@ print_recv_tag_op(void)
 	clear_prompt();
 	printf("%s %s\n",
 	       axa_tag_to_str(tag_buf, sizeof(tag_buf),
-			      AXA_P2H16(client.recv_hdr.tag)),
+			      AXA_P2H_TAG(client.recv_hdr.tag)),
 	       axa_op_to_str(op_buf, sizeof(op_buf),
 			     client.recv_hdr.op));
 }
@@ -2320,7 +2566,7 @@ static bool
 rdata_domain_to_buf(void *ctxt0, const uint8_t *name, size_t name_len,
 		    axa_walk_dom_t dtype AXA_UNUSED,
 		    uint rtype AXA_UNUSED,
-		   const char *str AXA_UNUSED)
+		    const char *str AXA_UNUSED)
 {
 	rdata_ctxt_t *ctxt = ctxt0;
 	char wname[NS_MAXDNAME];
@@ -2328,7 +2574,7 @@ rdata_domain_to_buf(void *ctxt0, const uint8_t *name, size_t name_len,
 	if (!rdata_buf_cat(ctxt, " "))
 		return (false);
 
-	axa_domain_to_str(name, name_len, wname);
+	axa_domain_to_str(name, name_len, wname, sizeof(wname));
 	strlcpy(ctxt->buf, wname, ctxt->buf_len);
 	return (rdata_buf_alloc(ctxt));
 }
@@ -2353,8 +2599,7 @@ rdata_to_buf(char *buf, size_t buf_len,
 	ctxt.buf_len = buf_len;
 	ctxt.rdata_name = rdata_name;
 
-	strlcpy(ctxt.buf, axa_rtype_to_str(ctxt.buf, ctxt.buf_len, rtype),
-		ctxt.buf_len);
+	axa_rtype_to_str(ctxt.buf, ctxt.buf_len, rtype);
 	if (!rdata_buf_alloc(&ctxt))
 		return (buf);
 
@@ -2376,7 +2621,7 @@ rdata_nmsg_to_buf(char *buf, size_t buf_len, const nmsg_message_t msg,
 	size_t data_len;
 
 	/* Get the rdata type */
-	if (!axa_get_helper(&emsg, msg, &field->rtype, val_idx,
+	if (!axa_get_helper(&emsg, msg, &field->rtype, 0,
 			    &rtype, NULL, sizeof(rtype), sizeof(rtype), NULL)) {
 		strlcpy(buf, emsg.c, buf_len);
 		return (buf);
@@ -2414,17 +2659,11 @@ print_nmsg_base_dnsqr(const nmsg_message_t msg, const char *eq, const char *val,
 		print_verbose_nmsg(msg, eq, val);
 		return;
 	}
-	switch ((Nmsg__Base__DnsQRType)dnsqr->type) {
-	case NMSG__BASE__DNS_QRTYPE__UDP_QUERY_ONLY:
-	case NMSG__BASE__DNS_QRTYPE__UDP_RESPONSE_ONLY:
-	case NMSG__BASE__DNS_QRTYPE__UDP_QUERY_RESPONSE:
-	case NMSG__BASE__DNS_QRTYPE__UDP_UNANSWERED_QUERY:
-	case NMSG__BASE__DNS_QRTYPE__UDP_UNSOLICITED_RESPONSE:
-		break;
-	case NMSG__BASE__DNS_QRTYPE__UDP_INVALID:
-	case NMSG__BASE__DNS_QRTYPE__TCP:
-	case NMSG__BASE__DNS_QRTYPE__ICMP:
-	default:
+	if (dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_QUERY_ONLY
+	    && dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_RESPONSE_ONLY
+	    && dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_QUERY_RESPONSE
+	    && dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_UNSOLICITED_RESPONSE
+	    && dnsqr->type != NMSG__BASE__DNS_QRTYPE__UDP_UNANSWERED_QUERY) {
 		print_verbose_nmsg(msg, eq, val);
 		return;
 	}
@@ -2511,7 +2750,7 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 	    && (field == NULL || strcmp(field->name, "rrname") != 0)
 	    && dnsdedupe->has_rrname) {
 		axa_domain_to_str(dnsdedupe->rrname.data, dnsdedupe->rrname.len,
-				  rrname_buf);
+				  rrname_buf, sizeof(rrname_buf));
 		printf(NMSG_LEADER"rrname=%s", rrname_buf);
 		need_nl = true;
 	}
@@ -2541,12 +2780,12 @@ print_sie_newdomain(const nmsg_message_t msg,
 	newdomain = (Nmsg__Sie__NewDomain *)nmsg_message_get_payload(msg);
 
 	axa_domain_to_str(newdomain->rrname.data, newdomain->rrname.len,
-			  rrname_buf);
+			  rrname_buf, sizeof(rrname_buf));
 	axa_rtype_to_str(rtype_buf, sizeof(rtype_buf), newdomain->rrtype);
 	axa_domain_to_str(newdomain->domain.data, newdomain->domain.len,
-			  domain_buf);
+			  domain_buf, sizeof(domain_buf));
 
-	printf("%s%s\n%s/%s: %s\n",
+	printf("%s%s\n %s/%s: %s\n",
 	       eq, val, rrname_buf, rtype_buf, domain_buf);
 }
 
@@ -2667,15 +2906,18 @@ print_nmsg_base_packet(const nmsg_message_t msg, const axa_p_whit_t *whit,
 
 	ok = fname_enum_to_name(msg, "payload_type",
 				&type_str, ebuf, sizeof(ebuf));
-	printf("%s%s  %s\n", eq, val, type_str);
-	if (!ok)
+	if (!ok) {
+		printf("%s%s  %s\n", eq, val, type_str);
 		return;
-
+	}
 	if (!get_nmsg_field(msg, "payload", 0,
-			    &data, &data_len, ebuf, sizeof(ebuf))) {
+			       &data, &data_len, ebuf, sizeof(ebuf))) {
+		printf("%s%s  %s\n", eq, val, type_str);
 		printf(NMSG_LEADER"%s\n", (char *)data);
 		return;
 	}
+
+	printf("%s%s\n", eq, val);
 	print_raw_ip(data, data_len, whit);
 }
 
@@ -2694,7 +2936,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 	size_t data_len;
 	size_t n;
 
-	field_idx = whit->nmsg.hdr.field_idx;
+	field_idx = AXA_P2H_IDX(whit->nmsg.hdr.field_idx);
 	if (field_idx == AXA_NMSG_IDX_ERROR) {
 		strlcpy(buf, "ERROR", buf_len);
 		*nm = buf;
@@ -2745,7 +2987,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		*nm = field->name;
 		*eq = "=";
 		fname_to_ip(buf, buf_len, msg, field->name,
-			    whit->nmsg.hdr.val_idx);
+			    AXA_P2H_IDX(whit->nmsg.hdr.val_idx));
 		*val = buf;
 		break;
 
@@ -2753,9 +2995,9 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		*nm = field->name;
 		*eq = "=";
 		if (get_nmsg_field_by_idx(msg, field_idx,
-					   whit->nmsg.hdr.val_idx,
+					   AXA_P2H_IDX(whit->nmsg.hdr.val_idx),
 					   &data, &data_len, buf, buf_len))
-			axa_domain_to_str(data, data_len, buf);
+			axa_domain_to_str(data, data_len, buf, buf_len);
 		*val = buf;
 		break;
 
@@ -2765,7 +3007,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		*nm = field->name;
 		*eq = "=";
 		if (get_nmsg_field_by_idx(msg, field_idx,
-					  whit->nmsg.hdr.val_idx,
+					  AXA_P2H_IDX(whit->nmsg.hdr.val_idx),
 					  &data, &data_len, buf, buf_len)) {
 			n = min(buf_len-1, data_len);
 			memcpy(buf, data, n);
@@ -2778,7 +3020,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		*nm = field->name;
 		*eq = "=";
 		*val = rdata_nmsg_to_buf(buf, buf_len, msg, field,
-					 whit->nmsg.hdr.val_idx);
+					 AXA_P2H_IDX(whit->nmsg.hdr.val_idx));
 		break;
 
 	case AXA_FC_DNS:
@@ -2858,7 +3100,7 @@ out_error(const char *p, ...)
 }
 
 /* forward watch hits as nmsg messages */
-static void
+static bool
 out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 {
 	nmsg_message_t msg;
@@ -2868,21 +3110,23 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 		uint8_t	c[0];
 	} pkt_enum = { .e = NMSG__BASE__PACKET_TYPE__IP };
 	size_t len;
+	struct timeval now;
 	nmsg_res res;
+	bool result;
 
 	switch ((axa_p_whit_enum_t)whit->hdr.type) {
 	case AXA_P_WHIT_NMSG:
 		/* pass nmsg messages along */
 		whit2nmsg(&msg, whit, whit_len);
 		if (msg == NULL)
-			return;
+			return (false);
 		break;
 
 	case AXA_P_WHIT_IP:
 		/* Convert raw IP packets to nmsg BASE_PACKET */
 		len = whit_len - sizeof(whit->ip.hdr);
-		if (whit->ip.hdr.orig_len != len)
-			return;		/* Ignore incomplete packets. */
+		if (AXA_P2H32(whit->ip.hdr.ip_len) != len)
+			return (false);	/* Ignore incomplete packets. */
 
 		if (!out_nmsg_mod_checked) {
 			out_nmsg_mod_checked = true;
@@ -2890,19 +3134,19 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 						NMSG_VENDOR_BASE_PACKET_ID);
 			if (out_nmsg_mod == NULL) {
 				out_error("cannot get BASE_PACKET module");
-				return;
+				return (false);
 			}
 			res = nmsg_msgmod_init(out_nmsg_mod, &out_nmsg_clos);
 			if (res != nmsg_res_success) {
 				out_error("cannot init BASE_PACKET module");
 				out_nmsg_mod = NULL;
-				return;
+				return (false);
 			}
 		}
 		if (out_nmsg_mod == NULL) {
 			out_error("cannot forward IP as nmsg messages"
 				  " without PACKET nmsg_msgmod");
-			return;
+			return (false);
 		}
 
 		msg = nmsg_message_init(out_nmsg_mod);
@@ -2913,8 +3157,8 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 		res = nmsg_message_set_field(msg, "payload", 0,
 					     whit->ip.b, len);
 		AXA_ASSERT(res == nmsg_res_success);
-		ts.tv_sec = AXA_P2H32(whit->ip.hdr.ts.tv_sec);
-		ts.tv_nsec = AXA_P2H32(whit->ip.hdr.ts.tv_usec) * 1000;
+		ts.tv_sec = AXA_P2H32(whit->ip.hdr.tv.tv_sec);
+		ts.tv_nsec = AXA_P2H32(whit->ip.hdr.tv.tv_usec) * 1000;
 		nmsg_message_set_time(msg, &ts);
 		break;
 
@@ -2923,24 +3167,44 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 	default:
 		out_error("cannot forward SRA #%d messages as nmsg messages",
 			  whit->hdr.type);
-		return;
+		return (false);
 #pragma clang diagnostic pop
 	}
 
 	res = nmsg_output_write(out_nmsg_output, msg);
-	if (res != nmsg_res_success
-	    &&  (out_sock_type != SOCK_DGRAM
-		 || res != nmsg_res_errno
-		 || !AXA_IGNORED_UDP_ERRNO(errno))) {
-		clear_prompt();
-		error_msg("nmsg_output_write(): %s", nmsg_res_lookup(res));
-		out_close(false);
-		disconnect(true);
+	if (res == nmsg_res_success) {
+		result = true;
+	} else {
+		result = false;
+
+		gettimeofday(&now, NULL);
+		if (out_sock_type != SOCK_DGRAM
+		    || res != nmsg_res_errno
+		    || !AXA_IGNORED_UDP_ERRNO(errno)) {
+			/* Stop on non-UDP errors. */
+			clear_prompt();
+			error_msg("nmsg_output_write(): %s",
+				  nmsg_res_lookup(res));
+			out_close(false);
+			disconnect(true);
+		} else if (output_errno != errno
+			   || 60*1000 < axa_tv_diff2ms(&now,
+						       &output_errno_time)
+			   || axa_debug >= AXA_DEBUG_TRACE) {
+			/* Report occassional identical UDP errors. */
+			output_errno = errno;
+			gettimeofday(&output_errno_time, NULL);
+			clear_prompt();
+			error_msg("nmsg_output_write(): %s",
+				  strerror(output_errno));
+		}
 	}
 
 	nmsg_message_destroy(&msg);
 	if (time_out_flush.tv_sec == 0)
 		gettimeofday(&time_out_flush, NULL);
+
+	return (result);
 }
 
 static void
@@ -2986,19 +3250,49 @@ out_ip_pcap_file(const uint8_t *pkt, size_t caplen, size_t len,
 static void
 out_ip_pcap_inject(const uint8_t *pkt, size_t caplen)
 {
-	AXA_ASSERT(caplen < sizeof(out_buf) - sizeof(out_mac));
+	uint t;
+	uint32_t loopback_hdr;
 
-	memcpy(&out_buf[sizeof(out_mac)], pkt, caplen);
+	AXA_ASSERT(caplen < sizeof(out_buf) - out_buf_base);
 
-	if (0 > pcap_inject(out_pcap, out_buf, caplen)) {
+	if (out_pcap_datalink == DLT_NULL
+	    || out_pcap_datalink == DLT_LOOP) {
+		AXA_ASSERT(caplen >= 20);   /* Require at least an IP header. */
+		t = *pkt >> 4;
+		switch (t) {
+		case 4:
+			loopback_hdr = PF_INET;
+			break;
+		case 6:
+			loopback_hdr = PF_INET6;
+			break;
+		default:
+			error_msg("cannot inject packet onto %s"
+				  " with unknown IP protocol version %d",
+				  out_addr, t);
+			return;
+		}
+		if (out_pcap_datalink == DLT_LOOP)
+			loopback_hdr = htonl(loopback_hdr);
+		memcpy(out_buf, &loopback_hdr, sizeof(loopback_hdr));
+	}
+
+	memcpy(&out_buf[out_buf_base], pkt, caplen);
+	if (0 > pcap_inject(out_pcap, out_buf, caplen+out_buf_base)) {
+
+		/*
+		 * As of June, 2014, there is a bug in pcap_inject()
+		 * on Freebsd that breaks this.  Search for the
+		 * mailing list thread between Guy Harris and Fernando Gont
+		 * about "pcap_inject() on loopback (FreeBSD)"
+		 */
 		error_msg("failed to inject packet onto %s: %s",
 			  out_addr, pcap_geterr(out_pcap));
-		out_close(true);
 	}
 }
 
 /* forward watch hits in a pcap stream */
-static void
+static bool
 out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 {
 	struct timeval tv;
@@ -3007,7 +3301,6 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 	struct timespec ts;
 	nmsg_message_t msg;
 	uint vid, msgtype;
-	const char *vid_str, *msgtype_str;
 	const Nmsg__Base__Packet *packet;
 
 	tv.tv_sec = 0;
@@ -3021,40 +3314,46 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 			clear_prompt();
 			error_msg("truncated IP packet");
 			disconnect(true);
-			return;
+			return (false);
 		}
-		tv.tv_sec = AXA_P2H32(whit->ip.hdr.ts.tv_sec);
-		tv.tv_usec = AXA_P2H32(whit->ip.hdr.ts.tv_usec);
+		tv.tv_sec = AXA_P2H32(whit->ip.hdr.tv.tv_sec);
+		tv.tv_usec = AXA_P2H32(whit->ip.hdr.tv.tv_usec);
 		pkt = whit->ip.b;
 		caplen = whit_len - sizeof(whit->ip.hdr);
-		len = whit->ip.hdr.orig_len;
+		len = AXA_P2H32(whit->ip.hdr.ip_len);
 		break;
 
 	case AXA_P_WHIT_NMSG:
 		whit2nmsg(&msg, whit, whit_len);
 		if (msg == NULL)
-			return;
+			return (false);
 		vid = nmsg_message_get_vid(msg);
 		msgtype = nmsg_message_get_msgtype(msg);
 		if (vid != NMSG_VENDOR_BASE_ID
 		    || msgtype != NMSG_VENDOR_BASE_PACKET_ID) {
 			if (!out_error_ok()) {
-				vid_str = nmsg_msgmod_vid_to_vname(vid);
-				msgtype_str = nmsg_msgmod_msgtype_to_mname(vid,
-							msgtype);
 				out_error("cannot forward nmsg %s %s"
 					  " messages via pcap",
-					  vid_str, msgtype_str);
-				return;
+					  nmsg_msgmod_vid_to_vname(vid),
+					  nmsg_msgmod_msgtype_to_mname(vid,
+							msgtype));
 			}
+			return (false);
 		}
 
-		/* forward the IP packets in BASE_PACKET */
+		/* decode IP packets in BASE_PACKET to make pcap packets */
 		packet = (Nmsg__Base__Packet *)nmsg_message_get_payload(msg);
-		if (packet == NULL)
-			break;
-		if (packet->payload_type != NMSG__BASE__PACKET_TYPE__IP)
-			break;
+		if (packet == NULL
+		    || packet->payload_type != NMSG__BASE__PACKET_TYPE__IP) {
+			if (!out_error_ok()) {
+				out_error("failed to forward nmsg %s %s"
+					  " messages via pcap",
+					  nmsg_msgmod_vid_to_vname(vid),
+					  nmsg_msgmod_msgtype_to_mname(vid,
+							msgtype));
+			}
+			return (false);
+		}
 		nmsg_message_get_time(msg, &ts);
 		tv.tv_sec = ts.tv_sec;
 		tv.tv_usec = ts.tv_nsec / 1000;
@@ -3067,7 +3366,7 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
 		out_error("cannot forward watch hits type #%d", whit->hdr.type);
-		return;
+		return (false);
 #pragma clang diagnostic pop
 	}
 
@@ -3075,13 +3374,14 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 		out_ip_pcap_file(pkt, caplen, len, &tv);
 	else
 		out_ip_pcap_inject(pkt, caplen);
+	return (true);
 }
 
 static void
 print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	   const char *title_sep, const char *title)
 {
-	axa_p_whit_nmsg_hdr_t *mhdr;
+	axa_nmsg_idx_t vid, type;
 	char tag_buf[AXA_TAG_STRLEN];
 	const axa_nmsg_field_t *field;
 	char vendor_buf[12], mname_buf[12], field_buf[RDATA_BUF_LEN];
@@ -3097,16 +3397,16 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 
 	/* Convert binary vendor ID, message type, and field index to
 	 * vendor name, message type string, field name, and field value. */
-	mhdr = &whit->nmsg.hdr;
-	vendor = nmsg_msgmod_vid_to_vname(mhdr->vid);
+	vid = AXA_P2H_IDX(whit->nmsg.hdr.vid);
+	type = AXA_P2H_IDX(whit->nmsg.hdr.type);
+	vendor = nmsg_msgmod_vid_to_vname(vid);
 	if (vendor == NULL) {
-		snprintf(vendor_buf, sizeof(vendor_buf), "ID #%d",
-			 mhdr->vid);
+		snprintf(vendor_buf, sizeof(vendor_buf), "ID #%d", vid);
 		vendor = vendor_buf;
 	}
-	mname = nmsg_msgmod_msgtype_to_mname(mhdr->vid, mhdr->type);
+	mname = nmsg_msgmod_msgtype_to_mname(vid, type);
 	if (mname == NULL) {
-		snprintf(mname_buf, sizeof(mname_buf), "#%d", mhdr->type);
+		snprintf(mname_buf, sizeof(mname_buf), "#%d", type);
 		mname = mname_buf;
 	}
 	field = NULL;			/* silence gcc warning */
@@ -3127,13 +3427,13 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	clear_prompt();
 	printf("%s%s%s "AXA_OP_CH_PREFIX"%d  %s %s%s %s",
 	       axa_tag_to_str(tag_buf, sizeof(tag_buf),
-			      AXA_P2H16(client.recv_hdr.tag)),
+			      AXA_P2H_TAG(client.recv_hdr.tag)),
 	       title_sep, title,
-	       whit->hdr.ch, vendor, mname, group, nm);
+	       AXA_P2H_CH(whit->hdr.ch), vendor, mname, group, nm);
 
-	switch (mhdr->vid) {
+	switch (vid) {
 	case NMSG_VENDOR_BASE_ID:
-		switch (mhdr->type) {
+		switch (type) {
 		case NMSG_VENDOR_BASE_DNSQR_ID:
 			print_nmsg_base_dnsqr(msg, eq, val, whit);
 			break;
@@ -3153,7 +3453,7 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 		break;
 
 	case NMSG_VENDOR_SIE_ID:
-		switch (mhdr->type) {
+		switch (type) {
 		case NMSG_VENDOR_SIE_DNSDEDUPE_ID:
 			print_sie_dnsdedupe(msg, field, eq, val);
 			break;
@@ -3177,17 +3477,25 @@ print_whit(axa_p_whit_t *whit, size_t whit_len,
 	   const char *title_sep, const char *title)
 {
 	char tag_buf[AXA_TAG_STRLEN];
+	bool fwded;
 
+	/* Forward binary packets if necessary. */
 	if (out_on) {
 		if (out_nmsg_output != NULL) {
-			out_whit_nmsg(whit, whit_len);
+			fwded = out_whit_nmsg(whit, whit_len);
 		} else {
 			AXA_ASSERT(out_pcap != NULL);
-			out_whit_pcap(whit, whit_len);
+			fwded = out_whit_pcap(whit, whit_len);
+		}
+		if (fwded && --output_count == 0 && output_counting) {
+			clear_prompt();
+			printf("output %d packets to %s finished\n",
+			       output_count_total, out_addr);
+			out_close(true);
 		}
 	}
 
-	if (packet_counting && --packet_count < 0) {
+	if (--packet_count < 0 && packet_counting) {
 		if (packet_count == -1) {
 			clear_prompt();
 			fputs("packet count limit exceeded\n", stdout);
@@ -3209,9 +3517,9 @@ print_whit(axa_p_whit_t *whit, size_t whit_len,
 
 		printf("%s%s%s "AXA_OP_CH_PREFIX"%d\n",
 		       axa_tag_to_str(tag_buf, sizeof(tag_buf),
-				      AXA_P2H16(client.recv_hdr.tag)),
+				      AXA_P2H_TAG(client.recv_hdr.tag)),
 		       title_sep, title,
-		       whit->hdr.ch);
+		       AXA_P2H_CH(whit->hdr.ch));
 		print_raw_ip(whit->ip.b, whit_len - sizeof(whit->ip.hdr),
 			     whit);
 		return;
@@ -3242,7 +3550,8 @@ print_channel(void)
 
 	clear_prompt();
 	clist = &client.recv_body->clist;
-	snprintf(buf.c, sizeof(buf), AXA_OP_CH_PREFIX"%d", clist->ch);
+	snprintf(buf.c, sizeof(buf),
+		 AXA_OP_CH_PREFIX"%d", AXA_P2H_CH(clist->ch));
 	printf(" %8s %3s %s\n",
 	       buf.c, clist->on != 0 ? "on" : "off", clist->spec.c);
 }
@@ -3260,18 +3569,12 @@ sra_ssh_flush(void)
 	i = read(client.err_sock, ebuf, sizeof(ebuf));
 	if (i > 0) {
 		clear_prompt();
-		/* Set i = write() and discard i, because GNU gcc says that
-		 * ignoring the result from write() is "either a security
-		 * problem or always a bug" and casting write() to void
-		 * does not prevent the gcc warning. */
-		i = write(STDERR_FILENO, ebuf, i);
+		fwrite(ebuf, i, 1, stderr);
+		fflush(stderr);
 
-	} else if (i <= 0) {
-		if (i < 0 && (errno != EWOULDBLOCK
-			      || errno != EAGAIN
-			      || errno != EINTR))
-			error_msg("read(ssh stderr): %s",
-				  strerror(errno));
+	} else if (i < 0 && errno != EWOULDBLOCK && errno != EAGAIN
+		   && errno != EINTR) {
+		error_msg("read(ssh stderr): %s", strerror(errno));
 		close(client.err_sock);
 		client.err_sock = -1;
 	}
@@ -3281,126 +3584,132 @@ sra_ssh_flush(void)
 static void
 read_srvr(void)
 {
-	char buf[1024];
+	char buf[AXA_P_STRLEN];
 	char time_buf[32];
 	time_t epoch;
 	const axa_p_missed_t *missed;
 
-	switch (axa_p_recv(&emsg, client.in_sock, &client.recv_hdr,
-			   &client.recv_body, &client.recv_len, client.addr,
-			   protocol_mode==SRA ? AXA_P_FROM_SRA : AXA_P_FROM_RAD,
-			   &client.alive)) {
-	case AXA_P_RECV_RESULT_INCOM:
-		return;
-	case AXA_P_RECV_RESULT_ERR:
-		clear_prompt();
-		error_msg("%s", emsg.c);
-		disconnect(true);
-		return;
-	case AXA_P_RECV_RESULT_DONE:
-		break;
-	default:
-		AXA_FAIL("impossible axa_p_recv() result");
-	}
+	do {
+		switch (axa_p_recv(&emsg, client.in_sock, &client.recv_hdr,
+				   &client.recv_body, &client.recv_len,
+				   &client.buf, client.addr,
+				   protocol_mode==SRA
+				   ? AXA_P_FROM_SRA : AXA_P_FROM_RAD,
+				   &client.alive)) {
+		case AXA_P_RECV_RESULT_INCOM:
+			return;
+		case AXA_P_RECV_RESULT_ERR:
+			clear_prompt();
+			error_msg("%s", emsg.c);
+			disconnect(true);
+			return;
+		case AXA_P_RECV_RESULT_DONE:
+			break;
+		default:
+			AXA_FAIL("impossible axa_p_recv() result");
+		}
 
-	switch ((axa_p_op_t)client.recv_hdr.op) {
-	case AXA_P_OP_NOP:
-		if (axa_debug >= AXA_DEBUG_TRACE) {
+		switch ((axa_p_op_t)client.recv_hdr.op) {
+		case AXA_P_OP_NOP:
+			if (axa_debug >= AXA_DEBUG_TRACE) {
+				clear_prompt();
+				printf("%s\n", axa_p_to_str(buf, sizeof(buf),
+							true, &client.recv_hdr,
+							client.recv_body));
+			}
+			break;
+
+		case AXA_P_OP_HELLO:
+			axa_client_hello(&client, &client.recv_body->hello);
+			if (quiet)
+				break;
 			clear_prompt();
 			printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
 						    &client.recv_hdr,
 						    client.recv_body));
-		}
-		break;
-
-	case AXA_P_OP_HELLO:
-		clear_prompt();
-		axa_client_hello(&client, &client.recv_body->hello);
-		printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
-					    &client.recv_hdr,
-					    client.recv_body));
-		break;
-
-	case AXA_P_OP_OK:
-		clear_prompt();
-		printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
-					    &client.recv_hdr,
-					    client.recv_body));
-		break;
-
-	case AXA_P_OP_ERROR:
-		clear_prompt();
-		printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
-					    &client.recv_hdr,
-					    client.recv_body));
-		eclose_fnc();
-		break;
-
-	case AXA_P_OP_MISSED:
-		if (packet_counting && packet_count < 0)
 			break;
-		missed = &client.recv_body->missed;
-		epoch = AXA_P2H32(missed->last_reported);
-		strftime(time_buf, sizeof(time_buf), "%Y/%m/%d %T",
-			 localtime(&epoch));
-		print_recv_tag_op();
-		printf("    lost %ld input packets,"
-		       " dropped %ld for congestion,\n"
-		       "\t%ld for per sec limit,"
-		       " %ld for per day limit\n"
-		       "\tsince %s\n",
-		       AXA_P2H64(missed->input_dropped),
-		       AXA_P2H64(missed->dropped),
-		       AXA_P2H64(missed->sec_rlimited),
-		       AXA_P2H64(missed->day_rlimited),
-		       time_buf);
-		break;
 
-	case AXA_P_OP_WHIT:
-		print_whit(&client.recv_body->whit,
-			   client.recv_len - sizeof(client.recv_hdr),
-			   "", "");
-		break;
+		case AXA_P_OP_OK:
+			if (quiet)
+				break;
+			clear_prompt();
+			printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
+						    &client.recv_hdr,
+						    client.recv_body));
+			break;
 
-	case AXA_P_OP_AHIT:
-		print_ahit();
-		break;
+		case AXA_P_OP_ERROR:
+			clear_prompt();
+			printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
+						    &client.recv_hdr,
+						    client.recv_body));
+			error_close(false);
+			break;
 
-	case AXA_P_OP_WLIST:
-	case AXA_P_OP_ALIST:
-	case AXA_P_OP_OPT:
-		clear_prompt();
-		printf("%s\n", axa_p_to_str(buf, sizeof(buf), false,
-					    &client.recv_hdr,
-					    client.recv_body));
-		break;
+		case AXA_P_OP_MISSED:
+			if (packet_counting && packet_count < 0)
+				break;
+			missed = &client.recv_body->missed;
+			epoch = AXA_P2H32(missed->last_reported);
+			strftime(time_buf, sizeof(time_buf), "%Y/%m/%d %T",
+				 localtime(&epoch));
+			print_recv_tag_op();
+			printf("    lost %"PRIu64" input packets,"
+			       " dropped %"PRIu64" for congestion,\n"
+			       "\t%"PRIu64" for per sec limit\n"
+			       "\tsince %s\n",
+			       AXA_P2H64(missed->input_dropped),
+			       AXA_P2H64(missed->dropped),
+			       AXA_P2H64(missed->sec_rlimited),
+			       time_buf);
+			break;
 
-	case AXA_P_OP_CLIST:
-		print_channel();
-		break;
+		case AXA_P_OP_WHIT:
+			print_whit(&client.recv_body->whit,
+				   client.recv_len - sizeof(client.recv_hdr),
+				   "", "");
+			break;
 
-	case AXA_P_OP_USER:
-	case AXA_P_OP_JOIN:
-	case AXA_P_OP_PAUSE:
-	case AXA_P_OP_GO:
-	case AXA_P_OP_WATCH:
-	case AXA_P_OP_WGET:
-	case AXA_P_OP_ANOM:
-	case AXA_P_OP_AGET:
-	case AXA_P_OP_STOP:
-	case AXA_P_OP_ALL_STOP:
-	case AXA_P_OP_CHANNEL:
-	case AXA_P_OP_CGET:
-	case AXA_P_OP_ACCT:
-	default:
-		AXA_FAIL("impossible SRA op of %d from %s",
-			 client.recv_hdr.op, client.addr);
-	}
-	axa_client_flush(&client);
+		case AXA_P_OP_AHIT:
+			print_ahit();
+			break;
+
+		case AXA_P_OP_WLIST:
+		case AXA_P_OP_ALIST:
+		case AXA_P_OP_OPT:
+			clear_prompt();
+			printf("%s\n", axa_p_to_str(buf, sizeof(buf), false,
+						    &client.recv_hdr,
+						    client.recv_body));
+			break;
+
+		case AXA_P_OP_CLIST:
+			print_channel();
+			break;
+
+		case AXA_P_OP_USER:
+		case AXA_P_OP_JOIN:
+		case AXA_P_OP_PAUSE:
+		case AXA_P_OP_GO:
+		case AXA_P_OP_WATCH:
+		case AXA_P_OP_WGET:
+		case AXA_P_OP_ANOM:
+		case AXA_P_OP_AGET:
+		case AXA_P_OP_STOP:
+		case AXA_P_OP_ALL_STOP:
+		case AXA_P_OP_CHANNEL:
+		case AXA_P_OP_CGET:
+		case AXA_P_OP_ACCT:
+		default:
+			AXA_FAIL("impossible SRA op of %d from %s",
+				 client.recv_hdr.op, client.addr);
+		}
+		axa_client_flush(&client);
+	} while (client.buf.data_len != 0);
 }
 
 /* Send a command to the SRA or RAD server. */
-static int				/* 1=ok 0=failed -1=would be syntax */
+static int				/* 1=ok 0=failed -1=server syntax */
 srvr_send(axa_tag_t tag, axa_p_op_t op, const void *b, size_t b_len)
 {
 	axa_p_hdr_t hdr;
@@ -3408,20 +3717,28 @@ srvr_send(axa_tag_t tag, axa_p_op_t op, const void *b, size_t b_len)
 	size_t done;
 	char pbuf[120];
 
-	result = axa_p_send(&emsg, client.out_sock, AXA_P_PVERS, tag, op, &hdr,
-			    b, b_len, NULL, 0, &done, client.addr,
-			    protocol_mode == SRA ? AXA_P_TO_SRA : AXA_P_TO_RAD,
-			    &client.alive);
-
 	if (axa_debug >= AXA_DEBUG_TRACE) {
 		clear_prompt();
+		axa_make_hdr(&hdr, client.pvers, tag, op, b_len, 0,
+			     protocol_mode==SRA ? AXA_P_TO_SRA : AXA_P_TO_RAD);
 		printf("sending %s\n",
 		       axa_p_to_str(pbuf, sizeof(pbuf), true, &hdr, b));
 	}
-	if (result != AXA_P_SEND_BAD)
-		return (1);
 
-	error_msg("%s", emsg.c);
-	disconnect(true);
-	return (0);
+	result = axa_p_send(&emsg, client.out_sock, client.pvers, tag,
+			    op, &hdr, b, b_len, NULL, 0, &done, client.addr,
+			    protocol_mode == SRA ? AXA_P_TO_SRA : AXA_P_TO_RAD,
+			    &client.alive);
+	switch (result) {
+	case AXA_P_SEND_OK:
+		return (1);
+	case AXA_P_SEND_BUSY:
+		error_msg("%s", emsg.c);
+		return (1);
+	case AXA_P_SEND_BAD:
+	default:
+		error_msg("%s", emsg.c);
+		disconnect(true);
+		return (0);
+	}
 }

@@ -16,6 +16,7 @@
  *  limitations under the License.
  */
 
+#include <axa/axa_endian.h>
 #include <axa/wire.h>
 
 #include <wdns.h>
@@ -28,22 +29,17 @@
 #include <string.h>
 #ifdef __linux
 #include <bsd/string.h>			/* for strlcpy() */
-#include <endian.h>
-#else
-#include <sys/endian.h>
 #endif
 #include <sys/uio.h>
 #include <unistd.h>
 
 
-/* Point to the value string for "ip=", "dns=", or "ch=".
+/* Point to the value string after "ip=", "dns=", or "ch=".
  * Allow whitespace around '=' or instead of '='.
- * If the arg string has the specified prefix, return a pointer to the
- * rest of the arg, allowing whitespace around '=' after "ip" and "dns".
- * Require whitespace when there is no '=' in the old format "dns example.com".
  */
 static const char *
-get_value(const char *arg, const char *type, size_t type_len)
+get_value(const char *arg,
+	  const char *type, size_t type_len)	/* "ip", "dns", or "ch" */
 {
 	size_t sep_len;
 
@@ -61,21 +57,26 @@ get_value(const char *arg, const char *type, size_t type_len)
 	return (arg);
 }
 
-/* Parse a watch definition.
- *	An empty emsg->c indicates an unrecognized type of watch. */
+/*
+ * Parse an AXA watch definition.
+ *	false=problem
+ *	    with emsg->c a relevant error message except when the watch
+ *	    makes no sense.  In that case, emsg->c[0] == '\0'.
+ */
 bool
 axa_parse_watch(axa_emsg_t *emsg,
 		axa_p_watch_t *watch,	/* parsed result */
 		size_t *watch_len,
-		const char *arg)	/* null terminated */
+		const char *arg)	/* null terminated input */
 {
 	const char *value;
 	int prefix;
 	axa_socku_t su;
+	axa_p_ch_t ch;
 	wdns_name_t name;
 
 	memset(watch, 0, sizeof(*watch));
-	*watch_len = sizeof(*watch)-sizeof(watch->pat);
+	*watch_len = sizeof(*watch) - sizeof(watch->pat);
 
 	if ((value = get_value(arg, "ip", sizeof("ip")-1)) != NULL) {
 		if (*value == '\0') {
@@ -88,11 +89,19 @@ axa_parse_watch(axa_emsg_t *emsg,
 		watch->prefix = prefix;
 		if (su.sa.sa_family == AF_INET) {
 			watch->type = AXA_P_WATCH_IPV4;
+			if (watch->prefix < 32)
+				watch->flags |= AXA_P_WATCH_FG_WILD;
 			watch->pat.addr = su.ipv4.sin_addr;
+			/* Be conservative in what we send by not trimming
+			 * the address. */
 			*watch_len += sizeof(watch->pat.addr);
 		} else {
 			watch->type = AXA_P_WATCH_IPV6;
+			if (watch->prefix < 128)
+				watch->flags |= AXA_P_WATCH_FG_WILD;
 			watch->pat.addr6 = su.ipv6.sin6_addr;
+			/* Be conservative in what we send by not trimming
+			 * the address. */
 			*watch_len += sizeof(watch->pat.addr6);
 		}
 		return (true);
@@ -101,7 +110,7 @@ axa_parse_watch(axa_emsg_t *emsg,
 	if ((value = get_value(arg, "dns", sizeof("dns")-1)) != NULL) {
 		watch->type = AXA_P_WATCH_DNS;
 		if (*value == '*') {
-			watch->is_wild = 1;
+			watch->flags |= AXA_P_WATCH_FG_WILD;
 			if (*++value == '.' && value[1] != '\0')
 				++value;
 		}
@@ -127,16 +136,157 @@ axa_parse_watch(axa_emsg_t *emsg,
 			return (false);
 		}
 		watch->type = AXA_P_WATCH_CH;
-		if (!axa_parse_ch(emsg, &watch->pat.ch,
+		if (!axa_parse_ch(emsg, &ch,
 				  value, strlen(value), false, true))
 			return (false);
+		watch->pat.ch = AXA_H2P_CH(ch);
 		*watch_len += sizeof(watch->pat.ch);
 		return (true);
+	}
+
+	if (AXA_CLITCMP(arg, "errors")) {
+		arg += sizeof("errors")-1;
+		arg += strspn(arg, AXA_WHITESPACE);
+		if (*arg == '\0') {
+			watch->type = AXA_P_WATCH_ERRORS;
+			return (true);
+		}
+	}
+	if (AXA_CLITCMP(arg, "error")) {
+		arg += sizeof("error")-1;
+		arg += strspn(arg, AXA_WHITESPACE);
+		if (*arg == '\0') {
+			watch->type = AXA_P_WATCH_ERRORS;
+			return (true);
+		}
 	}
 
 	/* Let the caller handle nonsense watches */
 	emsg->c[0] = '\0';
 	return (false);
+}
+
+static bool
+get_flag(axa_p_watch_t *watch, u_int bit,
+	 char **strp, const char *flag, size_t flag_len)
+{
+	char *str;
+
+	str = *strp;
+	if (strncasecmp(str, flag, flag_len) != 0)
+		return (false);
+	str += flag_len;
+	if (*str == ',') {
+		++str;
+	} else if (*str != ')') {
+		return (false);
+	}
+	watch->flags |= bit;
+	*strp = str;
+	return (true);
+}
+
+/*
+ * Parse an RAD watch definition.
+ *	An empty emsg->c indicates an unrecognized type of watch.
+ */
+bool
+axa_parse_rad_watch(axa_emsg_t *emsg,
+		    axa_p_watch_t *watch,   /* parsed result */
+		    size_t *watch_len,
+		    const char *arg)	/* null terminated */
+{
+	char *str, *flags;
+
+	str = strdup(arg);
+	flags = strchr(str, '(');
+	if (flags != NULL)
+		*flags++ = '\0';
+
+	if (!axa_parse_watch(emsg, watch, watch_len, str)) {
+		free(str);
+		return (false);
+	}
+
+	switch ((axa_p_watch_type_t)watch->type) {
+	case AXA_P_WATCH_IPV4:
+	case AXA_P_WATCH_IPV6:
+	case AXA_P_WATCH_DNS:
+		break;
+	case AXA_P_WATCH_CH:
+		axa_pemsg(emsg, "channel watches not available");
+		free(str);
+		return (false);
+	case AXA_P_WATCH_ERRORS:
+		axa_pemsg(emsg, "error watches not available");
+		free(str);
+		return (false);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
+	default:
+		AXA_FAIL("impossible message type");
+#pragma clang diagnostic pop
+	}
+
+	if (flags != NULL && *flags != '\0') {
+		do {
+			if (get_flag(watch, AXA_P_WATCH_FG_SHARED,
+				     &flags, AXA_P_WATCH_STR_SHARED,
+				     sizeof(AXA_P_WATCH_STR_SHARED)-1))
+				continue;
+			axa_pemsg(emsg, "unrecognized flag \"(%s\"", flags);
+			free(str);
+			return (false);
+		} while (strcmp(flags, ")") != 0);
+	}
+	free(str);
+	return (true);
+}
+
+/* Parse an AXA anomaly detection module definition.
+ *	false=problem
+ *	    emsg->c is a relevant error message except when the watch
+ *	    makes no sense.  In that case, emsg->c[0] == '\0'. */
+bool
+axa_parse_anom(axa_emsg_t *emsg,
+	       axa_p_anom_t *anom,	/* parsed result */
+	       size_t *anom_len,	/* its length */
+	       const char *arg)		/* null terminated input */
+{
+	const char *parms;
+	size_t an_len, parms_len;
+
+	memset(anom, 0, sizeof(*anom));
+
+	/* look for "name [parameters]" */
+	if (arg[0] == '\0') {
+		axa_pemsg(emsg, "missing name");
+		return (false);
+	}
+	parms = strpbrk(arg, AXA_WHITESPACE);
+	if (parms == NULL) {
+		an_len = strlen(arg);
+		parms = arg+an_len;
+	} else {
+		an_len = parms - arg;
+	}
+	if (an_len >= sizeof(anom->an)) {
+		axa_pemsg(emsg, "name \"%.*s\" too long",
+			  (int)an_len, arg);
+		return (false);
+	}
+	memcpy(&anom->an, arg, an_len);
+
+	parms += strspn(parms, AXA_WHITESPACE);
+	parms_len = strlen(parms)+1;
+	if (parms_len >= sizeof(anom->parms)) {
+		axa_pemsg(emsg, "parameters \"%s\" too long", parms);
+		return (false);
+	}
+	memcpy(&anom->parms, parms, parms_len);
+	*anom_len = sizeof(*anom) - sizeof(anom->parms) + parms_len;
+
+	return (true);
 }
 
 char *
@@ -229,6 +379,7 @@ watch_ip_to_str(char *buf, size_t buf_len,
 
 	/* allow truncation to the prefix */
 	memset(&abuf, 0, sizeof(abuf));
+	AXA_ASSERT(alen <= sizeof(abuf));
 	memcpy(&abuf, addr, alen);
 
 	if (NULL == inet_ntop(af, &abuf, ip_str, sizeof(ip_str))) {
@@ -261,8 +412,9 @@ axa_watch_to_str(char *buf, size_t buf_len,
 				&watch->pat.addr6, pat_len, watch->prefix);
 		break;
 	case AXA_P_WATCH_DNS:
-		axa_domain_to_str(watch->pat.dns, pat_len, domain);
-		if (!watch->is_wild) {
+		axa_domain_to_str(watch->pat.dns, pat_len,
+				  domain, sizeof(domain));
+		if ((watch->flags & AXA_P_WATCH_FG_WILD) == 0) {
 			star = "";
 		} else if (domain[0] == '.') {
 				star = "*";
@@ -274,7 +426,7 @@ axa_watch_to_str(char *buf, size_t buf_len,
 	case AXA_P_WATCH_CH:
 		snprintf(buf, buf_len,
 			 AXA_OP_CH_PREFIX"="AXA_OP_CH_PREFIX"%d",
-			 watch->pat.ch);
+			 AXA_P2H_CH(watch->pat.ch));
 		break;
 	case AXA_P_WATCH_ERRORS:
 		snprintf(buf, buf_len, "ERRORS");
@@ -282,10 +434,13 @@ axa_watch_to_str(char *buf, size_t buf_len,
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
-		snprintf(buf, buf_len, "invalid watch type %d", watch->type);
+		snprintf(buf, buf_len, "unknown watch type %d", watch->type);
 		break;
 #pragma clang diagnostic pop
 	}
+
+	if ((watch->flags & AXA_P_WATCH_FG_SHARED) != 0)
+		strlcat(buf, "("AXA_P_WATCH_STR_SHARED")", buf_len);
 
 	return (buf);
 }
@@ -302,7 +457,7 @@ watch_add_str(char **bufp, size_t *buf_lenp,
 	*buf_lenp -= len;
 }
 
-static bool
+static void
 rlimit_to_str(char **bufp, size_t *buf_lenp,
 	      axa_rlimit_t limit, axa_rlimit_t cur, const char *str)
 {
@@ -315,25 +470,25 @@ rlimit_to_str(char **bufp, size_t *buf_lenp,
 	cur = AXA_P2H64(cur);
 	if (cur == AXA_RLIMIT_NA) {
 		if (limit == AXA_RLIMIT_NA)
-			return (true);
+			return;
 		cur_buf[0] = '\0';
 	} else {
-		snprintf(cur_buf, sizeof(cur_buf), "; current value=%ld", cur);
+		snprintf(cur_buf, sizeof(cur_buf),
+			 "; current value=%"PRIu64, cur);
 	}
 	if (limit == AXA_RLIMIT_NA) {
 		limit_str = "no change";
 	} else if (limit == AXA_RLIMIT_OFF) {
 		limit_str = "unlimited";
 	} else {
-		snprintf(limit_buf, sizeof(limit_buf), "%ld", limit);
+		snprintf(limit_buf, sizeof(limit_buf), "%"PRIu64, limit);
 		limit_str = limit_buf;
 	}
-	return (axa_buf_print(bufp, buf_lenp, true, "\n    %s per %s%s",
-			      limit_str, str, cur_buf));
+	axa_buf_print(bufp, buf_lenp, "\n    %s per %s%s",
+		      limit_str, str, cur_buf);
 }
 
-/* Convert AXA protocol messages to strings for debugging and
- * in some cases for sratool and radtool. */
+/* Convert som AXA protocol messages to strings. */
 char *
 axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	     bool print_op,
@@ -347,9 +502,9 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	buf = buf0;
 	buf[0] = '\0';
 	if (print_op)
-		axa_buf_print(&buf, &buf_len, true, "%s %s ",
+		axa_buf_print(&buf, &buf_len, "%s %s ",
 			      axa_tag_to_str(tag_buf, sizeof(tag_buf),
-					     AXA_P2H16(hdr->tag)),
+					     AXA_P2H_TAG(hdr->tag)),
 			      axa_op_to_str(op_buf, sizeof(op_buf), hdr->op));
 
 	switch ((axa_p_op_t)hdr->op) {
@@ -357,7 +512,7 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 		break;
 
 	case AXA_P_OP_HELLO:
-		axa_buf_print(&buf, &buf_len, true, "%s", body->hello.str);
+		axa_buf_print(&buf, &buf_len, "%s", body->hello.str);
 		break;
 
 	case AXA_P_OP_OK:
@@ -365,10 +520,10 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 		if (body->result.op == AXA_P_OP_OK
 		    || body->result.op == AXA_P_OP_NOP
 		    || body->result.op == AXA_P_OP_ERROR) {
-			axa_buf_print(&buf, &buf_len, true, "%s",
+			axa_buf_print(&buf, &buf_len, "%s",
 				      body->result.str);
 		} else {
-			axa_buf_print(&buf, &buf_len, true, "%s %s",
+			axa_buf_print(&buf, &buf_len, "%s %s",
 				      axa_op_to_str(op_buf, sizeof(op_buf),
 						    body->result.op),
 				      body->result.str);
@@ -376,8 +531,10 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 		break;
 
 	case AXA_P_OP_MISSED:
-	case AXA_P_OP_WHIT:
 		break;
+
+	case AXA_P_OP_WHIT:
+		break;			/* The tag is enough. */
 
 	case AXA_P_OP_WATCH:
 		watch = &body->watch;
@@ -386,49 +543,55 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 		break;
 
 	case AXA_P_OP_ANOM:
-		snprintf(buf, buf_len, "%s %s",
-			 body->anom.an.c, body->anom.parms);
+		if (AXA_P2H32(hdr->len)-sizeof(*hdr) == sizeof(body->anom.an.c))
+			snprintf(buf, buf_len, "\"%s\"",
+				 body->anom.an.c);
+		else
+			snprintf(buf, buf_len, "\"%s\" \"%s\"",
+				 body->anom.an.c, body->anom.parms);
 		break;
 
 	case AXA_P_OP_CHANNEL:
-		if (body->channel.ch == AXA_OP_CH_ALL) {
+		if (body->channel.ch == AXA_P2H_CH(AXA_OP_CH_ALL)) {
 			snprintf(buf, buf_len, AXA_OP_CH_ALLSTR" %s",
 				 (body->channel.on != 0) ? "on" : "off");
 		} else {
 			snprintf(buf, buf_len, AXA_OP_CH_PREFIX"%d %s",
-				 body->channel.ch,
+				 AXA_P2H_CH(body->channel.ch),
 				 (body->channel.on != 0) ? "on" : "off");
 		}
 		break;
 
 	case AXA_P_OP_WLIST:
-		if (hdr->tag != AXA_TAG_NONE &&
+		if (hdr->tag != AXA_P2H_TAG(AXA_TAG_NONE) &&
 		    hdr->tag != body->wlist.cur_tag)
-			axa_buf_print(&buf, &buf_len, true,
+			axa_buf_print(&buf, &buf_len,
 				      "    nearest WATCH to %d is %d\n",
-				      AXA_P2H16(hdr->tag),
-				      AXA_P2H16(body->wlist.cur_tag));
-		axa_buf_print(&buf, &buf_len, true, "  %5s ",
+				      AXA_P2H_TAG(hdr->tag),
+				      AXA_P2H_TAG(body->wlist.cur_tag));
+		axa_buf_print(&buf, &buf_len, "  %5s ",
 			      axa_tag_to_str(tag_buf, sizeof(tag_buf),
-					     body->wlist.cur_tag));
-		watch = &body->wlist.w;
-		watch_add_str(&buf, &buf_len, watch,
-			      (AXA_P2H32(hdr->len) - sizeof(*hdr)));
+					     AXA_P2H_TAG(body->wlist.cur_tag)));
+		watch_add_str(&buf, &buf_len, &body->wlist.w,
+			      (AXA_P2H32(hdr->len) - sizeof(*hdr)
+			       - (sizeof(body->wlist)
+				  - sizeof(body->wlist.w))));
 		break;
 
 	case AXA_P_OP_AHIT:
+		snprintf(buf, buf_len, "\"%s\"", body->ahit.an.c);
 		break;
 
 	case AXA_P_OP_ALIST:
-		if (hdr->tag != AXA_TAG_NONE
+		if (hdr->tag != AXA_P2H_TAG(AXA_TAG_NONE)
 		    && hdr->tag != body->alist.cur_tag)
-			axa_buf_print(&buf, &buf_len, true,
+			axa_buf_print(&buf, &buf_len,
 				      "    nearest ANOMALY to %d is %d\n",
-				      AXA_P2H16(hdr->tag),
-				      AXA_P2H16(body->alist.cur_tag));
-		axa_buf_print(&buf, &buf_len, true, "  %5s %5s; %s",
+				      AXA_P2H_TAG(hdr->tag),
+				      AXA_P2H_TAG(body->alist.cur_tag));
+		axa_buf_print(&buf, &buf_len, "  %5s %5s %s",
 			      axa_tag_to_str(tag_buf, sizeof(tag_buf),
-					     body->alist.cur_tag),
+					     AXA_P2H_TAG(body->alist.cur_tag)),
 			      body->alist.anom.an.c,
 			      body->alist.anom.parms);
 		break;
@@ -437,33 +600,29 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 		break;
 
 	case AXA_P_OP_USER:
-		axa_buf_print(&buf, &buf_len, true, "'%s'", body->user.name);
+		axa_buf_print(&buf, &buf_len, "'%s'", body->user.name);
 		break;
 
 	case AXA_P_OP_OPT:
 		switch ((axa_p_opt_type_t)body->opt.type) {
 		case AXA_P_OPT_DEBUG:
-			axa_buf_print(&buf, &buf_len, true, "debug=%d",
+			axa_buf_print(&buf, &buf_len, "debug=%d",
 				      body->opt.u.debug);
 			break;
 		case AXA_P_OPT_RLIMIT:
-			axa_buf_print(&buf, &buf_len, true, "RATE LIMITS");
+			axa_buf_print(&buf, &buf_len, "RATE LIMITS");
 			rlimit_to_str(&buf, &buf_len,
 				      body->opt.u.rlimit.max_pkts_per_sec,
 				      body->opt.u.rlimit.cur_pkts_per_sec,
 				      "second");
-			rlimit_to_str(&buf, &buf_len,
-				      body->opt.u.rlimit.max_pkts_per_day,
-				      body->opt.u.rlimit.cur_pkts_per_day,
-				      "day");
 			if (AXA_P2H64(body->opt.u.rlimit.report_secs)
 			    == AXA_RLIMIT_OFF)
-				axa_buf_print(&buf, &buf_len, true,
-					      "    no regular reports");
+				axa_buf_print(&buf, &buf_len,
+					      "\n    no regular reports");
 			else if (AXA_P2H64(body->opt.u.rlimit.report_secs)
 				 != AXA_RLIMIT_NA)
-				axa_buf_print(&buf, &buf_len, true,
-					      "\n    %ld"
+				axa_buf_print(&buf, &buf_len,
+					      "\n    %"PRIu64
 					      " seconds between reports",
 					      AXA_P2H64(body->opt.u.
 							rlimit.report_secs));
@@ -471,7 +630,7 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 		default:
-			axa_buf_print(&buf, &buf_len, true,
+			axa_buf_print(&buf, &buf_len,
 				      "unrecogized type %d", body->opt.type);
 			break;
 #pragma clang diagnostic pop
@@ -494,7 +653,7 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	return (buf0);
 }
 
-/* Check the header of an SRA message. */
+/* Check the header of an AXA message. */
 static bool				/* false=bad */
 ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
        const char *peer, axa_p_direction_t dir)
@@ -603,7 +762,7 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 		max_len = sizeof(body->watch);
 		min_len = max_len - sizeof(body->watch.pat);
 		tagged = 1;
-		dir_ok = (dir == AXA_P_TO_SRA);
+		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
 		break;
 	case AXA_P_OP_WGET:
 		max_len = min_len = 0;
@@ -666,7 +825,7 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 #pragma clang diagnostic pop
 	}
 
-	tag = AXA_P2H16(hdr->tag);
+	tag = AXA_P2H_TAG(hdr->tag);
 	if (tagged == 1) {
 		if (tag == AXA_TAG_NONE) {
 			axa_pemsg(emsg, "missing tag for %s from %s",
@@ -697,9 +856,7 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 		default:		dir_str = "?"; break;
 #pragma clang diagnostic pop
 		}
-		axa_pemsg(emsg, "%s illegal from %s %s",
-			  axa_op_to_str(op_buf, sizeof(op_buf), hdr->op),
-			  dir_str, peer);
+		axa_pemsg(emsg, "illegal from %s %s", dir_str, peer);
 		return (false);
 	}
 
@@ -719,26 +876,37 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 	return (true);
 }
 
+/* Check that an AXA message is null terminated. */
 static bool
-ck_body_null(axa_emsg_t *emsg, const axa_p_hdr_t *hdr, const axa_p_body_t *body,
-	     size_t hdr_len, const char *field)
+ck_field_null(axa_emsg_t *emsg, axa_p_op_t op, const void *field,
+	      size_t field_len, const char *field_name)
 {
 	char op_buf[AXA_P_OP_STRLEN];
 
-	if (body->b[hdr_len-sizeof(*hdr)-1] != '\0') {
+	if (field_len == 0) {
+		axa_pemsg(emsg, "%s %s truncated",
+			  axa_op_to_str(op_buf, sizeof(op_buf), op),
+			  field_name);
+		return (false);
+	}
+	if (((uint8_t *)field)[field_len-1] != '\0') {
 		axa_pemsg(emsg, "%s %s not null terminated",
-			  axa_op_to_str(op_buf, sizeof(op_buf), hdr->op),
-			  field);
+			  axa_op_to_str(op_buf, sizeof(op_buf), op),
+			  field_name);
 		return (false);
 	}
 	return (true);
 }
 
+/* Check a binary channel number. */
 static bool
-ck_ch(axa_emsg_t *emsg, axa_p_op_t op, axa_p_ch_t ch, bool all_ok)
+ck_ch(axa_emsg_t *emsg, axa_p_op_t op,
+      axa_p_ch_t ch,			/* protocol byte order */
+      bool all_ok)
 {
 	char op_buf[AXA_P_OP_STRLEN];
 
+	ch = AXA_P2H_CH(ch);
 	if (ch == AXA_OP_CH_ALL && all_ok)
 		return (true);
 	if (ch > AXA_OP_CH_MAX) {
@@ -749,13 +917,14 @@ ck_ch(axa_emsg_t *emsg, axa_p_op_t op, axa_p_ch_t ch, bool all_ok)
 	return (true);
 }
 
+/* Check anomaly name */
 static bool
 ck_an(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_an_t *an)
 {
 	char op_buf[AXA_P_OP_STRLEN];
 
 	if (an->c[sizeof(an)-1] != '\0') {
-		axa_pemsg(emsg, "%s \"%.*s\" anomaly name not null terminated",
+		axa_pemsg(emsg, "%s \"%.*s\" name not null terminated",
 			  axa_op_to_str(op_buf, sizeof(op_buf), op),
 			  (int)sizeof(*an), an->c);
 		return (false);
@@ -763,42 +932,97 @@ ck_an(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_an_t *an)
 	return (true);
 }
 
+/* Check anomally specification. */
+static bool
+ck_anom(axa_emsg_t *emsg, axa_p_op_t op,
+	const axa_p_anom_t *anom, size_t anom_len)
+{
+	size_t parms_len;
+
+	parms_len = anom_len - sizeof(anom->an);
+	return (ck_field_null(emsg, op, anom->an.c, sizeof(anom->an), "name")
+		&& (parms_len == 0
+		    || ck_field_null(emsg, op, anom->parms, parms_len,
+				     "parameters")));
+}
+
+/* Check a watch in AXA_P_OP_WATCH or AXA_P_OP_WLIST. */
 static bool
 ck_watch(axa_emsg_t *emsg, axa_p_op_t op,
 	 const axa_p_watch_t *w, size_t watch_len)
 {
 	char op_buf[AXA_P_OP_STRLEN];
 	ssize_t pat_len;
+	int name_len;
+
+	if (w->pad != 0) {
+		axa_pemsg(emsg, "%s bad watch byte %#x",
+			  axa_op_to_str(op_buf, sizeof(op_buf), op),
+			  w->pad);
+		return (false);
+	}
+	if (0 != (w->flags & ~(AXA_P_WATCH_FG_WILD
+			       | AXA_P_WATCH_FG_SHARED))) {
+		axa_pemsg(emsg, "%s bad watch flags %#x",
+			  axa_op_to_str(op_buf, sizeof(op_buf), op),
+			  w->flags);
+		return (false);
+	}
 
 	pat_len = watch_len - (sizeof(*w) - sizeof(w->pat));
 	switch ((axa_p_watch_type_t)w->type) {
 	case AXA_P_WATCH_IPV4:
-		if (pat_len < 0 || pat_len > (int)sizeof(w->pat.addr)) {
-			axa_pemsg(emsg, "%s bad IPv4 watch length%zd",
+		if (pat_len <= 0 || pat_len > (ssize_t)sizeof(w->pat.addr)) {
+			axa_pemsg(emsg, "%s bad IP watch length %zd",
 				  axa_op_to_str(op_buf, sizeof(op_buf), op),
 				  watch_len);
 			return (false);
 		}
+		if (w->prefix == 0 || (w->prefix+7)/8 > pat_len) {
+			axa_pemsg(emsg, "%s bad IP prefix length"
+				  " %d for address length %zd",
+				  axa_op_to_str(op_buf, sizeof(op_buf), op),
+				  w->prefix, pat_len);
+			return (false);
+		}
 		break;
 	case AXA_P_WATCH_IPV6:
-		if (pat_len < 0 || pat_len > (int)sizeof(w->pat.addr6)) {
-			axa_pemsg(emsg, "%s bad IPv6 watch length%zd",
+		if (pat_len <= 0 || pat_len > (ssize_t)sizeof(w->pat.addr6)) {
+			axa_pemsg(emsg, "%s bad IP watch length %zd",
 				  axa_op_to_str(op_buf, sizeof(op_buf), op),
 				  watch_len);
+			return (false);
+		}
+		if (w->prefix == 0 || (w->prefix+7)/8 > pat_len) {
+			axa_pemsg(emsg, "%s bad IP prefix length"
+				  " %d for address length %zd",
+				  axa_op_to_str(op_buf, sizeof(op_buf), op),
+				  w->prefix, pat_len);
 			return (false);
 		}
 		break;
 	case AXA_P_WATCH_DNS:
 		if (pat_len <= 0 || pat_len > (int)sizeof(w->pat.dns)) {
-			axa_pemsg(emsg, "%s bad dns watch length%zd",
+			axa_pemsg(emsg, "%s bad dns watch length %zd",
 				  axa_op_to_str(op_buf, sizeof(op_buf), op),
 				  watch_len);
+			return (false);
+		}
+		name_len = 0;
+		while (w->pat.dns[name_len] != 0) {
+			name_len += 1+w->pat.dns[name_len];
+			if (name_len > pat_len)
+				break;
+		}
+		if (name_len+1 != pat_len) {
+			axa_pemsg(emsg, "%s bad dns watch label lengths",
+				  axa_op_to_str(op_buf, sizeof(op_buf), op));
 			return (false);
 		}
 		break;
 	case AXA_P_WATCH_CH:
 		if (pat_len != sizeof(w->pat.ch)) {
-			axa_pemsg(emsg, "%s bad channel watch length%zd",
+			axa_pemsg(emsg, "%s bad channel watch length %zd",
 				  axa_op_to_str(op_buf, sizeof(op_buf), op),
 				  watch_len);
 			return (false);
@@ -806,7 +1030,7 @@ ck_watch(axa_emsg_t *emsg, axa_p_op_t op,
 		return (ck_ch(emsg, op, w->pat.ch, false));
 	case AXA_P_WATCH_ERRORS:
 		if (pat_len != 0) {
-			axa_pemsg(emsg, "%s bad error watch length%zd",
+			axa_pemsg(emsg, "%s bad error watch length %zd",
 				  axa_op_to_str(op_buf, sizeof(op_buf), op),
 				  watch_len);
 			return (false);
@@ -864,65 +1088,62 @@ ck_opt(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_opt_t *opt, size_t opt_len)
 	return (true);
 }
 
-static bool				/* false=bad */
-ck_body(axa_emsg_t *emsg, const axa_p_hdr_t *hdr, const axa_p_body_t *body,
-	size_t hdr_len)
+bool					/* false=bad */
+axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_body_t *body,
+	    size_t body_len)
 {
 
-	switch ((axa_p_op_t)hdr->op) {
+	switch (op) {
 	case AXA_P_OP_HELLO:
-		return (ck_body_null(emsg, hdr, body, hdr_len, "version"));
+		return (ck_field_null(emsg, op, body->b, body_len, "version"));
 	case AXA_P_OP_NOP:
 		break;
 	case AXA_P_OP_OK:
 	case AXA_P_OP_ERROR:
-		return (ck_body_null(emsg, hdr, body, hdr_len, "message"));
+		return (ck_field_null(emsg, op, body, body_len, "message"));
 	case AXA_P_OP_MISSED:
 		break;
 	case AXA_P_OP_WHIT:
-		return (ck_ch(emsg, hdr->op, body->whit.hdr.ch, false));
+		return (ck_ch(emsg, op, body->whit.hdr.ch, false));
 	case AXA_P_OP_WLIST:
-		return (ck_watch(emsg, hdr->op, &body->wlist.w,
-				 hdr_len - (sizeof(*hdr)
-					    + sizeof(body->wlist)
+		return (ck_watch(emsg, op, &body->wlist.w,
+				 body_len - (sizeof(body->wlist)
 					     - sizeof(body->wlist.w))));
 	case AXA_P_OP_AHIT:
-		return (ck_an(emsg, hdr->op, &body->ahit.an)
-			&& ck_ch(emsg, hdr->op, body->ahit.whit.hdr.ch, false));
+		return (ck_an(emsg, op, &body->ahit.an)
+			&& ck_ch(emsg, op, body->ahit.whit.hdr.ch, false));
 	case AXA_P_OP_ALIST:
-		return (ck_an(emsg, hdr->op, &body->alist.anom.an)
-			&& ck_body_null(emsg, hdr, body, hdr_len,
-					"parameters"));
+		return (ck_anom(emsg, op, &body->alist.anom,
+				body_len - (sizeof(body->alist)
+					    - sizeof(body->alist.anom))));
 	case AXA_P_OP_CLIST:
-		if (!ck_ch(emsg, hdr->op, body->clist.ch, false))
+		if (!ck_ch(emsg, op, body->clist.ch, false))
 			return (false);
-		return (ck_body_null(emsg, hdr, body, hdr_len, "channel"));
+		return (ck_field_null(emsg, op, body, body_len, "channel"));
 
 
 	case AXA_P_OP_USER:
-		return (ck_body_null(emsg, hdr, body, hdr_len, "user name"));
+		return (ck_field_null(emsg, op, body, body_len, "user name"));
 	case AXA_P_OP_JOIN:
 	case AXA_P_OP_PAUSE:
 	case AXA_P_OP_GO:
 		break;
 	case AXA_P_OP_WATCH:
-		return (ck_watch(emsg, hdr->op, &body->watch,
-				 hdr_len - sizeof(*hdr)));
+		return (ck_watch(emsg, op, &body->watch, body_len));
 	case AXA_P_OP_WGET:
 		break;
 	case AXA_P_OP_ANOM:
-		return (ck_body_null(emsg, hdr, body, hdr_len, "anomaly"));
+		return (ck_anom(emsg, op, &body->anom, body_len));
 	case AXA_P_OP_AGET:
 	case AXA_P_OP_STOP:
 	case AXA_P_OP_ALL_STOP:
 		break;
 	case AXA_P_OP_CHANNEL:
-		return (ck_ch(emsg, hdr->op, body->channel.ch, true));
+		return (ck_ch(emsg, op, body->channel.ch, true));
 	case AXA_P_OP_CGET:
 		break;
 	case AXA_P_OP_OPT:
-		return (ck_opt(emsg, hdr->op, &body->opt,
-			       hdr_len - sizeof(*hdr)));
+		return (ck_opt(emsg, op, &body->opt, body_len));
 	case AXA_P_OP_ACCT:
 		break;
 	}
@@ -930,26 +1151,65 @@ ck_body(axa_emsg_t *emsg, const axa_p_hdr_t *hdr, const axa_p_body_t *body,
 	return (true);
 }
 
+static ssize_t				/* -1=error 0=EWOULDBLOCK */
+recv_read(axa_emsg_t *emsg, int s, void *buf, size_t len,
+	  const char *peer, struct timeval *alive)
+{
+	int i;
+
+	for (;;) {
+		i = read(s, buf, len);
+		if (i > 0) {
+			if (alive != NULL)
+				gettimeofday(alive, NULL);
+			return (i);
+		}
+
+		if (i == 0) {
+			axa_pemsg(emsg, "read(%s): EOF", peer);
+			return (-1);
+		}
+		if (errno == EINTR)
+			continue;
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return (0);
+		axa_pemsg(emsg, "read(%s): %s", peer, strerror(errno));
+		return (-1);
+	}
+}
+
 /*
- * Receive an SRA request or response into a fixed header buffer and
- *	a dynamic body buffer.
- *  This function stalls until something is read, so use poll() or select().
- *  On entry, recv_len is the size received previously by this function.
- *  On exit,
+ *  Receive an AXA request or response into a fixed header buffer and
+ *      a dynamic body buffer.
+ * This function stalls until something is read, so use poll() or select()
+ *	before calling it.
+ * On entry,
+ *	hdr points to a buffer for the AXA protocol header
+ *	bodyp is a pointer to a pointer to a buffer that will be allocated
+ *	    and filled with the next AXA protocol message.  This buffer must
+ *	    be freed by the caller, perhaps with axa_client_flush().
+ *	recv_len is the number of bytes previously received by this function.
+ *	buf is optional for reducing read() system calls.
+ *	peer is a string describing the peer such as its IP address and port #
+ *	direction specifies whether this is working for an AXA server or client
+ *	alive is used to trigger AXA protocol keepalives
+ * On exit,
  *	AXA_P_RECV_RESULT_ERR	fatal error or EOF
  *	AXA_P_RECV_RESULT_INCOM	try again after select() with the same args
- *	AXA_P_RECV_RESULT_DONE	complete message received
- *				    recv_len includes sizeof(*hdr)
+ *	AXA_P_RECV_RESULT_DONE	complete message received in *bodyp
+ *	recv_len=sizeof(*hdr)+bytes in *bodyp
  */
 axa_p_recv_result_t
 axa_p_recv(axa_emsg_t *emsg, int s,
 	   axa_p_hdr_t *hdr, axa_p_body_t **bodyp, size_t *recv_len,
+	   axa_recv_buf_t *buf,
 	   const char *peer, axa_p_direction_t dir, struct timeval *alive)
 {
+#define BUF_SIZE (8*1024)
 	ssize_t len, i;
 	size_t hdr_len;
 	axa_p_body_t *body;
-	void *buf;
+	uint8_t *tgt;
 
 	AXA_ASSERT(peer != NULL);
 
@@ -958,12 +1218,16 @@ axa_p_recv(axa_emsg_t *emsg, int s,
 
 	body = *bodyp;
 	for (;;) {
+		/*
+		 * Decide how much we need and where to put it.
+		 */
 		len = sizeof(*hdr) - *recv_len;
 		if (len > 0) {
 			/* We do not yet have the entire header,
 			 * and so we must not have a buffer for the body. */
 			AXA_ASSERT(body == NULL);
-			buf = (uint8_t *)hdr + *recv_len;
+			tgt = (uint8_t *)hdr + *recv_len;
+
 		} else {
 			/* We have at least all of the header.
 			 * Check the header when we first have it. */
@@ -974,48 +1238,66 @@ axa_p_recv(axa_emsg_t *emsg, int s,
 			/* Stop when we have a complete message. */
 			hdr_len = AXA_P2H32(hdr->len);
 			if (hdr_len == *recv_len) {
-				if (!ck_body(emsg, hdr, body, hdr_len))
+				if (!axa_ck_body(emsg, hdr->op, body,
+						 hdr_len - sizeof(*hdr)))
 					return (AXA_P_RECV_RESULT_ERR);
 				return (AXA_P_RECV_RESULT_DONE);
 			}
 
 			if (body == NULL) {
 				body = malloc(hdr_len - sizeof(*hdr));
-				if (body == NULL) {
-					axa_pemsg(emsg,
-						  "no memory for axa_p_recv()");
-					return (AXA_P_RECV_RESULT_ERR);
-				}
+				AXA_ASSERT(body != NULL);
 				*bodyp = body;
 			}
 			len = hdr_len - *recv_len;
-			buf = (uint8_t *)body + *recv_len - sizeof(*hdr);
+			tgt = (uint8_t *)body + *recv_len - sizeof(*hdr);
 		}
 
-		i = read(s, buf, len);
-		if (i <= 0) {
-			if (i == 0) {
-				axa_pemsg(emsg, "read(%s): EOF", peer);
-				if (body != NULL) {
-					free(body);
-					*bodyp = NULL;
-				}
+		if (buf != NULL) {
+			if (buf->data == NULL) {
+				buf->buf_size = BUF_SIZE;
+				buf->data = malloc(buf->buf_size);
+				AXA_ASSERT(buf->data != NULL);
+				buf->data_len = 0;
+			}
+
+			/* Get more data when we run out. */
+			if (buf->data_len == 0) {
+				/* If we have enough of an AXA protocol header
+				 * to know the size of the message,
+				 * then read only that much.
+				 * This ensures that pause occassionally.
+				 * When we have the whole header, we could
+				 * read() directly into to final buffer,
+				 * but that is a rare case. */
+				if (body != NULL)
+					i = len;
+				else
+					i = buf->buf_size;
+				i = recv_read(emsg, s, buf->data, i,
+					      peer, alive);
+				if (i < 0)
+					return (AXA_P_RECV_RESULT_ERR);
+				if (i == 0)
+					return (AXA_P_RECV_RESULT_INCOM);
+				buf->data_len = i;
+				buf->base = buf->data;
+			}
+
+			i = min(len, buf->data_len);
+			memcpy(tgt, buf->base, i);
+			buf->base += i;
+			buf->data_len -= i;
+
+		} else {
+			i = recv_read(emsg, s, tgt, len, peer, alive);
+			if (i < 0)
 				return (AXA_P_RECV_RESULT_ERR);
-			}
-			if (errno == EINTR)
-				continue;
-			if (errno == EAGAIN || errno == EWOULDBLOCK)
+			if (i == 0)
 				return (AXA_P_RECV_RESULT_INCOM);
-			axa_pemsg(emsg, "read(%s): %s", peer, strerror(errno));
-			if (body != NULL) {
-				free(body);
-				*bodyp = NULL;
-			}
-			return (AXA_P_RECV_RESULT_ERR);
 		}
+
 		*recv_len += i;
-		if (alive != NULL)
-			gettimeofday(alive, NULL);
 	}
 }
 
@@ -1029,14 +1311,11 @@ axa_make_hdr(axa_p_hdr_t *hdr,
 
 	total = sizeof(*hdr) + b1_len + b2_len;
 	memset(hdr, 0, sizeof(axa_p_hdr_t));
-	hdr->tag = AXA_H2P16(tag);
+	hdr->tag = AXA_H2P_TAG(tag);
 	hdr->len = AXA_H2P32(total);
-	AXA_ASSERT(pvers >= AXA_P_PVERS_MIN && pvers <= AXA_P_PVERS_MAX);
 	hdr->pvers = pvers;
 	hdr->op = op;
-	if (axa_debug != 0)
-		AXA_ASSERT_MSG(ck_hdr(&emsg, hdr, "myself", dir),
-			       "%s", emsg.c);
+	AXA_ASSERT_MSG(ck_hdr(&emsg, hdr, "myself", dir), "%s", emsg.c);
 
 	return (total);
 }
@@ -1050,7 +1329,7 @@ axa_p_send_result_t
 axa_p_send(axa_emsg_t *emsg, int s,
 	   axa_p_pvers_t pvers, axa_tag_t tag, axa_p_op_t op,
 	   axa_p_hdr_t *hdr,
-	   const void *b1, size_t b1_len,   /* rest of SRA message to send */
+	   const void *b1, size_t b1_len,   /* rest of AXA message to send */
 	   const void *b2, size_t b2_len,
 	   size_t *donep,		/* put # of bytes sent here */
 	   const char *peer,		/* peer name for error messages */
@@ -1087,10 +1366,10 @@ axa_p_send(axa_emsg_t *emsg, int s,
 	done = writev(s, iov, iovcnt);
 	if (done < 0) {
 		*donep = 0;
+		axa_pemsg(emsg, "writev(%s): %s", peer, strerror(errno));
 		if (errno == EAGAIN || errno == EWOULDBLOCK
 		    || errno == ENOBUFS || errno == EINTR)
 			return (AXA_P_SEND_BUSY);
-		axa_pemsg(emsg, "writev(%s): %s", peer, strerror(errno));
 		return (AXA_P_SEND_BAD);
 	}
 

@@ -17,6 +17,7 @@
  */
 
 
+#include <axa/axa_endian.h>
 #include <axa/socket.h>
 
 #include <arpa/inet.h>
@@ -24,9 +25,6 @@
 #include <fcntl.h>
 #ifdef __linux
 #include <bsd/string.h>			/* for strlcpy() */
-#include <endian.h>
-#else
-#include <sys/endian.h>
 #endif
 #include <string.h>
 #include <stdlib.h>
@@ -39,8 +37,7 @@
 #define IPV6_CHARS     IPV4_CHARS":abcdefABCDEF"
 
 
-/*
- * Make a socket address from an IPv4 address and a port number */
+/* Make a socket address from an IPv4 address and a port number */
 static axa_socku_t *
 mk_inet_su(axa_socku_t *su,		/* put it here */
 	   const struct in_addr *addrp, /* 0=INADDR_ANY */
@@ -156,10 +153,16 @@ axa_data_to_su(axa_socku_t *su, const void *data, size_t data_len)
 		su->sa.sa_family = AF_INET;
 		memcpy(&su->ipv4.sin_addr, data,
 		       sizeof(su->ipv4.sin_addr));
+#ifdef HAVE_SA_LEN
+		su->sa.sa_len = sizeof(su->ipv4.sin_addr);
+#endif
 	} else if (data_len == sizeof(su->ipv6.sin6_addr)) {
 		su->sa.sa_family = AF_INET6;
 		memcpy(&su->ipv6.sin6_addr, data,
 		       sizeof(su->ipv6.sin6_addr));
+#ifdef HAVE_SA_LEN
+		su->sa.sa_len = sizeof(su->ipv6.sin6_addr);
+#endif
 	} else {
 		return (false);
 	}
@@ -175,10 +178,16 @@ axa_ip_to_su(axa_socku_t *su, const void *ip, uint family)
 		memcpy(&su->ipv4.sin_addr, ip,
 		       sizeof(su->ipv4.sin_addr));
 		su->sa.sa_family = family;
+#ifdef HAVE_SA_LEN
+		su->sa.sa_len = sizeof(su->ipv4.sin_addr);
+#endif
 	} else if (family == AF_INET6) {
 		memcpy(&su->ipv6.sin6_addr, ip,
 		       sizeof(su->ipv6.sin6_addr));
 		su->sa.sa_family = family;
+#ifdef HAVE_SA_LEN
+		su->sa.sa_len = sizeof(su->ipv6.sin6_addr);
+#endif
 	} else {
 		return (false);
 	}
@@ -249,7 +258,8 @@ axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str)
 	const char *bitsp;
 	char *p;
 	size_t str_len, addr_len, bits_len;
-	int n, bits, wordno;
+	u_long bits;
+	int wordno;
 
 	str = axa_strip_white(str, &str_len);
 	bitsp = strchr(str, '/');
@@ -271,8 +281,7 @@ axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str)
 	memcpy(addr_str, str, addr_len);
 	addr_str[addr_len] = '\0';
 	if (!axa_str_to_su(su, addr_str)) {
-		axa_pemsg(emsg, "invalid IP address \"%s\" in \"%s\"",
-			  addr_str, str);
+		axa_pemsg(emsg, "invalid IP address \"%s\"", addr_str);
 		return (-1);
 	}
 	axa_su_to_str(addr_str, sizeof(addr_str), '.', su);
@@ -288,13 +297,12 @@ axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str)
 		bits = 128;
 	} else {
 		bits_len = str_len - addr_len - 1;
-		n = strtoul(++bitsp, &p, 10);
-		bits = n;
+		bits = strtoul(++bitsp, &p, 10);
 		if (su->sa.sa_family == AF_INET)
 			bits += 128-32;
-		if (p < bitsp+bits_len || bits > 128 || n == 0) {
+		if (p < bitsp+bits_len || bits > 128 || bits < 1) {
 			axa_pemsg(emsg, "invalid prefix length \"%.*s\"",
-				  (int)str_len, str);
+				  (int)str_len, bitsp);
 			return (-1);
 		}
 	}
@@ -323,7 +331,7 @@ axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str)
  * Parse a "hostname,port" string specifying an SRA or RAD server.
  */
 bool
-axa_get_srvr(axa_emsg_t *emsg, const char *line,
+axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 	     bool passive, struct addrinfo **resp)
 {
 	char *buf;
@@ -333,23 +341,24 @@ axa_get_srvr(axa_emsg_t *emsg, const char *line,
 
 	*resp = NULL;
 
-	/* get the hostname and from separate it from the port number */
-	buf = axa_strdup(line);
+	/* Get the hostname and from separate it from the port number. */
+	buf = axa_strdup(addr_port);
 	port = buf;
-	host = strsep(&port, ",");
+	host = strsep(&port, ",/");
 	if (*host == '\0') {
 		free(buf);
-		axa_pemsg(emsg, "missing host name in \"%s\"", line);
+		axa_pemsg(emsg, "missing host name in \"%s\"", addr_port);
 		return (false);
 	}
 	if (port == NULL) {
 		free(buf);
-		axa_pemsg(emsg, "missing port in \"%s\"", line);
+		axa_pemsg(emsg, "missing port in \"%s\"", addr_port);
 		return (false);
 	}
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = PF_UNSPEC;
+	/* The IP address might might be used by the caller for UDP. */
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 	hints.ai_flags = AI_ADDRCONFIG;
@@ -358,7 +367,7 @@ axa_get_srvr(axa_emsg_t *emsg, const char *line,
 
 	error = getaddrinfo(host, port, &hints, resp);
 	if (error != 0) {
-		axa_pemsg(emsg, "%s: %s", line, gai_strerror(error));
+		axa_pemsg(emsg, "%s: %s", addr_port, gai_strerror(error));
 		free(buf);
 		return (false);
 	}
@@ -367,27 +376,27 @@ axa_get_srvr(axa_emsg_t *emsg, const char *line,
 	return (true);
 }
 
-bool
-axa_set_sock(axa_emsg_t *emsg, int s, const char *addr, bool nonblock)
+/* Set socket or other communications file descriptor options */
+bool					/* false=emsg has an error message */
+axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
 {
 	int on;
-	uint family;
+#ifdef SO_PROTOCOL
+	uint protocol;
+#endif
 	uint type;
 	socklen_t len;
 
-	if (s < 0)
-		return (true);
-
 	if (0 > fcntl(s, F_SETFD, FD_CLOEXEC)) {
 		axa_pemsg(emsg, "fcntl(%s, F_SETFD, FD_CLOEXEC): %s",
-			      addr, strerror(errno));
+			  label, strerror(errno));
 		return (false);
 	}
 
 	if (nonblock && -1 == fcntl(s, F_SETFL,
 				    fcntl(s, F_GETFL, 0) | O_NONBLOCK)) {
-		axa_error_msg("fcntl(%s, O_NONBLOCK): %s",
-			      addr, strerror(errno));
+		axa_pemsg(emsg, "fcntl(%s, O_NONBLOCK): %s",
+			  label, strerror(errno));
 		return (false);
 	}
 
@@ -398,35 +407,57 @@ axa_set_sock(axa_emsg_t *emsg, int s, const char *addr, bool nonblock)
 			return (true);
 
 		/* hope for the best despite this error */
-		axa_error_msg("getsockopt(%s, SO_TYPE): %s",
-			      addr, strerror(errno));
-	} else if (type != SOCK_STREAM) {
+		axa_trace_msg("getsockopt(%s, SO_TYPE): %s",
+			      label, strerror(errno));
+	} else if (type != SOCK_STREAM && type != SOCK_DGRAM) {
 		return (true);
 	}
 
-	len = sizeof(family);
-	if (0 > getsockopt(s, SOL_SOCKET, SO_PROTOCOL, &family, &len)) {
+#ifndef SO_PROTOCOL
+	/*
+	 * Without getsockopt(SOL_SOCKET, SO_PROTOCOL) to check that we have
+	 * a TCP/IP socket (e.g. on OS X), there will be errors as we try
+	 * set UDP or TCP options.
+	 */
+#else
+	len = sizeof(protocol);
+	if (0 > getsockopt(s, SOL_SOCKET, SO_PROTOCOL, &protocol, &len)) {
 		/* hope for the best despite this error */
-		axa_error_msg("getsockopt(%s, SO_PROTOCOL): %s",
-			      addr, strerror(errno));
-	} else if (family != AF_INET && family != AF_INET6) {
-		return (true);
+		axa_trace_msg("getsockopt(%s, SO_PROTOCOL): %s",
+			      label, strerror(errno));
 	}
+#endif
 
-	on = 1;
-	if (0 > setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
-			   &on, sizeof(on))) {
-		/* hope for the best despite this error */
-		axa_error_msg("setsockopt(%s, SO_KEEPALIVE): %s",
-			      addr, strerror(errno));
+#ifdef SO_PROTOCOL
+	if (protocol == IPPROTO_TCP) {
+#endif
+		on = 1;
+		if (0 > setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
+				   &on, sizeof(on))) {
+			/* hope for the best despite this error */
+			axa_trace_msg("setsockopt(%s, SO_KEEPALIVE): %s",
+				      label, strerror(errno));
+		}
+		on = 1;
+		if (0 > setsockopt(s, SO_KEEPALIVE, TCP_NODELAY,
+				   &on, sizeof(on))) {
+			/* hope for the best despite this error */
+			axa_trace_msg("setsockopt(%s, TCP_NODELAY): %s",
+				      label, strerror(errno));
+		}
+#ifdef SO_PROTOCOL
+	} else if (protocol == IPPROTO_UDP) {
+#endif
+		on = 1;
+		if (0 > setsockopt(s, SOL_SOCKET, SO_BROADCAST,
+				   &on, sizeof(on))) {
+			/* hope for the best despite this error */
+			axa_trace_msg("setsockopt(%s, SO_BROADCAST): %s",
+				      label, strerror(errno));
+		}
+#ifdef SO_PROTOCOL
 	}
-	on = 1;
-	if (0 > setsockopt(s, SO_KEEPALIVE, TCP_NODELAY,
-			   &on, sizeof(on))) {
-		/* hope for the best despite this error */
-		axa_error_msg("setsockopt(%s, TCP_NODELAY): %s",
-			      addr, strerror(errno));
-	}
+#endif
 
 	return (true);
 }

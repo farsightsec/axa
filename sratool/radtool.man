@@ -20,7 +20,6 @@
 .Nm radtool
 .Nd Realtime Anomaly Detector (RAD) tool
 .Sh SYNOPSIS
-.Nm radtool
 .Op Fl VdN
 .Op Fl F Ar fields
 .Op Fl c Ar cfile
@@ -31,7 +30,7 @@ connects and sends Advanced Exchange Access (AXA) protocol messages
 to Realtime Anomaly Detector (RAD) servers
 and displays the responses.
 It can also tunnel SIE data like
-.Xr radtunnel 1 .
+.Xr sratunnel 1 .
 .Pp
 .Nm Radtool
 is a programming example for the Advanced Exchange Access (AXA)
@@ -82,20 +81,53 @@ Multiple commands can be specified at once by separating them with semicolons.
 The following commands are available:
 .Bl -tag -width 3n
 .so cmds.man
-.It Oo tag Oc Ic list anomaly
-List a specified or all available anomaly detection modules.
-.It Ic tag anomaly name Op Ar parameters
+.It Ar tag Ic watch Brq Ar ip=IP[/N][(shared) | dns=[*.]dom[(shared)]
+Specify IP addresses or domain names relevant to the
+anomaly detection modules specified by subsequent
+.Ic anomaly
+commands with the same tag.
+.so radwatch.man
+.El
+.It Ar tag Ic anomaly Ar name Op Ar parameters
 Start the named anomaly detector module.
+The relevant domains and IP addresses are specified by preceding
+.Ic watch
+commands with the same tag.
+The parameters for each module are described it its man page.
 .Ic Tag
-is the number labeling the module
+is a number that labels the module and the relevant watches as well as
+other modules using the same watches.
+.It Oo Ar tag Oc Ic list anomaly
+If a tag is present,
+list the set of watches and anomaly detection modules with that tag.
+Without a tag,
+list all active as well as available anomaly detection modules
 .El
 .Sh FILES
 .Bl -tag -width fields
-.It Pa fields
+.It Ar fields
 defines relationships among and meanings of SIE message fields.
 Its contents should rarely if ever need to be changed.
+.It Ar config
+is the
+.Xr ssh_config 5
+configuration file used with
+.Ar connect\ ssh\ ...
+connections.
+If it is not specified explicitly by
+.Sm off Fl z Fl F Sm on
+with the
+.Ar connect
+command,
+the usual
+.Xr ssh 1
+sequence is used, starting with
+.Pa ~/.ssh/config .
+"Host" stanzas in the file can simplify connections to \*(SR servers.
 .El
 .Sh SEE ALSO
+.Xr ip_probe 1 ,
+.Xr dns_binding 1 ,
 .Xr sratool 1 ,
 .Xr sratunnel 1 ,
 .Xr mkfifo 1 ,

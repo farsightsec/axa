@@ -36,20 +36,9 @@ if test -n "$PKG_CONFIG"; then
     fi
 fi
 
-AC_C_BIGENDIAN
-
 MY_CHECK_LIBPCAP
 
 MY_CHECK_LIBPROTOBUF_C
-
-save_LIBS="$LIBS"
-AC_SEARCH_LIBS([pidfile_open],
-               [bsd util],
-               [pidfile_LIBS="$LIBS"],
-               [AC_MSG_ERROR([could not find library containing pidfile_open])]
-              )
-LIBS="$save_LIBS"
-AC_SUBST(pidfile_LIBS)
 
 save_LIBS="$LIBS"
 AC_SEARCH_LIBS([strlcpy],

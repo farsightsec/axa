@@ -1,0 +1,9 @@
+.\" radwatch.man
+.\" text describing common features of radtool watches.
+The optional
+.Op Ar (shared)
+suffix marks IP addresses or domains that are not exclusively used
+by the RAD client.
+.so watch.man
+.\"
+.\" end of radwatch.man

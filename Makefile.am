@@ -28,10 +28,10 @@ MAN_PROCESS = $(AM_V_GEN) soelim -I. -I`dirname $<` -r $< | sed -e "s/^\.Dd.*/.D
 	    $(MAN_PROCESS)
 
 sratool/sratool.1: sratool/sratool.man \
-	fwd.man watch.man sratool/options.man sratool/cmds.man
+	fwd.man watch.man srawatch.man sratool/options.man sratool/cmds.man
 sratool/radtool.1: sratool/radtool.man \
-	fwd.man watch.man sratool/options.man sratool/cmds.man
-sratunnel/sratunnel.1: sratunnel/sratunnel.man fwd.man watch.man
+	fwd.man watch.man radwatch.man sratool/options.man sratool/cmds.man
+sratunnel/sratunnel.1: sratunnel/sratunnel.man fwd.man srawatch.man watch.man
 
 EXTRA_DIST += \
 	sratool/sratool.man \
@@ -39,6 +39,8 @@ EXTRA_DIST += \
 	sratunnel/sratunnel.man \
 	fwd.man \
 	watch.man \
+	srawatch.man \
+	radwatch.man \
 	sratool/options.man \
 	sratool/cmds.man
 
@@ -63,14 +65,16 @@ LIBAXA_AGE=0
 
 nobase_include_HEADERS = \
 	axa/axa.h \
-	axa/bit_funcs.h \
 	axa/bits.h \
 	axa/client.h \
 	axa/dns_walk.h \
+	axa/axa_endian.h \
 	axa/fields.h \
+	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/rad_mod.h \
 	axa/socket.h \
+	axa/trie.h \
 	axa/wire.h
 lib_LTLIBRARIES = axa/libaxa.la
 
@@ -80,10 +84,13 @@ axa_libaxa_la_SOURCES = \
 	axa/bits.h \
 	axa/client.h \
 	axa/dns_walk.h \
+	axa/axa_endian.h \
 	axa/fields.h \
+	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/rad_mod.h \
 	axa/socket.h \
+	axa/trie.h \
 	axa/wire.h \
 	axalib/bit_funcs.c \
 	axalib/client.c \
@@ -93,9 +100,11 @@ axa_libaxa_la_SOURCES = \
 	axalib/fields.c \
 	axalib/get_field_name.c \
 	axalib/hash_divisor.c \
+	axalib/open_nmsg_out.c \
 	axalib/parse_ch.c \
 	axalib/socket.c \
 	axalib/time.c \
+	axalib/trie.c \
 	axalib/wdns_res.c \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \
@@ -107,15 +116,13 @@ axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	${libpcap_LIBS} \
 	${libwdns_LIBS} \
 	${libnmsg_LIBS} \
-	${strlcpy_LIBS} \
-	${pidfile_LIBS}
+	${strlcpy_LIBS}
 axa_libaxa_la_CFLAGS = \
 	${AM_CFLAGS} \
 	${libpcap_CFLAGS} \
 	${libwdns_CFLAGS} \
 	${libnmsg_CFLAGS} \
-	${strlcpy_CFLAGS} \
-	${pidfile_CFLAGS}
+	${strlcpy_CFLAGS}
 
 pkgconfig_DATA = axa/libaxa.pc
 EXTRA_DIST += axa/libaxa.pc.in
@@ -147,8 +154,7 @@ sratool_sratool_LDADD = \
 	${libnmsg_LIBS} \
 	${libz_LIBS} \
 	${libwdns_LIBS} \
-	${libedit_LIBS} \
-	${pidfile_LIBS}
+	${libedit_LIBS}
 sratool_sratool_CFLAGS = \
 	${AM_CFLAGS} \
 	${libprotobuf_c_CFLAGS} \
@@ -156,8 +162,7 @@ sratool_sratool_CFLAGS = \
 	${libnmsg_CFLAGS} \
 	${libz_CFLAGS} \
 	${libwdns_CFLAGS} \
-	${libedit_CFLAGS} \
-	${pidfile_CFLAGS}
+	${libedit_CFLAGS}
 
 bin_PROGRAMS += sratool/radtool
 sratool_radtool_SOURCES = ${sratool_sratool_SOURCES}

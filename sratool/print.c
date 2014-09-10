@@ -19,6 +19,8 @@
 #include "sratool.h"
 
 #include <arpa/nameser.h>
+#include <axa/axa_endian.h>
+
 #include <errno.h>
 #include <netinet/ip6.h>
 #define __FAVOR_BSD			/* for Debian tcp.h and udp.h */
@@ -28,9 +30,6 @@
 #include <string.h>
 #ifdef __linux
 #include <bsd/string.h>			/* for strlcpy() */
-#include <endian.h>
-#else
-#include <sys/endian.h>
 #endif
 
 
@@ -98,7 +97,8 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 		}
 		rtype = axa_rtype_to_str(rtype_buf, sizeof(rtype_buf),
 					 q->rrtype);
-		axa_domain_to_str(q->name.data, q->name.len, qname);
+		axa_domain_to_str(q->name.data, q->name.len,
+				  qname, sizeof(qname));
 	}
 
 	printf(" %s %s %s"
@@ -159,24 +159,26 @@ ck_ipdg(const char *protocol,
 		if (err_buf == NULL)
 			error_msg("missing %s header from "
 				  AXA_OP_CH_PREFIX"%d",
-				  protocol, whit->hdr.ch);
+				  protocol, AXA_P2H_CH(whit->hdr.ch));
 		else
 			snprintf(err_buf, err_buf_len,
 				 " missing %s header from "
 				 AXA_OP_CH_PREFIX"%d",
-				 protocol, whit->hdr.ch);
+				 protocol, AXA_P2H_CH(whit->hdr.ch));
 		return (false);
 	}
 	if (actual_len < min_len) {
 		if (err_buf == NULL)
 			error_msg("truncated %s header of "
 				  "%zd bytes from "AXA_OP_CH_PREFIX"%d",
-				  protocol, actual_len, whit->hdr.ch);
+				  protocol, actual_len,
+				  AXA_P2H_CH(whit->hdr.ch));
 		else
 			snprintf(err_buf, err_buf_len,
 				 " truncated %s header of %zd bytes from "
 				 AXA_OP_CH_PREFIX"%d",
-				 protocol, actual_len, whit->hdr.ch);
+				 protocol, actual_len,
+				 AXA_P2H_CH(whit->hdr.ch));
 		return (false);
 	}
 	return (true);
