@@ -84,6 +84,4 @@ AC_MSG_RESULT([
         libdir:                 ${libdir}
         includedir:             ${includedir}
         pkgconfigdir:           ${pkgconfigdir}
-
-        bigendian:              ${ac_cv_c_bigendian}
 ])

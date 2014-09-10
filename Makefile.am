@@ -80,7 +80,6 @@ lib_LTLIBRARIES = axa/libaxa.la
 
 axa_libaxa_la_SOURCES = \
 	axa/axa.h \
-	axa/bit_funcs.h \
 	axa/bits.h \
 	axa/client.h \
 	axa/dns_walk.h \
@@ -92,7 +91,6 @@ axa_libaxa_la_SOURCES = \
 	axa/socket.h \
 	axa/trie.h \
 	axa/wire.h \
-	axalib/bit_funcs.c \
 	axalib/client.c \
 	axalib/dns_walk.c \
 	axalib/domain_to_str.c \
@@ -203,3 +201,9 @@ EXTRA_DIST += \
 	axa/README \
 	sratool/README \
 	sratunnel/README
+
+spotless: distclean
+	rm -fr ar-lib aclocal.m4 autom4te.cache configure config.* Makefile.in \
+	autoscan.log config.h compile depcomp configure.scan       			   \
+	doc/doxygen/Doxyfile missing install-sh ltmain.sh
+
