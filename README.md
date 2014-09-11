@@ -22,8 +22,9 @@ or more SRA channels:
 
 * `libaxa`: middleware for AXA protocol including connection and 
 encapsulation/decapsulation
-* `sratunnel`: a tool that enables remote SIE data appear on a local socket
-* `sratool`: a debuging interface capable of exercising and examining AXA
+* `sratunnel`: a tool that copies remote SIE data to the local network
+* `sratool`: a debuging interface to exercise and examine AXA protocol 
+operations
 
 The `sratunnel` source code is intended as a working example of calling 
 `libaxa` to set up an SRA session, turn on an SIE channel, set a single and 
@@ -35,30 +36,30 @@ program which will make the remote data available locally, and then use
 [`nmsg`](https://github.com/farsightsec/nmsg) (for all other SIE channels) 
 as they would on an analysis server directly conected to SIE itself. 
 
-Of note, SRA can perform filtering at the initator's request. This feature is
+Of note, SRA can perform filtering. This feature is
 highly desirable due to the very high volume of data caried by SIE which can
-burst to hundreds of megabits per second in a single channel. On the flip side
-, it is expected that when using SRA to access low volume channels, entire 
-channels will be selected for remote distribution. However, when remotely 
-accessing high volume SIE channels, it is expected that the subscriber will 
-specify a list of IP addresses and DNS names of interest, so that the SRA 
-server can filter out everything else, and send to the subscriber only a small 
-subset of that channel's data.
+burst to hundreds of megabits per second in a single channel. On the flip side, 
+when using SRA to access low volume channels, entire 
+channels can be selected for remote distribution. However, when remotely 
+accessing high volume SIE channels, the subscriber usually 
+specifies a list of IP addresses and DNS names of interest, so that the SRA 
+server can filter out everything else, and send to the subscriber only a 
+subset of that channel's SIE data.
 
 Also of note, AXA is a deliberately lossy protocol. If a subscriber requests 
-more data volume than the network can carry, data overruns wil occurr. When 
-this happens, "loss markers" will be transmitted reliably within the AXA stream 
-to inform the subscriber of their losses. At this point, the subscriber's 
-possible mitgation strategies are:
+more data than the network can carry, data overruns will occurr. When 
+this happens, "loss markers" are transmitted reliably within the AXA stream 
+to inform the subscriber. At this point, the subscriber's possible mitgation 
+strategies include:
 
-* to ask for less data,
+* ask for less data,
 * increase their network capacity, or 
 * treat the SRA stream as a chunky and non-representative sample of the 
-underlying SIE channel data. 
+total SIE data. 
 
 The `sratool` program is intended primarily as a protocol demonstration and 
 debuging interface, although it can also perform the same functions as 
-`sratunnel`. The distribution of the AXA package presently constitutes the 
+`sratunnel`. The distributed AXA package constitutes the 
 authoritative documentation of the AXA protocol. Farsight advises SRA 
 subscribers to utilize the `libaxa` library for session management and data 
 decapsulation rather than crafting hand drawn logic to perform these functions.
@@ -72,12 +73,12 @@ man pages included in the distribution.
 
 ## SRA server SSH details
 -------------------------
-As of the time of this writing, the SRA service answers at he following address
-via the SSH transport:
+As of the time of this writing, the SRA service answers at the following 
+address via the SSH transport:
 
 `sra-service@sra-eft.sie-remote.net`
 
-Note, you will need to create or edit your ~/.ssh/config file to specify the 
+You will need to create or edit your ~/.ssh/config file to specify the 
 private half of the SSH key pair whose public half you will have registered 
 with Farsight for SRA use, similar to:
 
@@ -88,20 +89,21 @@ Host *.sie-remote.net
 
 ## Building and installing AXA
 ------------------------------
-AXA can built manually or, on Debian systems, by using pre-built packages.
+AXA can built manually or, on Debian systems, installed by using pre-built 
+packages.
 
 ### Building manually
 ---------------------
 The `axa` suite has the following external dependencies:
 
- * C compiler (gcc or llvm seem to work wonderfully)
+ * C compiler (gcc or llvm)
  * [nmsg](https://github.com/farsightsec/nmsg)
  * [wdns](https://github.com/farsightsec/wdns)
  * [libedit](http://thrysoee.dk/editline/)
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed on BSDish systems)
  * Nimble fingers
 
-After satisfying the above, to build, try something like:
+After satisfying the above, build with something like:
 
 `./autogen.sh` followed by `./configure` and then a nice `make` 
 
@@ -122,9 +124,9 @@ On Debian systesm, the following packages should be installed:
  * `libnmsg-dev (>= 0.8.0)`
  * `nmsg-msg-module-sie-dev (>= 0.16)`
 
-The binary packages of axa and its dependencies are available from 
+The binary packages of AXA and its dependencies are available from 
 [a Debian package repository maintained by Farsight Security](https://archive.farsightsecurity.com/SIE_Software_Installation_Debian/). These packages should be
-used in preference to building from source on Debian-based systems.
+used instead of building from source on Debian-based systems.
 
 ## Tool examples
 ---------------
@@ -138,7 +140,7 @@ SIE channel 212 (Newly Observed Domains):
 
 ```
 $ sratool
-> connect ssh sra-service@sra-eft.sie-remote.net
+> connect ssh:sra-service@sra-eft.sie-remote.net
 * HELLO srad version 0.2.3 AXA protocol 1
 > count 5
 > channel 212 on
@@ -178,7 +180,7 @@ Next, we introduce in-line connections and show rate limiting of SIE channel
 204 (filtered passive DNS RRsets):
 
 ```
-$ sratool 'connect ssh sra-service@sra-eft.sie-remote.net'
+$ sratool 'connect:ssh sra-service@sra-eft.sie-remote.net'
 * HELLO srad version 0.2.3 AXA protocol 1
 > count 5
 > limit 1
@@ -208,7 +210,7 @@ packet count limit exceeded
 > quit
 ```
 
-1. `sratool 'connect ssh sra-service@sra-eft.sie-remote.net': `we put our 
+1. `sratool 'connect ssh:sra-service@sra-eft.sie-remote.net': `we put our 
 first `sratool` subcommand on the command line of `sratool` itself. This is a 
 shortcut that allows the first subcommand to come from the command line, while 
 subsequent subdomains wil come from the control terminal. 
@@ -314,9 +316,12 @@ provisions to detect or recover from duplicate, out-of-order, lost, or
 partially lost data. AXA data can be lost before encapsulation in AXA protocol 
 messages or packets.
 
-It consists of a pair of streams of messages between a "client" such as 
-`sratool` and an AXA server, one stream in each direction. Most types of 
-messages are sent by only the client or the server.
+For most uses, a protocol such as ssh is used below  AXA layer and above TCP
+to provide authentication, confidentiality, and integrity.
+
+The AXA protocol consists of a pair of streams of messages between a "client" 
+such as `sratool` and an AXA server, one stream in each direction, often 
+ultimately over a single TCP connection.
 
 The authoritative definition of the protocol starts with the 
 `axalib/protocol.h` file. This document is merely an informal supplement to 
@@ -333,15 +338,15 @@ and authorization. An AXA client and server pair on a computer can use
 unadorned TCP through the loop-back interface or use a UNIX domain socket. 
 The AXA protocol assumes this is safe.
 
-Between separate computers, the AXA protocol uses UNIX pipes to the stdin and 
-stdout streams provided by the `ssh` command or the funtions of an ssh library 
-such as `libssh2`. Ssh must identify and authenticate the client and server to 
-each other.
+Between separate computers, the AXA protocol can use UNIX pipes to the stdin 
+and stdout streams provided by the `ssh` command or the functions of an ssh 
+library such as `libssh2`. Ssh must identify and authenticate the client and 
+server to each other.
 
 The AXA client starts by waiting for an `AXA_P_OP_HELLO` message from the 
 server. Over a local stream, the client then sends an `AXA_P_OP_USER` message 
 to tell the server which parameters to use. When `ssh` is used, the user name 
-is obtained from the ssh server (e.g. sshd).
+is provided by the ssh protocol.
 
 ### AXA message header
 ----------------------
@@ -383,7 +388,7 @@ header file.
  * sent by clients and servers
  * ignored when received
  * it should be sent when no AXA message has been sent or received recently
- * tag is empty
+ * tag is `0`
  * carries no data and provokes no response AXA messages and is intended only 
 to ensure that the TCP connection has not been closed or broken
 
@@ -391,7 +396,7 @@ to ensure that the TCP connection has not been closed or broken
 ---------------------
  * sent by the server
  * helps the client choose a compatible AXA protocol version
- * tag is empty
+ * tag is `0`
  * carries this variable length data:
 
 ```C
@@ -405,8 +410,8 @@ to ensure that the TCP connection has not been closed or broken
     } axa_p_hello_t;
 ```
 
- * `axa_p_clnt_id_t`: a number unique to the current instance of the server
-used in bundling TCP connections 
+ * `axa_p_clnt_id_t`: a number assigned by the server used in bundling TCP 
+connections 
  * `pvers_min`: minimum version of the AXA protocol that is acceptable
  * `pvers_max`: maximum version of the AXA protocol that is acceptable
  * `str`: human readable string containing name and version of the SRA or RAD
@@ -417,7 +422,7 @@ server (variable length string up to 512 bytes including terminating NULL)
  * sent by the server
  * indicates the success of the preceding client request with the same "tag" in
  the AXA message header
- * tag is valid
+ * tag is the same as the corresponding client request, possibly `0`
  * carries this variable length data:
 
 ```C
@@ -437,7 +442,7 @@ failed (variable length string up to 512 bytes including terminating NULL)
  * sent by the server
  * indicates the failure of the preceding client request with the same "tag" in
  the AXA message header
- * tag is valid
+ * tag is the same as the corresponding client request, possibly `0`
  * carries this variable length data:
 
 ```C
@@ -456,7 +461,7 @@ failed (variable length string up to 512 bytes including terminating NULL)
 #### AXA_P_OP_MISSED (4) -- Packets got lost
 --------------------
  * sent by the server
- * tag is valid
+ * tag is `0`
  * carries this fixed length data (subject to change):
 
 ```C
@@ -465,7 +470,7 @@ failed (variable length string up to 512 bytes including terminating NULL)
         uint64_t input_dropped;
         uint64_t dropped;
         uint64_t sec_rlimited;
-        uint64_t day_rlimited;
+        uint64_t reserved_and_unused;
         uint32_t last_reported;
     }
     axa_p_missed_t;
@@ -476,10 +481,9 @@ failed (variable length string up to 512 bytes including terminating NULL)
 because the SRA server was too busy or because of network congestion between
 the SRA server and nmsg sources.
  * `dropped`: the number of SRA messages discarded by the server instead of 
-being transmitted, because of congestion on the server-to-client TCP connection
+being transmitted, because of congestion on the server-to-client connection
  * `sec_limited`: the number of SRA messages discarded by the server because of
 per-second rate limiting
- * `day_limited`: the number of SRA messages discarded by the server
 because of per-day rate limiting
  * `last_reported`: the UNIX epoch of the previous report
 
@@ -487,7 +491,7 @@ because of per-day rate limiting
 --------------------
  * sent by the server
  * reports a "watch hit" or packet or nmsg message that matched an SRA watch
- * tag is valid
+ * tag is the same as the watch that this packet or nmsg message triggered
  * carries this fixed length data:
 
 ```C
@@ -497,7 +501,7 @@ because of per-day rate limiting
 #define AXA_OP_CH_MIN    1
 #define AXA_OP_CH_MAX    4095
 typedef char axa_p_ch_buf_t[16];
-typedef uint16_t axa_p_ch_t;    /* channel number with leading "ch" */
+typedef uint16_t axa_p_ch_t;    /* channel number */
 
     typedef enum 
     {
