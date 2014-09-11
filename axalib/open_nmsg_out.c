@@ -83,14 +83,14 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 			return (0);
 		}
 
-		if (0 > connect(s, &su.sa, AXA_SU_LEN(&su))) {
-			axa_pemsg(emsg, "connect(%s): %s",
-				  addr, strerror(errno));
+		if (!axa_set_sock(emsg, s, addr, false)) {
 			close(s);
 			return (0);
 		}
 
-		if (!axa_set_sock(emsg, s, addr, false)) {
+		if (0 > connect(s, &su.sa, AXA_SU_LEN(&su))) {
+			axa_pemsg(emsg, "connect(%s): %s",
+				  addr, strerror(errno));
 			close(s);
 			return (0);
 		}
