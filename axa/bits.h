@@ -1,5 +1,5 @@
-/**
- * Bits in words.
+/*
+ * Advanced Exchange Access (AXA) Bits in words
  *
  *  Copyright (c) 2014 by Farsight Security, Inc.
  *
@@ -18,6 +18,12 @@
 
 #ifndef AXA_BITS_H
 #define AXA_BITS_H
+
+/*! \file bits.h
+ *  \brief Bit-wise functions and macros for libaxa
+ *
+ *  This file contains bitwise macros and function declarations for libaxa.
+ */
 
 #include <sys/types.h>
 #include <stdint.h>

@@ -1,5 +1,5 @@
 /*
- * Common code for RAD and SRA clients
+ * Advanced Exchange Access (AXA) common code for RAD and SRA clients
  *
  *  Copyright (c) 2014 by Farsight Security, Inc.
  *
@@ -19,6 +19,13 @@
 #ifndef AXA_CLIENT_H
 #define AXA_CLIENT_H
 
+/*! \file client.h
+ *  \brief Common code for RAD and SRA clients
+ *
+ *  This file contains AXA client macros, datatypes definitions and function 
+ *  prototypes.
+ */
+
 #include <axa/axa.h>
 #include <axa/wire.h>
 
@@ -36,38 +43,38 @@ typedef enum {
 
 typedef struct {
 	axa_client_type_t type;	    /** connection type: unix, tcp, ssh */
-	char		*addr;	    /** [user@]sshhost, tcphost, udspath */
+	char		*addr;	        /** [user@]sshhost, tcphost, udspath */
 	axa_p_user_t	user;	    /** for TCP or unix domain socket */
-	char		*hello;	    /** HELLO string from server */
+	char		*hello;	        /** HELLO string from server */
 
-	axa_socku_t	su;	    /** socket address to server */
+	axa_socku_t	su;	            /** socket address to server */
 
-	bool		have_id;    /** for AXA_P_OP_JOIN */
+	bool		have_id;        /** for AXA_P_OP_JOIN */
 	axa_p_clnt_id_t clnt_id;    /** unquie client ID */
 
 	axa_p_pvers_t	pvers;	    /** protocol version */
 
 	struct timeval	alive;	    /** AXA protocol keepalive timer */
 
-	int		in_sock;    /** input socket to server */
-	int		out_sock;   /** output socket to server */
-	int		err_sock;   /** error messages from ssh process */
+	int		in_sock;            /** input socket to server */
+	int		out_sock;           /** output socket to server */
+	int		err_sock;           /** error messages from ssh process */
 
-	pid_t		ssh_pid;    /** ssh pid if .type==CLIENT_TYPE_SSH_STR */
+	pid_t		ssh_pid;        /** ssh pid if .type==CLIENT_TYPE_SSH_STR */
 
 	bool		nonblock_connect;
 
-	int		in_poll_nfd;  /** # of input FDs for current poll() */
-	int		err_poll_nfd;	/** # of output FDS for poll() */
+	int		in_poll_nfd;        /** # of input FDs for current poll() */
+	int		err_poll_nfd;	    /** # of output FDS for poll() */
 
 	struct timeval	retry;
 	time_t		backoff;
 
-	axa_recv_buf_t	buf;	/** data from server to client */
+	axa_recv_buf_t	buf;	    /** data from server to client */
 
 	axa_p_hdr_t	recv_hdr;
 	axa_p_body_t	*recv_body;
-	size_t		recv_len;	/* sizeof(recv_hdr)+ *recv_body */
+	size_t		recv_len;	    /** sizeof(recv_hdr) + *recv_body */
 } axa_client_t;
 
 /**

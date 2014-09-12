@@ -1,5 +1,5 @@
 /*
- * Advanced Exchange Access (AXA) semanatics for DNS packets and fields.
+ * Advanced Exchange Access (AXA) semanatics for DNS packets and fields
  *
  *  Copyright (c) 2014 by Farsight Security, Inc.
  *
@@ -18,6 +18,12 @@
 
 #ifndef AXA_DNS_WALK_H
 #define AXA_DNS_WALK_H
+
+/*! \file dns_walk.h
+ *  \brief semantics for DNS packets and fields
+ *
+ *  This file contains DNS-related datatypes and function declarations.
+ */
 
 #include <axa/axa.h>
 

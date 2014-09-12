@@ -1,5 +1,5 @@
 /*
- * AXA nmsg definitions.
+ * Advanced Exchange Access (AXA) nmsg definitions
  *
  *  Copyright (c) 2014 by Farsight Security, Inc.
  *
@@ -18,6 +18,14 @@
 
 #ifndef AXA_FIELDS_H
 #define AXA_FIELDS_H
+
+/*! \file fields.h
+ *  \brief Nmsg definitions for libaxa
+ *
+ *  This file contains nmsg field related datatype definitions and function 
+ *  declarations.
+ */
+
 
 #include <nmsg/timespec.h>		/* for OS X */
 #include <nmsg.h>

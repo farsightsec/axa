@@ -1,5 +1,5 @@
 /*
- * sockets and IP addresses
+ * Advanced Exchange Access (AXA) socket and IP address code
  *
  *  Copyright (c) 2014 by Farsight Security, Inc.
  *
@@ -18,6 +18,12 @@
 
 #ifndef AXA_SOCKET_H
 #define AXA_SOCKET_H
+
+/*! \file socket.h
+ *  \brief AXA socket and IP address macros and function declarations.
+ *
+ */
+
 
 #include <axa/axa.h>
 

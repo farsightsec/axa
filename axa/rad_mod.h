@@ -1,10 +1,5 @@
 /*
- * Realtime Anomaly Detector (RAD) modules
- *
- * Before including this file,
- *	#define RAD_MOD_PREFIX xxx
- * to declare axa_rad_##prefix##_open() axa_rad_##prefix##_whit(),
- *	and axa_rad_##prefix##_close()
+ * Advanced Exchange Access (AXA) Realtime Anomaly Detector (RAD) modules
  *
  *  Copyright (c) 2014 by Farsight Security, Inc.
  *
@@ -20,19 +15,31 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
+ 
 #ifndef RAD_MOD_H
 #define RAD_MOD_H
+
+/*! \file protocol.h
+ *  \brief AXA RAD datatypes and function declarations.
+ *
+ *  This file contains the RAD datatypes and function declarations.
+ *  Before including this file,
+ *  #define RAD_MOD_PREFIX xxx
+ *  to declare axa_rad_##prefix##_open() axa_rad_##prefix##_whit(),
+ *  and axa_rad_##prefix##_close()
+ */
 
 #include <axa/wire.h>
 
 
-/* Only hdr.len and hdr.op are valid. hdr.len is in host byte-order.
- * body is in wire format. */
+/**
+ *  Only hdr.len and hdr.op are valid. hdr.len is in host byte-order.
+ *  body is in wire format. 
+ */
 typedef struct axa_rad_p axa_rad_p_t;
 struct axa_rad_p {
-	axa_p_hdr_t	hdr;
-	axa_p_body_t	body;		/* variable size */
+	axa_p_hdr_t	hdr;            /**< axa protocol header */
+	axa_p_body_t	body;		/**< variable size */
 };
 
 typedef struct axa_rad_parm axa_rad_parm_t;
@@ -43,7 +50,7 @@ struct axa_rad_parm {
 
 
 /*
- * All of these function can be called concurrently by two or more RAD server
+ * All of these functions can be called concurrently by two or more RAD server
  *	threads and so must protect themselves.
  *
  * When it is opened, the module is given
@@ -80,7 +87,6 @@ typedef void (axa_rad_close_t)(void *ctxt);
 
 
 #define AXA_RAD_CPARMS_ALLOWED	"+"	/* allow RAD client parameters */
-
 
 #define RAD_PREFIX "axa_rad_"
 

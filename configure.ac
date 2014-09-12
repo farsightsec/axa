@@ -25,7 +25,6 @@ my_CFLAGS=" \
 AC_SUBST([my_CFLAGS])
 
 AC_CONFIG_HEADERS(config.h)
-AC_CONFIG_FILES([Makefile axa/libaxa.pc])
 
 PKG_PROG_PKG_CONFIG
 if test -n "$PKG_CONFIG"; then
@@ -58,6 +57,14 @@ PKG_CHECK_MODULES([libwdns], [libwdns])
 AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
 AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
 
+AC_PATH_PROG([DOXYGEN], [doxygen])
+AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
+if test -n "$DOXYGEN"; then
+        DOC_HTML_MSG="yes, doxygen available: $DOXYGEN"
+else
+        DOC_HTML_MSG="no, doxygen not available"
+fi
+
 save_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$libnmsg_CFLAGS"
 AC_CHECK_HEADERS([nmsg/base/dnsqr.pb-c.h nmsg/base/encode.pb-c.h nmsg/base/packet.pb-c.h nmsg/sie/newdomain.pb-c.h],
@@ -70,6 +77,7 @@ AC_DEFINE_UNQUOTED(FIELDS_FILE,"$CONFDIR/fields",[Fields file])
 
 AC_DEFINE_UNQUOTED(AXA_PVERS_STR,"version $PACKAGE_VERSION", [Version])
 
+AC_CONFIG_FILES([Makefile axa/libaxa.pc doc/doxygen/Doxyfile])
 AC_OUTPUT
 AC_MSG_RESULT([
     $PACKAGE $VERSION
@@ -84,4 +92,6 @@ AC_MSG_RESULT([
         libdir:                 ${libdir}
         includedir:             ${includedir}
         pkgconfigdir:           ${pkgconfigdir}
+
+        building html docs:     ${DOC_HTML_MSG}
 ])

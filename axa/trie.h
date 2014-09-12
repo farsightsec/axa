@@ -1,5 +1,6 @@
 /*
- * Tries for SRA servers and RAD modules
+ * Advanced Exchange Access (AXA) tries for SRA servers and RAD modules
+ *
  *	The trie code is in the server library and so in radd and so available
  *	to RAD modules.
  *

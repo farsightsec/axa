@@ -161,7 +161,7 @@ packet count limit exceeded
 > quit
 
 ```
- 1. `> connect ssh sra-service@sra-eft.sie-remote.net`: we connected to 
+ 1. `> connect ssh:sra-service@sra-eft.sie-remote.net`: we connected to 
 Farsight's SRA server using the SSH transport. SSH used its keyring to prove 
 the user's identity, so there was no 'password:' prompt. The `HELLO` response
 from the remote end tells us its version number and the protocol level. 
@@ -180,13 +180,12 @@ Next, we introduce in-line connections and show rate limiting of SIE channel
 204 (filtered passive DNS RRsets):
 
 ```
-$ sratool 'connect:ssh sra-service@sra-eft.sie-remote.net'
+$ sratool 'connect ssh:sra-service@sra-eft.sie-remote.net'
 * HELLO srad version 0.2.3 AXA protocol 1
 > count 5
 > limit 1
 RATE LIMITS
     1 per second; current value=0
-    unlimited per day; current value=0
     10 seconds between reports
 > channel 204 on
 * OK CHANNEL ON/OFF channel ch204 on
@@ -316,7 +315,7 @@ provisions to detect or recover from duplicate, out-of-order, lost, or
 partially lost data. AXA data can be lost before encapsulation in AXA protocol 
 messages or packets.
 
-For most uses, a protocol such as ssh is used below  AXA layer and above TCP
+For most uses, a protocol such as ssh is used below the AXA layer and above TCP
 to provide authentication, confidentiality, and integrity.
 
 The AXA protocol consists of a pair of streams of messages between a "client" 
@@ -423,7 +422,7 @@ server (variable length string up to 512 bytes including terminating NULL)
  * indicates the success of the preceding client request with the same "tag" in
  the AXA message header
  * tag is the same as the corresponding client request, possibly `0`
- * carries this variable length data:
+ * carries this variable length data, `NULL` terminated ASCII result string:
 
 ```C
     typedef struct
@@ -433,7 +432,7 @@ server (variable length string up to 512 bytes including terminating NULL)
     } axa_p_result_t;
 ```
 
- * `op`: `AXA_P_OP_OK`
+ * `op`: original, successful operation
  * `str`: human readable string containing an error message of why the request
 failed (variable length string up to 512 bytes including terminating NULL)
 
@@ -453,7 +452,7 @@ failed (variable length string up to 512 bytes including terminating NULL)
     } axa_p_result_t;
 ```
 
- * `op`: `AXA_P_OP_ERROR`
+ * `op`: original, failing operation
  * `str`: human readable string containing an error message of why the request
 failed (variable length string up to 512 bytes including terminating NULL)
 
@@ -484,88 +483,99 @@ the SRA server and nmsg sources.
 being transmitted, because of congestion on the server-to-client connection
  * `sec_limited`: the number of SRA messages discarded by the server because of
 per-second rate limiting
-because of per-day rate limiting
  * `last_reported`: the UNIX epoch of the previous report
 
 #### AXA_P_OP_WHIT (5) -- Watch hit
 --------------------
  * sent by the server
  * reports a "watch hit" or packet or nmsg message that matched an SRA watch
- * tag is the same as the watch that this packet or nmsg message triggered
- * carries this fixed length data:
+ * tag is the same as the watch that this packet or nmsg message
+ * carries this variable length data:
 
 ```C
+typedef struct {char c[16];} axa_p_ch_buf_t;
+uint16_t axa_p_ch_t;
 #define AXA_OP_CH_PREFIX "ch"
-#define AXA_OP_CH_ALL    0
+#define AXA_OP_CH_ALL    ((axa_p_ch_t)-1)
 #define AXA_OP_CH_ALLSTR "all"
-#define AXA_OP_CH_MIN    1
-#define AXA_OP_CH_MAX    4095
-typedef char axa_p_ch_buf_t[16];
-typedef uint16_t axa_p_ch_t;    /* channel number */
+#define AXA_OP_CH_MAX  4095
+#define AXA_P2H_CH(ch) AXA_P2H16(ch)
+#define AXA_H2P_CH(ch) AXA_H2P16(ch)
 
-    typedef enum 
-    {
-        AXA_P_WHIT_NMSG = 0,
-        AXA_P_WHIT_IP   = 1,
-    } axa_p_whit_enum_t;
-    typedef struct
-    {
-        axa_p_ch_t ch;          /* channel number */
-        uint8_t    type;        /* axa_p_whit_enum_t */
-        uint8_t    pad;         /* to 0 mod 4 */
-    } axa_p_whit_hdr_t;
+typedef enum 
+{
+    AXA_P_WHIT_NMSG =0,
+    AXA_P_WHIT_IP   =1,
+} axa_p_whit_enum_t;
+typedef struct
+{
+    axa_p_ch_t ch;          /* channel number */
+    uint8_t    type;        /* axa_p_whit_enum_t */
+    uint8_t    pad;         /* to 0 mod 4 */
+} axa_p_whit_hdr_t;
 
-    typedef uint8_t axa_nmsg_idx;
-#define AXA_NMSG_IDX_RSVD   ((axa_nmsg_idx)-8)
-#define AXA_NMSG_IDX_NONE   (AXA_NMSG_IDX_RSVD+1)
-#define AXA_NMSG_IDX_ERROR  (AXA_NMSG_IDX_RSVD+2)
-#define AXA_NMSG_IDX_ALL_CH (AXA_NMSG_IDX_RSVD+3)
-    typedef struct
+typedef uint16_t       axa_nmsg_idx_t;
+#define AXA_NMSG_IDX_RSVD  ((axa_nmsg_idx_t)-16)
+#define AXA_NMSG_IDX_NONE  (AXA_NMSG_IDX_RSVD+1)
+#define AXA_NMSG_IDX_ERROR (AXA_NMSG_IDX_RSVD+2)
+#define AXA_NMSG_IDX_ALL_CH    (AXA_NMSG_IDX_RSVD+3)
+#define AXA_P2H_IDX(idx)   AXA_P2H16(idx)
+#define AXA_H2P_IDX(idx)   AXA_H2P16(idx)
+typedef struct
+{
+    axa_p_whit_hdr_t mhdr;
+    axa_nmsg_idx_t  field_idx;  /* triggering field index */
+    axa_nmsg_idx_t  val_idx;    /* which value of field */
+    axa_nmsg_idx_t  vid;    /* nmsg vendor ID */
+    axa_nmsg_idx_t  type;   /* nmsg type */
+    struct
     {
-        axa_p_whit_hdr_t mhdr;
-        uint8_t      vid;       /* nmsg vendor ID */
-        uint8_t      type;      /* nmsg type */
-        axa_nmsg_idx field_idx; /* triggering field index */
-        axa_nmsg_idx val_idx;   /* which value in field */
-        struct
-        {
-            uint32_t tv_sec;
-            uint32_t tv_nsec;
-        } ts;
-        uint8_t msg[0];
-    } axa_p_whit_nmsg_hdr_t;
+        uint32_t    tv_sec;
+        uint32_t    tv_nsec;
+    } ts;
+    uint8_t     msg[0];
+} axa_p_whit_nmsg_hdr_t;
 
-    typedef struct
+typedef struct
+{
+    axa_p_whit_hdr_t mhdr;
+    struct
     {
-        axa_p_whit_hdr_t mhdr;
-        struct
-        {
-            uint32_t tv_sec;
-            uint32_t tv_usec;
-        } ts;
-        uint32_t len;           /* original length on the wire */
-    } axa_p_whit_ip_hdr_t;
+        uint32_t tv_sec;
+        uint32_t tv_usec;
+    } tv;
+    uint32_t len;           /* packet length on the wire */
+} axa_p_whit_ip_hdr_t;
 
-    typedef union
-    {
-        axa_p_whit_hdr_t hdr;
-        struct axa_p_whit_nmsg
-        {
-            axa_p_whit_nmsg_hdr_t hdr;
-            uint8_t b[0];
-        } nmsg;
-        struct axa_p_whit_ip
-        {
-            axa_p_whit_ip_hdr_t hdr;
-            uint8_t b[0];
-        } ip;
-    } axa_p_whit_t;
+typedef struct
+{
+    axa_p_whit_nmsg_hdr_t hdr;
+#define AXA_P_WHIT_NMSG_MAX (3*(2<<16))    /* some nmsg have >1 DNS packet */
+    uint8_t     b[0];
+} axa_p_whit_nmsg_t;
+
+typedef struct
+{
+    axa_p_whit_ip_hdr_t hdr;
+#define AXA_P_WHIT_IP_MAX  (2<<16) /* IPv6 can be bigger */
+    uint8_t     b[0];
+} axa_p_whit_ip_t;
+
+typedef union
+{
+    axa_p_whit_hdr_t hdr;
+    axa_p_whit_nmsg_t nmsg;
+    axa_p_whit_ip_t ip;
+} axa_p_whit_t;
+#define AXA_WHIT_MIN_LEN min(sizeof(axa_p_whit_ip_t),          \
+                sizeof(axa_p_whit_nmsg_t))
+#define AXA_WHIT_MAX_LEN max(sizeof(axa_p_whit_ip_t)+AXA_P_WHIT_IP_MAX,    \
+                sizeof(axa_p_whit_nmsg_t)+AXA_P_WHIT_NMSG_MAX)
 ```
 
- * `hdr`: this wordy beast (`axa_p_whit_hdr_t`) indicates the kind of packet 
-or nmsg message
- * `ts`: when the packet or nmsg message was received in little endian
-byte order, with nanoseconds or microseconds depending on whether the original 
+ * `hdr`: `axa_p_whit_hdr_t` indicates the kind of packet or nmsg message
+ * `ts` or `tv`: when the packet or nmsg message was received little endian
+nanoseconds or microseconds depending on whether the original 
 data was nmsg (supports nanosecond resolution) or pcap (does not)
  * `ch`: the SRA channel on which the packet or nmsg message was received
  * `nmsg`: a complete nmsg message `nmsg.vid` and `nmsg.type` are the nmsg 
@@ -577,8 +587,8 @@ values `field_id`x and `val_idx` are the relevant nmsg field and value indeces
  * sent by the server
  * reports a current watch in response to `AXA_P_OP_WGET` from the client (see
 below)
- * tag is valid (carries the tag of the `AXA_P_OP_WGET` request in the AXA 
-message header)
+ * tag is valid (carries the tag of the `AXA_P_OP_WGET` request in the AXA message 
+header)
  * carries this variable length data:
 
 ```C
@@ -612,11 +622,6 @@ message header)
 ```C
     typedef struct
     {
-        char c[8];              /* channel name with leading "ch" */
-    } axa_p_ch_t;
-
-    typedef struct
-    {
         char c[1024];
     } axa_p_chspec_t;
 
@@ -630,7 +635,7 @@ message header)
 
  * `on`: zero or non-zero to indicate that the SRA server is monitoring this 
 channel
- * `ch`: name of the channel with leading "ch"
+ * `ch`: number of the channel
  * `axa_p_chspec_t`: a formally opaque but human readable ASCII string 
 specifying the channel.  It often looks like an IP address or network 
 interface name or SIE channel alias.
@@ -680,28 +685,32 @@ up to 64 bytes including terminating NULL)
  * carries this variable length data:
 
 ```C
-    typedef enum 
-    {
-        AXA_P_WATCH_IPV4   =1,
-        AXA_P_WATCH_IPV6   =2,
-        AXA_P_WATCH_DNS    =3,
-        AXA_P_WATCH_CH     =4,
-        AXA_P_WATCH_ERRORS =5
-    } axa_p_watch_type_t;
-    typedef union {
-        struct in_addr  addr;
-        struct in6_addr addr6;
-#define          AXA_P_DOMAIN_LEN 255
-        uint8_t    dns[AXA_P_DOMAIN_LEN];
-        axa_p_ch_t ch;
-    } axa_p_watch_pat_t;
-    typedef struct {
-        uint8_t type;           /* axa_p_watch_type_t */
-        uint8_t prefix;         /* IP address only */
-        uint8_t is_wild;
-        uint8_t pad[1];         /* to 0 mod 4 */
-        axa_p_watch_pat_t pat;
- } axa_p_watch_t;
+typedef enum 
+{
+    AXA_P_WATCH_IPV4   =1,
+    AXA_P_WATCH_IPV6   =2,
+    AXA_P_WATCH_DNS    =3,
+    AXA_P_WATCH_CH     =4,
+    AXA_P_WATCH_ERRORS =5
+} axa_p_watch_type_t;
+typedef union {
+    struct _PK in_addr  addr;
+    struct _PK in6_addr addr6;
+#define      AXA_P_DOMAIN_LEN 255
+    uint8_t     dns[AXA_P_DOMAIN_LEN];  /* DNS wire format */
+    axa_p_ch_t  ch;
+} axa_p_watch_pat_t;
+typedef struct
+{
+    uint8_t     type;   /* axa_p_watch_type_t */
+    uint8_t     prefix; /* IP address only */
+    uint8_t     flags;
+#define     AXA_P_WATCH_FG_WILD    0x01    /* valid for domains only */
+#define     AXA_P_WATCH_FG_SHARED  0x02
+#define     AXA_P_WATCH_STR_SHARED "shared"
+    uint8_t     pad;    /* to 0 mod 4 */
+    axa_p_watch_pat_t pat;
+} axa_p_watch_t;
 ```
 
  * `addr`: binary, big endian IPv4 address
@@ -787,8 +796,8 @@ much of them have been used.
     {
         axa_rlimit_t max_pkts_per_sec;
         axa_rlimit_t cur_pkts_per_sec;
-        axa_rlimit_t max_pkts_per_day;
-        axa_rlimit_t cur_pkts_per_day;
+        axa_rlimit_t unused1;
+        axa_rlimit_t unused2;
         axa_rlimit_t report_secs;
     } axa_p_rlimits_t;
 ```
@@ -796,22 +805,19 @@ much of them have been used.
  * values of `AXA_RLIMIT_OFF` set rate limits to infinity
         `AXA_RLIMIT_NA` in a message from the client indicates that the
             client does not want to change that limit.
-        typedef enum {
-                AXA_P_OPT_DEBUG    =0,
-                AXA_P_OPT_RLIMIT   =1,
-        } axa_p_opt_type_t;
+typedef enum {
+    AXA_P_OPT_DEBUG    =0,
+    AXA_P_OPT_RLIMIT   =1,
+} axa_p_opt_type_t;
 
-        typedef struct _PK {
-                uint8_t         type;
-                uint8_t         pad[7];         /* to 0 mod 8 for axa_p_rlimit_t */
-                union {
-                        uint32_t        debug;
-                        axa_p_rlimit_t  rlimit;
-                } u;
-        } axa_p_opt_t;
-
-
-
+typedef struct _PK {
+    uint8_t         type;
+    uint8_t         pad[7];         /* to 0 mod 8 for axa_p_rlimit_t */
+    union {
+        uint32_t        debug;
+        axa_p_rlimit_t  rlimit;
+    } u;
+} axa_p_opt_t;
 
 #### AXA_P_OP_ACCT (141) -- Request accounting info
 --------------------
