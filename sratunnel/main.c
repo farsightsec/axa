@@ -126,7 +126,7 @@ usage(const char *msg)
 	exit(EX_USAGE);
 }
 
-int AXA_NORETURN
+int
 main(int argc, char **argv)
 {
 	arg_t *arg;
