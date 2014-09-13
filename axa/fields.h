@@ -128,7 +128,7 @@ extern nmsg_res axa_nmsg_serialize(axa_emsg_t *emsg, nmsg_message_t msg,
 /* whit2msg.c */
 /**
  *  Create an nmsg from a watch hit
- *  \param[out] emsg error messages will go here if func fails
+ *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] nmsg_input nmsg_input_t
  *  \param[in] msgp nmsg_message_t pointer the nmsg will
  *  \param[in] whit axa_p_whit_t pointer

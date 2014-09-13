@@ -79,14 +79,17 @@ typedef struct {
 
 /**
  *  (Re-)initialize an axa client structure with default values.
+ *
  *  \param[in] client address of a client structure
  */
 extern void axa_client_init(axa_client_t *client);
 
 /**
  *  Check to see if is it time to a client to try connecting again.
+ *
  *  \param[in] client address of a client structure
  *  \param[out] now wall clock time
+ *
  *  \return < 0 if yes
  */
 extern time_t axa_client_again(axa_client_t *client, struct timeval *now);
@@ -94,18 +97,21 @@ extern time_t axa_client_again(axa_client_t *client, struct timeval *now);
 /**
  *  Set the client's backoff timer. If the client is connected to a server,
  *  disconnect it and re-initialize it (preserving the backoff timer).
+ *
  *  \param[in] client address of a client structure
  */
 extern void axa_client_backoff(axa_client_t *client);
 
 /**
  *  Flush client recv buffers of any data.
+ *
  *  \param[in] client address of a client structure
  */
 extern void axa_client_flush(axa_client_t *client);
 
 /**
  *  Close down any possible server connections a client might hold.
+ *
  *  \param[in] client address of a client structure
  */
 extern void axa_client_close(axa_client_t *client);
@@ -113,11 +119,14 @@ extern void axa_client_close(axa_client_t *client);
 /**
  *  Connect, start connecting non-blocking or try to finish a non-blocking
  *  connection via TCP or a UNIX domain socket.
+ *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of a client structure
  *  \param[in] nonblock true for nonblocking
  *
- *  \return -1=failed 0=retry 1=success
+ *  \retval -1 failed, check emsg
+ *  \retval 0 you should retry
+ *  \retval 1 connect was successful
  */
 extern int axa_client_connect(axa_emsg_t *emsg, axa_client_t *client,
 			      bool nonblock);
@@ -130,7 +139,9 @@ extern int axa_client_connect(axa_emsg_t *emsg, axa_client_t *client,
  *  \param[in] debug true to turn on debug (verbose output) when using SSH
  *  \param[in] nonblock true for nonblocking
  *
- *  \return -1=failed 0=retry 1=success
+ *  \retval -1 failed, check emsg
+ *  \retval 0 you should retry
+ *  \retval 1 connect was successful
  */
 extern int axa_client_open(axa_emsg_t *emsg, axa_client_t *client,
 			   const char *addr, bool debug, bool nonblock);

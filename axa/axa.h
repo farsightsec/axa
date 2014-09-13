@@ -40,7 +40,7 @@
  *
  *  \param[in] _a the array to size up
  *
- *  \return the size of the array an int instead of size_t
+ *  \return the size of the array as an int instead of size_t
  */
 #define AXA_DIM(_a)    ((int)((sizeof(_a) / sizeof((_a)[0]))))
 
@@ -53,11 +53,11 @@
  */
 #define AXA_LAST(_a)    (&(_a)[AXA_DIM(_a)-1])
 
-/**
- *  Unused.
- */
+/** @cond */
 #define AXA_OFFSET(_p,_s,_t)  ((uint8_t *)(_p)				\
 			       + ((uint8_t *)&((_s *)0)->_t  - (uint8_t *)0))
+
+/** @endcond */
 
 /**
  *  Test a char to see if it's whitespace. AXA ignores locales to get 
@@ -66,21 +66,22 @@
  *
  *  \param[in] c char to test
  *
- *  \return 1 if whitespace, 0 if not
+ *  \retval 1 if whitespace
+ *  \retval 0 if not
  */
 #define AXA_IS_WHITE(c) ({char _c = (c); _c == ' ' || _c == '\t'	\
 				      || _c == '\r' || _c == '\n';})
-/**
- *  AXA whitespace characters
- */
+/** @cond */
 #define AXA_WHITESPACE	" \t\n\r"
+/** @endcond */
 
 /**
  *  test if char is uppercase
  *
  *  \param[in] c char to test
  *
- *  \return 1 if uppercase char, 0 if not
+ *  \retval 1 if uppercase char
+ *  \retval 0 if not
  */
 #define AXA_IS_UPPER(c) ({char _c = (c); _c >= 'A' && _c <= 'Z';})
 
@@ -89,7 +90,8 @@
  *
  *  \param[in] c char to test
  *
- *  \return 1 if lowercase, 0 if not
+ *  \retval 1 if lowercase
+ *  \retval 0 if not
  */
 #define AXA_IS_LOWER(c) ({char _c = (c); _c >= 'a' && _c <= 'z';})
 
@@ -98,7 +100,8 @@
  *
  *  \param[in] c char to test
  *
- *  \return 1 if base 10 digit, 0 if not
+ *  \retval 1 if base 10 digit
+ *  \retval 0 if not
  */
 #define AXA_IS_DIGIT(c) ({char _c = (c); _c >= '0' && _c <= '9';})
 
@@ -134,18 +137,18 @@
  */
 #define AXA_PF(f,l)	__attribute__((format(printf,f,l)))
 
-/**
- * Tell the compiler that this function will never return.
- */
+/** Tell the compiler that this function will never return */
 #define	AXA_NORETURN    __attribute__((__noreturn__))
 
 
+/** @cond */
 #undef min
 #define min(a,b) ({typeof(a) _a = (a); typeof(b)_b = (b); _a < _b ? _a : _b; })
 #undef max
 #define max(a,b) ({typeof(a) _a = (a); typeof(b) _b = (b); _a > _b ? _a : _b; })
+/** @endcond */
 
-/* for declarations where ({}) is not allowed and side effects can't happen */
+/** for declarations where ({}) is not allowed and side effects can't happen */
 #define dcl_max(a,b) ((a) >= (b) ? (a) : (b))
 
 /**
@@ -160,9 +163,7 @@
  */
 #define AXA_CLITCMP(_b,_s)  (strncasecmp((_b), (_s), sizeof(_s)-1) == 0)
 
-/**
- *  For reference counting.
- */
+/** for reference counting */
 typedef int32_t		axa_ref_cnt_t;
 
 /**
@@ -219,6 +220,8 @@ extern void *axa_zalloc(size_t s);
  *  that is cast to (t *).
  *
  *  \param[in] t object to allocate memory for
+ *
+ *  \return pointer to the allocated memory
  */
 #define AXA_SALLOC(t) ((t *)axa_zalloc(sizeof(t)))
 
@@ -255,69 +258,74 @@ extern void axa_vasprintf(char **bufp, const char *p, va_list args);
  */
 extern void axa_asprintf(char **bufp, const char *p, ...) AXA_PF(2,3);
 
-/**
- *  Try to enable core files. Wraps getrlimit() and setrlimit().
- */
+/** Try to enable core files. Wraps getrlimit() and setrlimit(). */
 extern void axa_set_core(void);
 
-
+/** AXA error message datatype */
 typedef struct axa_emsg {
-	char	c[120];
+	char	c[120];             /**< error strings go here */
 } axa_emsg_t;
+
+/** AXA debug sentinel, 0 is off, a positive value sets a particular level */
 extern uint axa_debug;
-#define axa_debug_
-#define AXA_DEBUG_WATCH	2		/* watches, anomalies, & channels */
-#define AXA_DEBUG_TRACE	3		/* SRA messages */
-#define AXA_DEBUG_NMSG	4
+
+/** watches, anomalies, and channels */
+#define AXA_DEBUG_WATCH	2
+/** SRA messages */
+#define AXA_DEBUG_TRACE	3		
+/** use with AXA_DEBUG_TO_NMSG() to see nmsg debug */ 
+#define AXA_DEBUG_NMSG	4       
+
+/** convert AXA debug level to nmsg debug level */
 #define AXA_DEBUG_TO_NMSG() nmsg_set_debug(axa_debug <= AXA_DEBUG_NMSG	\
 					   ? 0 : axa_debug - AXA_DEBUG_NMSG)
+
+/** maximum debug level */
 #define AXA_DEBUG_MAX	10
 
 /**
  *  Set the global program name, the syslog logging stuff needs this to be
  *  called first.
- *  \param[in] me (argv[0])
+ *  \param[in] me argv[0]
  */
 extern void axa_set_me(const char *me);
 
+/** AXA program name (should be set via axa_set_me()) */
 extern char axa_prog_name[];
 
 /**
  *  Parse log options string
  *  \param[in] arg CSV string with the following options:
- *      {trace|error|acct},{off|FACILITY.LEVEL}[,{none,stderr,stdout}]
+ *  {trace|error|acct},{off|FACILITY.LEVEL}[,{none,stderr,stdout}]
  *
- *  \return true if string groks, false if not
+ *  \retval true if string groks
+ *  \retval false if not
  */
 extern bool axa_parse_log_opt(const char *arg);
 
-/**
- *  Initialize the axa syslog interface
- */
+/** initialize the axa syslog interface */
 extern void axa_syslog_init(void);
 
 /**
  *  Add text to an error or other message buffer.
  *  If we run out of room, add "...".
  *
- *  \param[in, out] bufp in: the orignal string, out: the concatenated strings
- *  \param[in, out] bufp_len in: the length of bufp string, out: new length
+ *  \param[in,out] bufp in: the orignal string, out: the concatenated strings
+ *  \param[in,out] buf_lenp in: the length of bufp string, out: new length
  *  \param[in] p the format string to copy over
  *  \param[in] ... va_args business
  */
 extern void axa_buf_print(char **bufp, size_t *buf_lenp,
 			  const char *p, ...) AXA_PF(3,4);
 
-/**
- *  Prevent surprises from uses of stdio FDs by ensuring that the FDs are open.
- */
+/** prevent surprises via use of stdio FDs by ensuring that the FDs are open */
 extern void axa_clean_stdio(void);
 
 /**
  *  Generate an erorr message string in a buffer, if we have a buffer.
  *  Log or print the message if there is no buffer
  *
- *  \param[out] emsg the error message buffer -- error message will end up here
+ *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] msg message
  *  \param[in] args arguments to p
  */
@@ -327,15 +335,17 @@ extern void axa_vpemsg(axa_emsg_t *emsg, const char *msg, va_list args);
  *  axa_vpemsg() wrapper using the variadic stdarg macros (va_start(),
  *  va_end()).
  *
- *  \param[out] emsg the error message buffer -- error message will end up here
+ *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] msg message
  *  \param[in] ... variable length argument list
  */
 extern void axa_pemsg(axa_emsg_t *emsg, const char *msg, ...) AXA_PF(2,3);
+
+/** AXA syslog types */
 typedef enum {
-	AXA_SYSLOG_TRACE=0,
-	AXA_SYSLOG_ERROR=1,
-	AXA_SYSLOG_ACCT=2
+	AXA_SYSLOG_TRACE=0,     /**< trace */
+	AXA_SYSLOG_ERROR=1,     /**< error */
+	AXA_SYSLOG_ACCT=2       /**< accounting */
 } axa_syslog_type_t;
 
 /**
@@ -373,8 +383,10 @@ extern void axa_error_msg(const char *p, ...) AXA_PF(1,2);
  *	a negative read or write length or the wrong length..  Complain
  *	about a non-negative length or decode errno for a negative length.
  *
- *  \param[in] p message
- *  \param[in] ... variable length argument list
+ *  \param[in] op canonical string referring to the I/O event that caused the 
+ *  error
+ *  \param[in] src error message
+ *  \param[in] len length of src
  */
 extern void axa_io_error(const char *op, const char *src, ssize_t len);
 
@@ -404,7 +416,8 @@ extern void axa_trace_msg(const char *p, ...) AXA_PF(1,2);
  *  \param[in] p message
  *  \param[in] args variadic argument list
  */
-extern void axa_vfatal_msg(int ex_code, const char *p, va_list) AXA_NORETURN;
+extern void axa_vfatal_msg(int ex_code, const char *p, va_list args) 
+    AXA_NORETURN;
 
 /**
  *  Log a serious error message and either exit with a specified exit code
@@ -414,8 +427,8 @@ extern void axa_vfatal_msg(int ex_code, const char *p, va_list) AXA_NORETURN;
  *  \param[in] p our last words
  *  \param[in] ... va_args business
  */
-extern void axa_fatal_msg(int ex_code,
-			  const char *p, ...) AXA_PF(2,3) AXA_NORETURN;
+extern void axa_fatal_msg(int ex_code, const char *p, ...) 
+    AXA_PF(2,3) AXA_NORETURN;
 
 /**
  *  Get a logical line from a stdio stream, with leading and trailing
@@ -431,7 +444,7 @@ extern void axa_fatal_msg(int ex_code,
  *  \param[in] file_name name of the file (for error reporting)
  *  \param[in,out] line_num line number of file, will be progressively updated
  *  \param[in,out] bufp buffer to store line, can be NULL
- *  \param[in,out] bufp_size
+ *  \param[in,out] buf_sizep size of buffer pointed to by bufp
  *
  *  \return The return value is NULL and emsg->c[0]=='\0' at EOF or NULL and
  *  emsg->c[0]!='\0' after an error.
@@ -477,7 +490,7 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
  *  \param[in] ... variadic arguments (should be a string and any trailing 
  *  parameters)
  *
- *  \return 0 if c is true, otherwise call axa_fatal_msg() and exit
+ *  \retval 0 if c is true (otherwise call axa_fatal_msg() and exit)
  */
 #define AXA_ASSERT_MSG(c,...) ((c) ? 0 : axa_fatal_msg(0, __VA_ARGS__))
 
@@ -486,7 +499,7 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
  *
  *  \param[in] c condition to assert
  *
- *  \return 0 if c is true, otherwise call axa_fatal_msg() and exit
+ *  \retval 0 if c is true (otherwise call axa_fatal_msg() and exit)
  */
 #define AXA_ASSERT(c) AXA_ASSERT_MSG((c), "\""#c"\" is false")
 
@@ -494,7 +507,7 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
  *  Wrapper for axa_fatal_msg() with an exit code of 0 and the supplied 
  *  variadic arguments.
  *
- *  \param[in] c condition to assert
+ *  \param[in] ... variadic arguments
  */
 #define AXA_FAIL(...) axa_fatal_msg(0, __VA_ARGS__)
 
@@ -519,6 +532,19 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
 extern uint32_t axa_hash_divisor(uint32_t initial, bool smaller);
 
 /* parse_ch.c */
+/**
+ *  Parse a channel string into a binary channel in host byte order
+ *
+ *  \param[out] emsg if something goes wrong, this will contain the reason
+ *  \param[out] chp pointer to a axa_p_ch_t channel in host byte order
+ *  \param[in,out] str string containing channel number or "all" keyword
+ *  \param[in,out] str_len length of str
+ *  \param[in] all_ok boolean indicating "all" is allowed
+ *  \param[in] number_ok boolean indicating "202 is the same as ch202"
+ *
+ *  \retval true if no errors were encountered, chp will contain the channel
+ *  \retval false error was was encountered, emsg will contain the reason
+ */
 extern bool axa_parse_ch(axa_emsg_t *emsg, uint16_t *chp,
 			 const char *str, size_t str_len,
 			 bool all_ok, bool number_ok);

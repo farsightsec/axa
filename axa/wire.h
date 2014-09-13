@@ -34,7 +34,7 @@
  *  contain a relevant error message -- except when the watch makes no sense.
  *  In that case, emsg->c[0] == '\0'.
  *
- *  \param[out] emsg will hold an error message if there's a problem
+ *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[out] watch parsed result
  *  \param[out] watch_len sizeof(*watch) - sizeof(watch->pat);
  *  \param[in] arg user specified string to watch for, must be NULL terminated
@@ -51,7 +51,7 @@ extern bool axa_parse_watch(axa_emsg_t *emsg,
  *  contain a relevant error message -- except when the watch is unrecognized.
  *  In that case, emsg->c[0] == '\0'.
  *
- *  \param[out] emsg will hold an error message if there's a problem
+ *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[out] watch parsed result
  *  \param[out] watch_len sizeof(*watch) - sizeof(watch->pat);
  *  \param[in] arg user specified string to watch for, must be NULL terminated
@@ -69,7 +69,7 @@ extern bool axa_parse_rad_watch(axa_emsg_t *emsg,
  *  contain a relevant error message -- except when the watch is unrecognized.
  *  In that case, emsg->c[0] == '\0'.
  *
- *  \param[out] emsg will hold an error message if there's a problem
+ *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[out] watch parsed result
  *  \param[out] watch_len sizeof(*watch) - sizeof(watch->pat);
  *  \param[in] arg user specified string to watch for, must be NULL terminated

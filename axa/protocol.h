@@ -221,7 +221,9 @@ typedef struct _PK {
 
 typedef struct {char c[16];} axa_p_ch_buf_t;
 typedef uint16_t axa_p_ch_t;
+/** SIE channel prefix */
 #define AXA_OP_CH_PREFIX "ch"
+/** AXA shorthand for "all channels" */
 #define AXA_OP_CH_ALL	((axa_p_ch_t)-1)
 #define AXA_OP_CH_ALLSTR "all"
 #define AXA_OP_CH_MAX	4095
