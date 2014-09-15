@@ -26,7 +26,6 @@
  *  declarations.
  */
 
-
 #include <nmsg/timespec.h>		/* for OS X */
 #include <nmsg.h>
 
@@ -34,94 +33,164 @@
 #include <axa/axa.h>
 
 
-/* nmsg field contents */
+/** nmsg field contents */
 typedef enum {
-	AXA_FC_UNKNOWN,			/* do not care about this field */
-	AXA_FC_IP_DGRAM,		/* IP datagram */
-	AXA_FC_IP,			/* binary IP address */
-	AXA_FC_IP_ASCII,		/* ASCII IP address */
-	AXA_FC_DOM,			/* wire-format domain */
-	AXA_FC_DOM_ASCII,		/* ASCII domain */
-	AXA_FC_HOST,			/* ASCII domain or IP address */
-	AXA_FC_RDATA,			/* DNS rdata */
-	AXA_FC_DNS,			/* complete DNS packet */
-	AXA_FC_JSON,
+	AXA_FC_UNKNOWN,			/**< do not care about this field */
+	AXA_FC_IP_DGRAM,		/**< IP datagram */
+	AXA_FC_IP,			    /**< binary IP address */
+	AXA_FC_IP_ASCII,		/**< ASCII IP address */
+	AXA_FC_DOM,			    /**< wire-format domain */
+	AXA_FC_DOM_ASCII,		/**< ASCII domain */
+	AXA_FC_HOST,			/**< ASCII domain or IP address */
+	AXA_FC_RDATA,			/**< DNS rdata */
+	AXA_FC_DNS,			    /**< complete DNS packet */
+	AXA_FC_JSON,            /**< JSON encoded */
 } axa_fc_t;
 
-/* A sub-field such as a JSON tag */
+/** sub-field such as a JSON tag, linked list */
 typedef struct axa_nmsg_sf {
-	struct axa_nmsg_sf *next;
-	axa_fc_t	fc;
-	size_t		len;
-	char		name[0];
+	struct axa_nmsg_sf *next;   /**< next item in list */
+	axa_fc_t	fc;             /**< nmsg field contents */
+	size_t		len;            /**< length of subval */
+	char		name[0];        /**< name of subval */
 } axa_nmsg_sf_t;
 
+/** nmsg vendor IDs and message types */
 typedef struct vm_entry vm_entry_t;
 
-/* nmsg fields worth parsing */
+/** nmsg fields worth parsing */
 #define AXA_FIELD_NM_LEN    32
+
+/** nmsg helper struct */
 typedef struct {
-	axa_nmsg_idx_t	idx;
+	axa_nmsg_idx_t	idx;            /**< nmsg index, a uint16_t */
 } axa_nmsg_help_t;
+
+/** nmsg field, linked list */
 typedef struct axa_nmsg_field {
-	struct axa_nmsg_field *next;
-	char  vname[AXA_FIELD_NM_LEN];	/* message module vendor name */
-	char  mname[AXA_FIELD_NM_LEN];	/* message type as a string */
-	char  name[AXA_FIELD_NM_LEN];	/* name of this field */
-	axa_nmsg_sf_t	*sf;		/* list of sub-fields */
-	axa_nmsg_idx_t	idx;		/* nmsg field index */
-	axa_nmsg_help_t	class;
-	axa_nmsg_help_t	rtype;
-	axa_nmsg_help_t	owner;
-	axa_nmsg_help_t	enm;
-	uint		enm_val;	/* target enum value */
-	axa_fc_t	fc;
-	vm_entry_t	*vm;
-	uint		line_num;
+	struct axa_nmsg_field *next;    /**< next item in list */
+	char  vname[AXA_FIELD_NM_LEN];	/**< message module vendor name */
+	char  mname[AXA_FIELD_NM_LEN];	/**< message type as a string */
+	char  name[AXA_FIELD_NM_LEN];	/**< name of this field */
+	axa_nmsg_sf_t	*sf;		    /**< list of sub-fields */
+	axa_nmsg_idx_t	idx;		    /**< nmsg field index */
+	axa_nmsg_help_t	class;          /**< DNS class */
+	axa_nmsg_help_t	rtype;          /**< DNS rtype */
+	axa_nmsg_help_t	owner;          /**< rdata owner domain */
+	axa_nmsg_help_t	enm;            /**< enum */
+	uint		enm_val;	        /**< target enum value */
+	axa_fc_t	fc;                 /**< nmsg field contents */
+	vm_entry_t	*vm;                /**< nmsg vendor IDs and message types */
+	uint		line_num;           /**< line number in config file */
 } axa_nmsg_field_t;
 
+/** AXA helper cache size */
 #define AXA_HELPER_CACHE_LEN 4
+
+/** AXA helper cache */
 typedef struct {
-	uint		len;
+	uint		len;                /**< length */
 	struct {
-		axa_nmsg_idx_t	idx;
-		axa_nmsg_idx_t	val_idx;
-		uint		val;
+		axa_nmsg_idx_t	idx;        /**< nmsg field index */
+		axa_nmsg_idx_t	val_idx;    /**< val index */
+		uint		val;            /**< value */
 	} e[AXA_HELPER_CACHE_LEN];
 } axa_helper_cache_t;
 
 
 /* fields.c */
+/**
+ *
+ *  \param[out] emsg if something goes wrong, this will contain the reason
+ *  \param[] msg
+ *  \param[] help
+ *  \param[] val_idx
+ *  \param[] val
+ *  \param[] val_len
+ *  \param[] min_val_len
+ *  \param[] max_val_len
+ *  \param[] cache
+ *
+ *  \retval true
+ *  \retval false
+ */
 extern bool axa_get_helper(axa_emsg_t *emsg, const nmsg_message_t msg,
 			   const axa_nmsg_help_t *help, axa_nmsg_idx_t val_idx,
 			   void *val, size_t *val_len,
 			   size_t min_val_len, size_t max_val_len,
 			   axa_helper_cache_t *cache);
+/** */
 extern const axa_nmsg_field_t axa_null_field;
-extern const axa_nmsg_field_t *axa_msg_fields(const nmsg_message_t msg);
-extern void axa_unload_fields(void);
+
 /**
- *  read the nmsg fields file to build the tables of known vendor IDs, message
- *  types, and fields
+ *
+ *  \param[] msg
+ *
+ *  \returns
+ */
+extern const axa_nmsg_field_t *axa_msg_fields(const nmsg_message_t msg);
+
+/**
+ *
+ */
+extern void axa_unload_fields(void);
+
+/**
+ *  Read the nmsg fields file to build the tables of known vendor IDs, message
+ *  types, and fields.
+ *
  *  \param fields_file const char * canonical name of nmsg fields file
  */
 extern void axa_load_fields(const char *fields_file);
 
-
 /* get_field_name.c */
+/**
+ *
+ *  \param[] msg
+ *  \param[] field_idx
+ *
+ *  \returns
+ */
 extern const char *axa_get_field_name(const nmsg_message_t msg,
 				      unsigned field_idx);
 
-/* wdns_res.c
- * buf is used only for bogus wres */
+/** buf is used only for bogus wres */
 #define AXA_WDNS_RES_STRLEN 24
+
+/* wdns_res.c */
+/**
+ *
+ *  \param[] wres
+ *  \param[] buf
+ *  \param[] buf_len
+ *
+ *  \returns
+ */
 extern const char *axa_wdns_res(unsigned int wres, char *buf, size_t buf_len);
 
 /* wdns_rtype.c */
+/**
+ *
+ *  \param[] buf
+ *  \param[] buf_len
+ *  \param[] rtype
+ *
+ *  \returns
+ */
 extern const char *axa_rtype_to_str(char *buf, size_t buf_len,
 				    unsigned int rtype);
 
 /* nmsg_serialize.c */
+/**
+ *
+ *  \param[out] emsg if something goes wrong, this will contain the reason
+ *  \param[] msg
+ *  \param[] help
+ *  \param[out] pbuf
+ *  \param[out] buf_len
+ *
+ *  \returns
+ */
 extern nmsg_res axa_nmsg_serialize(axa_emsg_t *emsg, nmsg_message_t msg,
 				   uint8_t **pbuf, size_t *buf_len);
 

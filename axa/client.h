@@ -68,8 +68,8 @@ typedef struct {
 
 	bool	nonblock_connect;   /**< nonblock flag */
 
-	int		in_poll_nfd;        /**< # of input FDs for current poll() */
-	int		err_poll_nfd;	    /**< # of output FDS for poll() */
+	int		in_poll_nfd;        /**< number of input FDs for current poll() */
+	int		err_poll_nfd;	    /**< number of output FDs for poll() */
 
 	struct timeval	retry;      /**< retry timer */
 	time_t		backoff;        /**< backoff quantum */
