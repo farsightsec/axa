@@ -22,59 +22,63 @@
 /*! \file client.h
  *  \brief Common code for RAD and SRA clients
  *
- *  This file contains AXA client macros, datatypes definitions and function 
+ *  This file contains AXA client macros, datatypes definitions, and function 
  *  prototypes.
  */
 
 #include <axa/axa.h>
 #include <axa/wire.h>
 
+/**< @cond */
 #define AXA_MAX_SRVRLEN (4+64+1025+1)	/* "unix user@host" */
+/**< @endcond */
 
+/** AXA client types */
 typedef enum {
 	CLIENT_TYPE_UNKN=0,
 	CLIENT_TYPE_UNIX,
-#define  CLIENT_TYPE_UNIX_STR "unix"
+#define  CLIENT_TYPE_UNIX_STR "unix"    /**< client type string: unix */
 	CLIENT_TYPE_TCP,
-#define  CLIENT_TYPE_TCP_STR "tcp"
+#define  CLIENT_TYPE_TCP_STR "tcp"      /**< client type string: tcp */
 	CLIENT_TYPE_SSH
-#define  CLIENT_TYPE_SSH_STR "ssh"
+#define  CLIENT_TYPE_SSH_STR "ssh"      /**< client type string: ssh */
 } axa_client_type_t;
 
+/** AXA client state */
 typedef struct {
-	axa_client_type_t type;	    /** connection type: unix, tcp, ssh */
-	char		*addr;	        /** [user@]sshhost, tcphost, udspath */
-	axa_p_user_t	user;	    /** for TCP or unix domain socket */
-	char		*hello;	        /** HELLO string from server */
+	axa_client_type_t type;	    /**< connection type: unix, tcp, ssh */
+	char		*addr;	        /**< [user@]sshhost, tcphost, udspath */
+	axa_p_user_t	user;	    /**< for TCP or unix domain socket */
+	char		*hello;	        /**< HELLO string from server */
 
-	axa_socku_t	su;	            /** socket address to server */
+	axa_socku_t	su;	            /**< socket address to server */
 
-	bool		have_id;        /** for AXA_P_OP_JOIN */
-	axa_p_clnt_id_t clnt_id;    /** unquie client ID */
+	bool		have_id;        /**< for AXA_P_OP_JOIN */
+	axa_p_clnt_id_t clnt_id;    /**< unquie client ID */
 
-	axa_p_pvers_t	pvers;	    /** protocol version */
+	axa_p_pvers_t	pvers;	    /**< protocol version */
 
-	struct timeval	alive;	    /** AXA protocol keepalive timer */
+	struct timeval	alive;	    /**< AXA protocol keepalive timer */
 
-	int		in_sock;            /** input socket to server */
-	int		out_sock;           /** output socket to server */
-	int		err_sock;           /** error messages from ssh process */
+	int		in_sock;            /**< input socket to server */
+	int		out_sock;           /**< output socket to server */
+	int		err_sock;           /**< error messages from ssh process */
 
-	pid_t		ssh_pid;        /** ssh pid if .type==CLIENT_TYPE_SSH_STR */
+	pid_t		ssh_pid;        /**< ssh pid if .type==CLIENT_TYPE_SSH_STR */
 
-	bool		nonblock_connect;
+	bool	nonblock_connect;   /**< nonblock flag */
 
-	int		in_poll_nfd;        /** # of input FDs for current poll() */
-	int		err_poll_nfd;	    /** # of output FDS for poll() */
+	int		in_poll_nfd;        /**< # of input FDs for current poll() */
+	int		err_poll_nfd;	    /**< # of output FDS for poll() */
 
-	struct timeval	retry;
-	time_t		backoff;
+	struct timeval	retry;      /**< retry timer */
+	time_t		backoff;        /**< backoff quantum */
 
-	axa_recv_buf_t	buf;	    /** data from server to client */
+	axa_recv_buf_t	buf;	    /**< data from server to client */
 
-	axa_p_hdr_t	recv_hdr;
-	axa_p_body_t	*recv_body;
-	size_t		recv_len;	    /** sizeof(recv_hdr) + *recv_body */
+	axa_p_hdr_t	recv_hdr;       /**< receive header */
+	axa_p_body_t	*recv_body; /**< receive body */
+	size_t		recv_len;	    /**< sizeof(recv_hdr) + *recv_body */
 } axa_client_t;
 
 /**
@@ -152,6 +156,5 @@ extern int axa_client_open(axa_emsg_t *emsg, axa_client_t *client,
  *  \param[in] hello address of hello
  */
 extern void axa_client_hello(axa_client_t *client, const axa_p_hello_t* hello);
-
 
 #endif /* AXA_CLIENT_H */

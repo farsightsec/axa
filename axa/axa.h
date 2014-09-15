@@ -124,16 +124,16 @@
 #define AXA_TO_UPPER(c) ({char _u = (c); AXA_IS_LOWER(_u) ? (_u-'a'-'A') : _u;})
 
 /**
- * Tell the compiler not to complain about an unused parameter. 
+ *  Tell the compiler not to complain about an unused parameter. 
  */
 #define AXA_UNUSED	__attribute__((unused))
 
 /**
- * Tell the compiler to check an actual format string against  the other 
- * actual parameters.
+ *  Tell the compiler to check an actual format string against  the other 
+ *  actual parameters.
  *
- * \param[in] f the number of the "format string" parameter
- * \param[in] l the number of the first variadic parameter
+ *  \param[in] f the number of the "format string" parameter
+ *  \param[in] l the number of the first variadic parameter
  */
 #define AXA_PF(f,l)	__attribute__((format(printf,f,l)))
 
@@ -148,7 +148,15 @@
 #define max(a,b) ({typeof(a) _a = (a); typeof(b) _b = (b); _a > _b ? _a : _b; })
 /** @endcond */
 
-/** for declarations where ({}) is not allowed and side effects can't happen */
+/**
+ *  Return the larger of two scalar values. This macro is for declarations 
+ *  where ({}) is not allowed and side effects can't happen.
+ *
+ *  \param[in] a first value to compare
+ *  \param[in] b second value to compare
+ *
+ *  \return the larger of the two values, if they are equal, return a
+ */
 #define dcl_max(a,b) ((a) >= (b) ? (a) : (b))
 
 /**
@@ -303,7 +311,7 @@ extern char axa_prog_name[];
  */
 extern bool axa_parse_log_opt(const char *arg);
 
-/** initialize the axa syslog interface */
+/** initialize the AXA syslog interface */
 extern void axa_syslog_init(void);
 
 /**
@@ -349,7 +357,7 @@ typedef enum {
 } axa_syslog_type_t;
 
 /**
- *  Log an axa message. Depending on type, this function could write to stdout
+ *  Log an AXA message. Depending on type, this function could write to stdout
  *  stderr, and/or to syslog.
  *
  *  \param[in] type one of #axa_syslog_type_t
