@@ -94,44 +94,51 @@ typedef struct {
 		axa_nmsg_idx_t	idx;        /**< nmsg field index */
 		axa_nmsg_idx_t	val_idx;    /**< val index */
 		uint		val;            /**< value */
-	} e[AXA_HELPER_CACHE_LEN];
+	} e[AXA_HELPER_CACHE_LEN];      /**< number of cache helpers */
 } axa_helper_cache_t;
 
 
 /* fields.c */
 /**
+ *  Get the contents of a "helper" field for a fields file line
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[] msg
- *  \param[] help
- *  \param[] val_idx
- *  \param[] val
- *  \param[] val_len
- *  \param[] min_val_len
- *  \param[] max_val_len
- *  \param[] cache
+ *  \param[in] msg the nmsg to query
+ *  \param[in] help nmsg helper
+ *  \param[in] val_idx value index
+ *  \param[out] val the value will be stored here
+ *  \param[out] val_len optional length of value, can be NULL for fixed value 
+ *  length
+ *  \param[in] min_val_len minimum allowed data length
+ *  \param[in] max_val_len maximum allowed data length
+ *  \param[in,out] cache optional cache pointer to expedite repeated fetches
  *
- *  \retval true
- *  \retval false
+ *  \retval true successful lookup, val and val_len are set
+ *  \retval false something went wrong, check emsg
  */
 extern bool axa_get_helper(axa_emsg_t *emsg, const nmsg_message_t msg,
 			   const axa_nmsg_help_t *help, axa_nmsg_idx_t val_idx,
 			   void *val, size_t *val_len,
 			   size_t min_val_len, size_t max_val_len,
 			   axa_helper_cache_t *cache);
-/** */
+
+/** sentinel field */
 extern const axa_nmsg_field_t axa_null_field;
 
 /**
+ *  Check the global vid/msgtype hash table to see if we know a vendor ID and 
+ *  message type.
  *
- *  \param[] msg
+ *  \param[in] msg nmsg message to query
  *
- *  \returns
+ *  \return success: pointer to axa_nmsg_field_t containing the nmsg vid and 
+ *  msgtype, failure: NULL
  */
 extern const axa_nmsg_field_t *axa_msg_fields(const nmsg_message_t msg);
 
 /**
- *
+ *  Unload all data from the global vid/msgtype hash table and free all
+ *  memory.
  */
 extern void axa_unload_fields(void);
 
@@ -139,17 +146,20 @@ extern void axa_unload_fields(void);
  *  Read the nmsg fields file to build the tables of known vendor IDs, message
  *  types, and fields.
  *
- *  \param fields_file const char * canonical name of nmsg fields file
+ *  \param[in] fields_file const char * canonical name of nmsg fields file
  */
 extern void axa_load_fields(const char *fields_file);
 
 /* get_field_name.c */
 /**
+ *  Get the name of a field specified by index. Function is a wrapper for 
+ *  nmsg_message_get_field_name() that returns the string "???" if field name
+ *  is not known.
  *
- *  \param[] msg
- *  \param[] field_idx
+ *  \param[in] msg nmsg to query
+ *  \param[in] field_idx field index
  *
- *  \returns
+ *  \returns success; the name of the field, failure: the string "???"
  */
 extern const char *axa_get_field_name(const nmsg_message_t msg,
 				      unsigned field_idx);
@@ -159,27 +169,32 @@ extern const char *axa_get_field_name(const nmsg_message_t msg,
 
 /* wdns_res.c */
 /**
+ *  Lookup wdns result code and return a canonical string representation.
+ *  Return a value that can be used as an arg to printf()
  *
- *  \param[] wres
- *  \param[] buf
- *  \param[] buf_len
+ *  \param[in] wres wdns result code
+ *  \param[out] buf buffer to hold string representation
+ *  \param[out] buf_len length of buffer
  *
- *  \returns
+ *  \returns the contents of buf
  */
 extern const char *axa_wdns_res(unsigned int wres, char *buf, size_t buf_len);
 
 /* wdns_rtype.c */
 /**
+ *  Lookup wdns rrtype and return a canonical string representation.
+ *  Wraps wdns_rrtype_to_str().
  *
- *  \param[] buf
- *  \param[] buf_len
- *  \param[] rtype
+ *  \param[out] buf buffer to hold string representation
+ *  \param[out] buf_len length of buffer
+ *  \param[in] rtype the wdns rrtype code
  *
- *  \returns
+ *  \returns the contents of buf
  */
 extern const char *axa_rtype_to_str(char *buf, size_t buf_len,
 				    unsigned int rtype);
 
+/**< @cond */
 /* nmsg_serialize.c */
 /**
  *
@@ -193,10 +208,12 @@ extern const char *axa_rtype_to_str(char *buf, size_t buf_len,
  */
 extern nmsg_res axa_nmsg_serialize(axa_emsg_t *emsg, nmsg_message_t msg,
 				   uint8_t **pbuf, size_t *buf_len);
+/**< @endcond */
 
 /* whit2msg.c */
 /**
  *  Create an nmsg from a watch hit
+ *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] nmsg_input nmsg_input_t
  *  \param[in] msgp nmsg_message_t pointer the nmsg will

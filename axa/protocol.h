@@ -48,27 +48,48 @@
 
 #include <axa/socket.h>
 
+/** minimize memory required */
 #define _PK __attribute__ ((__packed__))
 
+/** ah ah ah ah staying alive */
 #define AXA_KEEPALIVE_SECS  30
+/** ah ah ah ah staying alive (in ms) */
 #define AXA_KEEPALIVE_MS    (AXA_KEEPALIVE_SECS*1000)
 
 
-/* Tags are opaque to SRA server except for AXA_TAG_NONE
- *	and that the server orders them like integers.
+/**
+ *  A tag is a 16-bit identifier used to uniquely "tag" specific events during 
+ *  the lifetime of an AXA session. To refer to these events, the client or 
+ *  server will use the tag. Some AXA messages do not require tags, in that 
+ *  case the tag field should be 0. Required tags must be unique during the 
+ *  lifetime of the corresponding client request. Some client requests such as 
+ *  a "watch" can last indefinitely and will elicit many server responses all 
+ *  with the same tag.
+ *  
+ *  Tags are opaque to SRA server except for AXA_TAG_NONE and that the server 
+ *  orders them like integers.
  */
 typedef uint16_t	axa_tag_t;
+
+/** no tag */
 #define AXA_TAG_NONE	0
+/** maximum tag */
 #define AXA_TAG_MAX	((axa_tag_t)-1)
+/** convert tag protocol to host order */
 #define AXA_P2H_TAG(t)	AXA_P2H16(t)
+/** convert tag host to protocol order */
 #define AXA_H2P_TAG(t)	AXA_H2P16(t)
 
 
-/* Define old versions for eventual "#ifdef AXA_P_VERSx". */
+/** define old versions for eventual "#ifdef AXA_P_VERSx" */
 typedef uint8_t		axa_p_pvers_t;
+/** protocol version 1 */
 #define AXA_P_PVERS1	1
+/** current protocol version */
 #define AXA_P_PVERS	AXA_P_PVERS1
+/** maximum protocol version */
 #define AXA_P_PVERS_MIN	AXA_P_PVERS1
+/** minimum protocol version */
 #define AXA_P_PVERS_MAX	AXA_P_PVERS1
 
 
@@ -79,7 +100,7 @@ typedef uint8_t		axa_p_pvers_t;
  *  manipulated as numbers.
  *  Hence, AXA_H2Pxx() stands for "AXA Host to Protocol..."
  */
-#if 1   /* 0=switch to big endian protocol for testing */
+#if 1   /**< 0=switch to big endian protocol for testing */
 #define AXA_H2P16(x)	htole16(x)
 #define AXA_H2P32(x)	htole32(x)
 #define AXA_H2P64(x)	htole64(x)
@@ -96,19 +117,15 @@ typedef uint8_t		axa_p_pvers_t;
 #endif
 
 
-/**
- *  Room for more than two full sized UDP packets.
- */
+/** Room for more than two full sized UDP packets. */
 #define AXA_P_MAX_BODY_LEN	(64*1024*3)
 
-/**
- *  Clients must authenticate within many seconds after connect().
- */
+/** Clients must authenticate within many seconds after connect(). */
 #define AXA_AUTH_DELAY	30
 
 /**
  *  AXA protocol header
- *  This header starts all items in either direction.
+ *  This header starts all conversations in either direction.
  *  At 8 bytes, it is alignment friendly.
  */
 typedef struct _PK {
@@ -162,9 +179,7 @@ typedef enum {
 	AXA_P_OP_ACCT	    =142,	/**< no data */
 } axa_p_op_t;
 
-/**
- * AXA protocol client ID
- */
+/** AXA protocol client ID */
 typedef uint64_t axa_p_clnt_id_t;
 
 /**
@@ -178,44 +193,63 @@ typedef uint64_t axa_p_clnt_id_t;
  *  AXA_P_OP_HELLO must remain the same in all protocol versions.
  */
 typedef struct _PK {
-	axa_p_clnt_id_t	id;
-	axa_p_pvers_t	pvers_min;
-	axa_p_pvers_t	pvers_max;
-	char		str[512];	/* null terminated */
+	axa_p_clnt_id_t	id;         /**< ID */
+	axa_p_pvers_t	pvers_min;  /**< minimum protocol version accepted */
+	axa_p_pvers_t	pvers_max;  /**< maximum protocol version accepted */
+    /**
+     *  Human readable string containing name and version of the SRA or RAD 
+     *  server (variable length string up to 512 bytes including terminating 
+     *  NULL).
+     */
+    char		str[512];
 } axa_p_hello_t;
 
-/**
- *  AXA protocol join
- */
+/** AXA protocol join */
 typedef struct _PK {
-	axa_p_clnt_id_t	id;
+	axa_p_clnt_id_t	id;         /**< ID */
 } axa_p_join_t;
 
-/**
- *  AXA protocol result
- */
+/** AXA protocol result */
 typedef struct _PK {
-	uint8_t		op;		/* original axa_p_op_t */
+	uint8_t		op;		                /**< original axa_p_op_t */
 #define	AXA_P_RESULT_LEN 512
-	char		str[AXA_P_RESULT_LEN];	/* null terminated */
+    /**
+     *  Human readable string containing error message why the request failed
+     *  (variable length string up to 512 bytes including terminating  NULL).
+     */
+	char		str[AXA_P_RESULT_LEN];
 } axa_p_result_t;
 
-/**
- *  AXA protocol missed
- */
+/** AXA protocol missed */
 typedef struct _PK {
+    /**
+     *  The number of data lost or dropped by the server because it was too 
+     *  busy. For an SRA server, it is the total nmsg and pcap messages lost 
+     *  because the SRA server was too busy or because of network congestion 
+     *  between the SRA server and nmsg sources.
+     */
 	uint64_t	input_dropped;
+    /**
+     *  The number of SRA messages discarded by the server instead of being 
+     *  transmitted, because of congestion on the server-to-client connection.
+     */
 	uint64_t	dropped;
+    /**
+     *  The number of SRA messages discarded by the server because of 
+     *  per-second rate limiting.
+     */
 	uint64_t	sec_rlimited;
 	uint64_t	unused;
-	uint32_t	last_reported;
+	uint32_t	last_reported;  /**< UNIX epoch of the previous report */
 } axa_p_missed_t;
 
-/**
- *  AXA protocol user
- */
+/** AXA protocol user */
 typedef struct _PK {
-	char		name[64];	/* null terminated */
+    /**
+     *  Human readable string containing user-name (variable length string up
+     *  to 64 bytes including terminating NULL).
+     */
+	char		name[64];
 } axa_p_user_t;
 
 
