@@ -34,19 +34,22 @@ const axa_nmsg_field_t axa_null_field = {
 };
 
 
-/* Vendor IDs and message types of messages that are worth decoding.
- * Each (vendor,message type) pair has a list of fields that
- * contain domains or IP addresses. */
+/**
+ *  Vendor IDs and message types of messages that are worth decoding.
+ *  Each (vendor,message type) pair has a list of fields that
+ *  contain domains or IP addresses. 
+ */
 struct vm_entry {
-	struct vm_entry *next;
-	axa_nmsg_idx_t	vid;
-	axa_nmsg_idx_t	msgtype;
-	struct nmsg_msgmod *mod;
-	axa_nmsg_field_t *fields;
+	struct vm_entry *next;          /**< next entry in list */
+	axa_nmsg_idx_t	vid;            /**< vendor ID */
+	axa_nmsg_idx_t	msgtype;        /**< message type */
+	struct nmsg_msgmod *mod;        /**< nmsg message module */
+	axa_nmsg_field_t *fields;       /**< linked lisg of nmsg fields */
 };
+/** Vendor ID Message Type hash table type */
 typedef struct {
-	uint	    num_bins;
-	vm_entry_t  *bins[];
+	uint	    num_bins;           /**< number of bins */
+	vm_entry_t  *bins[];            /**< hash tables */
 } vm_hash_t;
 static vm_hash_t *vm_hash_tbl;
 

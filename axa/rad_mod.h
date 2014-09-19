@@ -19,14 +19,14 @@
 #ifndef RAD_MOD_H
 #define RAD_MOD_H
 
-/*! \file protocol.h
+/*! \file rad_mod.h
  *  \brief AXA RAD datatypes and function declarations.
  *
  *  This file contains the RAD datatypes and function declarations.
  *  Before including this file,
- *  #define RAD_MOD_PREFIX xxx
- *  to declare axa_rad_##prefix##_open() axa_rad_##prefix##_whit(),
- *  and axa_rad_##prefix##_close()
+ *  \#define RAD_MOD_PREFIX xxx
+ *  to declare axa_rad_\#\#prefix\#\#_open() axa_rad_\#\#prefix\#\#_whit(),
+ *  and axa_rad_\#\#prefix\#\#_close()
  */
 
 #include <axa/wire.h>
@@ -90,7 +90,7 @@ typedef bool (axa_rad_open_t)(void **ctxt, char **errmsg,
 			      const char *uparms, const char *cparms);
 
 /**
- *  RAD watch hit
+ *  RAD watch hit.
  *  Say whether to forward a packet to the RAD client.
  *
  *	\param[in] ctxt

@@ -39,7 +39,8 @@
  *  \param[out] watch_len sizeof(*watch) - sizeof(watch->pat);
  *  \param[in] arg user specified string to watch for, must be NULL terminated
  *
- *  \return true on success, false on error
+ *  \retval true success
+ *  \retval false error, check emsg
  */
 extern bool axa_parse_watch(axa_emsg_t *emsg,
 			    axa_p_watch_t *watch, size_t *watch_len,
@@ -56,7 +57,8 @@ extern bool axa_parse_watch(axa_emsg_t *emsg,
  *  \param[out] watch_len sizeof(*watch) - sizeof(watch->pat);
  *  \param[in] arg user specified string to watch for, must be NULL terminated
  *
- *  \return true on success, false on error
+ *  \retval true success
+ *  \retval false error, check emsg
  */
 extern bool axa_parse_rad_watch(axa_emsg_t *emsg,
 				axa_p_watch_t *watch, size_t *watch_len,
@@ -70,11 +72,12 @@ extern bool axa_parse_rad_watch(axa_emsg_t *emsg,
  *  In that case, emsg->c[0] == '\0'.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[out] watch parsed result
- *  \param[out] watch_len sizeof(*watch) - sizeof(watch->pat);
+ *  \param[out] anom parsed result
+ *  \param[out] anom_len sizeof(*watch) - sizeof(watch->pat);
  *  \param[in] arg user specified string to watch for, must be NULL terminated
  *
- *  \return true on success, false on error
+ *  \retval true success
+ *  \retval false error, check emsg
  */
 extern bool axa_parse_anom(axa_emsg_t *emsg,
 			   axa_p_anom_t *anom, size_t *anom_len,
@@ -84,7 +87,7 @@ extern bool axa_parse_anom(axa_emsg_t *emsg,
  *  Convert a watch to its string equivalent
  *
  *  \param[out] buf will hold the watch string
- *  \param[out] buflen length of buf
+ *  \param[out] buf_len length of buf
  *  \param[in] watch the watch to convert
  *  \param[out] watch_len size of the watch parameter
  *
@@ -93,41 +96,46 @@ extern bool axa_parse_anom(axa_emsg_t *emsg,
 extern char *axa_watch_to_str(char *buf, size_t buf_len,
 			      const axa_p_watch_t *watch, size_t watch_len);
 
+/** maximum human readable opcode string length */
 #define AXA_P_OP_STRLEN 20
+
 /**
  *  Convert AXA opcode to its string equivalent. If the opcode is unknown to
  *  AXA, the buffer will contain the string "unknown op n". The function can't
  *  fail.
  *
  *  \param[out] buf will hold the opcode string
- *  \param[out] buflen length of buf (should be AXA_P_OP_STRLEN)
+ *  \param[out] buf_len length of buf (should be AXA_P_OP_STRLEN)
  *  \param[out] op the opcode to look up
  *
  *  \return buf
  */
 extern char *axa_op_to_str(char *buf, size_t buf_len, axa_p_op_t op);
 
+/** maximum human readable tag string length */
 #define AXA_TAG_STRLEN 10
+
 /**
  *  Convert AXA tag to its string equivalent. If the tag is #AXA_TAG_NONE, buf
  *  will contain "*". The function can't fail.
  *
  *  \param[out] buf will hold the opcode string
- *  \param[out] buflen length of buf (should be AXA_TAG_STRLEN)
+ *  \param[out] buf_len length of buf (should be AXA_TAG_STRLEN)
  *  \param[out] tag the AXA tag value
  *
  *  \return buf
  */
 extern char *axa_tag_to_str(char *buf, size_t buf_len, axa_tag_t tag);
 
-/* "dns=" *. NS_MAXDNAME AXA_P_WATCH_STR_SHARED '\0' */
+/** "dns=" *. NS_MAXDNAME AXA_P_WATCH_STR_SHARED '\0' */
 #define AXA_P_STRLEN (4+2+1025+1+sizeof(AXA_P_WATCH_STR_SHARED)+1)
+
 /**
  *  Convert AXA protocol message to its string equivalent. If the protocol
  *  message is unrecognized or has no string equivalent, NULL is returned.
  *
  *  \param[out] buf will hold the opcode string
- *  \param[out] buflen length of buf (should be AXA_P_STRLEN)
+ *  \param[out] buf_len length of buf (should be AXA_P_STRLEN)
  *  \param[out] print_op if true, preprend the tag and opcode to string
  *  \param[out] hdr protocol header
  *  \param[out] cmd AXA command to parse into a string
@@ -136,14 +144,13 @@ extern char *axa_tag_to_str(char *buf, size_t buf_len, axa_tag_t tag);
  */
 extern char *axa_p_to_str(char *buf, size_t buf_len, bool print_op,
 			  const axa_p_hdr_t *hdr, const axa_p_body_t *cmd);
-/**
- *  AXA receive buffer
- */
+
+/** AXA receive buffer */
 typedef struct axa_recv_buf {
-	uint8_t		*data;
-	ssize_t		buf_size;
+	uint8_t		*data;          /**< data */
+	ssize_t		buf_size;       /**< size of data */
 	uint8_t		*base;		    /**< first data here */
-	ssize_t		data_len;
+	ssize_t		data_len;       /**< length of data */
 } axa_recv_buf_t;
 
 /**
@@ -151,10 +158,10 @@ typedef struct axa_recv_buf {
  *  specifies the direction of the communication
  */
 typedef enum {
-	AXA_P_TO_SRA,
-	AXA_P_FROM_SRA,
-	AXA_P_TO_RAD,
-	AXA_P_FROM_RAD
+	AXA_P_TO_SRA,               /**< To SRA server */
+	AXA_P_FROM_SRA,             /**< From SRA server */
+	AXA_P_TO_RAD,               /**< To RAD server */
+	AXA_P_FROM_RAD              /**< From RAD server */
 } axa_p_direction_t;
 
 /**
@@ -184,7 +191,7 @@ typedef enum {
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] s client input socket fd
  *  \param[in, out] hdr AXA protocol header
- *  \param[out] bodyp will contain the next AXA protocol message
+ *  \param[out] body will contain the next AXA protocol message
  *  \param[in, out] recv_len number of bytes previously received by this
  *  function
  *  \param[in] buf optional for reducing read() system calls
@@ -192,11 +199,10 @@ typedef enum {
  *  \param[in] dir the direction of the flow (to/from SRA to to/from RAD)
  *  \param[out] alive if non-NULL, triggers keepalives
  *
- *  \return one of the following codes:
- *  AXA_P_RECV_RESULT_ERR   fatal error or EOF
- *  AXA_P_RECV_RESULT_INCOM try again after select() with the same args
- *  AXA_P_RECV_RESULT_DONE  complete message received in *bodyp
- *			     recv_len=sizeof(*hdr)+bytes in *bodyp
+ *  \retval #AXA_P_RECV_RESULT_ERR 
+ *  \retval #AXA_P_RECV_RESULT_INCOM try again after select() with the same args
+ *  \retval #AXA_P_RECV_RESULT_DONE  complete message received in *bodyp, 
+ *  recv_len = sizeof(*hdr) + bytes in *bodyp
  */
 extern axa_p_recv_result_t axa_p_recv(axa_emsg_t *emsg, int s,
 				      axa_p_hdr_t *hdr, axa_p_body_t **body,
@@ -220,6 +226,22 @@ extern axa_p_recv_result_t axa_p_recv(axa_emsg_t *emsg, int s,
 extern size_t axa_make_hdr(axa_p_hdr_t *hdr,
 			   axa_p_pvers_t pvers, axa_tag_t tag, axa_p_op_t op,
 			   size_t b1_len, size_t b2_len, axa_p_direction_t dir);
+
+/**
+ *  Sanity check the body of AXA message
+ *
+ *  Depending on the opcode, function checks such things as NULL 
+ *  termination on strings, sane channel numbers, legal options, watch 
+ *  semantics, etc.
+ *
+ *  \param[out] emsg if something goes wrong, this will contain the reason
+ *  \param[in] op opcode
+ *  \param[in] body message body
+ *  \param[in] body_len message body length
+ *
+ *  \retval true message is legal
+ *  \retval false something's wrong, check emsg
+ */
 extern bool axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op,
 			const axa_p_body_t *body, size_t body_len);
 /**
@@ -251,16 +273,17 @@ typedef enum {
  *  \param[in] op AXA opcode
  *  \param[out] hdr AXA protocol header (will be filled in)
  *  \param[in] b1 optional first message body
- *  \param[in] b1_len length of first message body
+ *  \param[in] b_len1 length of first message body
  *  \param[in] b2 optional second message body
- *  \param[in] b2_len length of second message body
+ *  \param[in] b_len2 length of second message body
  *  \param[out] donep number of sent bytes
  *  \param[in] peer peer name for error messages
  *  \param[in] dir the direction of the flow (to/from SRA to to/from RAD)
  *  \param[out] alive if non-NULL, triggers keepalives
  *
- *  \return one of the following codes: AXA_P_SEND_BUSY, AXA_P_SEND_BAD,
- *  AXA_P_SEND_OK
+ *  \retval #AXA_P_SEND_BUSY
+ *  \retval #AXA_P_SEND_BAD
+ *  \retval #AXA_P_SEND_OK
  */
 extern axa_p_send_result_t axa_p_send(axa_emsg_t *emsg, int s,
 				      axa_p_pvers_t pvers, axa_tag_t tag,
@@ -270,6 +293,5 @@ extern axa_p_send_result_t axa_p_send(axa_emsg_t *emsg, int s,
 				      size_t *donep,
 				      const char *peer, axa_p_direction_t dir,
 				      struct timeval *alive);
-
 
 #endif /* AXA_WIRE_H */
