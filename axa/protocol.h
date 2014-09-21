@@ -450,8 +450,8 @@ typedef enum {
 
 /** AXA protocol watch pattern */
 typedef union {
-	struct _PK in_addr  addr;           /**< IPv4 address */
-	struct _PK in6_addr addr6;          /**< IPv6 address */
+	struct in_addr  addr;           /**< IPv4 address */
+	struct in6_addr addr6;          /**< IPv6 address */
 #	 define		 AXA_P_DOMAIN_LEN 255   /**< max length of a domain name */
 	uint8_t		dns[AXA_P_DOMAIN_LEN];	/**< DNS wire format */
 	axa_p_ch_t	ch;                     /**< channel */
