@@ -218,10 +218,10 @@ axa_walk_rdata(void *ctxt, axa_walk_ops_t *ops,
 	       axa_walkb_t *oname,
 	       size_t oname_len,
 	       axa_walkb_t *pkt_base,   /* NULL or DNS pkt to decompress */
-	       axa_walkb_t *rdata,	/* rdata to walk or parse */
 	       axa_walkb_t *pkt_lim,    /* end+1 of DNS pkt */
-	       uint rtype,
+	       axa_walkb_t *rdata,	/* rdata to walk or parse */
 	       size_t rdlength,		/* length of rdata */
+	       uint rtype,
 	       axa_walks_t *s)		/* DNS section name */
 {
 	axa_walkb_t *eod;
@@ -311,10 +311,10 @@ axa_skip_rdata(void *ctxt, axa_walk_ops_t *ops,
 	       axa_walkb_t *oname AXA_UNUSED,
 	       size_t oname_len AXA_UNUSED,
 	       axa_walkb_t *pkt_base AXA_UNUSED,
-	       axa_walkb_t *rdata,
 	       axa_walkb_t *pkt_lim,
-	       uint rtype,
+	       axa_walkb_t *rdata,
 	       size_t rdlength,
+	       uint rtype,
 	       axa_walks_t *s)
 {
 	axa_walkb_t *eod;
@@ -385,7 +385,7 @@ walk_rr(void *ctxt, axa_walk_ops_t *ops,
 	if (rdata == NULL)
 		rdata = axa_walk_rdata;
 	if (!rdata(ctxt, ops, oname, oname_len,
-		  pkt_base, *pp, pkt_lim, type, rdlength, s))
+		  pkt_base, pkt_lim, *pp, rdlength, type, s))
 		return (false);
 
 	*pp += rdlength;
