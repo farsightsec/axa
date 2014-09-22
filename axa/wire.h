@@ -30,7 +30,7 @@
 
 /**
  *  Parse an AXA watch definition.
- *  If there's a problem, the function will return false and emsg->c will 
+ *  If there is a problem, the function will return false and emsg->c will
  *  contain a relevant error message -- except when the watch makes no sense.
  *  In that case, emsg->c[0] == '\0'.
  *
@@ -48,7 +48,7 @@ extern bool axa_parse_watch(axa_emsg_t *emsg,
 
 /**
  *  Parse a RAD watch definition.
- *  If there's a problem, the function will return false and emsg->c will 
+ *  If there is a problem, the function will return false and emsg->c will
  *  contain a relevant error message -- except when the watch is unrecognized.
  *  In that case, emsg->c[0] == '\0'.
  *
@@ -67,7 +67,7 @@ extern bool axa_parse_rad_watch(axa_emsg_t *emsg,
 /**
  *  Parse an AXA anomaly detection module definition.
  *
- *  If there's a problem, the function will return false and emsg->c will 
+ *  If there is a problem, the function will return false and emsg->c will
  *  contain a relevant error message -- except when the watch is unrecognized.
  *  In that case, emsg->c[0] == '\0'.
  *
@@ -147,9 +147,9 @@ extern char *axa_p_to_str(char *buf, size_t buf_len, bool print_op,
 
 /** AXA receive buffer */
 typedef struct axa_recv_buf {
-	uint8_t		*data;          /**< data */
+	uint8_t		*data;		/**< data */
 	ssize_t		buf_size;       /**< size of data */
-	uint8_t		*base;		    /**< first data here */
+	uint8_t		*base;		/**< first data here */
 	ssize_t		data_len;       /**< length of data */
 } axa_recv_buf_t;
 
@@ -158,10 +158,10 @@ typedef struct axa_recv_buf {
  *  specifies the direction of the communication
  */
 typedef enum {
-	AXA_P_TO_SRA,               /**< To SRA server */
-	AXA_P_FROM_SRA,             /**< From SRA server */
-	AXA_P_TO_RAD,               /**< To RAD server */
-	AXA_P_FROM_RAD              /**< From RAD server */
+	AXA_P_TO_SRA,			/**< To SRA server */
+	AXA_P_FROM_SRA,			/**< From SRA server */
+	AXA_P_TO_RAD,			/**< To RAD server */
+	AXA_P_FROM_RAD			/**< From RAD server */
 } axa_p_direction_t;
 
 /**
@@ -199,9 +199,9 @@ typedef enum {
  *  \param[in] dir the direction of the flow (to/from SRA to to/from RAD)
  *  \param[out] alive if non-NULL, triggers keepalives
  *
- *  \retval #AXA_P_RECV_RESULT_ERR 
+ *  \retval #AXA_P_RECV_RESULT_ERR
  *  \retval #AXA_P_RECV_RESULT_INCOM try again after select() with the same args
- *  \retval #AXA_P_RECV_RESULT_DONE  complete message received in *bodyp, 
+ *  \retval #AXA_P_RECV_RESULT_DONE  complete message received in *bodyp,
  *  recv_len = sizeof(*hdr) + bytes in *bodyp
  */
 extern axa_p_recv_result_t axa_p_recv(axa_emsg_t *emsg, int s,
@@ -230,8 +230,8 @@ extern size_t axa_make_hdr(axa_p_hdr_t *hdr,
 /**
  *  Sanity check the body of AXA message
  *
- *  Depending on the opcode, function checks such things as NULL 
- *  termination on strings, sane channel numbers, legal options, watch 
+ *  Depending on the opcode, function checks such things as NULL
+ *  termination on strings, sane channel numbers, legal options, watch
  *  semantics, etc.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
@@ -249,9 +249,9 @@ extern bool axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op,
  *  return codes for axa_p_send()
  */
 typedef enum {
-	AXA_P_SEND_OK,      /**< part of the message was sent */
-	AXA_P_SEND_BUSY,    /**< a hard error occured when trying to send data */
-	AXA_P_SEND_BAD      /**< all messages were sent */
+	AXA_P_SEND_OK,			/**< the AXA message was sent */
+	AXA_P_SEND_BUSY,		/**< only part sent--try again later */
+	AXA_P_SEND_BAD			/**< failed to send the message */
 } axa_p_send_result_t;
 
 /**
@@ -272,10 +272,10 @@ typedef enum {
  *  \param[in] tag AXA tag
  *  \param[in] op AXA opcode
  *  \param[out] hdr AXA protocol header (will be filled in)
- *  \param[in] b1 optional first message body
- *  \param[in] b_len1 length of first message body
- *  \param[in] b2 optional second message body
- *  \param[in] b_len2 length of second message body
+ *  \param[in] b1 NULL or first part of AXA message after header
+ *  \param[in] b_len1 length of first part of the message
+ *  \param[in] b2 optional second part of the message
+ *  \param[in] b_len2 length of second part
  *  \param[out] donep number of sent bytes
  *  \param[in] peer peer name for error messages
  *  \param[in] dir the direction of the flow (to/from SRA to to/from RAD)

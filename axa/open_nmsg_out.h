@@ -1,6 +1,6 @@
 /*
  * Advanced Exchange Access (AXA) nmsg stream API
- *  
+ *
  *  Copyright (c) 2014 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,14 +31,14 @@
 
 /**
  *  Open an output nmsg stream for output or forwarding by sratunnel or sratool.
- *  
+ *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[out] out_nmsg_output nmsg_output_t of the newly opened nmsg 
- *  connection
+ *  \param[out] out_nmsg_output nmsg_output_t of the newly opened nmsg
+ *	connection
  *  \param[out] out_sock_type will hold the type of output socket
- *  (SOCK_STREAM or SOCK_DGRAM)
+ *	(SOCK_STREAM or SOCK_DGRAM)
  *  \param[in] addr canonical protocol/address of the format:
- *  "host,port", "tcp:host,port", "udp:host,port", "file:filename"
+ *	"host,port", "tcp:host,port", "udp:host,port", "file:filename"
  *
  *  \retval -1 on error
  *  \retval 0 on bad host/port/filename

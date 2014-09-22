@@ -2944,7 +2944,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		*val = "";
 		*fieldp = NULL;
 		return;
-	} else if (field_idx == AXA_NMSG_IDX_ALL_CH) {
+	} else if (field_idx == AXA_NMSG_IDX_DARK) {
 		*nm = "";
 		*eq = "";
 		*val = "";

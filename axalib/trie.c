@@ -201,6 +201,17 @@ rev_domain(uint8_t *rev, const uint8_t *name, size_t name_len)
 	return (true);
 }
 
+static inline axa_word_t
+axa_word_mask(uint b)
+{
+	axa_word_t m;
+
+	m = (axa_word_t)(-1);
+	if (b != 0)
+		m <<= (AXA_WORD_BITS - b);
+	return (m);
+}
+
 static inline void
 ip_to_key(trie_key_t *key, const void *addr, uint family, uint prefix)
 {

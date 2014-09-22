@@ -932,7 +932,7 @@ ck_an(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_an_t *an)
 	return (true);
 }
 
-/* Check anomaly specification. */
+/* Check anomally specification. */
 static bool
 ck_anom(axa_emsg_t *emsg, axa_p_op_t op,
 	const axa_p_anom_t *anom, size_t anom_len)

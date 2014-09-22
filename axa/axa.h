@@ -1,4 +1,4 @@
-/* 
+/*
  * Advanced Exchange Access (AXA) definitions
  *
  *  Copyright (c) 2014 by Farsight Security, Inc.
@@ -22,7 +22,7 @@
 /*! \file axa.h
  *  \brief Top-level interface specification for libaxa
  *
- *  This file contains AXA macros, datatype definitions and function 
+ *  This file contains AXA macros, datatype definitions and function
  *  declarations.
  */
 
@@ -54,14 +54,18 @@
 #define AXA_LAST(_a)    (&(_a)[AXA_DIM(_a)-1])
 
 /** @cond */
+/* Produce a pointer to a byte in a buffer that corresponds to a structure
+ * tag.  This works where a cast to the structure would not work or
+ * would give the wrong answer because of word mis-alignment of the buffer
+ * or other reasons. */
 #define AXA_OFFSET(_p,_s,_t)  ((uint8_t *)(_p)				\
 			       + ((uint8_t *)&((_s *)0)->_t  - (uint8_t *)0))
 
 /** @endcond */
 
 /**
- *  Test a char to see if it's whitespace. AXA ignores locales to get 
- *  consistent results on all systems, and because the AXA control files are 
+ *  Test a char to see if it's whitespace. AXA ignores locales to get
+ *  consistent results on all systems, and because the AXA control files are
  *  ASCII.
  *
  *  \param[in] c char to test
@@ -124,16 +128,16 @@
 #define AXA_TO_UPPER(c) ({char _u = (c); AXA_IS_LOWER(_u) ? (_u-'a'-'A') : _u;})
 
 /**
- *  Tell the compiler not to complain about an unused parameter. 
+ * Tell the compiler not to complain about an unused parameter.
  */
 #define AXA_UNUSED	__attribute__((unused))
 
 /**
- *  Tell the compiler to check an actual format string against  the other 
- *  actual parameters.
+ * Tell the compiler to check an actual format string against  the other
+ * actual parameters.
  *
- *  \param[in] f the number of the "format string" parameter
- *  \param[in] l the number of the first variadic parameter
+ * \param[in] f the number of the "format string" parameter
+ * \param[in] l the number of the first variadic parameter
  */
 #define AXA_PF(f,l)	__attribute__((format(printf,f,l)))
 
@@ -142,6 +146,8 @@
 
 
 /** @cond */
+/* Use local definitions of min() and max() because some UNIX-like systems
+ * have less useful or hard to find definitions. */
 #undef min
 #define min(a,b) ({typeof(a) _a = (a); typeof(b)_b = (b); _a < _b ? _a : _b; })
 #undef max
@@ -149,7 +155,7 @@
 /** @endcond */
 
 /**
- *  Return the larger of two scalar values. This macro is for declarations 
+ *  Return the larger of two scalar values. This macro is for declarations
  *  where ({}) is not allowed and side effects can't happen.
  *
  *  \param[in] a first value to compare
@@ -175,7 +181,7 @@
 typedef int32_t		axa_ref_cnt_t;
 
 /**
- *  Wrapper for compiler builtin __sync_and_add_fetch(c,1). This function 
+ *  Wrapper for compiler builtin __sync_and_add_fetch(c,1). This function
  *  atomically adds 1 to the variable that c points to. If the variable would
  *  be less than 0, AXA_ASSERT() will be called and the program will exit.
  *
@@ -186,8 +192,8 @@ typedef int32_t		axa_ref_cnt_t;
 #define AXA_INC_REF(c)	AXA_ASSERT(__sync_add_and_fetch(&(c), 1) > 0)
 
 /**
- *  Wrapper for compiler builtin __sync_and_sub_fetch(c,1). This function 
- *  atomically subtracts 1 from the variable that c points to. If the variable 
+ *  Wrapper for compiler builtin __sync_and_sub_fetch(c,1). This function
+ *  atomically subtracts 1 from the variable that c points to. If the variable
  *  would be less than 0, AXA_ASSERT() will be called and the program will exit.
  *
  *  \param[in] c pointer to the variable to be decremented
@@ -195,6 +201,7 @@ typedef int32_t		axa_ref_cnt_t;
  *  \return the new value of what c points to
  */
 #define AXA_DEC_REF(c)	AXA_ASSERT(__sync_sub_and_fetch(&(c), 1) >= 0)
+
 
 /* domain_to_str.c */
 /**
@@ -204,13 +211,15 @@ typedef int32_t		axa_ref_cnt_t;
  *
  *  \param[in] src domain name in wire format
  *  \param[in] src_len length of domain name in bytes
- *  \param[out] dst caller-alloc'd string buffer, should be of size NS_MAXDNAME
+ *  \param[out] dst caller allocated string buffer that should be of
+ *	size NS_MAXDNAME
  *  \param[in] dst_len size of the dst buffer
  *
  *  \return the value of dst
  */
 extern const char *axa_domain_to_str(const uint8_t *src, size_t src_len,
 				     char *dst, size_t dst_len);
+
 
 /* emsg.c */
 /**
@@ -271,24 +280,27 @@ extern void axa_set_core(void);
 
 /** AXA error message datatype */
 typedef struct axa_emsg {
-	char	c[120];             /**< error strings go here */
+	char	c[120];			/**< error strings go here */
 } axa_emsg_t;
 
-/** AXA debug sentinel, 0 is off, a positive value sets a particular level */
+/** AXA debug control.  0 is off.  More positive values generate more messages.
+ * See AXA_DEBUG_WATCH, AXA_DEBUG_TRACE, and so forth */
 extern uint axa_debug;
 
-/** watches, anomalies, and channels */
+/** value for axa_debug to generate messages related to watches, anomaly
+ *  modules, and channels */
 #define AXA_DEBUG_WATCH	2
-/** SRA messages */
-#define AXA_DEBUG_TRACE	3		
-/** use with AXA_DEBUG_TO_NMSG() to see nmsg debug */ 
-#define AXA_DEBUG_NMSG	4       
+/** value for axa_debug to also generate messages about
+ * AXA message sending and receiving */
+#define AXA_DEBUG_TRACE	3
+/** value for axa_debug to see nmsg related debugging messages */
+#define AXA_DEBUG_NMSG	4
 
 /** convert AXA debug level to nmsg debug level */
 #define AXA_DEBUG_TO_NMSG() nmsg_set_debug(axa_debug <= AXA_DEBUG_NMSG	\
 					   ? 0 : axa_debug - AXA_DEBUG_NMSG)
 
-/** maximum debug level */
+/** maximum value for axa_debug */
 #define AXA_DEBUG_MAX	10
 
 /**
@@ -305,13 +317,20 @@ extern char axa_prog_name[];
  *  Parse log options string
  *  \param[in] arg CSV string with the following options:
  *  {trace|error|acct},{off|FACILITY.LEVEL}[,{none,stderr,stdout}]
+ *  "trace", "error" and "acct" correspond to the members of axa_syslog_type_t.
+ *  The following settings for "trace", "error" and "acct" are assumed:
+ *	trace,LOG_DEBUG.LOG_DAEMON
+ *	error.LOG_ERR,LOG_DAEMON
+ *	acct,LOG_NOTICE.LOG_AUTH,none
  *
- *  \retval true if string groks
+ *  \retval true if string is valid
  *  \retval false if not
  */
 extern bool axa_parse_log_opt(const char *arg);
 
-/** initialize the AXA syslog interface */
+/** initialize the AXA syslog interface.
+ *  Call this function after calling axa_parse_log_opt() and axa_set_me(),
+ *  and before calling any AXA logging, accouting, or tracing function. */
 extern void axa_syslog_init(void);
 
 /**
@@ -326,12 +345,13 @@ extern void axa_syslog_init(void);
 extern void axa_buf_print(char **bufp, size_t *buf_lenp,
 			  const char *p, ...) AXA_PF(3,4);
 
-/** prevent surprises via use of stdio FDs by ensuring that the FDs are open */
+/** prevent surprises via use of stdio FDs by ensuring that the FDs are open
+ * to at least /dev/null */
 extern void axa_clean_stdio(void);
 
 /**
  *  Generate an erorr message string in a buffer, if we have a buffer.
- *  Log or print the message if there is no buffer
+ *  Log or print the message with axa_vlog_msg() if there is no buffer.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] msg message
@@ -351,16 +371,16 @@ extern void axa_pemsg(axa_emsg_t *emsg, const char *msg, ...) AXA_PF(2,3);
 
 /** AXA syslog types */
 typedef enum {
-	AXA_SYSLOG_TRACE=0,     /**< trace */
-	AXA_SYSLOG_ERROR=1,     /**< error */
-	AXA_SYSLOG_ACCT=2       /**< accounting */
+	AXA_SYSLOG_TRACE=0,		/**< trace */
+	AXA_SYSLOG_ERROR=1,		/**< error */
+	AXA_SYSLOG_ACCT=2		/**< accounting */
 } axa_syslog_type_t;
 
 /**
- *  Log an AXA message. Depending on type, this function could write to stdout
- *  stderr, and/or to syslog.
+ *  Log an AXA message. Depending on type and calls to axa_parse_log_opt(),
+ *  this function could write to stdout stderr, and/or syslog.
  *
- *  \param[in] type one of #axa_syslog_type_t
+ *  \param[in] type one of axa_syslog_type_t
  *  \param[in] fatal if true and fatal verbiage will be prepended to message
  *  \param[in] p message
  *  \param[in] args variadic argument list
@@ -369,7 +389,7 @@ extern void axa_vlog_msg(axa_syslog_type_t type, bool fatal,
 			 const char *p, va_list args);
 
 /**
- *  Log an error message.  This is a wrapper for axa_vlog_msg with
+ *  Log or print an error message.  This is a wrapper for axa_vlog_msg with
  *	type of AXA_SYSLOG_ERROR with fatal == false.
  *
  *  \param[in] p message
@@ -378,7 +398,7 @@ extern void axa_vlog_msg(axa_syslog_type_t type, bool fatal,
 extern void axa_verror_msg(const char *p, va_list args);
 
 /**
- *  Log an error message and crash.  This is a variadic wrapper for
+ *  Log or print an error message.  This is a variadic wrapper for
  *	axa_vlog_msg with type of AXA_SYSLOG_ERROR with fatal == false.
  *
  *  \param[in] p message
@@ -391,7 +411,7 @@ extern void axa_error_msg(const char *p, ...) AXA_PF(1,2);
  *	a negative read or write length or the wrong length..  Complain
  *	about a non-negative length or decode errno for a negative length.
  *
- *  \param[in] op canonical string referring to the I/O event that caused the 
+ *  \param[in] op canonical string referring to the I/O event that caused the
  *  error
  *  \param[in] src error message
  *  \param[in] len length of src
@@ -408,8 +428,8 @@ extern void axa_io_error(const char *op, const char *src, ssize_t len);
 extern void axa_vtrace_msg(const char *p, va_list args);
 
 /**
- *  Log a trace message in the tracing syslog stream as opposed to the
- *	error syslog stream.
+ *  Log a trace message in the tracing stream or AXA_SYSLOG_TRACE
+ *  as opposed to the error or AXA_SYSLOG_ERROR stream.
  *
  *  \param[in] p message
  *  \param[in] ... variable length argument list
@@ -424,7 +444,7 @@ extern void axa_trace_msg(const char *p, ...) AXA_PF(1,2);
  *  \param[in] p message
  *  \param[in] args variadic argument list
  */
-extern void axa_vfatal_msg(int ex_code, const char *p, va_list args) 
+extern void axa_vfatal_msg(int ex_code, const char *p, va_list args)
     AXA_NORETURN;
 
 /**
@@ -435,15 +455,15 @@ extern void axa_vfatal_msg(int ex_code, const char *p, va_list args)
  *  \param[in] p our last words
  *  \param[in] ... va_args business
  */
-extern void axa_fatal_msg(int ex_code, const char *p, ...) 
+extern void axa_fatal_msg(int ex_code, const char *p, ...)
     AXA_PF(2,3) AXA_NORETURN;
 
 /**
  *  Get a logical line from a stdio stream, with leading and trailing
  *  whitespace trimmed and "\\\n" deleted as a continuation.
  *  If the buffer is NULL or it is not big enough, it is freed and a new
- *  buffer is allocated. This must be freed after the last use of this
- *  function.
+ *  buffer is allocated. This must be freed by the caller after the last use
+ *  of this function.
  *
  *  Except at error or EOF, the start of the next line is returned,
  *  which might not be at the start of the buffer.
@@ -491,11 +511,11 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
 /**
  *  Assert and bail if false.
  *  Macro checks if c is true, if so it does nothing, if c is false it
- *  calls axa_fatal_msg() with an exit code of 0 and the supplied variadic 
+ *  calls axa_fatal_msg() with an exit code of 0 and the supplied variadic
  *  arguments.
  *
  *  \param[in] c condition to assert
- *  \param[in] ... variadic arguments (should be a string and any trailing 
+ *  \param[in] ... variadic arguments (should be a string and any trailing
  *  parameters)
  *
  *  \retval 0 if c is true (otherwise call axa_fatal_msg() and exit)
@@ -512,7 +532,7 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
 #define AXA_ASSERT(c) AXA_ASSERT_MSG((c), "\""#c"\" is false")
 
 /**
- *  Wrapper for axa_fatal_msg() with an exit code of 0 and the supplied 
+ *  Wrapper for axa_fatal_msg() with an exit code of 0 and the supplied
  *  variadic arguments.
  *
  *  \param[in] ... variadic arguments
@@ -524,16 +544,22 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
 /**
  *  Get a modulus for a hash function that is tolerably likely to be
  *  relatively prime to most inputs.  We get a prime for initial values
- *  not larger than the square of the last prime.  We often get a prime
- *  after that.
- *  This works well in practice for hash tables up to at least 100
- *  times the square of the last prime and better than a multiplicative hash.
+ *  not larger than 1 million.  We often get a prime after that.
+ *  This works well in practice for hash tables up to at least 100 million
+ *  and better than a multiplicative hash.
+ *
+ *  The algorithm starts by finding either the smallest prime number that
+ *  is larger than the initial parameter value and not larger than 1009 or
+ *  the largest prime smaller than the initial value and not larger than 1009.
+ *  The algorithm is finished if the initial value is at most 1009.
+ *  Otherwise, it finds the smallest (or largest) number that is relatively
+ *  prime to all prime numbers <=1009.
  *
  *  \param[in] initial is the starting point for searching for number with no
- *  small divisors. That is usually the previous size of an expanding hashtable
- *  or the initial guess for a new hash table.
- *  \param[in] smaller false if  you want a prime larger than the initial
- *  value but somet.
+ *	small divisors. That is usually the previous size of an expanding
+ *	hash table or the initial guess for a new hash table.
+ *  \param[in] smaller false if you want a value smaller than the initial
+ *	value.
  *
  *  \return the modulus
  */
@@ -559,7 +585,8 @@ extern bool axa_parse_ch(axa_emsg_t *emsg, uint16_t *chp,
 
 /* time.c */
 /**
- *  Compute (tv1 - tv2) in milliseconds, but clamped to FOREVER_SECS.
+ *  Compute (tv1 - tv2) in milliseconds, but limited or clamped to 1 day
+ *  or between  +/- 24*60*60*1000.
  *
  *  \param[in] tv1 const struct timeval * to first time value
  *  \param[in] tv2 const struct timeval * to second time value
@@ -570,8 +597,10 @@ extern time_t axa_tv_diff2ms(const struct timeval *tv1,
 			     const struct timeval *tv2);
 
 /**
- *  Compute elapsed time between two timevals, in milliseconds -- if the
- *  value would be negative, return 0.
+ *  Compute the positive elapsed time between two timevals in milliseconds,
+ *  but limited or clamped to at least 0 ms and at most 1 day
+ *  or between 0 and 24*60*60*1000.  Negative elapsed time is impossible
+ *  except when the system clock is changed.
  *
  *  \param[in] now const struct timeval * to first time value
  *  \param[in] then const struct timeval * to second time value
