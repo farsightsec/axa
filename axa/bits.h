@@ -64,18 +64,6 @@ typedef uint64_t axa_word_t;
  */
 #define BITS_TO_AXA_WORDS(b)	(((b) + AXA_WORD_BITS-1) / AXA_WORD_BITS)
 
-/** */
-static inline axa_word_t
-axa_word_mask(uint b)
-{
-	axa_word_t m;
-
-	m = (axa_word_t)(-1);
-	if (b != 0)
-		m <<= (AXA_WORD_BITS - b);
-	return (m);
-}
-
 /**< @cond internal macro */
 #define AXA_MAKE_BIT(bit, w, bit_num) do {				    \
 	(w) += (bit_num) / AXA_WORD_BITS;				    \

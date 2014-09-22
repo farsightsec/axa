@@ -47,10 +47,10 @@
  *  Holds socket endpoint state
  */
 typedef union {
-	struct sockaddr sa;                 /**< sockaddr */
-	struct sockaddr_in ipv4;            /**< sockaddr_in for IPv4 */
-	struct sockaddr_in6 ipv6;           /**< sockaddr_in6 for IPv6 */
-	struct sockaddr_un sun;             /**< sockaddr_un for Unix domain */
+	struct sockaddr sa;		/**< sockaddr */
+	struct sockaddr_in ipv4;	/**< sockaddr_in for IPv4 */
+	struct sockaddr_in6 ipv6;	/**< sockaddr_in6 for IPv6 */
+	struct sockaddr_un sun;		/**< sockaddr_un for Unix domain */
 } axa_socku_t;
 
 /** @cond */
@@ -60,16 +60,10 @@ typedef union {
 /** @endcond */
 
 #ifdef HAVE_SA_LEN
-/**
- *  Return the length of an axa_socku_t union
- *
- *  \param[in] s a pointer to a populated axa_socku_t structure
- *
- *  \return the length of the union as reported by sa_len
- */
+/** @cond */
 #define AXA_SU_LEN(s) ((s)->sa.sa_len)
+/** @endcond */
 #else
-
 /**
  *  Return the length of an axa_socku_t union
  *
@@ -99,11 +93,11 @@ typedef union {
 			   ? &(su)->ipv6.sin6_port			\
 			   : &(su)->ipv4.sin_port))
 /** @cond */
-/*  server side stuff */
+/*  server side listen socket type */
 typedef enum {
-	AXA_LSOCK_TCP,                  /* TCP socket */
-	AXA_LSOCK_UDS,                  /* Unix domain socket */
-	AXA_LSOCK_PROXY_SSH             /* Proxy SSH */
+	AXA_LSOCK_TCP,			/* TCP socket */
+	AXA_LSOCK_UDS,			/* Unix domain socket */
+	AXA_LSOCK_PROXY_SSH		/* Proxy SSH */
 } axa_lsock_type_t;
 
 typedef struct {
@@ -113,11 +107,11 @@ typedef struct {
 } axa_lsock_t;
 /** @endcond */
 
-/** poll(2) flags */
+/** interesting poll(2) flags for an input socket */
 #define AXA_POLL_IN	(POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI)
-/** poll(2) flags */
+/** intersting poll(2) flags for an output socket */
 #define AXA_POLL_OUT	(POLLOUT | POLLWRNORM | POLLWRBAND)
-/** poll(2) flags */
+/** poll(2) flags for noticing disconnect */
 #define AXA_POLL_OFF	(POLLERR | POLLHUP | POLLNVAL)
 #ifndef INFTIM
 /** infinite timeout flag */
@@ -127,12 +121,12 @@ typedef struct {
 
 /**
  *  Tests for errors on UDP output that are not necessarily fatal.
- *	At least some filters including IPFW say EACCES on hits,
- *	so treat EACCES like unreachables.
+ *	Some firewall filters or access control lists including IPFW say
+ *	EACCES on hits,	so treat EACCES like unreachables.
  *
  *	\param[in] e errno
  *
- *  \retval 1 on an errno that corresponds to an error that should not be 
+ *  \retval 1 on an errno that corresponds to an error that should not be
  *  fatal
  *  \retval 0 on errno that should be fatal
  */
@@ -154,42 +148,41 @@ typedef struct {
 				|| errno == EALREADY)
 
 /** wait this long for a busy port */
-#define AXA_ADDR_WAIT_IN_USE	5	
+#define AXA_ADDR_WAIT_IN_USE	5
 
 
 /* socket.c */
-/** INET6_ADDRSTRLEN+1+5+1 is xxxx:...:xxx/65535 */
+/** maximum string needed to represent the contents of an axa_socku_t
+ * INET6_ADDRSTRLEN+1+5+1 is xxxx:...:xxx/65535 */
 #define AXA_SU_TO_STR_LEN dcl_max(INET6_ADDRSTRLEN+1+5+1,		\
 				  sizeof(((axa_socku_t*)0)->sun.sun_path)+1)
 
 /**
- *  Extract IP address and port information from AXA socket union and place
- *  contents in a char buffer.
- *  Finished string will be of the format "[IP][separator char][PORT]". If the
- *  address family of su is unrecognized, the function will fail and call
+ *  Extract IP address and port information from AXA socket union into
+ *  a string.
+ *  The finished string will be of the format "[IP][separator char][PORT]".
+ *  If the address family of su is unrecognized, the function will fail with
  *  AXA_FAIL().
  *
- *  \param[out] str should be a char buffer of size str_len, will contain the
+ *  \param[out] str a char buffer of size str_len that will contain the
  *  finished string
  *  \param[in] str_len length of str
- *  \param[in] portc char to separate the IP address and port
- *  \param[in] su pointer to an axa_socku_t
+ *  \param[in] portc char to separate the IP address and port such as '.' or '/'
+ *  \param[in] su pointer to source axa_socku_t
  *
  *  \return the value of str
  */
 extern char *axa_su_to_str(char *str, size_t str_len, char portc,
 			   const axa_socku_t *su);
 /**
- *  Populate an axa_socku_t union with supplied data (pointer to an IPv4 or 
- *  IPv6 address)
+ *  Populate an axa_socku_t union with a supplied IPv4 or IPv6 address
  *
  *  \param[out] su pointer to a axa_socku_t union
  *  \param[in] data pointer to wire-format IPv4 or IPv6 address
- *  \param[in] data_len size of data
+ *  \param[in] data_len size of data and so IPv4 vs. IPv6 indicator
  *
- *  \retval true success, su will point to an axa_socku_t with a newly 
- *  populated IP address
- *  \retval false failure, su will be filled with 0s
+ *  \retval true success, su contains the IP address
+ *  \retval false failure, data_len was unrecognized and su is filled with 0s
  */
 extern bool axa_data_to_su(axa_socku_t *su, const void *data, size_t data_len);
 
@@ -200,9 +193,8 @@ extern bool axa_data_to_su(axa_socku_t *su, const void *data, size_t data_len);
  *  \param[in] ip pointer to wire-format IPv4 or IPv6 address
  *  \param[in] family address family, should be AF_INET or AF_INET6
  *
- *  \retval true success, su will point to an axa_socku_t with a newly 
- *  populated IP address
- *  \retval false failure, family was an unrecognized AF_* type
+ *  \retval true success, su contains the IP address
+ *  \retval false failure, family was unrecognized and su is filled with 0s
  */
 extern bool axa_ip_to_su(axa_socku_t *su, const void *ip, uint family);
 
@@ -213,14 +205,13 @@ extern bool axa_ip_to_su(axa_socku_t *su, const void *ip, uint family);
  *  \param[out] su pointer to a axa_socku_t union
  *  \param[in] str dotted quad or IPv6 string
  *
- *  \retval true success, su will point to an axa_socku_t with a newly
- *  populated IP address
- *  \retval false failure, su will be filled with 0s
+ *  \retval true success, su contains the IP address
+ *  \retval false failure, the address string was invalid and su filled with 0s
  */
 extern bool axa_str_to_su(axa_socku_t *su, const char *str);
 
 /**
- *  
+ *  Get an IP prefix mask
  *
  *  \param[out] mask IPv6 address
  *  \param[in] bits number of bits
@@ -240,14 +231,14 @@ extern int axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str);
 
 /**
  *  Parse a "hostname,port" string specifying an SRA or RAD server.
- *  If the boolean passive is true, the function sets AI_PASSIVE. As per 
- *  getaddrinfo(3), this causes the result's IP address to be filled out with 
- *  INADDR_ANY (IPv4)or in6addr_any (IPv6).
+ *  If the boolean passive is true, the function sets AI_PASSIVE. As per
+ *  getaddrinfo(3), this causes the resulting IP address to be optionally
+ *  filled with INADDR_ANY (IPv4)or in6addr_any (IPv6) for a call to bind(2).
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] addr_port string of the format "hostname,port"
  *  \param[in] passive boolean, if true, enable AI_PASSIVE
- *  \param[out] resp pointer to address of struct addrinfo, results will go 
+ *  \param[out] resp pointer to address of struct addrinfo, results will go
  *  here
  *
  *  \retval true success, *resp will have the results
@@ -257,7 +248,7 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 			 bool passive, struct addrinfo **resp);
 
 /**
- *  Set socket (or other communications file descriptor) options. The 
+ *  Set socket (or other communications file descriptor) options. The
  *  function will set FD_CLOEXEC and O_NONBLOCK if boolean is true.
  *  Additionally, the following semantics are followed:
  *
