@@ -367,7 +367,7 @@ typedef struct _PK {
 
 /** nmsg (SIE) field or value index or a special flag */
 typedef uint16_t		axa_nmsg_idx_t;
-/** values >= than this are not nmsg indices but flags */
+/** values >= than this are not nmsg indeces but flags */
 #define AXA_NMSG_IDX_RSVD	((axa_nmsg_idx_t)-16)
 /** no nmsg index */
 #define AXA_NMSG_IDX_NONE	(AXA_NMSG_IDX_RSVD+1)

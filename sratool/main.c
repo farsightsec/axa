@@ -2603,8 +2603,8 @@ rdata_to_buf(char *buf, size_t buf_len,
 	if (!rdata_buf_alloc(&ctxt))
 		return (buf);
 
-	axa_walk_rdata(&ctxt, &rdata_ops, NULL, 0, NULL,
-		       rdata, rdata+rdata_len, rtype, rdata_len, "");
+	axa_walk_rdata(&ctxt, &rdata_ops, NULL, 0, NULL, rdata+rdata_len,
+		       rdata, rdata_len, rtype, "");
 
 	return (buf);
 }
