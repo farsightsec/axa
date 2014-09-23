@@ -88,7 +88,7 @@ typedef struct {
 } axa_client_t;
 
 /**
- *  (Re-)initialize an axa client structure with default values.
+ *  (Re-)initialize an AXA client structure with default values.
  *
  *  \param[in] client address of a client structure
  */

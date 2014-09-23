@@ -48,7 +48,7 @@
  *  host byte-order but body is in wire format.
  */
 typedef struct {
-	axa_p_hdr_t	hdr;		/**< axa protocol header */
+	axa_p_hdr_t	hdr;		/**< AXA protocol header */
 	axa_p_body_t	body;		/**< variable size AXA message body */
 } axa_rad_p_t;
 

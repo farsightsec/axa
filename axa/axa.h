@@ -284,7 +284,7 @@ typedef struct axa_emsg {
 } axa_emsg_t;
 
 /** AXA debug control.  0 is off.  More positive values generate more messages.
- * See AXA_DEBUG_WATCH, AXA_DEBUG_TRACE, and so forth */
+ * See #AXA_DEBUG_WATCH, #AXA_DEBUG_TRACE, and so forth */
 extern uint axa_debug;
 
 /** value for axa_debug to generate messages related to watches, anomaly
