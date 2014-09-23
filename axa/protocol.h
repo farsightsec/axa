@@ -367,7 +367,7 @@ typedef struct _PK {
 
 /** nmsg (SIE) field or value index or a special flag */
 typedef uint16_t		axa_nmsg_idx_t;
-/** values >= than this are not nmsg indeces but flags */
+/** values >= than this are not nmsg indices but flags */
 #define AXA_NMSG_IDX_RSVD	((axa_nmsg_idx_t)-16)
 /** no nmsg index */
 #define AXA_NMSG_IDX_NONE	(AXA_NMSG_IDX_RSVD+1)
@@ -401,6 +401,7 @@ typedef struct _PK {
 	axa_nmsg_idx_t	val_idx;	/**< which value of field */
 	axa_nmsg_idx_t	vid;		/**< nmsg vendor ID */
 	axa_nmsg_idx_t	type;		/**< nmsg type */
+    /** packed timestamp */
 	struct _PK {
 		uint32_t    tv_sec;	/**< seconds */
 		uint32_t    tv_nsec;	/**< nanoseconds */
@@ -423,14 +424,14 @@ typedef struct _PK {
 typedef	struct _PK {
 	axa_p_whit_nmsg_hdr_t hdr;	/**< watch hit nmsg header */
 #define AXA_P_WHIT_NMSG_MAX (3*(2<<16))	/**< some nmsg have >1 DNS packet */
-	uint8_t	    b[0];		/** start of SIE message */
+	uint8_t	    b[0];		/**< start of SIE message */
 }  axa_p_whit_nmsg_t;
 
 /** AXA protocol watch hit IP */
 typedef struct _PK {
 	axa_p_whit_ip_hdr_t hdr;	/**< watch hit IP header */
 # define AXA_P_WHIT_IP_MAX  (2<<16)	/**< IPv6 can be bigger */
-	uint8_t	    b[0];		/** start of IP packet */
+	uint8_t	    b[0];		/**< start of IP packet */
 } axa_p_whit_ip_t;
 
 /** AXA protocol watch hit */

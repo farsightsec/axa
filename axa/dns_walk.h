@@ -46,6 +46,7 @@ typedef enum {
 	AXA_WALK_DOM_RDATA2,		/**< 2nd rdata domain in such as SOA */
 } axa_walk_dom_t;
 
+/** list of callback functions */
 typedef const struct axa_walk_ops axa_walk_ops_t;
 
 /**
@@ -100,7 +101,7 @@ typedef bool (axa_walk_domain_t)(void *ctxt,
  *  Examine or walk over an owner name and its rdata.
  *
  *  \param[in] ctxt caller's context
- *  \param[in] ops
+ *  \param[in] ops list of callback functions
  *  \param[in] oname owner name if known or NULL if unknown
  *  \param[in] oname_len length of owner name
  *  \param[in] pkt_base start of DNS packet or NULL for isolated rdata
