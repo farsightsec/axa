@@ -391,32 +391,33 @@ developers building `axalib` programs.
 `axalib/protocol.h`
  * VAL: The numerical value of the opcode.
  * SENT BY: Who can send the message
- * TAG: Boolean value indidcating if header tag is valid, as described above
+ * TAG: Boolean value indidcating if header tag must be valid or non-zero,
+as described above
  * DESCRIPTION: Short blurb describing opcode
 
 | OPCODE              | VAL | SENT BY         | TAG   | DESCRIPTION            |
 | ------------------- |----:|----------------:| -----:|----------------------------------------------------------------------------------------------:|
 | `AXA_P_OP_NOP`      | 0   | CLIENT / SERVER | NO    | carries no data, is intended only to ensure that the TCP connection is still up               |
 | `AXA_P_OP_HELLO`    | 1   | SERVER          | NO    | helps the client choose a compatible AXA protocol version                                     |
-| `AXA_P_OP_OK`       | 2   | SERVER          | YES   | indicates the success of preceeding client request referenced by tag                          |
-| `AXA_P_OP_ERROR`    | 3   | SERVER          | YES   | indicates the failure of preceeding client request referenced by tag                          |
+| `AXA_P_OP_OK`       | 2   | SERVER          | YES   | indicates the success of the preceeding client request with the same tag                      |
+| `AXA_P_OP_ERROR`    | 3   | SERVER          | YES   | indicates the failure of a preceeding client request with the same tag                        |
 | `AXA_P_OP_MISSED`   | 4   | SERVER          | NO    | carries details about data or packet loss due to rate limiting or network congestion          |
-| `AXA_P_OP_WHIT`     | 5   | SERVER          | YES   | reports a "watch hit" or packet or nmsg message that matched an SRA watch referenced by tag   |
-| `AXA_P_OP_WLIST`    | 6   | SERVER          | YES   | reports a current watch in response to `AXA_P_OP_WGET` from the client referenced by tag      |
-| `AXA_P_OP_AHIT`     | 7   | CLIENT          | NO    | used by RAD client                                                                            |
-| `AXA_P_OP_ALIST`    | 8   | CLIENT          | YES   | used by RAD client                                                                            |
-| `AXA_P_OP_CLIST`    | 9   | SERVER          | NO    | reports the on/off state and specification of an SRA channel                                  |
+| `AXA_P_OP_WHIT`     | 5   | SERVER (SRA)    | YES   | reports a "watch hit" or packet or nmsg message that matched an SRA watch with the same tag   |
+| `AXA_P_OP_WLIST`    | 6   | SERVER (SRA)    | YES   | reports a current watch in response to `AXA_P_OP_WGET` from the client referenced by tag      |
+| `AXA_P_OP_AHIT`     | 7   | SERVER (RAD)    | YES   | reports an "anomaly hit" or packet or nmsg message detected by a set of anomaly detector      |
+| `AXA_P_OP_ALIST`    | 8   | SERVER (RAD)    | YES   | reports a current anomaly detector in response to `AXA_P_OP_AGET`                             |
+| `AXA_P_OP_CLIST`    | 9   | SERVER (SRA)    | NO    | reports the on/off state and specification of an SRA channel                                  |
 | `AXA_P_OP_USER`     | 129 | CLIENT          | NO    | indicates the AXA protocol is used over a local stream and rejected otherwise                 |
-| `AXA_P_OP_JOIN`     | 130 | CLIENT          | NO    | indicates bundling TCP connections                                                            |
+| `AXA_P_OP_JOIN`     | 130 | CLIENT          | NO    | used to bundle TCP connections                                                                |
 | `AXA_P_OP_PAUSE`    | 131 | CLIENT          | NO    | ask the server to temporarily stop sending packets or nmsg messages                           |
 | `AXA_P_OP_GO`       | 132 | CLIENT          | NO    | ask the server to resume sending packets or nmsg messages                                     |
 | `AXA_P_OP_WATCH`    | 133 | CLIENT          | NO    | specify interesting packets or nmsg messages                                                  |
-| `AXA_P_OP_WGET`     | 134 | SERVER (RAD)    | NO    | requests one or all current watches in `AXA_P_OP_WLIST` messages                              |
-| `AXA_P_OP_ANOM`     | 135 | SERVER (SRA)    | NO    | used by RAD servers talking to SRA servers                                                    |
-| `AXA_P_OP_AGET`     | 136 | SERVER          | NO    | used by RAD servers talking to SRA servers                                                    |
-| `AXA_P_OP_STOP`     | 137 | CLIENT          | NO    | ask the SRA server to delete the watch referenced by tag                                      |
-| `AXA_P_OP_ALL_STOP` | 138 | CLIENT          | NO    | ask the SRA server to delete all watches                                                      |
-| `AXA_P_OP_CHANNEL`  | 139 | CLIENT          | NO    | tell the SRA server to enable or disable one channel or all channels                          |
-| `AXA_P_OP_CGET`     | 140 | CLIENT          | NO    | get the specification and state of all channels                                               |
+| `AXA_P_OP_WGET`     | 134 | SERVER (SRA)    | --    | requests one (with specified tag) or all (tag 0) current watches in `AXA_P_OP_WLIST` messages |
+| `AXA_P_OP_ANOM`     | 135 | SERVER (RAD)    | YES   | specify an anomaly detector                                                                   |
+| `AXA_P_OP_AGET`     | 136 | SERVER (RAD)    | --    | requests one or all current anomaly detectors                                                 |
+| `AXA_P_OP_STOP`     | 137 | CLIENT          | NO    | ask the server to delete the watch or anomaly detector by tag                                 |
+| `AXA_P_OP_ALL_STOP` | 138 | CLIENT          | NO    | ask the server to delete all watches or anomaly detectors                                     |
+| `AXA_P_OP_CHANNEL`  | 139 | CLIENT (SRA)    | NO    | tell the SRA server to enable or disable one channel or all channels                          |
+| `AXA_P_OP_CGET`     | 140 | CLIENT (SRA)    | NO    | get the specifications and states of all channels                                               |
 | `AXA_P_OP_OPT`      | 141 | CLIENT / SERVER | NO    | set various options (rate limiting) report rate limits, how much has been used                |
 | `AXA_P_OP_ACCT`     | 142 | CLIENT / SERVER | NO    | request accounting information                                                                |
