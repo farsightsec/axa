@@ -248,21 +248,36 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 			 bool passive, struct addrinfo **resp);
 
 /**
- *  Set socket (or other communications file descriptor) options. The
- *  function will set FD_CLOEXEC and O_NONBLOCK if boolean is true.
- *  Additionally, the following semantics are followed:
+ *  Set socket (or other communications file descriptor) options. 
+ *  
+ *  AXA has the option of using several communications primitives. Depending on
+ *  network details and the user's whim, AXA may use:
+ *      - Unix domain (unix:/foo/bar)
+ *      - TCP  (tcp:10.0.0.1,123)
+ *      - SSH  (ssh:10.0.0.1,123)
+ *      - UDP  (udp:10.0.0.1,123)
+ *      - NMSG over TCP (nmsg:tcp:10.0.0.1,123)
+ *      - NMSG over UDP (nmsg:udp:10.0.0.1,123)
  *
- *  SOCK_STREAM:
- *      - SO_KEEPALIVE
- *      - TCP_NODELAY
+ *  There are a handful of code paths that will require this function to be
+ *  called, and they won't know ahead of time which of the above connection
+ *  primitives was specified. The above alternatives need some the following:
+ *      - close-on-exec (FD_CLOEXEC)
+ *      - non-blocking (O_NONBLOCK, set if nonblock is true)
+ *      - Nagle Algorithm disabled (TCP and SSH only)
+ *      - TCP keepalives enabled (TCP and SSH only)
+ *      - Broadcasting enabled (UDP to broadcast IP address only)
  *
- *  SOCK_DGRAM:
- *      - SO_BROADCAST
+ *  As such, #axa_set_sock() tries to do the right thing for the given 
+ *  primitive. However, on some platforms, this is a best effort service
+ *  (notably OS X which does not support SO_PROTOCOL) and there may be 
+ *  spurious warnings when AXA attempts to set a socket option that is 
+ *  non-sequitor for the given primitive.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] s socket or fd
  *  \param[in] label descriptive labal referring to s (usually an address)
- *  \param[in] nonblock boolean to set O_NONBLOCK
+ *  \param[in] nonblock boolean, if true, set O_NONBLOCK
  *
  *  \retval true success
  *  \retval false something went wrong, check emsg

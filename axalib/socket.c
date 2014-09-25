@@ -377,89 +377,87 @@ axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 }
 
 /* Set socket or other communications file descriptor options */
-bool					/* false=emsg has an error message */
+bool                    /* false=emsg has an error message */
 axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
 {
-	int on;
+    int on;
+    uint protocol;
+    uint type;
+    socklen_t len;
+
+    if (0 > fcntl(s, F_SETFD, FD_CLOEXEC)) {
+        axa_pemsg(emsg, "fcntl(%s, F_SETFD, FD_CLOEXEC): %s",
+              label, strerror(errno));
+        return (false);
+    }
+
+    if (nonblock && -1 == fcntl(s, F_SETFL,
+                    fcntl(s, F_GETFL, 0) | O_NONBLOCK)) {
+        axa_pemsg(emsg, "fcntl(%s, O_NONBLOCK): %s",
+              label, strerror(errno));
+        return (false);
+    }
+
+    len = sizeof(type);
+    if (0 > getsockopt(s, SOL_SOCKET, SO_TYPE, &type, &len)) {
+        /* Do not worry about not setting socket options on files. */
+        if (errno == ENOTSOCK)
+            return (true);
+
+        /* hope for the best despite this error */
+        axa_trace_msg("getsockopt(%s, SO_TYPE): %s",
+                  label, strerror(errno));
+    } else if (type != SOCK_STREAM && type != SOCK_DGRAM) {
+        return (true);
+    }
+
 #ifdef SO_PROTOCOL
-	uint protocol;
-#endif
-	uint type;
-	socklen_t len;
-
-	if (0 > fcntl(s, F_SETFD, FD_CLOEXEC)) {
-		axa_pemsg(emsg, "fcntl(%s, F_SETFD, FD_CLOEXEC): %s",
-			  label, strerror(errno));
-		return (false);
-	}
-
-	if (nonblock && -1 == fcntl(s, F_SETFL,
-				    fcntl(s, F_GETFL, 0) | O_NONBLOCK)) {
-		axa_pemsg(emsg, "fcntl(%s, O_NONBLOCK): %s",
-			  label, strerror(errno));
-		return (false);
-	}
-
-	len = sizeof(type);
-	if (0 > getsockopt(s, SOL_SOCKET, SO_TYPE, &type, &len)) {
-		/* Do not worry about not setting socket options on files. */
-		if (errno == ENOTSOCK)
-			return (true);
-
-		/* hope for the best despite this error */
-		axa_trace_msg("getsockopt(%s, SO_TYPE): %s",
-			      label, strerror(errno));
-	} else if (type != SOCK_STREAM && type != SOCK_DGRAM) {
-		return (true);
-	}
-
-#ifndef SO_PROTOCOL
-	/*
-	 * Without getsockopt(SOL_SOCKET, SO_PROTOCOL) to check that we have
-	 * a TCP/IP socket (e.g. on OS X), there will be errors as we try
-	 * set UDP or TCP options.
-	 */
+    len = sizeof(protocol);
+    if (0 > getsockopt(s, SOL_SOCKET, SO_PROTOCOL, &protocol, &len)) {
+        /* hope for the best despite this error */
+        axa_trace_msg("getsockopt(%s, SO_PROTOCOL): %s",
+                  label, strerror(errno));
+        protocol = -1;
+    }
 #else
-	len = sizeof(protocol);
-	if (0 > getsockopt(s, SOL_SOCKET, SO_PROTOCOL, &protocol, &len)) {
-		/* hope for the best despite this error */
-		axa_trace_msg("getsockopt(%s, SO_PROTOCOL): %s",
-			      label, strerror(errno));
-	}
+    /*
+     * Without getsockopt(..SOL_SOCKET, SO_PROTOCOL..) to check that we have
+     * a TCP/IP socket (e.g. on OS X), there will be errors as we assume
+     * that all stream or datagram sockets are TCP/IP sockets and try
+     * set UDP or TCP options on UNIX domain sockets.
+     */
+    protocol = -1;
 #endif
 
-#ifdef SO_PROTOCOL
-	if (protocol == IPPROTO_TCP) {
-#endif
-		on = 1;
-		if (0 > setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
-				   &on, sizeof(on))) {
-			/* hope for the best despite this error */
-			axa_trace_msg("setsockopt(%s, SO_KEEPALIVE): %s",
-				      label, strerror(errno));
-		}
-		on = 1;
-		if (0 > setsockopt(s, SO_KEEPALIVE, TCP_NODELAY,
-				   &on, sizeof(on))) {
-			/* hope for the best despite this error */
-			axa_trace_msg("setsockopt(%s, TCP_NODELAY): %s",
-				      label, strerror(errno));
-		}
-#ifdef SO_PROTOCOL
-	} else if (protocol == IPPROTO_UDP) {
-#endif
-		on = 1;
-		if (0 > setsockopt(s, SOL_SOCKET, SO_BROADCAST,
-				   &on, sizeof(on))) {
-			/* hope for the best despite this error */
-			axa_trace_msg("setsockopt(%s, SO_BROADCAST): %s",
-				      label, strerror(errno));
-		}
-#ifdef SO_PROTOCOL
-	}
-#endif
+    if (protocol != IPPROTO_UDP && type == SOCK_STREAM) {
+        on = 1;
+        if (0 > setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
+                   &on, sizeof(on))) {
+            /* hope for the best despite this error */
+            axa_trace_msg(
+                    "probably spurious error setsockopt(%s, SO_KEEPALIVE): %s",
+                    label, strerror(errno));
+        }
+        on = 1;
+        if (0 > setsockopt(s, SO_KEEPALIVE, TCP_NODELAY,
+                   &on, sizeof(on))) {
+            /* hope for the best despite this error */
+            axa_trace_msg(
+                    "probably spurious error setsockopt(%s, TCP_NODELAY): %s",
+                    label, strerror(errno));
+        }
+    } else if (protocol != IPPROTO_TCP && type == SOCK_DGRAM) {
+        on = 1;
+        if (0 > setsockopt(s, SOL_SOCKET, SO_BROADCAST,
+                   &on, sizeof(on))) {
+            /* hope for the best despite this error */
+            axa_trace_msg(
+                    "probably spurious error setsockopt(%s, SO_BROADCAST): %s",
+                    label, strerror(errno));
+        }
+    }
 
-	return (true);
+    return (true);
 }
 
 /*
