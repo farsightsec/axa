@@ -22,9 +22,7 @@
 #ifndef AXA_ENDIAN_H
 #define AXA_ENDIAN_H
 
-
 /* This ought to be handled with autoconf. */
-
 
 #ifdef __linux
 #include <endian.h>
@@ -35,7 +33,7 @@
 #endif
 
 #ifdef __APPLE__
-# include <libkern/OSByteOrder.h>
+#include <libkern/OSByteOrder.h>
 
 #define htobe16(x) OSSwapHostToBigInt16(x)
 #define htole16(x) OSSwapHostToLittleInt16(x)
@@ -50,6 +48,5 @@
 #define be64toh(x) OSSwapBigToHostInt64(x)
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 #endif
-
 
 #endif /* AXA_ENDIAN_H */

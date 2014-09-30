@@ -2603,8 +2603,8 @@ rdata_to_buf(char *buf, size_t buf_len,
 	if (!rdata_buf_alloc(&ctxt))
 		return (buf);
 
-	axa_walk_rdata(&ctxt, &rdata_ops, NULL, 0, NULL,
-		       rdata, rdata+rdata_len, rtype, rdata_len, "");
+	axa_walk_rdata(&ctxt, &rdata_ops, NULL, 0, NULL, rdata+rdata_len,
+		       rdata, rdata_len, rtype, "");
 
 	return (buf);
 }
@@ -2944,7 +2944,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		*val = "";
 		*fieldp = NULL;
 		return;
-	} else if (field_idx == AXA_NMSG_IDX_ALL_CH) {
+	} else if (field_idx == AXA_NMSG_IDX_DARK) {
 		*nm = "";
 		*eq = "";
 		*val = "";

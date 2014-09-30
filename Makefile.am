@@ -42,7 +42,9 @@ EXTRA_DIST += \
 	srawatch.man \
 	radwatch.man \
 	sratool/options.man \
-	sratool/cmds.man
+	sratool/cmds.man \
+	README.md \
+	doc/doxygen/doxygen-input-filter
 
 dist_man_MANS =  \
 	sratool/sratool.1 \
@@ -201,6 +203,13 @@ EXTRA_DIST += \
 	axa/README \
 	sratool/README \
 	sratunnel/README
+
+if HAVE_DOXYGEN
+html-local: doc/doxygen/Doxyfile
+	$(AM_V_GEN) cd doc/doxygen && $(DOXYGEN)
+endif
+
+doc: html-local
 
 spotless: distclean
 	rm -fr ar-lib aclocal.m4 autom4te.cache configure config.* Makefile.in \

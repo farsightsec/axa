@@ -90,7 +90,10 @@ axa_tval_delete(trie_roots_t *roots, tval_list_t **tval_listp, tval_t tval)
 	}
 	if (--tval_list->in_use == 0) {
 		*tval_listp = NULL;
-		roots->tval_list_delete(tval_list);
+		if (roots->tval_list_free == NULL)
+			free(tval_list);
+		else
+			roots->tval_list_free(tval_list);
 	}
 
 	return (true);
@@ -133,18 +136,16 @@ tval_list_expand(trie_roots_t *roots,
 
 		/* Mark the old list to be freed when all trie searchers
 		 * are out of the way. */
-		roots->tval_list_delete(old);
+		if (roots->tval_list_free == NULL)
+			free(old);
+		else
+			roots->tval_list_free(old);
 	} else {
 		*tval_listp = new;
 		free(old);
 	}
 }
 
-/*
- * Add a value to a trie value list.
- *	lock_free=true if we are adding to an old trie node
- *	    and so must accomodate the lock-free reading.
- */
 void
 axa_tval_add(trie_roots_t *roots, tval_list_t **tval_listp, tval_t new,
 	     uint padded_len, bool lock_free)
@@ -198,6 +199,17 @@ rev_domain(uint8_t *rev, const uint8_t *name, size_t name_len)
 	} while (name_len > 0);
 
 	return (true);
+}
+
+static inline axa_word_t
+axa_word_mask(uint b)
+{
+	axa_word_t m;
+
+	m = (axa_word_t)(-1);
+	if (b != 0)
+		m <<= (AXA_WORD_BITS - b);
+	return (m);
 }
 
 static inline void
@@ -335,9 +347,9 @@ watch_to_trie_key(axa_emsg_t *emsg, trie_key_t *key,
 	}
 }
 
-size_t					/* gross axa_p_watch_t length */
-axa_trie_to_watch(axa_p_watch_t *w, const trie_node_t *trie,
-		  trie_type_t trie_type, bool is_wild)
+size_t
+axa_trie_to_watch(axa_p_watch_t *w, const trie_node_t *node,
+		  trie_type_t node_type, bool is_wild)
 {
 	size_t bytelen, wlen;
 	trie_key_t key;
@@ -346,20 +358,20 @@ axa_trie_to_watch(axa_p_watch_t *w, const trie_node_t *trie,
 	memset(w, 0, sizeof(*w));
 	memset(&key, 0, sizeof(key));
 
-	bytelen = (trie->bitlen + 7)/8;
+	bytelen = (node->bitlen + 7)/8;
 	AXA_ASSERT(bytelen > 0 && bytelen <= sizeof(w->pat.dns));
-	wlen = BITS_TO_AXA_WORDS(trie->bitlen);
+	wlen = BITS_TO_AXA_WORDS(node->bitlen);
 	for (n = 0; n < wlen; ++n)
-		key.w[n] = htobe64(trie->key.w[n]);
+		key.w[n] = htobe64(node->key.w[n]);
 
-	switch (trie_type) {
+	switch (node_type) {
 	case TRIE_IPV4:
 		AXA_ASSERT(bytelen <= MAX_TRIE_IPV4_PREFIX/8
 			   && bytelen > (MAX_TRIE_IPV4_PREFIX - 32)/8);
 		bytelen -= (MAX_TRIE_IPV4_PREFIX - 32)/8;
 		w->type = AXA_P_WATCH_IPV4;
 		w->pat.addr = key.addr[MAX_TRIE_IPV4_PREFIX/32-1];
-		w->prefix = trie->bitlen - (MAX_TRIE_IPV4_PREFIX - 32);
+		w->prefix = node->bitlen - (MAX_TRIE_IPV4_PREFIX - 32);
 		AXA_ASSERT((w->prefix == 32) == !is_wild);
 		if (w->prefix < 32)
 			w->flags |= AXA_P_WATCH_FG_WILD;
@@ -368,7 +380,7 @@ axa_trie_to_watch(axa_p_watch_t *w, const trie_node_t *trie,
 		AXA_ASSERT(bytelen <= sizeof(w->pat.addr6));
 		w->type = AXA_P_WATCH_IPV6;
 		memcpy(&w->pat.addr6, &key.addr6, sizeof(w->pat.addr6));
-		w->prefix = trie->bitlen;
+		w->prefix = node->bitlen;
 		AXA_ASSERT((w->prefix == 128) == !is_wild);
 		if (w->prefix < 128)
 			w->flags |= AXA_P_WATCH_FG_WILD;
@@ -378,7 +390,7 @@ axa_trie_to_watch(axa_p_watch_t *w, const trie_node_t *trie,
 		if (is_wild)
 			w->flags |= AXA_P_WATCH_FG_WILD;
 		if (!rev_domain(w->pat.dns, key.b, bytelen))
-			AXA_FAIL("bad DNS label length in trie");
+			AXA_FAIL("bad DNS label length in node");
 		break;
 	default:
 		AXA_FAIL("impossible trie type");
@@ -461,7 +473,7 @@ diff_keys(const trie_key_t *key1, trie_bitlen_t bitlen1,
  *	If (!create && found != NULL),
  *	    then search for a particular node.
  *	    A lock might be needed.
- *	If (create), then add tgt/bitlen and the watch to the tree.
+ *	If (create), then add tgt/bitlen and the "hit" or value to the tree.
  *	    A lock might be needed.
  */
 static trie_op_result_t
@@ -497,7 +509,7 @@ trie_op(trie_roots_t *roots, trie_type_t trie_type,
 			 *   - additions and deletions are locked
 			 *   - pointers used by searchers, those pointing down,
 			 *	always point to valid nodes until every search
-			 *	agrees (by lockint) that deleted nodes can
+			 *	agrees (by locking) that deleted nodes can
 			 *	be destroyed.
 			 */
 			child = new_node(roots, tgt, tgt_bitlen,
@@ -630,11 +642,9 @@ trie_op(trie_roots_t *roots, trie_type_t trie_type,
 		 * so that the trie is always valid for searchers.
 		 * Searchers do not use the parent pointers.
 		 * The parent pointers are protected from other
-		 * trie maintainers by the exclusive lock in the
-		 * caller.
+		 * trie maintainers by the exclusive lock in the caller.
 		 *
-		 * Assume that aligned values 8-byte or smaller
-		 * are atomic.
+		 * Assume that aligned values of 8-bytes or smaller are atomic.
 		 */
 		__sync_synchronize();
 		if (parent == NULL)
@@ -718,7 +728,10 @@ axa_trie_node_delete(trie_roots_t *roots, trie_type_t trie_type,
 		 */
 		__sync_synchronize();
 
-		roots->node_delete(node);
+		if (roots->node_free == NULL)
+			axa_trie_node_free(node);
+		else
+			roots->node_free(node);
 
 		/* Delete the parent if it is now useless. */
 		node = parent;
@@ -919,7 +932,7 @@ hitlist_add(const trie_roots_t *roots, hitlist_t **hitlistp,
 {
 	hitlist_t *hitlist, *new_hitlist;
 	hit_t *hit;
-	int newlen;
+	int hitlist_max, newlen;
 
 	hitlist = *hitlistp;
 	if (hitlist == NULL) {
@@ -933,10 +946,15 @@ hitlist_add(const trie_roots_t *roots, hitlist_t **hitlistp,
 			return;
 
 		if (hitlist->in_use >= hitlist->len) {
+			if (roots->hitlist_max == 0)
+				hitlist_max = 10;
+			else
+				hitlist_max = roots->hitlist_max;
+
 			AXA_ASSERT(hitlist->in_use == hitlist->len);
-			AXA_ASSERT(hitlist->len < roots->hitlist_max);
+			AXA_ASSERT(hitlist->len < hitlist_max);
 			newlen = min(hitlist->len+1+extra,
-				     roots->hitlist_max - hitlist->len);
+				     hitlist_max - hitlist->len);
 			new_hitlist = hitlist_create(newlen);
 			new_hitlist->in_use = hitlist->in_use;
 			memcpy(new_hitlist->hits, hitlist->hits,
