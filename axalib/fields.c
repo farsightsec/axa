@@ -470,7 +470,7 @@ next_line:
 				   && strcasecmp(subtype, "sfield") == 0
 				   && (p = get_subsubval(subval)) != '\0') {
 				sf = axa_zalloc(sizeof(axa_nmsg_sf_t)
-						+strlen(p)+1);
+						+strlen(subval)+1);
 				sf->next = field->sf;
 				field->sf = sf;
 				sf->len = strlen(subval);
