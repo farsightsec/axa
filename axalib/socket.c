@@ -381,7 +381,7 @@ bool                    /* false=emsg has an error message */
 axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
 {
     int on;
-    uint protocol;
+    int protocol;
     uint type;
     socklen_t len;
 
@@ -429,9 +429,10 @@ axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
     protocol = -1;
 #endif
 
-    if (protocol != IPPROTO_UDP && type == SOCK_STREAM) {
+    if (protocol == IPPROTO_TCP
+	|| (protocol == -1 && type == SOCK_STREAM)) {
         on = 1;
-        if (0 > setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
+        if (0 > setsockopt(s, IPPROTO_TCP, SO_KEEPALIVE,
                    &on, sizeof(on))) {
             /* hope for the best despite this error */
             axa_trace_msg(
@@ -439,14 +440,15 @@ axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
                     label, strerror(errno));
         }
         on = 1;
-        if (0 > setsockopt(s, SO_KEEPALIVE, TCP_NODELAY,
+        if (0 > setsockopt(s, IPPROTO_TCP, TCP_NODELAY,
                    &on, sizeof(on))) {
             /* hope for the best despite this error */
             axa_trace_msg(
                     "probably spurious error setsockopt(%s, TCP_NODELAY): %s",
                     label, strerror(errno));
         }
-    } else if (protocol != IPPROTO_TCP && type == SOCK_DGRAM) {
+    } else if (protocol == IPPROTO_UDP
+	       || (protocol == -1 && type == SOCK_STREAM)) {
         on = 1;
         if (0 > setsockopt(s, SOL_SOCKET, SO_BROADCAST,
                    &on, sizeof(on))) {
