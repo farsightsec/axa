@@ -101,11 +101,20 @@ The `axa` suite has the following external dependencies:
  * [wdns](https://github.com/farsightsec/wdns)
  * [libedit](http://thrysoee.dk/editline/)
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed on BSDish systems)
- * Nimble fingers
 
+Optional dependency:
+
+* [doxygen](http://www.stack.nl/~dimitri/doxygen/) (verion 1.8.3 or newer that 
+supports inlining markdown files)
+    
 After satisfying the above, build with something like:
 
 `./autogen.sh` followed by `./configure` and `make`
+
+To generate the API documentation (including an HTMLized version of this 
+document): `./make doc`. The html documentation will be in `doc/doxygen/html` 
+and can be rendered in any modern browser. Something like 
+`$ open doc/doxygen/html/index.html` should get you started.
 
 Finally, to give the `axa` suite a home, `sudo make install`.
 

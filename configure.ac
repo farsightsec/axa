@@ -61,6 +61,12 @@ AC_PATH_PROG([DOXYGEN], [doxygen])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 if test -n "$DOXYGEN"; then
         DOC_HTML_MSG="yes, doxygen available: $DOXYGEN"
+        AC_MSG_CHECKING(doxygen version)
+        MY_CHECK_DOXYGEN
+        AC_MSG_RESULT($DOXYGEN_version)
+        if test $DOXYGEN_version == "oldish"; then
+            AC_MSG_WARN(old Doxygen version found API documentation may not render as intended consider upgrading to version 1.8.3 or newer)
+        fi
 else
         DOC_HTML_MSG="no, doxygen not available"
 fi
@@ -93,5 +99,5 @@ AC_MSG_RESULT([
         includedir:             ${includedir}
         pkgconfigdir:           ${pkgconfigdir}
 
-        building html docs:     ${DOC_HTML_MSG}
+        building html docs:     ${DOC_HTML_MSG} 
 ])
