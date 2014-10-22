@@ -66,7 +66,7 @@ decapsulation rather than crafting hand drawn logic to perform these functions.
 A later version of the AXA software is expected to include Python and Perl 
 language bindings.
 
-This document covers version `0.2.4`.
+This document covers version `0.2.5`.
 
 For specific details on `sratool` and `sratunnel` please see the respective
 man pages included in the distribution.
