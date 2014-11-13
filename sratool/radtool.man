@@ -1,0 +1,135 @@
+.\" Copyright (c) 2014 by Farsight Security, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"  http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.Dd current-date via make
+.Dt radtool 1 AXA
+.Os " "
+.ds SR RAD
+.Sh NAME
+.Nm radtool
+.Nd Realtime Anomaly Detector (RAD) tool
+.Sh SYNOPSIS
+.Op Fl VdN
+.Op Fl F Ar fields
+.Op Fl c Ar cfile
+.Op commands
+.Sh DESCRIPTION
+.Nm Radtool
+connects and sends Advanced Exchange Access (AXA) protocol messages
+to Realtime Anomaly Detector (RAD) servers
+and displays the responses.
+It can also tunnel SIE data like
+.Xr sratunnel 1 .
+.Pp
+.Nm Radtool
+is a programming example for the Advanced Exchange Access (AXA)
+applications programming interface to \*(SR servers, the AXA protocol.
+It also demonstrates the use of the AXA helper library,
+.Pa libaxa.a .
+.Pp
+Start using
+.Nm
+with the
+.Ic connect
+command described below.
+Use one or more
+.Ic anomaly
+commands to specify interesting patterns of SIE messages or IP packets.
+Limit the number of packets or messages transmitted from the SRA server
+or displayed with the
+.Ic rate limit
+and
+.Ic count
+commands.
+.Pp
+Unless more output is enabled with the
+.Ic verbose
+command,
+most messages or packets are displayed in two lines.
+The first line includes the channel number on which it was received,
+the SIE message vendor of the message,
+the name of the field that caused the message to be selected,
+and the contents of the field.
+The second line is a summary of the message or packet.
+.Pp
+When more verbose output is enabled or when
+.Nm
+does not understand the message,
+IP packets are printed in ASCII
+and SIE messages are printed in the standard
+.Ic nmsg
+presentation format also seen from
+.Xr nmsgtool 1 .
+.Ss OPTIONS
+.so options.man
+.Ss COMMANDS
+.Nm
+executes commands read from the standard input.
+Command history is available if the standard input is a terminal.
+Multiple commands can be specified at once by separating them with semicolons.
+The following commands are available:
+.Bl -tag -width 3n
+.so cmds.man
+.It Ar tag Ic watch Brq Ar ip=IP[/N][(shared) | dns=[*.]dom[(shared)]
+Specify IP addresses or domain names relevant to the
+anomaly detection modules specified by subsequent
+.Ic anomaly
+commands with the same tag.
+.so radwatch.man
+.El
+.It Ar tag Ic anomaly Ar name Op Ar parameters
+Start the named anomaly detector module.
+The relevant domains and IP addresses are specified by preceding
+.Ic watch
+commands with the same tag.
+The parameters for each module are described it its man page.
+.Ic Tag
+is a number that labels the module and the relevant watches as well as
+other modules using the same watches.
+.It Oo Ar tag Oc Ic list anomaly
+If a tag is present,
+list the set of watches and anomaly detection modules with that tag.
+Without a tag,
+list all active as well as available anomaly detection modules
+.El
+.Sh FILES
+.Bl -tag -width fields
+.It Ar fields
+defines relationships among and meanings of SIE message fields.
+Its contents should rarely if ever need to be changed.
+.It Ar config
+is the
+.Xr ssh_config 5
+configuration file used with
+.Ar connect\ ssh\ ...
+connections.
+If it is not specified explicitly by
+.Sm off Fl z Fl F Sm on
+with the
+.Ar connect
+command,
+the usual
+.Xr ssh 1
+sequence is used, starting with
+.Pa ~/.ssh/config .
+"Host" stanzas in the file can simplify connections to \*(SR servers.
+.El
+.Sh SEE ALSO
+.Xr ip_probe 1 ,
+.Xr dns_binding 1 ,
+.Xr sratool 1 ,
+.Xr sratunnel 1 ,
+.Xr mkfifo 1 ,
+and
+.Xr nmsgtool 1 .
