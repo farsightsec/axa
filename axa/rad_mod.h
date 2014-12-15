@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) Realtime Anomaly Detector (RAD) modules
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -42,8 +42,8 @@
 #include <axa/wire.h>
 
 /**
- *  A single RAD parameter specifying an SRA channel to enable or watch to
- *  start in the form of an AXA message header and body.
+ *  A RAD parameter specifying an SRA channel to enable or a watch to start
+ * in the form of an AXA message header and body.
  *  Only hdr.len and hdr.op are valid in the header.  hdr.len is in
  *  host byte-order but body is in wire format.
  */

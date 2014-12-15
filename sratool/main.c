@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -60,9 +60,16 @@ static struct {
 } in_files[MAX_IN_FILES];
 static int in_file_cur = 0;
 
+/* limit packets displayed */
 static int packet_count;
 static int packet_count_total;
 static bool packet_counting;
+static const char *out_bar_strs[] = {
+	"|\b", "/\b", "-\b", "\\\b", "|\b", "/\b", "-\b", "\\\b"
+};
+static uint out_bar_idx;
+#define PROGESS_MS (1000/AXA_DIM(out_bar_strs))	/* 2 revolutions/second */
+static struct timeval out_bar_time;
 
 
 static nmsg_input_t nmsg_input;
@@ -97,7 +104,7 @@ static void *out_nmsg_clos;
 static bool out_nmsg_mod_checked = false;
 static int output_errno;
 static struct timeval output_errno_time;
-static int output_count;
+static int output_count;		/* limit forwarded packets */
 static int output_count_total;
 static bool output_counting;
 
@@ -106,8 +113,9 @@ static bool output_counting;
 static History *el_history;
 static HistEvent el_event;
 static EditLine *el_e = NULL;
-static bool cmd_started = false;
+static struct timeval cmd_input;
 static bool no_prompt = false;
+static bool no_reprompt = false;
 static struct timeval prompt_cleared;
 static struct timeval last_output;
 static size_t prompt_len;
@@ -115,7 +123,6 @@ static bool interrupted = false;
 static bool terminated = false;
 
 
-static void sra_ssh_flush(void);
 static bool do_cmds(const char *cmd_buf);
 static void disconnect(bool announce);
 static void out_close(bool announce);
@@ -127,10 +134,15 @@ static int srvr_send(axa_tag_t tag, axa_p_op_t op,
 
 static axa_emsg_t emsg;
 
+static uint axa_debug;
+
 uint verbose = 0;
 static bool quiet;
 
 static bool eclose = false;
+
+typedef enum {SRA, RAD, BOTH} axa_mode_t;
+static axa_mode_t mode;
 
 
 static cmd_t help_cmd;
@@ -153,7 +165,7 @@ static cmd_t sra_watch_cmd;
 static cmd_t rad_watch_cmd;
 static cmd_t list_cmd;
 static cmd_t delete_cmd;
-static cmd_t ch_cmd;
+static cmd_t channel_cmd;
 static cmd_t anom_cmd;
 static cmd_t rlimits_cmd;
 static cmd_t acct_cmd;
@@ -164,16 +176,13 @@ static cmd_t sleep_cmd;
 
 typedef enum {NO, MB, YES} ternary_t;
 
-typedef enum {SRA, RAD, BOTH} axa_mode_t;
-static axa_mode_t protocol_mode;
-
 /* -1=display help message, 0=command failed, 1=success */
 struct cmd_tbl_entry {
 	const char	*cmd;
 	cmd_t		(*fnc);
 	axa_mode_t	mode;
 	ternary_t	need_args;
-	ternary_t	need_sock;
+	bool		need_sock;
 	const char	*help_str;
 	const char	*usage_str;
 };
@@ -208,14 +217,14 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"version",		version_cmd,		BOTH,NO, NO,
     "version",
     "shows the software and protocol version."},
-{"mode",		mode_cmd,		BOTH,MB, MB,
+{"mode",		mode_cmd,		BOTH,MB, NO,
     "mode [SRA | RAD]",
     "Show the current command mode or"
     " expect to connect to an SRA or RAD server."},
-{"srad",		sra_mode_cmd,		BOTH,MB, MB,
+{"srad",		sra_mode_cmd,		BOTH,MB, NO,
     NULL,
     NULL},
-{"radd",		rad_mode_cmd,		BOTH,MB, MB,
+{"radd",		rad_mode_cmd,		BOTH,MB, NO,
     NULL,
     NULL},
 {"source",		source_cmd,		BOTH,YES,NO,
@@ -225,7 +234,7 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     "connect [tcp:[user@]host,port | unix:[user@]/ud/socket | ssh:[user@]host]",
     "Connect to a server at an IP address or UNIX domain socket or via SSH"
     " or show the current connection."},
-{"disconnect",		disconnect_cmd,		BOTH,NO, YES,
+{"disconnect",		disconnect_cmd,		BOTH,NO, NO,
     "disconnect",
     "Disconnect from the server"},
 {"count",		count_cmd,		BOTH,MB, NO,
@@ -311,11 +320,11 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"stop",		delete_cmd,		BOTH,MB, YES,
     NULL,
     NULL},
-{"channels",		ch_cmd,			SRA, YES,YES,
+{"channels",		channel_cmd,		SRA, YES,YES,
     "channel {list | {on | off} {all | chN}}",
     "List available SRA channels or enable or disable"
     " one or all SIE channels."},
-{"channels",		ch_cmd,			SRA, YES,YES,
+{"channels",		channel_cmd,		SRA, YES,YES,
     "channel list",
     "List available SRA channels."},
 {"anomaly",		anom_cmd,		RAD, YES,YES,
@@ -372,6 +381,7 @@ el_prompt(EditLine *e AXA_UNUSED)
 		prompt = std_prompt;
 
 	prompt_cleared.tv_sec = 0;
+	no_reprompt = false;
 	prompt_len = strlen(prompt);
 	return (prompt);
 }
@@ -411,7 +421,7 @@ clear_prompt(void)
 	const LineInfo *li;
 	int cols, llen, i;
 
-	cmd_started = false;
+	cmd_input.tv_sec = 0;
 	gettimeofday(&last_output, NULL);
 
 	if (el_e == NULL)
@@ -451,13 +461,15 @@ clear_prompt(void)
 		fputc('\r', stdout);
 		fflush(stdout);
 	}
-	gettimeofday(&prompt_cleared, NULL);
+
+	prompt_cleared = last_output;
 }
 
 static void
 reprompt(void)
 {
 	prompt_cleared.tv_sec = 0;
+	no_reprompt = false;
 	el_set(el_e, EL_REFRESH);
 }
 
@@ -523,7 +535,7 @@ stop(int status)
 static void
 error_close(bool cmd_error)
 {
-	if (eclose && client.out_sock >= 0) {
+	if (eclose && AXA_CLIENT_OPENED(&client)) {
 		clear_prompt();
 		fprintf(stderr, "    disconnecting from %s after error\n",
 			client.addr);
@@ -561,134 +573,128 @@ error_help_cmd(axa_tag_t tag, const char *arg)
 	help_cmd(tag, arg, NULL);
 }
 
-static int				/* 0 or 1 input chars in buf */
-cmd_rdy(char *buf)
+static void
+io_wait(bool cmds_ok,			/* false=waiting for connect */
+	bool once,
+	time_t wait_ms)
 {
-	struct timeval input_start, now;
-	time_t poll_ms, cmd_ms, ms;
+	struct timeval now;
+	struct timeval start;
+	int poll_ms, ms;		/* poll() wants an int */
 	struct pollfd pollfds[3];
-	int nfds, i;
+	bool data_ok;
+	const char *cp;
+	int cmd_poll_nfd, in_poll_nfd, err_poll_nfd, nfds, i;
 
-	gettimeofday(&input_start, NULL);
-	for (;;) {
-		if (in_file_cur >= 0) {
-			AXA_ASSERT(in_file_cur == 0);
-			/* We will poll the primary input. */
-			pollfds[0].fd = STDIN_FILENO;
-			pollfds[0].events = AXA_POLL_IN;
-		} else {
-			/* After EOF from the primary input,
-			 * wait until the server connection breaks
-			 * or until we cannot output. */
-			if (client.in_sock < 0)
-				stop(EX_OK);
-			pollfds[0].fd = STDOUT_FILENO;
-			pollfds[0].events = 0;
-		}
-		pollfds[0].revents = 0;
-		nfds = 1;
-		client.in_poll_nfd = -1;
-		client.err_poll_nfd = -1;
+	gettimeofday(&start, NULL);
+	do {
+		nfds = 0;
+		cmd_poll_nfd = -1;
+		in_poll_nfd = -1;
+		err_poll_nfd = -1;
 
 		gettimeofday(&now, NULL);
+		poll_ms = wait_ms - axa_elapsed_ms(&now, &start);
+		if (poll_ms <= 0)
+			return;
+		data_ok = true;
 
-		if (interrupted) {
-			poll_ms = 0;
-
-		} else if (client.in_sock < 0) {
-			if (prompt_cleared.tv_sec != 0)
-				reprompt();
-			/* Wait forever when only the user is talking */
-			poll_ms = INFTIM;
-
-		} else {
-			/* Send a NOP after the user stops typing,
-			 * after we have not heard from the server
-			 *	to see if the connection is broken,
-			 * and at the start
-			 *	to declare our protocol version. */
-			if (cmd_started)
-				cmd_ms = axa_tv_diff2ms(&now, &input_start);
-			else
-				cmd_ms = INT_MAX;
-			ms = axa_elapsed_ms(&now, &client.alive);
-			if ((ms >= AXA_KEEPALIVE_MS || ms < 0)
-			    && cmd_ms > 5*1000) {
-				srvr_send(AXA_TAG_NONE, AXA_P_OP_NOP, NULL, 0);
-				continue;
+		if (cmds_ok) {
+			if (in_file_cur >= 0) {
+				AXA_ASSERT(in_file_cur == 0);
+				/* We will poll the primary input. */
+				pollfds[nfds].fd = STDIN_FILENO;
+				pollfds[nfds].events = AXA_POLL_IN;
+			} else {
+				/* After EOF from the primary input,
+				 * wait until the server connection breaks
+				 * or until we cannot output. */
+				if (!AXA_CLIENT_OPENED(&client))
+					stop(EX_OK);
+				pollfds[nfds].fd = STDOUT_FILENO;
+				pollfds[nfds].events = 0;
 			}
-			poll_ms = AXA_KEEPALIVE_MS - ms;
-			if (poll_ms < 0)
-				poll_ms = 100;
+			pollfds[nfds].revents = 0;
+			cmd_poll_nfd = nfds++;
 
 			/* Give the user 5 seconds without interruption
 			 * to finish typing. */
-			if (cmd_ms < 5*1000) {
-				poll_ms = 5*1000 - cmd_ms;
-			} else {
-				/* Delay restoring the prompt until
-				 * the server has been quiet 0.2 seconds. */
-				if (prompt_cleared.tv_sec != 0) {
-					ms = axa_elapsed_ms(&now,
-							&prompt_cleared);
-					if (ms > 200 || ms < 0) {
-					    ms = 0;
-					    reprompt();
-					}
-					ms = 200 - ms;
-					if (poll_ms > ms)
-					    poll_ms = ms;
-				}
+			if (cmd_input.tv_sec != 0
+			    && 0 < (ms = 5*1000- axa_elapsed_ms(&now,
+							&cmd_input))) {
+				data_ok = false;
+				if (poll_ms > ms)
+					poll_ms = ms;
+			}
 
+			/* Delay restoring the prompt until
+			 * the server has been quiet 0.5 seconds. */
+			if (prompt_cleared.tv_sec != 0
+			    && !no_reprompt) {
+				ms = 500 - axa_elapsed_ms(&now,
+							&prompt_cleared);
+				if (ms <= 0 || !AXA_CLIENT_OPENED(&client)) {
+					reprompt();
+					continue;
+				}
+				if (poll_ms > ms)
+					poll_ms = ms;
+			}
+		}
+
+		/* If the connection is complete,
+		 * if we are not about to send the user name,
+		 * if we have not heard from the server,
+		 * and if the user is not typing,
+		 * then send a NOP to test the connection. */
+		if (data_ok
+		    && AXA_CLIENT_CONNECTED(&client)) {
+			ms = (AXA_KEEPALIVE_MS
+			      - axa_elapsed_ms(&now, &client.alive));
+			if (ms <= 0) {
+				srvr_send(AXA_TAG_NONE, AXA_P_OP_NOP, NULL, 0);
+				continue;
+			}
+			if (poll_ms > ms)
+				poll_ms = ms;
+		}
+
+		if (AXA_CLIENT_OPENED(&client)) {
+			if (data_ok) {
 				pollfds[nfds].fd = client.in_sock;
 				pollfds[nfds].events = AXA_POLL_IN;
 				pollfds[nfds].revents = 0;
-				client.in_poll_nfd = nfds++;
+				in_poll_nfd = nfds++;
 
 				/* Watch stderr from ssh. */
 				if (client.err_sock >= 0) {
 					pollfds[nfds].fd = client.err_sock;
 					pollfds[nfds].events = AXA_POLL_IN;
 					pollfds[nfds].revents = 0;
-					client.err_poll_nfd = nfds++;
+					err_poll_nfd = nfds++;
 				}
-
-				/* Flush the forwarding buffer
-				 * when the SRA server goes quiet. */
-				poll_ms = out_flush_ck(&now, poll_ms);
 			}
 
-			/* Flush piped output when quiet. */
-			if (el_e == NULL && last_output.tv_sec != 0) {
-				ms = axa_elapsed_ms(&now, &last_output);
-				ms = 200 - ms;
-				if (ms < 0)
-					ms = 0;
-				if (poll_ms > ms)
-					poll_ms = ms;
-			}
+			/* Flush the forwarding buffer
+			 * when the SRA server goes quiet. */
+			poll_ms = out_flush_ck(&now, poll_ms);
 		}
 
-		if (interrupted)
-			poll_ms = 0;
+		/* Flush piped stdio output when quiet. */
+		if (el_e == NULL && last_output.tv_sec != 0) {
+			ms = 200 - axa_elapsed_ms(&now, &last_output);
+			if (poll_ms > ms)
+				poll_ms = ms;
+		}
+
 		AXA_ASSERT(nfds <= AXA_DIM(pollfds));
 		i = poll(pollfds, nfds, poll_ms);
-		if (i < 0 && errno != EINTR)
-			axa_fatal_msg(EX_OSERR, "poll(): %s",
-				      strerror(errno));
-		if (interrupted) {
-			if (terminated || el_e == NULL)
-				stop(1);
-			*buf = '\0';
+		if (i < 0 && errno != EINTR && errno != EAGAIN)
+			axa_fatal_msg(EX_OSERR, "poll(): %s", strerror(errno));
 
-			/* Tell editline(3) to return immediately
-			 * so that the interrupt can be acknowledged. */
-			el_set(el_e, EL_UNBUFFERED, 1);
-			return (1);
-		}
 		out_flush_ck(NULL, 0);
 		if (i <= 0) {
-			/* Flush output to a pipe when quiet. */
+			/* Flush output to a stdio pipe when quiet. */
 			if (el_e == NULL && last_output.tv_sec != 0) {
 				fflush(stderr);
 				fflush(stdout);
@@ -701,41 +707,52 @@ cmd_rdy(char *buf)
 		 * reading from a command file. */
 		if (in_file_cur > 0) {
 			/* Repeat anything the ssh process says */
-			if (client.err_poll_nfd >= 0
-			    && pollfds[client.err_poll_nfd].revents != 0)
-				sra_ssh_flush();
+			if (err_poll_nfd >= 0
+			    && pollfds[err_poll_nfd].revents != 0) {
+				pollfds[err_poll_nfd].revents = 0;
+				for (;;) {
+					cp = axa_client_stderr(&client);
+					if (cp == NULL)
+					    break;
+					error_msg("%s", cp);
+				}
+			}
 
 			/* Process messages from the server. */
-			if (client.in_poll_nfd >= 0
-			    && pollfds[client.in_poll_nfd].revents != 0)
+			if (in_poll_nfd >= 0
+			    && pollfds[in_poll_nfd].revents != 0) {
+				pollfds[in_poll_nfd].revents = 0;
 				read_srvr();
+				continue;
+			}
 		}
 
-		if (pollfds[0].revents != 0) {
-			if (in_file_cur < 0) {
-				/* in_file_cur<0 implies that pollfds[0]
-				 * is for output.
-				 * Quit when both input and output die. */
+		if (cmd_poll_nfd >= 0
+		    && pollfds[cmd_poll_nfd].revents != 0) {
+			/* in_file_cur<0 implies that
+			 * pollfds[cmd_poll_nfd] is for output.
+			 * Quit when both stdin and stdout are done. */
+			if (in_file_cur < 0)
 				stop(EX_OK);
-			}
-			/* restore the prompt before echoing user's input */
-			if (prompt_cleared.tv_sec != 0)
-				reprompt();
-			/* Return 0 to tell getcfn() to read a byte from the
-			 * terminal and return it to editline(3). */
-			return (0);
+			break;
 		}
 
 		/* Repeat anything the ssh process says */
-		if (client.err_poll_nfd >= 0
-		    && pollfds[client.err_poll_nfd].revents != 0)
-			sra_ssh_flush();
+		if (err_poll_nfd >= 0
+		    && pollfds[err_poll_nfd].revents != 0) {
+			for (;;) {
+				cp = axa_client_stderr(&client);
+				if (cp == NULL)
+					break;
+				error_msg("%s", cp);
+			}
+		}
 
-		/* Process messages from the server. */
-		if (client.in_poll_nfd >= 0
-		    && pollfds[client.in_poll_nfd].revents != 0)
+		/* Process messages or TCP syn-ack from the server. */
+		if (in_poll_nfd >= 0
+		    && pollfds[in_poll_nfd].revents != 0)
 			read_srvr();
-	}
+	} while (!interrupted && !once);
 }
 
 static int
@@ -745,23 +762,34 @@ getcfn(EditLine *e AXA_UNUSED, char *buf)
 
 	/* Wait until the user types something or a redisplay is faked */
 	for (;;) {
-		i = cmd_rdy(buf);
-		if (i != 0)
-			return (i);
+		io_wait(true, false, INT_MAX);
+		if (interrupted) {
+			if (terminated)
+				stop(1);
+			/* Return with '\0' in the buffer to tell editline(3)
+			 * to return immediately
+			 * so that the interrupt can be acknowledged. */
+			el_set(el_e, EL_UNBUFFERED, 1);
+			*buf = '\0';
+			return (1);
+		}
 
 		/* After EOF from the input,
 		 * wait until the server connection breaks
 		 * or until we cannot output. */
 		if (in_file_cur < 0) {
-			if (client.in_sock < 0)
+			if (!AXA_CLIENT_OPENED(&client))
 				stop(EX_OK);
 			continue;
 		}
 
 		AXA_ASSERT(in_file_cur == 0);
+		/* Restore the prompt before echoing user's input. */
+		if (prompt_cleared.tv_sec != 0)
+			reprompt();
 		i = read(STDIN_FILENO, buf, 1);
 		if (i == 1) {
-			cmd_started = true;
+			gettimeofday(&cmd_input, NULL);
 			return (1);
 		}
 		close(STDIN_FILENO);
@@ -797,14 +825,14 @@ main(int argc, char **argv)
 	axa_client_init(&client);
 
 	if (strcmp(axa_prog_name, "radtool") == 0)
-		protocol_mode = RAD;
+		mode = RAD;
 
 	if (isatty(STDIN_FILENO))
 		el_e = el_init(axa_prog_name, stdin, stdout, stderr);
 	if (el_e != NULL) {
-		int mode;
+		int flag;
 
-		if (0 > el_get(el_e, EL_EDITMODE, &mode) || !mode) {
+		if (0 > el_get(el_e, EL_EDITMODE, &flag) || !flag) {
 			el_end(el_e);
 			el_e = NULL;
 		}
@@ -863,11 +891,13 @@ main(int argc, char **argv)
 	}
 
 	signal(SIGPIPE, SIG_IGN);
-	signal(SIGINT, sigint);
-	signal(SIGTERM, sigterm);
-	signal(SIGHUP, sigterm);
+	if (el_e != NULL) {
+		signal(SIGINT, sigint);
+		signal(SIGTERM, sigterm);
+		signal(SIGHUP, sigterm);
+	}
 
-	AXA_DEBUG_TO_NMSG();
+	AXA_DEBUG_TO_NMSG(axa_debug);
 	res = nmsg_init();
 	if (res != nmsg_res_success) {
 		error_msg("nmsg_init(): %s", nmsg_res_lookup(res));
@@ -904,12 +934,16 @@ main(int argc, char **argv)
 	}
 
 	for (;;) {
-		cmd_started = false;
+		cmd_input.tv_sec = 0;
 		fflush(stderr);
 		fflush(stdout);
 
 		if (in_file_cur > 0) {
 			/* Get a command from a "sourced" file. */
+			if (interrupted) {
+				close_in_files();
+				continue;
+			}
 			cmd = axa_fgetln(in_files[in_file_cur].f,
 					 in_files[in_file_cur].name,
 					 &in_files[in_file_cur].lineno,
@@ -939,7 +973,7 @@ main(int argc, char **argv)
 						H_ENTER, cmd);
 			}
 
-		} else {
+		} else if (!interrupted) {
 			/* Get a command from stdin. */
 			n = 0;
 			for (;;) {
@@ -954,12 +988,14 @@ main(int argc, char **argv)
 
 		if (interrupted) {
 			interrupted = false;
-			el_set(el_e, EL_UNBUFFERED, 0);
-			el_reset(el_e);
-			if (prompt_cleared.tv_sec != 0) {
-				packet_counting = true;
-				packet_count = 0;
-				packet_count_total = 0;
+			if (el_e != NULL) {
+				el_set(el_e, EL_UNBUFFERED, 0);
+				el_reset(el_e);
+				if (prompt_cleared.tv_sec != 0) {
+					packet_counting = true;
+					packet_count = 0;
+					packet_count_total = 0;
+				}
 			}
 			close_in_files();
 			fputs(" (int)\n", stdout);
@@ -969,6 +1005,7 @@ main(int argc, char **argv)
 		if (!do_cmds(cmd)) {
 			fputs(" ?\n", stderr);
 			fflush(stdout);
+			close_in_files();
 		}
 	}
 }
@@ -1054,7 +1091,7 @@ run_cmd(axa_tag_t tag, const char *op, const char *arg,
 {
 	int i;
 
-	if (ce->need_sock == YES && client.out_sock <0) {
+	if (ce->need_sock && !AXA_CLIENT_OPENED(&client)) {
 		error_msg("\"%s\" requires a connection to a server", op);
 		return (0);
 	}
@@ -1089,7 +1126,7 @@ cmd(axa_tag_t tag, const char *op)
 	ce1 = NULL;
 	num_iss = 0;
 	for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
-		if (ce->mode != protocol_mode && ce->mode != BOTH)
+		if (ce->mode != mode && ce->mode != BOTH)
 			continue;
 		arg = cmd_cmp(op, ce->cmd, &iss);
 		if (arg == op)
@@ -1285,7 +1322,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	stealth = true;
 	if (arg != NULL && *arg != '\0') {
 		for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
-			if (ce->mode != protocol_mode && ce->mode != BOTH)
+			if (ce->mode != mode && ce->mode != BOTH)
 				continue;
 			p = cmd_cmp(arg, ce->cmd, &iss);
 			if (p == NULL) {
@@ -1313,7 +1350,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		usage_ce = NULL;
 		num_help = 0;
 		for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
-			if (ce->mode != protocol_mode && ce->mode != BOTH)
+			if (ce->mode != mode && ce->mode != BOTH)
 				continue;
 			if (ce->help_str != NULL) {
 				/* Show help for a matching synonym. */
@@ -1356,7 +1393,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 
 	llen = 0;
 	for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
-		if (ce->mode != protocol_mode && ce->mode != BOTH)
+		if (ce->mode != mode && ce->mode != BOTH)
 			continue;
 		hlen = help_cmd_snprint(buf, sizeof(buf), ce);
 		if (hlen == 0)
@@ -1439,7 +1476,7 @@ debug_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 			axa_debug = l;
 			quiet = false;
 		}
-		AXA_DEBUG_TO_NMSG();
+		AXA_DEBUG_TO_NMSG(axa_debug);
 	}
 	if (axa_debug > 1 || arg[0] == '\0') {
 		if (axa_debug == 0) {
@@ -1492,8 +1529,13 @@ static int
 version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
+#if AXA_P_PVERS_MIN != AXA_P_PVERS_MAX
+	printf("%s "AXA_PVERS_STR" AXA protocol %d in %d to %d\n",
+	       axa_prog_name, AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
+#else
 	printf("%s "AXA_PVERS_STR" AXA protocol %d\n",
 	       axa_prog_name, AXA_P_PVERS);
+#endif
 	return (1);
 }
 
@@ -1521,9 +1563,16 @@ source_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 static void
 disconnect(bool announce)
 {
-	sra_ssh_flush();
+	const char *cp;
 
-	if (announce && client.out_sock >= 0) {
+	for (;;) {
+		cp = axa_client_stderr(&client);
+		if (cp == NULL)
+			break;
+		error_msg("%s", cp);
+	}
+
+	if (announce && AXA_CLIENT_OPENED(&client)) {
 		clear_prompt();
 		printf("disconnected\n");
 	}
@@ -1537,7 +1586,11 @@ static int
 disconnect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	       const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	disconnect(true);
+	if (!AXA_CLIENT_OPENED(&client)) {
+		fputs("not connected to a server\n", stdout);
+	} else {
+		disconnect(true);
+	}
 	return (1);
 }
 
@@ -1545,12 +1598,11 @@ static int
 connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	fd_set wfds, efds;
-	int i;
-
 	if (arg[0] == '\0') {
-		if (client.out_sock < 0) {
+		if (!AXA_CLIENT_OPENED(&client)) {
 			fputs("not connected to a server\n", stdout);
+		} else if (client.hello == NULL) {
+			printf("connecting to %s\n", client.addr);
 		} else {
 			printf("connected to \"%s\"\n    via %s\n",
 			       client.hello, client.addr);
@@ -1558,50 +1610,38 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		return (1);
 	}
 
-	if (client.out_sock >= 0)
+	if (AXA_CLIENT_OPENED(&client))
 		disconnect(false);
 
-	client.retry.tv_sec = 0;
-	client.backoff = 0;
-	if (0 >= axa_client_open(&emsg, &client, arg,
-				 axa_debug > AXA_DEBUG_TRACE, true)) {
+	axa_client_backoff_reset(&client);
+	switch (axa_client_open(&emsg, &client, arg, mode == RAD,
+				axa_debug > AXA_DEBUG_TRACE, true)) {
+	case AXA_CLIENT_CONNECT_BAD:
+	case AXA_CLIENT_CONNECT_TEMP:
 		error_msg("%s", emsg.c);
 		return (0);
-	}
-
-	/* Wait until the connection is complete or fails. */
-	while (client.nonblock_connect) {
-		FD_ZERO(&wfds);
-		FD_SET(client.out_sock, &wfds);
-		FD_ZERO(&efds);
-		FD_SET(client.out_sock, &efds);
-		select(client.out_sock+1, NULL, &wfds, &efds, NULL);
-		i = axa_client_connect(&emsg, &client, true);
-		if (i <= 0) {
-			error_msg("%s", emsg.c);
-			return (0);
+	case AXA_CLIENT_CONNECT_DONE:
+		break;
+	case AXA_CLIENT_CONNECT_NOP:
+	case AXA_CLIENT_CONNECT_USER:
+		if (axa_debug >= AXA_DEBUG_TRACE) {
+			clear_prompt();
+			printf("send %s\n", emsg.c);
+		}
+		break;
+	case AXA_CLIENT_CONNECT_INCOM:
+		/* Wait here until the connection is complete or fails,
+		 * because user commands that would send AXA messages will
+		 * fail before the TCP connection is complete. */
+		while (!AXA_CLIENT_CONNECTED(&client)) {
+			if (interrupted) {
+				disconnect(true);
+				return (1);
+			}
+			io_wait(false, true, INT_MAX);
 		}
 	}
 
-	/* Send a NOP immediately to tell the server our version of
-	 * the AXA protocol so that the server can say hello. */
-	client.alive.tv_sec = 0;
-
-	/* But instead of a NOP, send the user name if it is known. */
-	if (client.user.name[0] != '\0') {
-		switch (client.type) {
-		case CLIENT_TYPE_UNIX:
-		case CLIENT_TYPE_TCP:
-			return (srvr_send(tag, AXA_P_OP_USER,
-					  &client.user, sizeof(client.user)));
-		case CLIENT_TYPE_SSH:
-			/* The user name is handled by the ssh pipe. */
-			break;
-		case CLIENT_TYPE_UNKN:
-		default:
-			error_msg("impossible client type %d", client.type);
-		}
-	}
 	return (1);
 }
 
@@ -1657,8 +1697,7 @@ out_flush_ck(const struct timeval *now, time_t delay)
 		now = &now0;
 	}
 
-	ms = axa_elapsed_ms(now, &time_out_flush);
-	ms = OUT_FLUSH_MS - ms;
+	ms = OUT_FLUSH_MS - axa_elapsed_ms(now, &time_out_flush);
 	if (ms > 0)
 		return (max(delay, ms));
 
@@ -1892,6 +1931,9 @@ out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	if (arg[0] == '\0') {
 		if (!out_on) {
 			fputs("not forwarding messages\n", stdout);
+		} else if (output_counting) {
+			printf("forwarding %d of total %d messages to %s\n",
+			       output_count, output_count_total, out_addr);
 		} else {
 			printf("forwarding messages to %s\n", out_addr);
 		}
@@ -2021,22 +2063,16 @@ mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	setting = arg;
 	if (setting[0] != '\0') {
 		if (word_cmp(&setting, "sra")) {
-			if (protocol_mode != SRA) {
-				disconnect(true);
-				protocol_mode = SRA;
-			}
+			mode = SRA;
 		} else if (word_cmp(&setting, "rad")) {
-			if (protocol_mode != RAD) {
-				disconnect(true);
-				protocol_mode = RAD;
-			}
+			mode = RAD;
 		} else {
 			return (-1);
 		}
 	}
 
 	if (verbose > 0 || arg[0] == '\0') {
-		switch (protocol_mode) {
+		switch (mode) {
 		case SRA:
 			printf("    SRA mode\n");
 			break;
@@ -2133,7 +2169,7 @@ rad_watch_cmd(axa_tag_t tag, const char *arg,
 static int
 list_cmd(axa_tag_t tag, const char *arg, const cmd_tbl_entry_t *ce)
 {
-	if (protocol_mode == RAD) {
+	if (mode == RAD) {
 		(void)word_cmp(&arg, "anomaly");
 		return (srvr_send(tag, AXA_P_OP_AGET, NULL, 0));
 	}
@@ -2154,7 +2190,7 @@ static int
 delete_cmd(axa_tag_t tag, const char *arg,
 	   const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	if (protocol_mode == SRA) {
+	if (mode == SRA) {
 		(void)word_cmp(&arg, "watches");
 	} else {
 		/* ignore "anomaly" but take "a" to mean "all" and so
@@ -2173,7 +2209,7 @@ delete_cmd(axa_tag_t tag, const char *arg,
 }
 
 static int
-ch_on_off(axa_tag_t tag, const char *arg, bool on)
+channel_on_off(axa_tag_t tag, const char *arg, bool on)
 {
 	axa_p_channel_t channel;
 
@@ -2188,7 +2224,7 @@ ch_on_off(axa_tag_t tag, const char *arg, bool on)
 }
 
 static int
-ch_cmd(axa_tag_t tag, const char *arg,
+channel_cmd(axa_tag_t tag, const char *arg,
        const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	axa_p_ch_buf_t arg1_buf, arg2_buf;
@@ -2209,14 +2245,14 @@ ch_cmd(axa_tag_t tag, const char *arg,
 	arg2 = arg2_buf.c;
 
 	if (word_cmp(&arg1, "off") || word_cmp(&arg1, "stop"))
-		return (ch_on_off(tag, arg2, false));
+		return (channel_on_off(tag, arg2, false));
 	if (word_cmp(&arg1, "on"))
-		return (ch_on_off(tag, arg2, true));
+		return (channel_on_off(tag, arg2, true));
 
 	if (word_cmp(&arg2, "off") || word_cmp(&arg2, "stop"))
-		return (ch_on_off(tag, arg1, false));
+		return (channel_on_off(tag, arg1, false));
 	if (word_cmp(&arg2, "on"))
-		return (ch_on_off(tag, arg1, true));
+		return (channel_on_off(tag, arg1, true));
 
 	return (-1);
 }
@@ -2242,7 +2278,7 @@ anom_cmd(axa_tag_t tag, const char *arg,
 }
 
 static bool				/* false=bad value */
-get_rlimit(axa_rlimit_t *rlimit, const char *word)
+get_rlimit(axa_cnt_t *rlimit, const char *word)
 {
 	unsigned long n;
 	char *p;
@@ -2251,15 +2287,15 @@ get_rlimit(axa_rlimit_t *rlimit, const char *word)
 		*rlimit = AXA_H2P64(AXA_RLIMIT_NA);
 		return (true);
 	}
-	if (word_cmp(&word, "MAXIMUM") || word_cmp(&word, "NEVER")) {
+	if (word_cmp(&word, "MAXIMUM") || word_cmp(&word, "NEVER")
+	    || word_cmp(&word, "OFF")) {
 		*rlimit = AXA_H2P64(AXA_RLIMIT_OFF);
 		return (true);
 	}
 	n = strtoul(word, &p, 10);
-	if (*p != '\0' || n < 1 || n > AXA_RLIMIT_MAX) {
-		*rlimit = AXA_H2P64(AXA_RLIMIT_NA);
+	if (*p != '\0' || n < 1 || n > AXA_RLIMIT_MAX)
 		return (false);
-	}
+
 	*rlimit = AXA_H2P64(n);
 	return (true);
 }
@@ -2285,8 +2321,6 @@ rlimits_cmd(axa_tag_t tag, const char *arg,
 
 	if (!get_rlimit(&opt.u.rlimit.max_pkts_per_sec, sec_buf))
 		return (-1);
-	/* Set per-day limit=no-limit for old servers. */
-	opt.u.rlimit.unused1 = AXA_RLIMIT_NA;
 	if (!get_rlimit(&opt.u.rlimit.report_secs, report_secs_buf))
 		return (-1);
 
@@ -2318,9 +2352,9 @@ sleep_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 
 	s = strtod(arg, &p);
 	if (*p != '\0' || s < 0.001 || s > 1000)
-		return -1;
-	usleep((u_int)(s*1000000.0));
-	return 1;
+		return (-1);
+	io_wait(false, false, s*1000.0);
+	return (1);
 }
 
 static int
@@ -2341,10 +2375,10 @@ trace_cmd(axa_tag_t tag, const char *arg,
 			return (-1);
 	}
 	memset(&opt, 0, sizeof(opt));
-	opt.type = AXA_P_OPT_DEBUG;
-	opt.u.debug = l;
+	opt.type = AXA_P_OPT_TRACE;
+	opt.u.trace = l;
 	return (srvr_send(tag, AXA_P_OP_OPT, &opt,
-			  sizeof(opt) - sizeof(opt.u) + sizeof(opt.u.debug)));
+			  sizeof(opt) - sizeof(opt.u) + sizeof(opt.u.trace)));
 }
 
 static int
@@ -2352,20 +2386,6 @@ acct_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	return (srvr_send(tag, AXA_P_OP_ACCT, NULL, 0));
-}
-
-static void
-print_recv_tag_op(void)
-{
-	char tag_buf[AXA_TAG_STRLEN];
-	char op_buf[AXA_P_OP_STRLEN];
-
-	clear_prompt();
-	printf("%s %s\n",
-	       axa_tag_to_str(tag_buf, sizeof(tag_buf),
-			      AXA_P2H_TAG(client.recv_hdr.tag)),
-	       axa_op_to_str(op_buf, sizeof(op_buf),
-			     client.recv_hdr.op));
 }
 
 static bool
@@ -3039,7 +3059,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		break;
 
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunreachable-code"
+ #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
 		*nm = field->name;
 		snprintf(buf, buf_len, " ? strange field #%d", field->fc);
@@ -3068,10 +3088,10 @@ out_error_ok(void)
 	time_t ms;
 
 	gettimeofday(&now, NULL);
-	ms = axa_tv_diff2ms(&now, &out_complaint_last);
+	ms = axa_elapsed_ms(&now, &out_complaint_last);
 
 	/* allow a new complaint every 5 seconds */
-	 if (ms < 0 || ms > 5000)
+	 if (ms > 5000)
 		 return (true);
 
 	 /* count skipped complaints */
@@ -3188,8 +3208,8 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 			out_close(false);
 			disconnect(true);
 		} else if (output_errno != errno
-			   || 60*1000 < axa_tv_diff2ms(&now,
-						       &output_errno_time)
+			   || 60*1000 <= axa_elapsed_ms(&now,
+							&output_errno_time)
 			   || axa_debug >= AXA_DEBUG_TRACE) {
 			/* Report occassional identical UDP errors. */
 			output_errno = errno;
@@ -3365,7 +3385,8 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
-		out_error("cannot forward watch hits type #%d", whit->hdr.type);
+		out_error("cannot forward watch hits type #%d",
+			  whit->hdr.type);
 		return (false);
 #pragma clang diagnostic pop
 	}
@@ -3476,6 +3497,8 @@ static void
 print_whit(axa_p_whit_t *whit, size_t whit_len,
 	   const char *title_sep, const char *title)
 {
+	struct timeval now;
+	time_t ms;
 	char tag_buf[AXA_TAG_STRLEN];
 	bool fwded;
 
@@ -3496,9 +3519,20 @@ print_whit(axa_p_whit_t *whit, size_t whit_len,
 	}
 
 	if (--packet_count < 0 && packet_counting) {
+		clear_prompt();
 		if (packet_count == -1) {
-			clear_prompt();
-			fputs("packet count limit exceeded\n", stdout);
+			fputs("\npacket count limit exceeded\n", stdout);
+		} else if (in_file_cur == 0 && el_e != NULL) {
+			gettimeofday(&now, NULL);
+			ms = axa_elapsed_ms(&now, &out_bar_time);
+			if (ms >= PROGESS_MS) {
+				fputs(out_bar_strs[out_bar_idx], stdout);
+				fflush(stdout);
+				no_reprompt = true;
+				++out_bar_idx;
+				out_bar_idx %= AXA_DIM(out_bar_strs);
+				out_bar_time = now;
+			}
 		}
 		return;
 	}
@@ -3556,54 +3590,78 @@ print_channel(void)
 	       buf.c, clist->on != 0 ? "on" : "off", clist->spec.c);
 }
 
-/* Repeat anything that the ssh process says */
 static void
-sra_ssh_flush(void)
+wlist_alist(void)
 {
-	char ebuf[240];
-	int i;
+	axa_tag_t list_tag;
+	char hdr_tag_buf[AXA_TAG_STRLEN];
+	char list_tag_buf[AXA_TAG_STRLEN];
+	char buf[AXA_P_STRLEN];
 
-	if (client.err_sock < 0)
-		return;
+	if (client.recv_hdr.op == AXA_P_OP_WLIST)
+		list_tag = client.recv_body->wlist.cur_tag;
+	 else
+		list_tag = client.recv_body->alist.cur_tag;
+	 axa_tag_to_str(list_tag_buf, sizeof(list_tag_buf),
+			AXA_P2H_TAG(list_tag));
 
-	i = read(client.err_sock, ebuf, sizeof(ebuf));
-	if (i > 0) {
-		clear_prompt();
-		fwrite(ebuf, i, 1, stderr);
-		fflush(stderr);
+	clear_prompt();
+	if (client.recv_hdr.tag != AXA_P2H_TAG(AXA_TAG_NONE)
+	    && client.recv_hdr.tag != list_tag)
+		printf("     nearest %s to %s is %s\n",
+		       mode == RAD ? "anomaly" : "watch",
+		       axa_tag_to_str(hdr_tag_buf, sizeof(hdr_tag_buf),
+				      client.recv_hdr.tag),
+		       list_tag_buf);
 
-	} else if (i < 0 && errno != EWOULDBLOCK && errno != EAGAIN
-		   && errno != EINTR) {
-		error_msg("read(ssh stderr): %s", strerror(errno));
-		close(client.err_sock);
-		client.err_sock = -1;
-	}
+	printf("%7s %s\n",
+	       list_tag_buf, axa_p_to_str(buf, sizeof(buf), false,
+					  &client.recv_hdr, client.recv_body));
 }
 
-/* Deal with a message from the server. */
+/* Input from the server is available, progress has been made on
+ * the connection, or it is time to send a NOP. */
 static void
 read_srvr(void)
 {
 	char buf[AXA_P_STRLEN];
-	char time_buf[32];
-	time_t epoch;
-	const axa_p_missed_t *missed;
+
+	if (!AXA_CLIENT_CONNECTED(&client)) {
+		switch (axa_client_connect(&emsg, &client, true)) {
+		case AXA_CLIENT_CONNECT_BAD:
+		case AXA_CLIENT_CONNECT_TEMP:
+			error_msg("%s", emsg.c);
+			disconnect(true);
+			break;
+		case AXA_CLIENT_CONNECT_DONE:
+		case AXA_CLIENT_CONNECT_INCOM:
+			break;
+		case AXA_CLIENT_CONNECT_NOP:
+		case AXA_CLIENT_CONNECT_USER:
+			if (axa_debug >= AXA_DEBUG_TRACE) {
+				clear_prompt();
+				printf("send %s\n", emsg.c);
+			}
+			break;
+		}
+		return;
+	}
 
 	do {
 		switch (axa_p_recv(&emsg, client.in_sock, &client.recv_hdr,
 				   &client.recv_body, &client.recv_len,
 				   &client.buf, client.addr,
-				   protocol_mode==SRA
-				   ? AXA_P_FROM_SRA : AXA_P_FROM_RAD,
+				   client.is_rad ? AXA_P_FROM_RAD
+				   : AXA_P_FROM_SRA,
 				   &client.alive)) {
-		case AXA_P_RECV_RESULT_INCOM:
-			return;
-		case AXA_P_RECV_RESULT_ERR:
-			clear_prompt();
+		case AXA_P_RECV_ERR:
 			error_msg("%s", emsg.c);
 			disconnect(true);
 			return;
-		case AXA_P_RECV_RESULT_DONE:
+		case AXA_P_RECV_INCOM:
+			return;
+		case AXA_P_RECV_DONE:
+			/* deal with the input */
 			break;
 		default:
 			AXA_FAIL("impossible axa_p_recv() result");
@@ -3620,7 +3678,11 @@ read_srvr(void)
 			break;
 
 		case AXA_P_OP_HELLO:
-			axa_client_hello(&client, &client.recv_body->hello);
+			if (!axa_client_hello(&emsg, &client, NULL)) {
+				error_msg("%s", emsg.c);
+				disconnect(true);
+				return;
+			}
 			if (quiet)
 				break;
 			clear_prompt();
@@ -3647,21 +3709,15 @@ read_srvr(void)
 			break;
 
 		case AXA_P_OP_MISSED:
-			if (packet_counting && packet_count < 0)
+		case AXA_P_OP_MISSED_RAD:
+			if (axa_debug == 0
+			    && (packet_counting && packet_count < 0))
 				break;
-			missed = &client.recv_body->missed;
-			epoch = AXA_P2H32(missed->last_reported);
-			strftime(time_buf, sizeof(time_buf), "%Y/%m/%d %T",
-				 localtime(&epoch));
-			print_recv_tag_op();
-			printf("    lost %"PRIu64" input packets,"
-			       " dropped %"PRIu64" for congestion,\n"
-			       "\t%"PRIu64" for per sec limit\n"
-			       "\tsince %s\n",
-			       AXA_P2H64(missed->input_dropped),
-			       AXA_P2H64(missed->dropped),
-			       AXA_P2H64(missed->sec_rlimited),
-			       time_buf);
+			clear_prompt();
+			printf("%s\n",
+			       axa_p_to_str(buf, sizeof(buf), true,
+					    &client.recv_hdr,
+					    client.recv_body));
 			break;
 
 		case AXA_P_OP_WHIT:
@@ -3676,9 +3732,12 @@ read_srvr(void)
 
 		case AXA_P_OP_WLIST:
 		case AXA_P_OP_ALIST:
+			wlist_alist();
+			break;
+
 		case AXA_P_OP_OPT:
 			clear_prompt();
-			printf("%s\n", axa_p_to_str(buf, sizeof(buf), false,
+			printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
 						    &client.recv_hdr,
 						    client.recv_body));
 			break;
@@ -3701,44 +3760,45 @@ read_srvr(void)
 		case AXA_P_OP_CGET:
 		case AXA_P_OP_ACCT:
 		default:
-			AXA_FAIL("impossible SRA op of %d from %s",
-				 client.recv_hdr.op, client.addr);
+			AXA_FAIL("impossible AXA %s from %s",
+				 axa_op_to_str(buf, sizeof(buf),
+					       client.recv_hdr.op),
+				 client.addr);
 		}
 		axa_client_flush(&client);
 	} while (client.buf.data_len != 0);
 }
 
 /* Send a command to the SRA or RAD server. */
-static int				/* 1=ok 0=failed -1=server syntax */
+static int				/* 1=ok 0=failed */
 srvr_send(axa_tag_t tag, axa_p_op_t op, const void *b, size_t b_len)
 {
 	axa_p_hdr_t hdr;
 	axa_p_send_result_t result;
-	size_t done;
 	char pbuf[120];
 
-	if (axa_debug >= AXA_DEBUG_TRACE) {
-		clear_prompt();
-		axa_make_hdr(&hdr, client.pvers, tag, op, b_len, 0,
-			     protocol_mode==SRA ? AXA_P_TO_SRA : AXA_P_TO_RAD);
-		printf("sending %s\n",
-		       axa_p_to_str(pbuf, sizeof(pbuf), true, &hdr, b));
-	}
+	AXA_ASSERT(AXA_CLIENT_OPENED(&client));
 
 	result = axa_p_send(&emsg, client.out_sock, client.pvers, tag,
-			    op, &hdr, b, b_len, NULL, 0, &done, client.addr,
-			    protocol_mode == SRA ? AXA_P_TO_SRA : AXA_P_TO_RAD,
+			    op, &hdr, b, b_len, NULL, 0, NULL, client.addr,
+			    mode == SRA ? AXA_P_TO_SRA : AXA_P_TO_RAD,
 			    &client.alive);
+
 	switch (result) {
 	case AXA_P_SEND_OK:
+		if (axa_debug >= AXA_DEBUG_TRACE) {
+			clear_prompt();
+			printf("send %s\n",
+			       axa_p_to_str(pbuf, sizeof(pbuf), true, &hdr, b));
+		}
 		return (1);
 	case AXA_P_SEND_BUSY:
 		error_msg("%s", emsg.c);
 		return (1);
 	case AXA_P_SEND_BAD:
-	default:
 		error_msg("%s", emsg.c);
 		disconnect(true);
 		return (0);
 	}
+	AXA_FAIL("impossible axa_p_send() result");
 }

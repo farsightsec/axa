@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) socket and IP address code
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -92,20 +92,6 @@ typedef union {
 #define AXA_SU_PORT(su) (*((su)->sa.sa_family == AF_INET6		\
 			   ? &(su)->ipv6.sin6_port			\
 			   : &(su)->ipv4.sin_port))
-/** @cond */
-/*  server side listen socket type */
-typedef enum {
-	AXA_LSOCK_TCP,			/* TCP socket */
-	AXA_LSOCK_UDS,			/* Unix domain socket */
-	AXA_LSOCK_PROXY_SSH		/* Proxy SSH */
-} axa_lsock_type_t;
-
-typedef struct {
-	int		s;
-	axa_socku_t	su;
-	axa_lsock_type_t	type;
-} axa_lsock_t;
-/** @endcond */
 
 /** interesting poll(2) flags for an input socket */
 #define AXA_POLL_IN	(POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI)
@@ -113,10 +99,6 @@ typedef struct {
 #define AXA_POLL_OUT	(POLLOUT | POLLWRNORM | POLLWRBAND)
 /** poll(2) flags for noticing disconnect */
 #define AXA_POLL_OFF	(POLLERR | POLLHUP | POLLNVAL)
-#ifndef INFTIM
-/** infinite timeout flag */
-#define INFTIM (-1)			/* for Linux */
-#endif
 
 
 /**
@@ -238,8 +220,7 @@ extern int axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str);
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] addr_port string of the format "hostname,port"
  *  \param[in] passive boolean, if true, enable AI_PASSIVE
- *  \param[out] resp pointer to address of struct addrinfo, results will go
- *  here
+ *  \param[out] resp pointer to address of struct addrinfo, results appear here
  *
  *  \retval true success, *resp will have the results
  *  \retval false parsing error, check emsg
@@ -248,8 +229,8 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 			 bool passive, struct addrinfo **resp);
 
 /**
- *  Set socket (or other communications file descriptor) options. 
- *  
+ *  Set socket (or other communications file descriptor) options.
+ *
  *  AXA has the option of using several communications primitives. Depending on
  *  network details and the user's whim, AXA may use:
  *      - Unix domain (unix:/foo/bar)
@@ -268,10 +249,10 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
  *      - TCP keepalives enabled (TCP and SSH only)
  *      - Broadcasting enabled (UDP to broadcast IP address only)
  *
- *  As such, #axa_set_sock() tries to do the right thing for the given 
+ *  As such, #axa_set_sock() tries to do the right thing for the given
  *  primitive. However, on some platforms, this is a best effort service
- *  (notably OS X which does not support SO_PROTOCOL) and there may be 
- *  spurious warnings when AXA attempts to set a socket option that is 
+ *  (notably OS X which does not support SO_PROTOCOL) and there may be
+ *  spurious warnings when AXA attempts to set a socket option that is
  *  non-sequitor for the given primitive.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
@@ -284,44 +265,5 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
  */
 extern bool axa_set_sock(axa_emsg_t *emsg, int s, const char *label,
 			 bool nonblock);
-
-/**< @cond */
-/**
- *  Parse "host/port" and start listening.
- *
- *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] lsocks
- *  \param[in] num_lsocks
- *  \param[in] max_lsocks
- *  \param[in] addr_port
- *
- *  \retval true
- *  \retval false
- */
-extern bool axa_bind_tcp_listen(axa_emsg_t *emsg, axa_lsock_t *lsocks,
-				uint *num_lsocks, uint max_lsocks,
-				const char *addr_port);
-
-/**
- *  Parse "/sock" and start listening.
- *
- *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] lsocks
- *  \param[in] num_lsocks
- *  \param[in] max_lsocks
- *  \param[in] sname
- *  \param[in] mode
- *  \param[in] uid
- *  \param[in] gid
- *  \param[in] type
- *
- *  \retval true
- *  \retval false
- */
-extern bool axa_bind_unix_listen(axa_emsg_t *emsg, axa_lsock_t *lsocks,
-				 uint *num_lsocks, uint max_lsocks,
-				 const char *sname, mode_t mode,
-				 uid_t uid, gid_t gid, axa_lsock_type_t type);
-/**< @endcond */
 
 #endif /* AXA_SOCKET_H */

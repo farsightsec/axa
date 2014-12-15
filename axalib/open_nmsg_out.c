@@ -1,7 +1,7 @@
 /*
  * Open an output nmsg stream for output or forwarding by sratunnel or sratool.
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,30 +36,35 @@
 int
 axa_open_nmsg_out(axa_emsg_t *emsg,
 		  nmsg_output_t *out_nmsg_output, int *out_sock_type,
-		  const char *addr)
+		  const char *addr0)
 {
+	const char *addr;
 	axa_socku_t su;
 	struct addrinfo *ai;
 	bool isfile;
 	int s;
 
-	if (AXA_CLITCMP(addr, "tcp:")) {
-		addr = strchr(addr, ':')+1;
+	if (AXA_CLITCMP(addr0, "tcp:")) {
+		addr = strchr(addr0, ':')+1;
 		*out_sock_type = SOCK_STREAM;
 		isfile = false;
-	} else if (AXA_CLITCMP(addr, "udp:")) {
-		addr = strchr(addr, ':')+1;
+	} else if (AXA_CLITCMP(addr0, "udp:")) {
+		addr = strchr(addr0, ':')+1;
 		*out_sock_type = SOCK_DGRAM;
 		isfile = false;
-	} else if (AXA_CLITCMP(addr, "file:")) {
-		addr = strchr(addr, ':')+1;
+	} else if (AXA_CLITCMP(addr0, "file:")) {
+		addr = strchr(addr0, ':')+1;
 		isfile = true;
 	} else {
+		addr = addr0;
 		*out_sock_type = SOCK_DGRAM;
 		isfile = false;
 	}
-	if (*addr == '\0')
+	if (*addr == '\0') {
+		axa_pemsg(emsg, "missing address or file name in \"%s\"",
+			  addr0);
 		return (-1);
+	}
 
 	if (isfile) {
 		s = open(addr, O_WRONLY | O_CREAT | O_TRUNC, 0666);

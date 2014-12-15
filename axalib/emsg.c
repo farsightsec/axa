@@ -1,7 +1,7 @@
 /*
  * Error message and syslog output.
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,8 +32,6 @@
 #include <sys/stat.h>
 #include <sys/resource.h>
 
-uint axa_debug;
-
 
 
 static struct {
@@ -44,12 +42,23 @@ static struct {
 	bool	out_stderr;		/* send messages to stderr */
 } ss[3];				/* AXA_SYSLOG_{TRACE,ERROR,ACCT} */
 
-static bool syslog_started;
+static bool syslog_set;
+static bool syslog_open;
 
 char axa_prog_name[256];
 
 
 /* Crash immediately on malloc failures. */
+void *
+axa_malloc(size_t s)
+{
+	void *p;
+
+	p = malloc(s);
+	AXA_ASSERT(p != NULL);
+	return (p);
+}
+
 void *
 axa_zalloc(size_t s)
 {
@@ -123,6 +132,8 @@ axa_set_me(const char *me)
 	if (p != NULL)
 		me = p+1;
 	strlcpy(axa_prog_name, me, sizeof(axa_prog_name));
+	if (syslog_open)
+		axa_syslog_init();
 }
 
 static int
@@ -195,15 +206,13 @@ parse_syslog_facility(const char *facility)
  *	{trace|error|acct},{off|FACILITY.LEVEL}[,{none,stderr,stdout}]
  */
 bool
-axa_parse_log_opt(const char *arg)
+axa_parse_log_opt(axa_emsg_t *emsg, const char *arg)
 {
 	char type_buf[32], syslog_buf[32], syslog1_buf[32];
 	const char *arg1, *syslog2_str;
 	int facility, level;
 	axa_syslog_type_t type;
 	bool on, out_stdout, out_stderr;
-
-	AXA_ASSERT_MSG(syslog_started, "axa_syslog_init() not yet called");
 
 	arg1 = arg;
 	axa_get_token(type_buf, sizeof(type_buf), &arg1, ",");
@@ -214,9 +223,9 @@ axa_parse_log_opt(const char *arg)
 	} else if (strcasecmp(type_buf, "acct") == 0) {
 		type = AXA_SYSLOG_ACCT;
 	} else {
-		axa_error_msg("\"%s\" in \"-L %s\""
-			      " is neither \"trace\", \"error\", nor \"acct\"",
-			      type_buf, arg);
+		axa_pemsg(emsg, "\"%s\" in \"-L %s\""
+			  " is neither \"trace\", \"error\", nor \"acct\"",
+			  type_buf, arg);
 		return (false);
 	}
 
@@ -238,12 +247,13 @@ axa_parse_log_opt(const char *arg)
 			level = parse_syslog_level(syslog1_buf);
 		}
 		if (facility < 0) {
-			axa_error_msg("unrecognized syslog facility in \"%s\"",
-				      arg);
+			axa_pemsg(emsg,
+				  "unrecognized syslog facility in \"%s\"",
+				  arg);
 			return (false);
 		}
 		if (level < 0) {
-			axa_error_msg("unrecognized syslog level in \"%s\"",
+			axa_pemsg(emsg, "unrecognized syslog level in \"%s\"",
 				      arg);
 			return (false);
 		}
@@ -253,16 +263,16 @@ axa_parse_log_opt(const char *arg)
 	if (arg1[0] == '\0' || AXA_CLITCMP(arg1, "stderr")) {
 		out_stdout = false;
 		out_stderr = true;
-	} else if (AXA_CLITCMP(arg1, "none")) {
+	} else if (AXA_CLITCMP(arg1, "off") || AXA_CLITCMP(arg1, "none")) {
 		out_stdout = false;
 		out_stderr = false;
 	} else if (AXA_CLITCMP(arg1, "stdout")) {
 		out_stdout = true;
 		out_stderr = false;
 	} else {
-		axa_error_msg("\"%s\" in \"-L %s\" is neither"
-			      " NONE, STDERR, nor STDOUT",
-			      arg1, arg);
+		axa_pemsg(emsg, "\"%s\" in \"-L %s\" is neither"
+			  " NONE, STDERR, nor STDOUT",
+			  arg1, arg);
 		return (false);
 	}
 
@@ -278,27 +288,42 @@ axa_parse_log_opt(const char *arg)
 	return (true);
 }
 
-void
-axa_syslog_init(void)
+static void
+set_syslog(void)
 {
-	AXA_ASSERT_MSG(axa_prog_name[0] != '\0', "axa_set_me() not yet called");
-	openlog(axa_prog_name, LOG_PID | LOG_NOWAIT, LOG_DAEMON);
+	axa_emsg_t emsg;
 
-	AXA_ASSERT_MSG(!syslog_started, "axa_syslog_init() already called");
-	syslog_started = true;
+	if (syslog_set)
+		return;
 
 	if (!ss[AXA_SYSLOG_TRACE].set) {
-		AXA_ASSERT(axa_parse_log_opt("trace,LOG_DEBUG.LOG_DAEMON"));
+		AXA_ASSERT(axa_parse_log_opt(&emsg,
+					     "trace,LOG_DEBUG.LOG_DAEMON"));
 		ss[AXA_SYSLOG_TRACE].set = false;
 	}
 	if (!ss[AXA_SYSLOG_ERROR].set) {
 		/* transposed facility and level to check axa_parse_log_opt() */
-		AXA_ASSERT(axa_parse_log_opt("error,LOG_DAEMON.LOG_ERR"));
+		AXA_ASSERT(axa_parse_log_opt(&emsg,
+					     "error,LOG_DAEMON.LOG_ERR"));
 		ss[AXA_SYSLOG_ERROR].set = false;
 	}
 	if (!ss[AXA_SYSLOG_ACCT].set) {
-		AXA_ASSERT(axa_parse_log_opt("acct,LOG_NOTICE.LOG_AUTH,none"));
+		AXA_ASSERT(axa_parse_log_opt(&emsg,
+					     "acct,LOG_NOTICE.LOG_AUTH,none"));
 		ss[AXA_SYSLOG_ACCT].set = false;
+	}
+	syslog_set = true;
+}
+
+void
+axa_syslog_init(void)
+{
+	set_syslog();
+	if (axa_prog_name[0] != '\0') {
+		if (syslog_open)
+			closelog();
+		openlog(axa_prog_name, LOG_PID, LOG_DAEMON);
+		syslog_open = true;
 	}
 }
 
@@ -369,10 +394,6 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 	FILE *stdio;
 #	define FMSG "; fatal error"
 
-	/* We cannot use AXA_ASSERT_MSG(), because that would call here */
-	if (!syslog_started)
-		abort();
-
 	bufp = buf;
 	buf_len = sizeof(buf);
 	if (fatal)
@@ -396,6 +417,8 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 	fflush(stdout);
 	fflush(stderr);
 
+	set_syslog();
+
 	if (ss[type].out_stderr)
 		stdio = stderr;
 	else if (ss[type].out_stdout)
@@ -403,7 +426,7 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 	else
 		stdio = NULL;
 	if (stdio != NULL)
-		fprintf(stdio, "%s: %s\n", axa_prog_name, buf);
+		fprintf(stdio, "%s\n", buf);
 
 	if (ss[type].on)
 		syslog(ss[type].priority, "%s", buf);
@@ -531,8 +554,7 @@ axa_fgetln(FILE *f,			/* source */
 
 	if (*bufp == NULL) {
 		AXA_ASSERT(*buf_sizep == 0);
-		buf = malloc(*buf_sizep = 81);
-		AXA_ASSERT(buf != NULL);
+		buf = axa_malloc(*buf_sizep = 81);
 		*bufp = buf;
 	}
 	for (;;) {
@@ -541,8 +563,7 @@ axa_fgetln(FILE *f,			/* source */
 		for (;;) {
 			if (buf_size < 80) {
 				delta = (*buf_sizep/81+2)*81 - buf_size;
-				p = malloc(*buf_sizep + delta);
-				AXA_ASSERT(p != NULL);
+				p = axa_malloc(*buf_sizep + delta);
 				len = buf - *bufp;
 				if (len > 0)
 					memcpy(p, *bufp, len);

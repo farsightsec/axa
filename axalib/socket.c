@@ -1,7 +1,7 @@
 /*
  * Socket utilities
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@
 #endif
 #include <string.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
 
@@ -298,13 +297,15 @@ axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str)
 	} else {
 		bits_len = str_len - addr_len - 1;
 		bits = strtoul(++bitsp, &p, 10);
-		if (su->sa.sa_family == AF_INET)
-			bits += 128-32;
-		if (p < bitsp+bits_len || bits > 128 || bits < 1) {
-			axa_pemsg(emsg, "invalid prefix length \"%.*s\"",
+		if (*bitsp == '\0' || p < bitsp+bits_len
+		    || bits < 1 || bits > 128
+		    || (bits > 32 && su->sa.sa_family == AF_INET)) {
+			axa_pemsg(emsg, "invalid prefix length \"/%.*s\"",
 				  (int)str_len, bitsp);
 			return (-1);
 		}
+		if (su->sa.sa_family == AF_INET)
+			bits += 128-32;
 	}
 
 	axa_bits_to_mask(&mask6, bits);
@@ -377,313 +378,123 @@ axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 }
 
 /* Set socket or other communications file descriptor options */
-bool                    /* false=emsg has an error message */
+bool					/* false=emsg has an error message */
 axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
 {
-    int on;
-    int protocol;
-    uint type;
-    socklen_t len;
+	int on;
+	int protocol;
+	uint type;
+	int bufsize;
+	socklen_t len;
 
-    if (0 > fcntl(s, F_SETFD, FD_CLOEXEC)) {
-        axa_pemsg(emsg, "fcntl(%s, F_SETFD, FD_CLOEXEC): %s",
-              label, strerror(errno));
-        return (false);
-    }
+	if (0 > fcntl(s, F_SETFD, FD_CLOEXEC)) {
+		axa_pemsg(emsg, "fcntl(%s, F_SETFD, FD_CLOEXEC): %s",
+			  label, strerror(errno));
+		return (false);
+	}
 
-    if (nonblock && -1 == fcntl(s, F_SETFL,
-                    fcntl(s, F_GETFL, 0) | O_NONBLOCK)) {
-        axa_pemsg(emsg, "fcntl(%s, O_NONBLOCK): %s",
-              label, strerror(errno));
-        return (false);
-    }
+	if (nonblock && -1 == fcntl(s, F_SETFL,
+				    fcntl(s, F_GETFL, 0) | O_NONBLOCK)) {
+		axa_pemsg(emsg, "fcntl(%s, O_NONBLOCK): %s",
+			  label, strerror(errno));
+		return (false);
+	}
 
-    len = sizeof(type);
-    if (0 > getsockopt(s, SOL_SOCKET, SO_TYPE, &type, &len)) {
-        /* Do not worry about not setting socket options on files. */
-        if (errno == ENOTSOCK)
-            return (true);
+	len = sizeof(type);
+	if (0 > getsockopt(s, SOL_SOCKET, SO_TYPE, &type, &len)) {
+		/* Do not worry about not setting socket options on pipes. */
+		if (errno == ENOTSOCK)
+			return (true);
 
-        /* hope for the best despite this error */
-        axa_trace_msg("getsockopt(%s, SO_TYPE): %s",
-                  label, strerror(errno));
-    } else if (type != SOCK_STREAM && type != SOCK_DGRAM) {
-        return (true);
-    }
+		/* Hope for the best despite this error. */
+		axa_trace_msg("getsockopt(%s, SO_TYPE): %s",
+			      label, strerror(errno));
+
+	} else if (type != SOCK_STREAM && type != SOCK_DGRAM) {
+		/* Do not worry about not setting socket options on files. */
+		return (true);
+	}
+
+	len = sizeof(bufsize);
+	if (0 > getsockopt(s, SOL_SOCKET, SO_RCVBUF, &bufsize, &len)) {
+		/* Hope for the best despite this error. */
+		axa_trace_msg("getsockopt(%s, SO_RCVBUF): %s",
+			      label, strerror(errno));
+	} else if (bufsize < 128*1024) {
+		/* Set at least modest socket buffer sizes */
+		bufsize = 128*1024;
+		if (0 > setsockopt(s, SOL_SOCKET, SO_RCVBUF,
+				   &bufsize, sizeof(bufsize))) {
+			/* Hope for the best despite this error. */
+			axa_trace_msg("getsockopt(%s, SO_RCVBUF): %s",
+				      label, strerror(errno));
+		}
+	}
+	len = sizeof(bufsize);
+	if (0 > getsockopt(s, SOL_SOCKET, SO_SNDBUF, &bufsize, &len)) {
+		/* Hope for the best despite this error. */
+		axa_trace_msg("getsockopt(%s, SO_SNDBUF): %s",
+			      label, strerror(errno));
+	} else if (bufsize < 128*1024) {
+		/* Set at least modest socket buffer sizes */
+		bufsize = 128*1024;
+		if (0 > setsockopt(s, SOL_SOCKET, SO_SNDBUF,
+				   &bufsize, sizeof(bufsize))) {
+			/* Hope for the best despite this error. */
+			axa_trace_msg("getsockopt(%s, SO_RCVBUF): %s",
+				      label, strerror(errno));
+		}
+	}
+
 
 #ifdef SO_PROTOCOL
-    len = sizeof(protocol);
-    if (0 > getsockopt(s, SOL_SOCKET, SO_PROTOCOL, &protocol, &len)) {
-        /* hope for the best despite this error */
-        axa_trace_msg("getsockopt(%s, SO_PROTOCOL): %s",
-                  label, strerror(errno));
-        protocol = -1;
-    }
+	len = sizeof(protocol);
+	if (0 > getsockopt(s, SOL_SOCKET, SO_PROTOCOL, &protocol, &len)) {
+		/* hope for the best despite this error */
+		axa_trace_msg("getsockopt(%s, SO_PROTOCOL): %s",
+			      label, strerror(errno));
+		protocol = -1;
+	}
 #else
-    /*
-     * Without getsockopt(..SOL_SOCKET, SO_PROTOCOL..) to check that we have
-     * a TCP/IP socket (e.g. on OS X), there will be errors as we assume
-     * that all stream or datagram sockets are TCP/IP sockets and try
-     * set UDP or TCP options on UNIX domain sockets.
-     */
-    protocol = -1;
+	/*
+	 * Without getsockopt(..SOL_SOCKET, SO_PROTOCOL..) to check that we
+	 * have a TCP/IP socket (e.g. on OS X),
+	 * there will be errors as we assume that all stream or datagram
+	 * sockets are TCP/IP sockets and try set UDP or TCP options
+	 * on UNIX domain sockets.
+	 */
+	protocol = -1;
 #endif
 
-    if (protocol == IPPROTO_TCP
-	|| (protocol == -1 && type == SOCK_STREAM)) {
-        on = 1;
-        if (0 > setsockopt(s, IPPROTO_TCP, SO_KEEPALIVE,
-                   &on, sizeof(on))) {
-            /* hope for the best despite this error */
-            axa_trace_msg(
-                    "probably spurious error setsockopt(%s, SO_KEEPALIVE): %s",
-                    label, strerror(errno));
-        }
-        on = 1;
-        if (0 > setsockopt(s, IPPROTO_TCP, TCP_NODELAY,
-                   &on, sizeof(on))) {
-            /* hope for the best despite this error */
-            axa_trace_msg(
-                    "probably spurious error setsockopt(%s, TCP_NODELAY): %s",
-                    label, strerror(errno));
-        }
-    } else if (protocol == IPPROTO_UDP
-	       || (protocol == -1 && type == SOCK_STREAM)) {
-        on = 1;
-        if (0 > setsockopt(s, SOL_SOCKET, SO_BROADCAST,
-                   &on, sizeof(on))) {
-            /* hope for the best despite this error */
-            axa_trace_msg(
-                    "probably spurious error setsockopt(%s, SO_BROADCAST): %s",
-                    label, strerror(errno));
-        }
-    }
-
-    return (true);
-}
-
-/*
- * Parse "host/port" and start listening.
- */
-bool
-axa_bind_tcp_listen(axa_emsg_t *emsg,
-		    axa_lsock_t *lsocks, uint *num_lsocks, uint max_lsocks,
-		    const char *addr_port)
-{
-	char addr_buf[AXA_SU_TO_STR_LEN];
-	struct addrinfo *res0, *res;
-	axa_lsock_t *lsock;
-	bool result;
-	int on;
-	uint n;
-
-	AXA_ASSERT(*num_lsocks < max_lsocks);
-
-	if (!axa_get_srvr(emsg, addr_port, true, &res0))
-		return (false);
-
-	result = true;
-	for (res = res0;
-	     *num_lsocks < max_lsocks && res != NULL;
-	     res = res->ai_next) {
-		lsock = &lsocks[*num_lsocks];
-		lsock->type = AXA_LSOCK_TCP;
-		memcpy(&lsock->su.sa, res->ai_addr, res->ai_addrlen);
-		axa_su_to_str(addr_buf, sizeof(addr_buf), ',', &lsock->su);
-
-		for (n = 0; n < *num_lsocks; ++n) {
-			if (0 == memcmp(&lsock->su, &lsocks[n].su,
-					sizeof(lsock->su))) {
-				if (axa_debug != 0)
-					axa_trace_msg("duplicate -l address: %s",
-						      addr_buf);
-				break;
-			}
+	if (protocol == IPPROTO_TCP
+	    || (protocol == -1 && type == SOCK_STREAM)) {
+		on = 1;
+		if (0 > setsockopt(s, IPPROTO_TCP, SO_KEEPALIVE,
+				   &on, sizeof(on))) {
+			/* hope for the best despite this error */
+			axa_trace_msg("probably spurious error setsockopt("
+				      "%s, SO_KEEPALIVE): %s",
+				      label, strerror(errno));
 		}
-		if (n < *num_lsocks)
-			continue;
-
-		/*
-		 * Look for a daemon already using our address.  Do not give up
-		 * immediately in case a previous instance is slowly stopping.
-		 */
-		n = 0;
-		for (;;) {
-			lsock->s = socket(lsock->su.sa.sa_family,
-					       SOCK_STREAM, 0);
-			if (lsock->s < 0) {
-				axa_pemsg(emsg,
-					  "socket(TCP %s): %s",
-					  addr_buf, strerror(errno));
-				return (false);
-			}
-			if (0 > fcntl(lsock->s, F_SETFD, FD_CLOEXEC)) {
-				axa_pemsg(emsg,
-					  "fcntl(%s,F_SETFD,FD_CLOEXEC): %s",
-					  addr_buf, strerror(errno));
-				return (false);
-			}
-			on = 1;
-			if (0 > setsockopt(lsock->s, SOL_SOCKET, SO_REUSEADDR,
-					   &on, sizeof(on))) {
-				axa_pemsg(emsg,
-					  "setsockopt(%s, SO_REUSADDR): %s",
-					  addr_buf, strerror(errno));
-				return (false);
-			}
-			if (0 <= bind(lsock->s, &lsock->su.sa,
-				      AXA_SU_LEN(&lsock->su)))
-				break;
-			if (errno != EADDRINUSE
-			    || ++n > AXA_ADDR_WAIT_IN_USE*10) {
-				axa_pemsg(emsg, "bind(%s) %s",
-					  addr_buf, strerror(errno));
-				close(lsock->s);
-				lsock->s = -1;
-				break;
-			}
-			close(lsock->s);
-			usleep(100*1000);
+		on = 1;
+		if (0 > setsockopt(s, IPPROTO_TCP, TCP_NODELAY,
+				   &on, sizeof(on))) {
+			/* hope for the best despite this error */
+			axa_trace_msg("probably spurious error setsockopt("
+				      "%s, TCP_NODELAY): %s",
+				      label, strerror(errno));
 		}
-		if (lsock->s < 0) {
-			result = false;
-			continue;
+	} else if (protocol == IPPROTO_UDP
+		   || (protocol == -1 && type == SOCK_DGRAM)) {
+		on = 1;
+		if (0 > setsockopt(s, SOL_SOCKET, SO_BROADCAST,
+				   &on, sizeof(on))) {
+			/* hope for the best despite this error */
+			axa_trace_msg("probably spurious error setsockopt("
+				      "%s, SO_BROADCAST): %s",
+				      label, strerror(errno));
 		}
-
-		if (0 > listen(lsock->s, 10)) {
-			axa_pemsg(emsg, "listen(%s): %s",
-				  addr_buf, strerror(errno));
-			close(lsock->s);
-			result = false;
-			continue;;
-		}
-
-		if (axa_debug != 0)
-			axa_trace_msg("listening on %s", addr_buf);
-		++*num_lsocks;
-	}
-	if (res0 != NULL)
-		freeaddrinfo(res0);
-	return (result);
-}
-
-/*
- * parse "/sock" and start listening
- */
-bool
-axa_bind_unix_listen(axa_emsg_t *emsg,
-		     axa_lsock_t *lsocks, uint *num_lsocks, uint max_lsocks,
-		     const char *sname, mode_t mode, uid_t uid, gid_t gid,
-		     axa_lsock_type_t type)
-{
-	struct sockaddr_un *sun;
-	int *sp;
-	struct stat sb;
-	int i;
-
-	if (0 <= stat(sname, &sb)
-	    && !(S_ISSOCK(sb.st_mode) || S_ISFIFO(sb.st_mode))) {
-		axa_pemsg(emsg, "non-socket present at %s", sname);
-		return (false);
 	}
 
-	AXA_ASSERT(*num_lsocks < max_lsocks);
-	lsocks[*num_lsocks].type = type;
-	sun = &lsocks[*num_lsocks].su.sun;
-	sp = &lsocks[*num_lsocks].s;
-
-	if (strlen(sname) >= sizeof(sun->sun_path)) {
-		axa_pemsg(emsg, "invalid UNIX domain socket: %s", sname);
-		return (false);
-	}
-	strcpy(sun->sun_path, sname);
-#ifdef HAVE_SA_LEN
-	sun->sun_len = SUN_LEN(sun);
-#endif
-	sun->sun_family = AF_UNIX;
-
-	/* Look for a daemon already using our socket.
-	 * Do not give up immediately in case a previous instance
-	 * is slowly stopping. */
-	i = 0;
-	for (;;) {
-		int s;
-
-		s = socket(AF_UNIX, SOCK_STREAM, 0);
-		if (s < 0) {
-			axa_pemsg(emsg, "socket(%s): %s",
-				  sname, strerror(errno));
-			return (false);
-		}
-		/* unlink it only if it looks like a dead socket */
-		if (0 > connect(s, (struct sockaddr *)sun,
-				sizeof(*sun))) {
-			if (errno == ECONNREFUSED
-			    || errno == ECONNRESET
-			    || errno == EACCES) {
-				if (0 > unlink(sname)) {
-					axa_pemsg(emsg, "unlink(%s): %s",
-						  sname, strerror(errno));
-					return (false);
-				}
-			} else if (errno != ENOENT
-				   && errno != EPROTOTYPE
-				   && axa_debug >= AXA_DEBUG_TRACE) {
-				axa_trace_msg("connect(old %s): %s",
-					      sun->sun_path, strerror(errno));
-			}
-			close(s);
-			break;
-		}
-		/* connect() worked so the socket is alive */
-		close(s);
-		if (++i > 5*10) {
-			axa_pemsg(emsg, "something running on %s",
-				  sun->sun_path);
-			return (false);
-		}
-		usleep(100*1000);
-	}
-
-	if (type == AXA_LSOCK_PROXY_SSH) {
-		*sp = socket(AF_UNIX, SOCK_DGRAM, 0);
-	} else {
-		*sp = socket(AF_UNIX, SOCK_STREAM, 0);
-	}
-
-	if (*sp < 0) {
-		axa_pemsg(emsg, "socket(%s): %s", sname, strerror(errno));
-		return (false);
-	}
-	if (0 > bind(*sp, (struct sockaddr *)sun, sizeof(*sun))) {
-		axa_pemsg(emsg, "unix domain bind(%s) %s",
-			  sun->sun_path, strerror(errno));
-		close(*sp);
-		return (false);
-	}
-	if (0 > chmod(sun->sun_path, mode)) {
-		axa_pemsg(emsg, "chmod(%s, %04o): %s",
-			  sun->sun_path, mode, strerror(errno));
-		close(*sp);
-		return (false);
-	}
-	if ((uid != (uid_t)-1 || gid != (gid_t)-1)
-	    && 0 > chown(sun->sun_path, uid, gid)) {
-		axa_pemsg(emsg, "chown(%s, %d, %d): %s",
-			  sun->sun_path, uid, gid, strerror(errno));
-		close(*sp);
-		return (false);
-	}
-
-	if (type == AXA_LSOCK_UDS && 0 > listen(*sp, 10)) {
-		axa_pemsg(emsg, "listen(%s): %s",
-			  sun->sun_path, strerror(errno));
-		close(*sp);
-		return (false);
-	}
-
-	++*num_lsocks;
-	if (axa_debug != 0)
-		axa_trace_msg("listening at %s", sun->sun_path);
 	return (true);
 }

@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2015 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 .Sh SYNOPSIS
 .Op Fl VdOR
 .Op Fl r Ar rate-limit
+.Op Fl C Ar count
 .Fl s Ar SRA-server
 .br
 .Fl c Ar channel
@@ -47,9 +48,13 @@ displays the version of
 .Nm
 and its preferred version of the AXA protocol.
 .It Fl d
-turns on tracing and debugging reports.
+enable debugging reports or increase them after the first
+.Fl d .
+.It Fl t
+enable tracing reports on the server or increase them after the first
+.Fl t .
 .It Fl O
-turns on a spinning bar output indicator on stdout.
+enable a spinning bar output indicator on stdout.
 .It Fl R
 switches from SRA to RAD mode.
 In SRA mode,
@@ -67,7 +72,13 @@ is not allowed.
 .It Fl r Ar rate-limit
 tells the server to send at most
 .Ar rate-limit
-SIE messages or raw IP packets per second.
+SIE messages and raw IP packets per second.
+.It Fl C Ar count
+stops
+.Nm
+after
+.Ar count
+SIE messages and raw IP packets.
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
