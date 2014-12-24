@@ -115,10 +115,10 @@ static HistEvent el_event;
 static EditLine *el_e = NULL;
 static struct timeval cmd_input;
 static bool no_prompt = false;
-static bool no_reprompt = false;
-static struct timeval prompt_cleared;
+static bool no_reprompt = false;	/* server has been active recently */
+static struct timeval prompt_cleared;	/* !=0 if prompt & user input erased */
 static struct timeval last_output;
-static size_t prompt_len;
+static size_t prompt_len;		/* length of visible prompt */
 static bool interrupted = false;
 static bool terminated = false;
 
@@ -430,9 +430,9 @@ clear_prompt(void)
 	fflush(stderr);
 	fflush(stdout);
 
-	if (prompt_cleared.tv_sec == 0) {
+	if (prompt_cleared.tv_sec == 0 && prompt_len != 0) {
 		/* We do not catch SIGWINCH,
-		 * and so must always get the screen size. */
+		 * and so must always get the screen (line) size. */
 		cols = get_cols();
 
 		/* get user's partial command */
@@ -462,9 +462,11 @@ clear_prompt(void)
 		fflush(stdout);
 	}
 
+	prompt_len = 0;
 	prompt_cleared = last_output;
 }
 
+/* Restore the prompt */
 static void
 reprompt(void)
 {
@@ -532,6 +534,10 @@ stop(int status)
 	exit(status);
 }
 
+/*
+ * After an error, disconnect from the server if in "error mode".
+ * And after a command error, give up on a command file set with "source".
+ */
 static void
 error_close(bool cmd_error)
 {
@@ -961,9 +967,13 @@ main(int argc, char **argv)
 		} else if (el_e != NULL) {
 			/* Get a command from the terminal via editline(3). */
 			cmd = el_gets(el_e, &cmd_len);
+			prompt_len = 0;
 			if (!interrupted) {
 				if (cmd == NULL) {
 					fputc('\n', stdout);
+					if (cmd_len == -1)
+					    error_msg("el_gets(): %s",
+						      strerror(errno));
 					stop(EX_OK);
 				}
 

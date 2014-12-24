@@ -183,31 +183,6 @@
  */
 #define AXA_CLITCMP(_b,_s)  (strncasecmp((_b), (_s), sizeof(_s)-1) == 0)
 
-/** for reference counting */
-typedef int32_t		axa_ref_cnt_t;
-
-/**
- *  Wrapper for compiler builtin __sync_and_add_fetch(c,1). This function
- *  atomically adds 1 to the variable that c points to.
- *  Crash with an assertion on overflow.
- *
- *  \param[in] c pointer to the variable to be incremented
- *
- *  \return the new value of what c points to
- */
-#define AXA_INC_REF(c)	AXA_ASSERT(__sync_add_and_fetch(&(c), 1) > 0)
-
-/**
- *  Wrapper for compiler builtin __sync_and_sub_fetch(c,1). This function
- *  atomically subtracts 1 from the variable that c points to.
- *  Crash with an assertion on underflow.
- *
- *  \param[in] c pointer to the variable to be decremented
- *
- *  \return the new value of what c points to
- */
-#define AXA_DEC_REF(c)	AXA_ASSERT(__sync_sub_and_fetch(&(c), 1) >= 0)
-
 
 /* domain_to_str.c */
 /**
@@ -606,9 +581,12 @@ extern bool axa_parse_ch(axa_emsg_t *emsg, uint16_t *chp,
 			 bool all_ok, bool number_ok);
 
 /* time.c */
+
+#define AXA_DAY_SECS (24*60*60)		/** one day of seconds */
+#define AXA_DAY_MS  (AXA_DAY_SECS*1000)	/** one day of milliseconds */
+
 /**
- *  Compute (tv1 - tv2) in milliseconds, but limited or clamped to 1 day
- *  or between  +/- 24*60*60*1000.
+ *  Compute (tv1 - tv2) in milliseconds, but limited or clamped to 1 day.
  *
  *  \param[in] tv1 const struct timeval * to first time value
  *  \param[in] tv2 const struct timeval * to second time value
@@ -620,9 +598,9 @@ extern time_t axa_tv_diff2ms(const struct timeval *tv1,
 
 /**
  *  Compute the positive elapsed time between two timevals in milliseconds,
- *  but limited or clamped to at least 0 ms and at most 1 day
- *  or between 0 and 24*60*60*1000.  Negative elapsed time is impossible
- *  except when the system clock is changed.
+ *  but limited or clamped to at least 0 ms and at most 1 day.
+ *  Negative elapsed time implies that the system clock was set back.
+ *  In that csae, set the 'then' timestamp to 'now' and return 0.
  *
  *  \param[in] now const struct timeval * current time
  *  \param[in] then struct timeval * past value, which will be set to the
