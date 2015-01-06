@@ -19,6 +19,7 @@
 #include <axa/axa_endian.h>
 #include <axa/wire.h>
 
+#include <nmsg.h>
 #include <wdns.h>
 
 #include <arpa/inet.h>
@@ -27,6 +28,9 @@
 #include <limits.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#define __FAVOR_BSD			/* for Debian tcp.h and udp.h */
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef __linux
@@ -599,7 +603,147 @@ missed_rad_add_str(char **bufp, size_t *buf_lenp,
 		      time_buf);
 }
 
-/* Convert som AXA protocol messages to strings. */
+static bool				/* false=message added to err_buf */
+ck_ipdg(const void *ptr, size_t actual_len, bool is_ip,
+	char **err_buf, size_t *err_buf_len,
+	const char *proto_nm, size_t min_len, axa_p_ch_t ch)
+{
+	if (ptr == NULL) {
+		axa_buf_print(err_buf, err_buf_len,
+			      "%smissing %s header from "
+			      AXA_OP_CH_PREFIX"%d",
+			      is_ip ? "" : "\n",
+			      proto_nm, ch);
+		return (false);
+	}
+	if (actual_len < min_len) {
+		axa_buf_print(err_buf, err_buf_len,
+			      "%struncated %s header of %zd bytes from "
+			      AXA_OP_CH_PREFIX"%d",
+			      is_ip ? "" : "\n",
+			      proto_nm, actual_len, ch);
+		return (false);
+	}
+	return (true);
+}
+
+/* Convert a raw IP datagram to a string. */
+bool					/* true=dst and src set */
+axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen, axa_p_ch_t ch,
+	       axa_socku_t *dst_su, axa_socku_t *src_su,
+	       char *cmt, size_t cmt_len)
+{
+	struct nmsg_ipdg dg;
+	struct ip ip_hdr;
+	uint ttl;
+	struct ip6_hdr ip6_hdr;
+	struct tcphdr tcp_hdr;
+	struct udphdr udp_hdr;
+	uint uh_ulen;
+	nmsg_res res;
+
+	memset(dst_su, 0, sizeof(*dst_su));
+	memset(src_su, 0, sizeof(*src_su));
+	if (cmt_len > 0)
+		*cmt = '\0';
+
+	memset(&dg, 0, sizeof(dg));
+	res = nmsg_ipdg_parse_pcap_raw(&dg, DLT_RAW, pkt_data, caplen);
+	if (res != nmsg_res_success && dg.len_network == 0) {
+		axa_buf_print(&cmt, &cmt_len, " unknown packet");
+		return (false);
+	}
+
+	switch (dg.proto_network) {
+	case AF_INET:
+		if (!ck_ipdg(dg.network, dg.len_network, false,
+			     &cmt, &cmt_len, "IP", sizeof(ip_hdr), ch))
+			return (false);
+		memcpy(&ip_hdr, dg.network, sizeof(ip_hdr));
+		axa_ip_to_su(dst_su, &ip_hdr.ip_dst, AF_INET);
+		axa_ip_to_su(src_su, &ip_hdr.ip_src, AF_INET);
+		ttl = ip_hdr.ip_ttl;
+		break;
+	case AF_INET6:
+		if (!ck_ipdg(dg.network, dg.len_network, false,
+			     &cmt, &cmt_len, "IPv6", sizeof(ip6_hdr), ch))
+			return (false);
+		memcpy(&ip6_hdr, dg.network, sizeof(ip6_hdr));
+		axa_ip_to_su(dst_su, &ip6_hdr.ip6_dst, AF_INET6);
+		axa_ip_to_su(src_su, &ip6_hdr.ip6_src, AF_INET6);
+		ttl = ip6_hdr.ip6_hlim;
+		break;
+	default:
+		axa_buf_print(&cmt, &cmt_len, "unknown AF %d from "
+			      AXA_OP_CH_PREFIX"%d",
+			      dg.proto_network, AXA_P2H_CH(ch));
+		return (false);
+	}
+
+	switch (dg.proto_transport) {
+	case IPPROTO_ICMP:
+		axa_buf_print(&cmt, &cmt_len, "TTL=%d ICMP", ttl);
+		if (dg.transport == NULL)
+			axa_buf_print(&cmt, &cmt_len, " later fragment");
+		else
+			axa_buf_print(&cmt, &cmt_len,
+				      " %d bytes", ntohs(ip_hdr.ip_len));
+		break;
+
+	case IPPROTO_ICMPV6:
+		axa_buf_print(&cmt, &cmt_len, "TTL=%d ICMPv6", ttl);
+		if (dg.transport == NULL)
+			axa_buf_print(&cmt, &cmt_len, " later fragment");
+		break;
+
+	case IPPROTO_TCP:
+		axa_buf_print(&cmt, &cmt_len, "TTL=%d TCP", ttl);
+		if (dg.transport == NULL) {
+			axa_buf_print(&cmt, &cmt_len, " later fragment");
+		} else if (ck_ipdg(dg.transport, dg.len_transport, true,
+				    &cmt, &cmt_len, "TCP",
+				    sizeof(tcp_hdr), ch )) {
+			memcpy(&tcp_hdr, dg.transport, sizeof(tcp_hdr));
+			AXA_SU_PORT(dst_su) = tcp_hdr.th_dport;
+			AXA_SU_PORT(src_su) = tcp_hdr.th_sport;
+			if ((tcp_hdr.th_flags & TH_FIN) != 0)
+				axa_buf_print(&cmt, &cmt_len, " FIN");
+			if ((tcp_hdr.th_flags & TH_SYN) != 0)
+				axa_buf_print(&cmt, &cmt_len, " SYN");
+			if ((tcp_hdr.th_flags & TH_ACK) != 0)
+				axa_buf_print(&cmt, &cmt_len, " ACK");
+			if ((tcp_hdr.th_flags & TH_RST) != 0)
+				axa_buf_print(&cmt, &cmt_len, " RST");
+		}
+		break;
+
+	case IPPROTO_UDP:
+		axa_buf_print(&cmt, &cmt_len, "TTL=%d UDP", ttl);
+		if (dg.transport == NULL) {
+			axa_buf_print(&cmt, &cmt_len, " later fragment");
+		} else if (ck_ipdg(dg.transport, dg.len_transport, true,
+				    &cmt, &cmt_len, "UDP",
+				    sizeof(udp_hdr), ch)) {
+			memcpy(&udp_hdr, dg.transport, sizeof(udp_hdr));
+			AXA_SU_PORT(dst_su) = udp_hdr.uh_dport;
+			AXA_SU_PORT(src_su) = udp_hdr.uh_sport;
+			uh_ulen = ntohs(udp_hdr.uh_ulen);
+			axa_buf_print(&cmt, &cmt_len, " %d bytes", uh_ulen);
+			if (uh_ulen != dg.len_payload+sizeof(udp_hdr))
+				axa_buf_print(&cmt, &cmt_len, "  fragment");
+		}
+		break;
+
+	default:
+		axa_buf_print(&cmt, &cmt_len, " IP protocol %d",
+			      dg.proto_transport);
+		break;
+	}
+
+	return (true);
+}
+
+/* Convert some AXA protocol messages to strings. */
 char *					/* input parameter buf0 */
 axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	     bool print_op,

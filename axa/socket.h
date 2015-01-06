@@ -87,7 +87,7 @@ typedef union {
  *
  *  \param[in] su a pointer to a populated axa_socku_t structure
  *
- *  \return the port number
+ *  \return a pointer to the 16-bit port number
  */
 #define AXA_SU_PORT(su) (*((su)->sa.sa_family == AF_INET6		\
 			   ? &(su)->ipv6.sin6_port			\
@@ -104,13 +104,13 @@ typedef union {
 /**
  *  Tests for errors on UDP output that are not necessarily fatal.
  *	Some firewall filters or access control lists including IPFW say
- *	EACCES on hits,	so treat EACCES like unreachables.
+ *	EACCES on hits, and so treat EACCES like unreachables.
  *
- *	\param[in] e errno
+ *  \param[in] e errno
  *
- *  \retval 1 on an errno that corresponds to an error that should not be
+ *  \retval true on an errno that corresponds to an error that should not be
  *  fatal
- *  \retval 0 on errno that should be fatal
+ *  \retval false on errno that should be fatal
  */
 #define AXA_IGNORED_UDP_ERRNO(e) (e == ECONNREFUSED			\
 				  || e == EHOSTUNREACH			\
@@ -123,8 +123,8 @@ typedef union {
 /**
  *  Tests for non-errors during non-blocking connect().
  *
- *  \retval 1 on an errno that corresponds to a non-fatal error
- *  \retval 0 on errno that should be fatal
+ *  \retval true on an errno that corresponds to a non-fatal error
+ *  \retval false on errno that should be fatal
  */
 #define AXA_CONN_WAIT_ERRORS() (errno == EAGAIN || errno == EINPROGRESS	\
 				|| errno == EALREADY)
@@ -134,8 +134,8 @@ typedef union {
 
 
 /* socket.c */
-/** maximum string needed to represent the contents of an axa_socku_t
- * INET6_ADDRSTRLEN+1+5+1 is xxxx:...:xxx/65535 */
+/** maximum string buffer needed the contents of an axa_socku_t
+ *  INET6_ADDRSTRLEN+1+5+1 comes from "xxxx:...:xxx/65535" */
 #define AXA_SU_TO_STR_LEN dcl_max(INET6_ADDRSTRLEN+1+5+1,		\
 				  sizeof(((axa_socku_t*)0)->sun.sun_path)+1)
 
@@ -143,12 +143,12 @@ typedef union {
  *  Extract IP address and port information from AXA socket union into
  *  a string.
  *  The finished string will be of the format "[IP][separator char][PORT]".
- *  If the address family of su is unrecognized, the function will fail with
+ *  If the address family of su is unrecognized, the function will crash with
  *  AXA_FAIL().
  *
  *  \param[out] str a char buffer of size str_len that will contain the
  *  finished string
- *  \param[in] str_len length of str
+ *  \param[in] str_len length of str; AXA_SU_TO_STR_LEN is sufficent
  *  \param[in] portc char to separate the IP address and port such as '.' or '/'
  *  \param[in] su pointer to source axa_socku_t
  *
@@ -156,12 +156,13 @@ typedef union {
  */
 extern char *axa_su_to_str(char *str, size_t str_len, char portc,
 			   const axa_socku_t *su);
+
 /**
  *  Populate an axa_socku_t union with a supplied IPv4 or IPv6 address
  *
  *  \param[out] su pointer to a axa_socku_t union
  *  \param[in] data pointer to wire-format IPv4 or IPv6 address
- *  \param[in] data_len size of data and so IPv4 vs. IPv6 indicator
+ *  \param[in] data_len size of data and so 4 for IPv4 or 16 for IPv6
  *
  *  \retval true success, su contains the IP address
  *  \retval false failure, data_len was unrecognized and su is filled with 0s

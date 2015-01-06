@@ -48,8 +48,7 @@ extern void error_msg(const char *p, ...)  AXA_PF(1,2);
 extern void print_raw(const uint8_t *pkt, size_t pkt_len);
 extern bool print_dns_pkt(const uint8_t *data, size_t data_len,
 			  const char *str);
-extern void print_raw_ip(const uint8_t *data, size_t data_len,
-			 const axa_p_whit_t *whit);
+extern void print_raw_ip(const uint8_t *data, size_t data_len, axa_p_ch_t ch);
 
 
 #endif /* SRATOOL_H */

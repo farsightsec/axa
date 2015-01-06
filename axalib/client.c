@@ -499,6 +499,8 @@ axa_client_recv_wait(axa_emsg_t *emsg, axa_client_t *client, time_t wait_ms)
 		ms = (AXA_KEEPALIVE_MS - axa_elapsed_ms(&now, &client->alive));
 		if (wait_ms > ms)
 			wait_ms = ms;
+		else if (wait_ms < 0)
+			wait_ms = 0;
 	}
 
 	memset(pollfds, 0, sizeof(pollfds));

@@ -2710,10 +2710,12 @@ print_nmsg_base_dnsqr(const nmsg_message_t msg, const char *eq, const char *val,
 	 * so print the query only without a response. */
 	if (dnsqr->n_response_packet == 0) {
 		print_raw_ip(dnsqr->query_packet[0].data,
-			      dnsqr->query_packet[0].len, whit);
+			     dnsqr->query_packet[0].len,
+			     AXA_P2H_CH(whit->hdr.ch));
 	} else {
 		print_raw_ip(dnsqr->response_packet[0].data,
-			      dnsqr->response_packet[0].len, whit);
+			     dnsqr->response_packet[0].len,
+			     AXA_P2H_CH(whit->hdr.ch));
 	}
 }
 
@@ -2948,7 +2950,7 @@ print_nmsg_base_packet(const nmsg_message_t msg, const axa_p_whit_t *whit,
 	}
 
 	printf("%s%s\n", eq, val);
-	print_raw_ip(data, data_len, whit);
+	print_raw_ip(data, data_len, AXA_P2H_CH(whit->hdr.ch));
 }
 
 /*
@@ -3565,7 +3567,7 @@ print_whit(axa_p_whit_t *whit, size_t whit_len,
 		       title_sep, title,
 		       AXA_P2H_CH(whit->hdr.ch));
 		print_raw_ip(whit->ip.b, whit_len - sizeof(whit->ip.hdr),
-			     whit);
+			     AXA_P2H_CH(whit->hdr.ch));
 		return;
 	}
 #pragma clang diagnostic push

@@ -26,11 +26,11 @@
  *  declarations.
  */
 
-#include <nmsg/timespec.h>		/* for OS X */
-#include <nmsg.h>
-
 #include <axa/protocol.h>
 #include <axa/axa.h>
+
+#include <nmsg/timespec.h>		/* for OS X */
+#include <nmsg.h>
 
 
 /** nmsg field contents type */

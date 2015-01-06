@@ -28,6 +28,8 @@
 #include <axa/axa.h>
 #include <axa/protocol.h>
 
+#include <nmsg.h>
+
 /**
  *  Parse an AXA watch definition.
  *  If there is a problem, the function will return false and emsg->c will
@@ -137,6 +139,26 @@ extern const char *axa_op_to_str(char *buf, size_t buf_len, axa_p_op_t op);
  */
 extern const char *axa_tag_op_to_str(char *buf, size_t buf_len,
 				     axa_tag_t tag, axa_p_op_t op);
+
+/**
+ *  Parse a raw IP datagram.
+ *
+ *  \param[in] pkt_data	IP datagram
+ *  \param[in] caplen captured length of the packet
+ *  \param[in] ch host byte order SIE channel on which it arrived
+ *  \param[out] dst buffer for destination address and port number
+ *  \param[out] src buffer for destination address and port number
+ *  \param[out] cmt buffer for error messages, optional protocol name,or
+ *	other optional comments; always '\0' terminated
+ *  \param[in] cmt_len length of cmt; 80 is good
+ *
+ *  \retval true found something to decode into the src and dst buffers
+ *  \retval false only the cmt buffer is set
+ */
+extern bool axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen,
+			   axa_p_ch_t ch, axa_socku_t *dst, axa_socku_t *src,
+			   char *cmt, size_t cmt_len);
+
 
 /* "dns=" *. NS_MAXDNAME AXA_P_WATCH_STR_SHARED '\0' */
 /** Maximum buffer or string length from axa_p_to_str() */
