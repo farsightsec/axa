@@ -518,7 +518,7 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
  *  \param[in] ... optional variadic arguments for pattern
  *  parameters)
  */
-#define AXA_ASSERT_MSG(c,p,...) (!(c) ? 0				    \
+#define AXA_ASSERT_MSG(c,p,...) ((c) ? 0				    \
 				 : axa_fatal_msg(0, __FILE__":%d " p,	    \
 						 __LINE__, ##__VA_ARGS__))
 
