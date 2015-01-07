@@ -514,10 +514,13 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
  *  condition, and so cannot be #ifdef'ed out.
  *
  *  \param[in] c condition to assert
- *  \param[in] ... variadic arguments (should be a string and any trailing
+ *  \param[in] p pattern or message
+ *  \param[in] ... optional variadic arguments for pattern
  *  parameters)
  */
-#define AXA_ASSERT_MSG(c,...) ((c) ? 0 : axa_fatal_msg(0, __VA_ARGS__))
+#define AXA_ASSERT_MSG(c,p,...) (!(c) ? 0				    \
+				 : axa_fatal_msg(0, __FILE__":%d " p,	    \
+						 __LINE__, ##__VA_ARGS__))
 
 /**
  *  Crash if a condition is false.
