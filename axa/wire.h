@@ -199,19 +199,20 @@ typedef enum {
 	AXA_P_FROM_RAD			/**< From RAD server */
 } axa_p_direction_t;
 
-/**
- *  return codes for axa_p_recv()
- */
+
+/** @cond */
+
+/*  return codes for axa_p_recv() */
 typedef enum {
 	AXA_P_RECV_ERR,			/**< fatal error or EOF */
 	AXA_P_RECV_INCOM,		/**< incomplete; poll() & try again */
 	AXA_P_RECV_DONE			/**< complete message received */
 } axa_p_recv_result_t;
 
-/**
- *  Receive an AXA request or response into a fixed header buffer and
- *  a dynamic body buffer. This function stalls until something is read, so
- *  use poll() or select().
+/*
+ *  Internal function to receive an AXA request or response into a fixed
+ *  header buffer and a dynamic body buffer. This function stalls until
+ *  something is read, so use poll() or select().
  *  On entry, hdr points to a buffer for the AXA protocol header
  *  bodyp is a pointer to a pointer to a buffer that will be allocated
  *  and filled with the next AXA protocol message.  This buffer must
@@ -245,6 +246,7 @@ extern axa_p_recv_result_t axa_p_recv(axa_emsg_t *emsg, int s,
 				      size_t *recv_len, axa_recv_buf_t *buf,
 				      const char *peer, axa_p_direction_t dir,
 				      struct timeval *alive);
+/** @endcond */
 
 /**
  *  Populate an AXA header including converting to wire byte order.
@@ -282,19 +284,19 @@ extern size_t axa_make_hdr(axa_emsg_t *emsg, axa_p_hdr_t *hdr,
  */
 extern bool axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op,
 			const axa_p_body_t *body, size_t body_len);
-/**
- *  AXA protocol send result
- *  return codes for axa_p_send()
- */
+
+/** @cond */
+
+/*  return codes for axa_p_send() */
 typedef enum {
 	AXA_P_SEND_OK,			/**< the AXA message was sent */
 	AXA_P_SEND_BUSY,		/**< only part sent--try again later */
 	AXA_P_SEND_BAD			/**< failed to send the message */
 } axa_p_send_result_t;
 
-/**
- *  Send an SRA or RAD request or response to the client or the server.
- *  The message is in 1, 2, or 3 parts.
+/*
+ *  Internal function to send an SRA or RAD request or response to the
+ *  client or the server.  The message is in 1, 2, or 3 parts.
  *  hdr always points to the AXA protocol header to build
  *  b1 and b1_len specify an optional second part
  *  b2 and b2_len specify the optional third part.  The second part must
@@ -333,5 +335,6 @@ extern axa_p_send_result_t axa_p_send(axa_emsg_t *emsg, int s,
 				      size_t *donep,
 				      const char *peer, axa_p_direction_t dir,
 				      struct timeval *alive);
+/** @endcond */
 
 #endif /* AXA_WIRE_H */

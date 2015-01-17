@@ -233,7 +233,8 @@ extern axa_client_connect_result_t axa_client_connect(axa_emsg_t *emsg,
 						      bool nonblock);
 
 /**
- *  Send an AXA message to the server connected through a client structure.
+ *  Send an AXA message to the server connected through a client structure,
+ *	blocking until finished.
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of a client structure
  *  \param[in] tag AXA tag
