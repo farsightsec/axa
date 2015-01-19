@@ -36,81 +36,51 @@
 
 
 /**
- *  AXA client types:
+ *  AXA client types prefixes
  *	unix:/path/to/socket
  *	tcp:hostname,port
  *	ssh:[user@]host
  */
-typedef enum {
-	CLIENT_TYPE_UNKN    =0,
-	CLIENT_TYPE_UNIX,
-#define  CLIENT_TYPE_UNIX_STR "unix"    /**< UNIX domain socket connection */
-	CLIENT_TYPE_TCP,
-#define  CLIENT_TYPE_TCP_STR "tcp"      /**< TCP connection */
-	CLIENT_TYPE_SSH
-#define  CLIENT_TYPE_SSH_STR "ssh"      /**< connection via ssh */
-} axa_client_type_t;
+#define	AXA_CLIENT_TYPE_UNIX_STR "unix"    /**< UNIX domain socket */
+#define AXA_CLIENT_TYPE_TCP_STR "tcp"      /**< TCP connection */
+#define AXA_CLIENT_TYPE_SSH_STR "ssh"      /**< connection via ssh */
+#define AXA_CLIENT_TYPE_SSH_TLS "tls"      /**< connection via OpenSSL */
 
 /** AXA client state */
 typedef struct {
-	axa_client_type_t type;		/**< connection type */
-	bool		is_rad;		/**< server is radd instead of srad */
+	axa_io_t	io;		/**< I/O context */
 	bool		debug_on;	/**< enable some debugging messages */
-	char		*addr;		/**< [user@]sshhost, host, path, ... */
 	axa_p_user_t	user;		/**< for TCP or UNIX domain socket */
 	bool		connected;	/**< false if connect() in progress */
-	char		*hello;		/**< HELLO string from server */
 
-	axa_socku_t	su;		/**< TCP/IP or UDS address of server */
+	char		*hello;		/**< HELLO string from server */
 
 	bool		have_id;	/**< for AXA_P_OP_JOIN */
 	axa_p_clnt_id_t clnt_id;	/**< unquie client ID */
 
-	axa_p_pvers_t	pvers;		/**< protocol version for this server */
-
-	struct timeval	alive;		/**< AXA protocol keepalive timer */
-
-	int		in_sock;	/**< input socket to server */
-	int		out_sock;	/**< output socket to server */
-
-	int		err_sock;	/**< error messages from ssh process */
-
-	/** @cond */
-	char		ebuf[120];	/**< ssh stderr buffer */
-	int		ebuf_len;	/**< data data in ebuf */
-	int		ebuf_bol;	/**< start of next line in ebuf */
-
-	pid_t		ssh_pid;	/**< ssh PID for CLIENT_TYPE_SSH_STR */
-
-	struct timeval	retry;		/**< retry timer */
-	time_t		backoff;	/**< back-off quantum */
-	/** @endcond */
-
-	axa_recv_buf_t	buf;		/**< new data from server */
-	axa_p_hdr_t	recv_hdr;       /**< received header */
-	axa_p_body_t	*recv_body;	/**< received body */
-	size_t		recv_len;	/**< sizeof(recv_hdr) + *recv_body */
+	struct timeval	retry;		/**< connection retry timer */
+	time_t		backoff;	/**< connection back-off quantum */
 } axa_client_t;
 
 /**
- * Check than an AXA client structure is closed
+ * Check than an AXA client context is closed
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  */
-#define AXA_CLIENT_OPENED(client) ((client)->in_sock >= 0)
+#define AXA_CLIENT_OPENED(client) ((client)->io.in_fd >= 0)
 
 /**
- * check that an AXA client structure is open and connected
+ * check that an AXA client context is open and connected
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  */
 #define AXA_CLIENT_CONNECTED(client) (AXA_CLIENT_OPENED(client)		\
 				      && (client)->connected)
 
 /**
- *  (Re-)initialize an AXA client structure with default values.
+ *  (Re-)initialize an AXA client context with default values.
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  */
 extern void axa_client_init(axa_client_t *client);
 
@@ -118,7 +88,7 @@ extern void axa_client_init(axa_client_t *client);
  *  Disconnect from the server
  *  and increase the delay before trying again.
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  */
 extern void axa_client_backoff(axa_client_t *client);
 
@@ -126,14 +96,14 @@ extern void axa_client_backoff(axa_client_t *client);
  *  Disconnect from the server and increase
  *  the delay before trying again to the maximum.
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  */
 extern void axa_client_backoff_max(axa_client_t *client);
 
 /**
  *  Reset the delay before try to connect to zero.
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  */
 extern void axa_client_backoff_reset(axa_client_t *client);
 
@@ -141,7 +111,7 @@ extern void axa_client_backoff_reset(axa_client_t *client);
  *  Get the number of milliseconds before the server connection should
  *  be attempted again.
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  *  \param[out] now current wall clock time or NULL
  *
  *  \return <= 0 if yes
@@ -149,16 +119,16 @@ extern void axa_client_backoff_reset(axa_client_t *client);
 extern time_t axa_client_again(axa_client_t *client, struct timeval *now);
 
 /**
- *  Flush data including applying free() to client->recv_body.
+ *  Flush and free AXA protocol message received from the server
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  */
 extern void axa_client_flush(axa_client_t *client);
 
 /**
- *  Close the server connection and flush or release buffers.
+ *  Close the server connection and flush and release buffers.
  *
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  */
 extern void axa_client_close(axa_client_t *client);
 
@@ -199,7 +169,7 @@ typedef enum {
  *	or AXA_CLIENT_CONNECT_USER.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  *  \param[in] is_rad true if server is radd isntead of srad
  *  \param[in] addr connect to this AXA server specification
  *  \param[in] debug_on true to turn on debugging output from libaxa without
@@ -223,7 +193,7 @@ extern axa_client_connect_result_t axa_client_open(axa_emsg_t *emsg,
  *	AXA_CLIENT_CONNECT_NOP, or AXA_CLIENT_CONNECT_USER.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  *  \param[in] nonblock true for nonblocking
  *
  *  \retval one of #axa_client_connect_result_t
@@ -233,10 +203,10 @@ extern axa_client_connect_result_t axa_client_connect(axa_emsg_t *emsg,
 						      bool nonblock);
 
 /**
- *  Send an AXA message to the server connected through a client structure,
+ *  Send an AXA message to the server connected through a client context,
  *	blocking until finished.
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of a client structure
+ *  \param[in] client address of a client context
  *  \param[in] tag AXA tag
  *  \param[in] op AXA opcode
  *  \param[out] hdr AXA protocol header to be built or NULL
@@ -258,7 +228,7 @@ typedef enum {
 	 * Call axa_client_backoff() and check check emsg. */
 	AXA_CLIENT_RECV_ERR,
 
-	AXA_CLIENT_RECV_STDERR,		/**< text waiting on ssh stderr */
+	AXA_CLIENT_RECV_TUNERR,		/**< get text via axa_io_tunerr() */
 	AXA_CLIENT_RECV_INCOM,		/**< incomplete; poll() & try again */
 	AXA_CLIENT_RECV_KEEPALIVE,	/**< need to send keepalive NOP */
 	AXA_CLIENT_RECV_DONE		/**< complete message received */
@@ -268,7 +238,7 @@ typedef enum {
  *  Wait for some input activit.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of the client structure
+ *  \param[in] client address of the client context
  *
  *  \retval one of #axa_client_recv_result_t
  */
@@ -276,10 +246,10 @@ extern axa_client_recv_result_t
 axa_client_recv_wait(axa_emsg_t *emsg, axa_client_t *client, time_t wait_ms);
 
 /**
- *  Wait for and read an AXA message from the server into the client structure
+ *  Wait for and read an AXA message from the server into the client context
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of the client structure
+ *  \param[in] client address of the client context
  *  \param[in] wait_ms wait at least this long
  *
  *  \retval one of #axa_client_recv_result_t
@@ -293,7 +263,7 @@ extern axa_client_recv_result_t axa_client_recv(axa_emsg_t *emsg,
  *  and save session information.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of the client structure
+ *  \param[in] client address of the client context
  *	default to &client->recv_body->hello if NULL
  *  \param[in] hello address of the received HELLO message or NULL, which
  *	    implies client->recv_body->hello
@@ -303,14 +273,5 @@ extern axa_client_recv_result_t axa_client_recv(axa_emsg_t *emsg,
  */
 extern bool axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 			     const axa_p_hello_t* hello);
-
-/**
- *  Get anything the ssh process says to stderr.
- *
- *  \param[in] client address of the client structure
- *
- *  \retval NULL or pointer to '\0' terminated text
- */
-extern const char *axa_client_stderr(axa_client_t *client);
 
 #endif /* AXA_CLIENT_H */

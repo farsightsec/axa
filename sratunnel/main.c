@@ -332,9 +332,9 @@ main(int argc, char **argv)
 		case AXA_CLIENT_RECV_ERR:
 			disconnect(true, "%s", emsg.c);
 			break;
-		case AXA_CLIENT_RECV_STDERR:
+		case AXA_CLIENT_RECV_TUNERR:
 			for (;;) {
-				cp = axa_client_stderr(&client);
+				cp = axa_io_tunerr(&client.io);
 				if (cp == NULL)
 					break;
 				axa_error_msg("%s", cp);
@@ -686,7 +686,7 @@ print_bad_op(const char *adj)
 
 	axa_error_msg("recv %s%s", adj,
 		      axa_p_to_str(buf, sizeof(buf), true,
-				   &client.recv_hdr, client.recv_body));
+				   &client.io.recv_hdr, client.io.recv_body));
 }
 
 static void
@@ -697,8 +697,8 @@ print_trace()
 	if (axa_debug > 0 || trace > 0)
 		axa_trace_msg("%s", axa_p_to_str(buf,
 						 sizeof(buf), false,
-						 &client.recv_hdr,
-						 client.recv_body));
+						 &client.io.recv_hdr,
+						 client.io.recv_body));
 }
 
 static void
@@ -710,11 +710,11 @@ print_missed(void)
 		return;
 
 	axa_p_to_str(buf, sizeof(buf), true,
-		     &client.recv_hdr,
-		     client.recv_body);
+		     &client.io.recv_hdr,
+		     client.io.recv_body);
 	axa_trace_msg("%s\n",
 		      axa_p_to_str(buf, sizeof(buf), true,
-				   &client.recv_hdr, client.recv_body));
+				   &client.io.recv_hdr, client.io.recv_body));
 }
 
 /* Send an AXA message to the server */
@@ -757,9 +757,9 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 			if (first_time || axa_debug != 0)
 				axa_error_msg("%s", emsg.c);
 			goto out;
-		case AXA_CLIENT_RECV_STDERR:
+		case AXA_CLIENT_RECV_TUNERR:
 			for (;;) {
-				cp = axa_client_stderr(&client);
+				cp = axa_io_tunerr(&client.io);
 				if (cp == NULL)
 					break;
 				axa_error_msg("%s", cp);
@@ -778,10 +778,10 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 			AXA_FAIL("impossible axa_client_recv() result");
 		}
 
-		switch ((axa_p_op_t)client.recv_hdr.op) {
+		switch ((axa_p_op_t)client.io.recv_hdr.op) {
 		case AXA_P_OP_NOP:
 			print_op(false, false,
-				 &client.recv_hdr, client.recv_body);
+				 &client.io.recv_hdr, client.io.recv_body);
 			break;
 
 		case AXA_P_OP_HELLO:
@@ -789,14 +789,16 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 				axa_error_msg("%s", emsg.c);
 			} else {
 				print_op(false, false,
-					 &client.recv_hdr, client.recv_body);
+					 &client.io.recv_hdr,
+					 client.io.recv_body);
 			}
 			break;
 
 		case AXA_P_OP_OPT:
-			if (resp_op == client.recv_hdr.op) {
+			if (resp_op == client.io.recv_hdr.op) {
 				print_op(false, false,
-					 &client.recv_hdr, client. recv_body);
+					 &client.io.recv_hdr,
+					 client.io.recv_body);
 				result = true;
 			} else {
 				print_bad_op("unexpected ");
@@ -805,13 +807,14 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 			break;
 
 		case AXA_P_OP_OK:
-			if (resp_op == client.recv_hdr.op
-			    && orig_op == client.recv_body->result.orig_op) {
+			if (resp_op == client.io.recv_hdr.op
+			    && orig_op == client.io.recv_body->result.orig_op) {
 				print_op(false, false,
-					 &client.recv_hdr, client. recv_body);
+					 &client.io.recv_hdr,
+					 client.io.recv_body);
 				result = true;
 				done = true;
-			} else if (client.recv_body->result.orig_op
+			} else if (client.io.recv_body->result.orig_op
 				   == AXA_P_OP_OK) {
 				print_trace();
 			} else {
@@ -821,7 +824,7 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 
 		case AXA_P_OP_ERROR:
 			print_op(first_time, false,
-				 &client.recv_hdr, client.recv_body);
+				 &client.io.recv_hdr, client.io.recv_body);
 			done = true;
 			break;
 
@@ -853,7 +856,7 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_ACCT:
 		default:
 			AXA_FAIL("impossible AXA op of %d from %s",
-				 client.recv_hdr.op, client.addr);
+				 client.io.recv_hdr.op, client.io.label);
 		}
 
 		axa_client_flush(&client);
@@ -1347,26 +1350,22 @@ forward(void)
 	axa_emsg_t emsg;
 
 	do {
-		switch (axa_p_recv(&emsg, client.in_sock, &client.recv_hdr,
-				   &client.recv_body, &client.recv_len,
-				   &client.buf, client.addr,
-				   mode==SRA ? AXA_P_FROM_SRA : AXA_P_FROM_RAD,
-				   &client.alive)) {
-		case AXA_P_RECV_INCOM:
+		switch (axa_io_recv(&emsg, &client.io)) {
+		case AXA_IO_RECV_INCOM:
 			return;
-		case AXA_P_RECV_ERR:
+		case AXA_IO_RECV_ERR:
 			disconnect(true, "%s", emsg.c);
 			return;
-		case AXA_P_RECV_DONE:
+		case AXA_IO_RECV_DONE:
 			break;
 		default:
-			AXA_FAIL("impossible axa_p_recv() result");
+			AXA_FAIL("impossible axa_io_recv() result");
 		}
 
-		switch ((axa_p_op_t)client.recv_hdr.op) {
+		switch ((axa_p_op_t)client.io.recv_hdr.op) {
 		case AXA_P_OP_NOP:
 			print_op(false, false,
-				 &client.recv_hdr, client.recv_body);
+				 &client.io.recv_hdr, client.io.recv_body);
 			break;
 
 		case AXA_P_OP_ERROR:
@@ -1381,18 +1380,21 @@ forward(void)
 
 		case AXA_P_OP_WHIT:
 			print_op(false, false,
-				 &client.recv_hdr, client.recv_body);
-			forward_hit(&client.recv_body->whit,
-				    client.recv_len - sizeof(client.recv_hdr));
+				 &client.io.recv_hdr, client.io.recv_body);
+			forward_hit(&client.io.recv_body->whit,
+				    client.io.recv_len
+				    - sizeof(client.io.recv_hdr));
 			break;
 
 		case AXA_P_OP_AHIT:
 			print_op(false, false,
-				 &client.recv_hdr, client.recv_body);
-			forward_hit(&client.recv_body->ahit.whit,
-				    client.recv_len - sizeof(client.recv_hdr)
-				    - (sizeof(client.recv_body->ahit)
-				       - sizeof(client.recv_body->ahit.whit)));
+				 &client.io.recv_hdr, client.io.recv_body);
+			forward_hit(&client.io.recv_body->ahit.whit,
+				    client.io.recv_len
+				    - sizeof(client.io.recv_hdr)
+				    - (sizeof(client.io.recv_body->ahit)
+				       - sizeof(client.io.recv_body
+						->ahit.whit)));
 			break;
 
 		case AXA_P_OP_OK:
@@ -1422,9 +1424,9 @@ forward(void)
 		case AXA_P_OP_ACCT:
 		default:
 			AXA_FAIL("impossible AXA op of %d from %s",
-				 client.recv_hdr.op, client.addr);
+				 client.io.recv_hdr.op, client.io.label);
 		}
 
 		axa_client_flush(&client);
-	} while (client.buf.data_len != 0);
+	} while (client.io.recv_buf.data_len != 0);
 }

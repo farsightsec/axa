@@ -234,8 +234,8 @@ extern void *axa_zalloc(size_t s);
 #define AXA_SALLOC(t) ((t *)axa_zalloc(sizeof(t)))
 
 /**
- *  A strdup() wrapper that crashes immediately (via AXA_ASSERT()) on a strdup()
- *  failure. The caller must free() the result.
+ *  A strdup() wrapper that crashes immediately (via AXA_ASSERT()) failure.
+ *  The caller must free() the result.
  *
  *  \param[in] s the string to duplicate
  *

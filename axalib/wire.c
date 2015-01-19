@@ -31,6 +31,7 @@
 #define __FAVOR_BSD			/* for Debian tcp.h and udp.h */
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef __linux
@@ -38,6 +39,7 @@
 #include <time.h>			/* for localtime() and strftime() */
 #endif
 #include <sys/uio.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 
@@ -205,7 +207,7 @@ axa_parse_rad_watch(axa_emsg_t *emsg,
 {
 	char *str, *flags;
 
-	str = strdup(arg);
+	str = axa_strdup(arg);
 	flags = strchr(str, '(');
 	if (flags != NULL)
 		*flags++ = '\0';
@@ -938,7 +940,7 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 /* Check the header of an AXA message. */
 static bool				/* false=bad */
 ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
-       const char *peer, axa_p_direction_t dir)
+       const char *label, axa_p_direction_t dir)
 {
 	size_t max_len, min_len;
 	bool dir_ok;
@@ -953,20 +955,20 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 	len = AXA_P2H32(hdr->len);
 	if (len < sizeof(*hdr)) {
 		axa_pemsg(emsg, "AXA header length of %d is too small"
-			  " from %s", len, peer);
+			  " from %s", len, label);
 		return (false);
 	}
 	if (hdr->pvers < AXA_P_PVERS_MIN || hdr->pvers > AXA_P_PVERS_MAX) {
 		axa_pemsg(emsg, "unknown protocol version #%d for %s from %s",
 			  hdr->pvers,
 			  axa_op_to_str(op_buf, sizeof(op_buf), hdr->op),
-			  peer);
+			  label);
 		return (false);
 	}
 	len -= sizeof(*hdr);
 	if (len > AXA_P_MAX_BODY_LEN) {
 		axa_pemsg(emsg, "impossible body length %d from %s",
-			  len, peer);
+			  len, label);
 		return (false);
 	}
 
@@ -1121,7 +1123,7 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 			axa_pemsg(emsg, "missing tag for %s from %s",
 				  axa_op_to_str(op_buf, sizeof(op_buf),
 						hdr->op),
-				  peer);
+				  label);
 			return (false);
 		}
 	} else if (tagged == -1) {
@@ -1130,7 +1132,7 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 				  tag,
 				  axa_op_to_str(op_buf, sizeof(op_buf),
 						hdr->op),
-				  peer);
+				  label);
 			return (false);
 		}
 	}
@@ -1138,26 +1140,26 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 	if (!dir_ok) {
 		switch (dir) {
 		case AXA_P_TO_SRA:
-			dir1_str = peer;
+			dir1_str = label;
 			dir2_str = "SRA client";
 			break;
 		case AXA_P_FROM_SRA:
 			dir1_str = "SRA";
-			dir2_str = peer;
+			dir2_str = label;
 			break;
 		case AXA_P_TO_RAD:
-			dir1_str = peer;
+			dir1_str = label;
 			dir2_str = "RAD client";
 			break;
 		case AXA_P_FROM_RAD:
 			dir1_str = "RAD";
-			dir2_str = peer;
+			dir2_str = label;
 			break;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 		default:
 			dir1_str = "?";
-			dir2_str = peer;
+			dir2_str = label;
 			break;
 #pragma clang diagnostic pop
 		}
@@ -1170,13 +1172,13 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 	if (len > max_len) {
 		axa_pemsg(emsg, "length %d for %s from %s should be at most %zu",
 			  len, axa_op_to_str(op_buf, sizeof(op_buf), hdr->op),
-			  peer, max_len);
+			  label, max_len);
 		return (false);
 	}
 	if (len < min_len) {
 		axa_pemsg(emsg, "length %d for %s from %s must be at least %zu",
 			  len, axa_op_to_str(op_buf, sizeof(op_buf), hdr->op),
-			  peer, min_len);
+			  label, min_len);
 		return (false);
 	}
 
@@ -1497,120 +1499,229 @@ axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_body_t *body,
 	return (true);
 }
 
-axa_p_recv_result_t
-axa_p_recv(axa_emsg_t *emsg, int s,
-	   axa_p_hdr_t *hdr, axa_p_body_t **bodyp, size_t *recv_len,
-	   axa_recv_buf_t *buf,
-	   const char *peer, axa_p_direction_t dir, struct timeval *alive)
+void
+axa_io_init(axa_io_t *io)
+{
+	bool is_rad, is_client;
+
+	/* Do not change the permanent state. */
+	is_rad = io->is_rad;
+	is_client = io->is_client;
+
+	/* The buffers must have been freed or never allocated. */
+	AXA_ASSERT(io->recv_body == NULL);
+	AXA_ASSERT(io->recv_buf.data == NULL);
+
+	memset(io, 0, sizeof(*io));
+	io->su.sa.sa_family = -1;
+	io->in_fd = -1;
+	io->out_fd = -1;
+	io->tun_fd = -1;
+	io->tun_pid = -1;
+	io->pvers = AXA_P_PVERS;
+
+	io->is_rad = is_rad;
+	io->is_client = is_client;
+	/* io->alive is 0 to ensure that clients immediately send
+	 * an AXA_P_OP_NOP (if not an AXA_P_OP_USER) to announce their
+	 * protocol version. */
+}
+
+void
+axa_io_flush(axa_io_t *io)
+{
+	if (io->recv_body != NULL) {
+		free(io->recv_body);
+		io->recv_body = NULL;
+	}
+	io->recv_len = 0;
+}
+
+void
+axa_io_close(axa_io_t *io)
+{
+	int wstatus;
+
+	axa_io_flush(io);
+
+	if (io->recv_buf.data != NULL) {
+		free(io->recv_buf.data);
+		io->recv_buf.data = NULL;
+	}
+
+	if (io->in_fd >= 0 && io->in_fd != io->out_fd)
+		close(io->in_fd);
+	if (io->out_fd >= 0)
+		close(io->out_fd);
+	io->in_fd = -1;
+	io->out_fd = -1;
+
+	if (io->tun_fd >= 0) {
+		close(io->tun_fd);
+		io->tun_fd = -1;
+	}
+
+	/* Kill the tunnel. */
+	if (io->tun_pid != -1) {
+		kill(io->tun_pid, SIGKILL);
+		waitpid(io->tun_pid, &wstatus, 0);
+	}
+
+	if (io->tun_buf != NULL) {
+		free(io->tun_buf);
+		io->tun_buf = NULL;
+		io->tun_buf_size = 0;
+	}
+
+	if (io->addr != NULL) {
+		free(io->addr);
+		io->addr = NULL;
+	}
+	if (io->label != NULL) {
+		free(io->label);
+		io->label = NULL;
+	}
+
+	/* Clear the FDs, PID, and everything else. */
+	axa_io_init(io);
+}
+
+
+static axa_p_direction_t
+which_direction(const axa_io_t *io, bool send)
+{
+	bool to_srvr;
+	axa_p_direction_t result;
+
+	to_srvr = ((send && io->is_client)
+		   || (!send && !io->is_client));
+	if (io->is_rad) {
+		result = to_srvr ? AXA_P_TO_RAD : AXA_P_FROM_RAD;
+	} else {
+		result = to_srvr ? AXA_P_TO_SRA : AXA_P_FROM_SRA;
+	}
+
+	return (result);
+}
+
+axa_io_recv_result_t
+axa_io_recv(axa_emsg_t *emsg, axa_io_t *io)
 {
 #define BUF_SIZE (64*1024)
 	ssize_t len, i;
 	size_t hdr_len;
-	axa_p_body_t *body;
 	uint8_t *tgt;
 
-	AXA_ASSERT(peer != NULL);
-
-	/* Create our hidden buffer the first time. */
-	if (buf->data == NULL) {
-		buf->buf_size = BUF_SIZE;
-		buf->data = axa_malloc(buf->buf_size);
-		buf->data_len = 0;
+	/* Create unprocessed data buffer the first time. */
+	if (io->recv_buf.data == NULL) {
+		io->recv_buf.buf_size = BUF_SIZE;
+		io->recv_buf.data = axa_malloc(io->recv_buf.buf_size);
+		io->recv_buf.data_len = 0;
 	}
 
-	if (*recv_len == 0)
-		memset(hdr, 0, sizeof(*hdr));
-	body = *bodyp;
+	if (io->recv_len == 0)
+		memset(&io->recv_hdr, 0, sizeof(io->recv_hdr));
 
 	for (;;) {
 		/* Decide how many more bytes we need. */
-		len = sizeof(*hdr) - *recv_len;
+		len = sizeof(io->recv_hdr) - io->recv_len;
 		if (len > 0) {
 			/* We do not yet have the entire header,
 			 * and so we must not have a place for the body. */
-			AXA_ASSERT(body == NULL);
+			AXA_ASSERT(io->recv_body == NULL);
 
-			tgt = (uint8_t *)hdr + *recv_len;
+			tgt = (uint8_t *)&io->recv_hdr + io->recv_len;
 
 		} else {
 			/* We have at least all of the header.
 			 * Check the header when we first have it. */
 			if (len == 0
-			    && !ck_hdr(emsg, hdr, peer, dir)) {
-				/* The AXA message header is bad.
-				 * If it is all ASCII, and if much of the
-				 * buffer read from the peer is ASCII, then
-				 * report it as a likely message-of-the-day
-				 * or other error. */
-				if (buf->base == &buf->data[sizeof(*hdr)]) {
-					len = buf->data_len+sizeof(*hdr);
+			    && !ck_hdr(emsg, &io->recv_hdr, io->label,
+				       which_direction(io, false))) {
+				/*
+				 * The AXA message header is bad.
+				 * If we received the header and any data in
+				 * a single read,
+				 * if the header is all ASCII,
+				 * and if the data is ASCII,
+				 * then report it as a likely MOTD via ssh.
+				 */
+				if (io->recv_buf.base
+				    == &io->recv_buf.data[sizeof(axa_p_hdr_t)
+							]) {
+					len = (io->recv_buf.data_len
+					       + sizeof(axa_p_hdr_t));
 					for (i = 0; i < len; ++i)
-					    if (buf->data[i] < ' '
-						|| buf->data[i] > '~')
+					    if (io->recv_buf.data[i] < ' '
+						|| io->recv_buf.data[i] > '~')
 						break;
-					if (i == buf->data_len
-					    || buf->data[i] == '\n')
+					if (i == io->recv_buf.data_len
+					    || io->recv_buf.data[i] == '\n'
+					    || io->recv_buf.data[i] == '\r')
 					    axa_pemsg(emsg, "unexpected text"
 						      " \"%.*s\" from %s",
-						      (int)i, buf->data, peer);
+						      (int)i, io->recv_buf.data,
+						      io->label);
 				}
-				return (AXA_P_RECV_ERR);
+				return (AXA_IO_RECV_ERR);
 			}
 
 			/* Stop when we have a complete message. */
-			hdr_len = AXA_P2H32(hdr->len);
-			if (hdr_len == *recv_len) {
+			hdr_len = AXA_P2H32(io->recv_hdr.len);
+			if (hdr_len == io->recv_len) {
 #if AXA_P_PVERS != 1
 #error "write code to adjust other guy's AXA protocol to our version"
 #endif
-				if (!axa_ck_body(emsg, hdr->op, body,
-						 hdr_len - sizeof(*hdr)))
-					return (AXA_P_RECV_ERR);
-				return (AXA_P_RECV_DONE);
+				if (!axa_ck_body(emsg, io->recv_hdr.op,
+						 io->recv_body,
+						 hdr_len-sizeof(io->recv_hdr)))
+					return (AXA_IO_RECV_ERR);
+				return (AXA_IO_RECV_DONE);
 			}
 
 			/* Allocate space for the body only when needed. */
-			if (body == NULL) {
-				body = axa_malloc(hdr_len - sizeof(*hdr));
-				*bodyp = body;
-			}
-			len = hdr_len - *recv_len;
-			tgt = (uint8_t *)body + *recv_len - sizeof(*hdr);
+			if (io->recv_body == NULL)
+				io->recv_body = axa_malloc(hdr_len
+							- sizeof(io->recv_hdr));
+			len = hdr_len - io->recv_len;
+			tgt = ((uint8_t *)io->recv_body
+			       + io->recv_len - sizeof(io->recv_hdr));
 		}
 
 		/* Read more data into the hidden buffer when we run out. */
-		if (buf->data_len == 0) {
+		if (io->recv_buf.data_len == 0) {
 			for (;;) {
-				buf->base = buf->data;
-				i = read(s, buf->base, buf->buf_size);
+				io->recv_buf.base = io->recv_buf.data;
+				i = read(io->in_fd, io->recv_buf.base,
+					 io->recv_buf.buf_size);
 				if (i > 0) {
-					if (alive != NULL)
-					    gettimeofday(alive, NULL);
+					gettimeofday(&io->alive, NULL);
 					break;
 				}
 
 				if (i == 0) {
-					axa_pemsg(emsg, "read(%s): EOF", peer);
-					return (AXA_P_RECV_ERR);
+					axa_pemsg(emsg, "read(%s): EOF",
+						  io->label);
+					return (AXA_IO_RECV_ERR);
 				}
 				if (errno == EINTR)
 					continue;
 				if (errno == EAGAIN || errno == EWOULDBLOCK)
-					return (AXA_P_RECV_INCOM);
+					return (AXA_IO_RECV_INCOM);
 				axa_pemsg(emsg, "read(%s): %s",
-					  peer, strerror(errno));
-				return (AXA_P_RECV_ERR);
+					  io->label, strerror(errno));
+				return (AXA_IO_RECV_ERR);
 			}
-			buf->data_len = i;
+			io->recv_buf.data_len = i;
 		}
 
 		/* Consume data in the buffer. */
-		i = min(len, buf->data_len);
-		memcpy(tgt, buf->base, i);
-		buf->base += i;
-		buf->data_len -= i;
+		i = min(len, io->recv_buf.data_len);
+		memcpy(tgt, io->recv_buf.base, i);
+		io->recv_buf.base += i;
+		io->recv_buf.data_len -= i;
 
-		*recv_len += i;
+		io->recv_len += i;
 	}
 }
 
@@ -1635,28 +1746,23 @@ axa_make_hdr(axa_emsg_t *emsg, axa_p_hdr_t *hdr,
 }
 
 /* Send an SRA or RAD request or response to the server or client.
- *	The message is in 1, 2, or 3 parts.
- *	hdr is the AXA protocol header to be built
+ *	The message is in 0, 1, 2, or 3 parts.
+ *	hdr is the optional AXA protocol header to be built
  *	b1 and b1_len specify an optional second part after the header
  *	b2 and b2_len specify the third part. */
-axa_p_send_result_t
-axa_p_send(axa_emsg_t *emsg, int s,
-	   axa_p_pvers_t pvers, axa_tag_t tag, axa_p_op_t op,
-	   axa_p_hdr_t *hdr,
-	   const void *b1, size_t b1_len,
-	   const void *b2, size_t b2_len,
-	   size_t *donep,		/* put # of bytes sent here */
-	   const char *peer,		/* peer name for error messages */
-	   axa_p_direction_t dir,	/* to server or to client */
-	   struct timeval *alive)
+axa_io_send_result_t
+axa_io_send(axa_emsg_t *emsg, axa_io_t *io,
+	    axa_tag_t tag, axa_p_op_t op,
+	    axa_p_hdr_t *hdr,
+	    const void *b1, size_t b1_len,
+	    const void *b2, size_t b2_len,
+	    size_t *donep)		/* put # of bytes sent here */
 {
 	axa_p_hdr_t hdr0;
 	struct iovec iov[3];
 	int iovcnt;
 	size_t total;
 	ssize_t done;
-
-	AXA_ASSERT(peer != NULL);
 
 #if AXA_P_PVERS != 1
 	if (pvers != AXA_P_PVERS) {
@@ -1666,9 +1772,10 @@ axa_p_send(axa_emsg_t *emsg, int s,
 
 	if (hdr == NULL)
 		hdr = &hdr0;
-	total = axa_make_hdr(emsg, hdr, pvers, tag, op, b1_len, b2_len, dir);
+	total = axa_make_hdr(emsg, hdr, io->pvers, tag, op,
+			     b1_len, b2_len, which_direction(io, true));
 	if (total == 0)
-		return (AXA_P_SEND_BAD);
+		return (AXA_IO_SEND_BAD);
 
 	iov[0].iov_base = hdr;
 	iov[0].iov_len = sizeof(*hdr);
@@ -1686,26 +1793,110 @@ axa_p_send(axa_emsg_t *emsg, int s,
 		}
 	}
 
-	gettimeofday(alive, NULL);
+	gettimeofday(&io->alive, NULL);
 
-	done = writev(s, iov, iovcnt);
+	done = writev(io->out_fd, iov, iovcnt);
 	if (done < 0) {
 		if (donep != NULL)
 			*donep = 0;
-		axa_pemsg(emsg, "writev(%s): %s", peer, strerror(errno));
+		axa_pemsg(emsg, "writev(%s): %s", io->label, strerror(errno));
 		if (errno == EAGAIN || errno == EWOULDBLOCK
 		    || errno == ENOBUFS || errno == EINTR)
-			return (AXA_P_SEND_BUSY);
-		return (AXA_P_SEND_BAD);
+			return (AXA_IO_SEND_BUSY);
+		return (AXA_IO_SEND_BAD);
 	}
 
 	if (donep != NULL)
 		*donep = done;
 	if (done == (ssize_t)total)
-		return (AXA_P_SEND_OK);	/* All of the message was sent. */
+		return (AXA_IO_SEND_OK);    /* All of the message was sent. */
 
 	/* Part of the message was sent.
 	 * The caller must figure out how much of the header and
 	 * each part was sent and save the unsent data. */
-	return (AXA_P_SEND_BUSY);
+	return (AXA_IO_SEND_BUSY);
+}
+
+/* Capture anything that the tunnel (eg. ssh) process says. */
+const char *				/* NULL or \'0' terminated string */
+axa_io_tunerr(axa_io_t *io)
+{
+	int i;
+	char *p;
+
+	/* Create the buffer the first time */
+	if (io->tun_buf == NULL || io->tun_buf_size == 0) {
+		AXA_ASSERT(io->tun_buf == NULL && io->tun_buf_size == 0);
+		io->tun_buf_size = 120;
+		io->tun_buf = axa_malloc(io->tun_buf_size);
+	}
+
+	for (;;) {
+		/* Discard the previously returned line. */
+		if (io->tun_buf_bol != 0) {
+			i = io->tun_buf_len - io->tun_buf_bol;
+			if (i > 0)
+				memmove(io->tun_buf,
+					&io->tun_buf[io->tun_buf_bol],
+					i);
+			io->tun_buf_len -= io->tun_buf_bol;
+			io->tun_buf_bol = 0;
+		}
+
+		/* Hope to return the next line in the buffer. */
+		if (io->tun_buf_len > 0) {
+			i = min(io->tun_buf_len, io->tun_buf_size);
+			p = memchr(io->tun_buf, '\n', i);
+			if (p != NULL) {
+				*p = '\0';
+				io->tun_buf_bol = p+1 - io->tun_buf;
+
+				/* trim '\r' */
+				while (p > io->tun_buf
+				       && *--p == '\r')
+					*p = '\0';
+				/* Discard blank lines. */
+				if (p == io->tun_buf)
+					continue;
+				return (io->tun_buf);
+			}
+		}
+
+		/* Get more data, possibly completing a partial line,
+		 * if there is room in the buffer.
+		 * If not, return whatever we have. */
+		i = io->tun_buf_size-1 - io->tun_buf_len;
+		if (i > 0 && io->tun_fd >= 0) {
+			i = read(io->tun_fd,
+				 &io->tun_buf[io->tun_buf_len],
+				 i);
+
+			/* Return the 1st line in the new buffer load */
+			if (i > 0) {
+				io->tun_buf_len += i;
+				io->tun_buf[io->tun_buf_len] = '\0';
+				continue;
+			}
+
+			if (i < 0 && (errno != EWOULDBLOCK && errno != EAGAIN
+				      && errno != EINTR)) {
+				/* Return an error message at errors. */
+				snprintf(io->tun_buf,
+					 io->tun_buf_size,
+					 "read(ssh stderr): %s",
+					 strerror(errno));
+				io->tun_buf_len = strlen(io->tun_buf)+1;
+				close(io->tun_fd);
+				io->tun_fd = -1;
+
+			} else if (i == 0) {
+				close(io->tun_fd);
+				io->tun_fd = -1;
+			}
+		}
+
+		/* Return whatever we have. */
+		io->tun_buf_bol = io->tun_buf_len;
+		return ((io->tun_buf_len > 0) ? io->tun_buf : NULL);
+	}
 }

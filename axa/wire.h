@@ -166,8 +166,8 @@ extern bool axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen,
 		      +sizeof(AXA_P_WATCH_STR_SHARED)+1)
 
 /**
- *  Convert AXA protocol message to its string equivalent. If the protocol
- *  message is unrecognized or has no string equivalent, NULL is returned.
+ *  Convert AXA protocol message to a string representation.
+ *  Return NULL if the protocol message is invalid.
  *
  *  \param[out] buf will hold the message string
  *  \param[in] buf_len length of buf (should be AXA_P_STRLEN)
@@ -180,17 +180,8 @@ extern bool axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen,
 extern char *axa_p_to_str(char *buf, size_t buf_len, bool print_op,
 			  const axa_p_hdr_t *hdr, const axa_p_body_t *cmd);
 
-/** AXA receive buffer */
-typedef struct axa_recv_buf {
-	uint8_t		*data;		/**< the buffer itself */
-	ssize_t		buf_size;       /**< size of buffer */
-	uint8_t		*base;		/**< start of unused data */
-	ssize_t		data_len;       /**< length of unused data */
-} axa_recv_buf_t;
-
 /**
- *  AXA protocol direction
- *  specifies the direction of the communication
+ *  AXA protocol data direction, to or from SRA or RAD server
  */
 typedef enum {
 	AXA_P_TO_SRA,			/**< To SRA server */
@@ -198,55 +189,6 @@ typedef enum {
 	AXA_P_TO_RAD,			/**< To RAD server */
 	AXA_P_FROM_RAD			/**< From RAD server */
 } axa_p_direction_t;
-
-
-/** @cond */
-
-/*  return codes for axa_p_recv() */
-typedef enum {
-	AXA_P_RECV_ERR,			/**< fatal error or EOF */
-	AXA_P_RECV_INCOM,		/**< incomplete; poll() & try again */
-	AXA_P_RECV_DONE			/**< complete message received */
-} axa_p_recv_result_t;
-
-/*
- *  Internal function to receive an AXA request or response into a fixed
- *  header buffer and a dynamic body buffer. This function stalls until
- *  something is read, so use poll() or select().
- *  On entry, hdr points to a buffer for the AXA protocol header
- *  bodyp is a pointer to a pointer to a buffer that will be allocated
- *  and filled with the next AXA protocol message.  This buffer must
- *  be freed by the caller, perhaps with axa_client_flush().
- *  recv_len is the number of bytes previously received by this function.
- *  buf is optional for reducing read() system calls.
- *  peer is a string describing the peer such as its IP address and port number
- *  direction specifies whether this is working for an AXA server or client
- *  alive is used to trigger AXA protocol keepalives
- *  If necessary, the incoming message will be will be adjusted to the current
- *  protocol version.
- *
- *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] s client input socket fd
- *  \param[in, out] hdr incoming AXA protocol header
- *  \param[out] body incoming AXA protocol message
- *  \param[in, out] recv_len number of bytes previously received by this
- *	function, eventually recv_len = sizeof(*hdr) + sizeof(*bodyp)
- *  \param[in] buf axa_recv_buf_t structure for reducing input system calls
- *  \param[in] peer string describing the peer such as its IP address and port
- *  \param[in] dir axa_p_direction_t of the flow, to or from SRA or RAD.
- *  \param[out] alive set to when the last I/O happened to facilitate
- *	keepalives if not NULL.
- *
- *  \retval #AXA_P_RECV_ERR	fatal error or EOF
- *  \retval #AXA_P_RECV_INCOM	try again after select()
- *  \retval #AXA_P_RECV_DONE	complete message received in *bodyp,
- */
-extern axa_p_recv_result_t axa_p_recv(axa_emsg_t *emsg, int s,
-				      axa_p_hdr_t *hdr, axa_p_body_t **body,
-				      size_t *recv_len, axa_recv_buf_t *buf,
-				      const char *peer, axa_p_direction_t dir,
-				      struct timeval *alive);
-/** @endcond */
 
 /**
  *  Populate an AXA header including converting to wire byte order.
@@ -285,31 +227,131 @@ extern size_t axa_make_hdr(axa_emsg_t *emsg, axa_p_hdr_t *hdr,
 extern bool axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op,
 			const axa_p_body_t *body, size_t body_len);
 
-/** @cond */
+/** AXA I/O receive buffer */
+typedef struct axa_io_recv_buf {
+	uint8_t		*data;		/* the buffer itself */
+	ssize_t		buf_size;       /* size of buffer */
+	uint8_t		*base;		/* start of unused data */
+	ssize_t		data_len;       /* length of unused data */
+} axa_io_recv_buf_t;
 
-/*  return codes for axa_p_send() */
+/** AXA I/O context types */
 typedef enum {
-	AXA_P_SEND_OK,			/**< the AXA message was sent */
-	AXA_P_SEND_BUSY,		/**< only part sent--try again later */
-	AXA_P_SEND_BAD			/**< failed to send the message */
-} axa_p_send_result_t;
+	AXA_IO_TYPE_UNKN = 0,		/**< invalid */
+	AXA_IO_TYPE_UNIX,		/**< UNIX domain socket */
+	AXA_IO_TYPE_TCP,		/**< TCP/IP socket */
+	AXA_IO_TYPE_SSH,		/**< ssh pipe */
+	AXA_IO_TYPE_TLS			/**< OpenSSL connection */
+} axa_io_type_t;
+
+/** AXA I/O context */
+typedef struct axa_io {
+	axa_io_type_t	type;		/**< type */
+	bool		is_rad;		/**< true=server is radd, not srad */
+	bool		is_client;	/**< true=client instead of server */
+
+	axa_socku_t	su;		/**< peer IP or UDS address */
+
+	/** [user@]sshhost, host, path, or whatever of peer */
+	char		*addr;
+
+	/** text to label tracing and error messages, close to addr */
+	char		*label;
+
+	int		in_fd;		/**< input to server */
+	int		out_fd;		/**< output to server */
+
+	/**
+	 *  In an AXA client using an ssh pipe and so type==CLIENT_TYPE_SSH_STR,
+	 *  this FD gets error messages from ssh.  In a server, it keeps the
+	 *  sshd process from closing the sshd-ssh connection.
+	 */
+	int		tun_fd;
+	pid_t		tun_pid;	/**< ssh PID */
+
+	char		*tun_buf;	/**< transport error or trace buffer */
+	size_t		tun_buf_size;	/**< length of tun_buf */
+	size_t		tun_buf_len;	/**< data data in tun_buf */
+	size_t		tun_buf_bol;	/**< start of next line in tun_buf */
+
+	axa_p_pvers_t	pvers;		/**< protocol version for this server */
+
+	axa_p_hdr_t	recv_hdr;       /**< received header */
+	axa_p_body_t	*recv_body;	/**< received body */
+	size_t		recv_len;	/**< sizeof(recv_hdr) + *recv_body */
+
+	axa_io_recv_buf_t recv_buf;	/**< unprocessed input data */
+
+	struct timeval	alive;		/**< AXA protocol keepalive timer */
+} axa_io_t;
+
+/**
+ *  (Re-)initialize an AXA I/O structure with default values.
+ *  When re-initializing, all buffers must have been freed and file descriptors
+ *  closed.
+ *
+ *  \param[in] io address of a io context
+ */
+extern void axa_io_init(axa_io_t *io);
+
+/**
+ *  Flush and free the received AXA protocol message (if any) in an I/O context
+ *
+ *  \param[in] io address of an I/O context
+ */
+extern void axa_io_flush(axa_io_t *io);
+
+/**
+ *  Close the connection and flush and release buffers.
+ *
+ *  \param[in] io address of an I/O structure
+ */
+extern void axa_io_close(axa_io_t *io);
+
+/**  result codes for axa_io_recv() */
+typedef enum {
+	AXA_IO_RECV_ERR,		/**< fatal error or EOF */
+	AXA_IO_RECV_INCOM,		/**< incomplete; poll() & try again */
+	AXA_IO_RECV_DONE		/**< complete message received */
+} axa_io_recv_result_t;
 
 /*
- *  Internal function to send an SRA or RAD request or response to the
+ *  Receive an AXA request or response into a fixed
+ *  header buffer and a dynamic body buffer. This function stalls until
+ *  something is read, so use poll() or select().
+ *
+ *  \param[out] emsg if something goes wrong, this will contain the reason
+ *  \param[in] io AXA IO context
+ *
+ *  \retval #AXA_IO_RECV_ERR	fatal error or EOF
+ *  \retval #AXA_IO_RECV_INCOM	try again after select()
+ *  \retval #AXA_IO_RECV_DONE	message in io->recv_hdr, io->recv_body,
+ *				    and io->recv_len
+ */
+extern axa_io_recv_result_t axa_io_recv(axa_emsg_t *emsg, axa_io_t *io);
+
+/**  result codes for axa_io_send() */
+typedef enum {
+	AXA_IO_SEND_OK,			/**< the AXA message was sent */
+	AXA_IO_SEND_BUSY,		/**< only part sent--try again later */
+	AXA_IO_SEND_BAD			/**< failed to send the message */
+} axa_io_send_result_t;
+
+/**
+ *  Send an SRA or RAD request or response to the
  *  client or the server.  The message is in 1, 2, or 3 parts.
  *  hdr always points to the AXA protocol header to build
  *  b1 and b1_len specify an optional second part
  *  b2 and b2_len specify the optional third part.  The second part must
  *  be present if the third part is.
  *
- *  If the function returns AXA_P_SEND_BUSY, only part of the message was sent
+ *  If the function returns AXA_IO_SEND_BUSY, only part of the message was sent
  *  and the caller must figure out how much of the header and each part was
  *  sent and save the unsent data.
  *
  *  \param[out] emsg contains an error message for return values other than
- *	#AXA_P_SEND_OK
- *  \param[in] s client input socket fd
- *  \param[in] pvers protocol version for this server
+ *	#AXA_IO_SEND_OK
+ *  \param[in] io AXA I/O context
  *  \param[in] tag AXA tag
  *  \param[in] op AXA opcode
  *  \param[out] hdr AXA protocol header to be built or NULL
@@ -318,23 +360,25 @@ typedef enum {
  *  \param[in] b2 NULL or second part of the message
  *  \param[in] b2_len length of b2
  *  \param[out] donep number of sent bytes
- *  \param[in] peer name for error messages
- *  \param[in] dir the direction of the flow, to/from SRA to to/from RAD
- *  \param[out] alive set to time when the request or response was sent to
- *	    facilitate keepalives if not Null
  *
- *  \retval #AXA_P_SEND_BUSY
- *  \retval #AXA_P_SEND_BAD
- *  \retval #AXA_P_SEND_OK
+ *  \retval #AXA_IO_SEND_BUSY
+ *  \retval #AXA_IO_SEND_BAD
+ *  \retval #AXA_IO_SEND_OK
  */
-extern axa_p_send_result_t axa_p_send(axa_emsg_t *emsg, int s,
-				      axa_p_pvers_t pvers, axa_tag_t tag,
-				      axa_p_op_t op, axa_p_hdr_t *hdr,
-				      const void *b1, size_t b1_len,
-				      const void *b2, size_t b2_len,
-				      size_t *donep,
-				      const char *peer, axa_p_direction_t dir,
-				      struct timeval *alive);
-/** @endcond */
+extern axa_io_send_result_t axa_io_send(axa_emsg_t *emsg, axa_io_t *io,
+					axa_tag_t tag, axa_p_op_t op,
+					axa_p_hdr_t *hdr,
+					const void *b1, size_t b1_len,
+					const void *b2, size_t b2_len,
+					size_t *donep);
+
+/**
+ *  Get anything the ssh process says to stderr.
+ *
+ *  \param[in] client address of the client context
+ *
+ *  \retval NULL or pointer to '\0' terminated text
+ */
+extern const char *axa_io_tunerr(axa_io_t *io);
 
 #endif /* AXA_WIRE_H */
