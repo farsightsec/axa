@@ -30,19 +30,22 @@
 
 #include <nmsg.h>
 
+#include <openssl/ssl.h>
+
+
 /**
  *  Parse an AXA watch definition.
  *  If there is a problem, the function will return false and emsg->c will
  *  contain a relevant error message -- except when the watch makes no sense.
  *  In that case, emsg->c[0] == '\0'.
  *
- *  \param[out] emsg if something goes wrong, this will contain the reason
+ *  \param[out] emsg the reason if something went wrong
  *  \param[out] watch parsed result
  *  \param[out] watch_len sizeof(*watch) - sizeof(watch->pat);
  *  \param[in] arg user specified string to watch for, must be NULL terminated
  *
  *  \retval true success
- *  \retval false error, check emsg
+ *  \retval false error; check emsg
  */
 extern bool axa_parse_watch(axa_emsg_t *emsg,
 			    axa_p_watch_t *watch, size_t *watch_len,
@@ -227,13 +230,17 @@ extern size_t axa_make_hdr(axa_emsg_t *emsg, axa_p_hdr_t *hdr,
 extern bool axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op,
 			const axa_p_body_t *body, size_t body_len);
 
-/** AXA I/O receive buffer */
-typedef struct axa_io_recv_buf {
-	uint8_t		*data;		/* the buffer itself */
-	ssize_t		buf_size;       /* size of buffer */
-	uint8_t		*base;		/* start of unused data */
-	ssize_t		data_len;       /* length of unused data */
-} axa_io_recv_buf_t;
+/**
+ *  AXA I/O type prefixes
+ *	unix:/path/to/socket
+ *	tcp:hostname,port
+ *	ssh:[user@]host
+ *	tls:certfile,keyfile[,certdir]@host[,port]
+ */
+#define	AXA_IO_TYPE_UNIX_STR "unix"	/**< UNIX domain socket */
+#define AXA_IO_TYPE_TCP_STR "tcp"	/**< TCP connection */
+#define AXA_IO_TYPE_SSH_STR "ssh"	/**< connection via ssh */
+#define AXA_IO_TYPE_TLS_STR "tls"	/**< TLS connection */
 
 /** AXA I/O context types */
 typedef enum {
@@ -241,7 +248,7 @@ typedef enum {
 	AXA_IO_TYPE_UNIX,		/**< UNIX domain socket */
 	AXA_IO_TYPE_TCP,		/**< TCP/IP socket */
 	AXA_IO_TYPE_SSH,		/**< ssh pipe */
-	AXA_IO_TYPE_TLS			/**< OpenSSL connection */
+	AXA_IO_TYPE_TLS			/**< TLS connection */
 } axa_io_type_t;
 
 /** AXA I/O context */
@@ -252,14 +259,24 @@ typedef struct axa_io {
 
 	axa_socku_t	su;		/**< peer IP or UDS address */
 
-	/** [user@]sshhost, host, path, or whatever of peer */
+	/** [user@]sshhost, host,port, socket path, or whatever of peer */
 	char		*addr;
-
 	/** text to label tracing and error messages, close to addr */
 	char		*label;
 
-	int		in_fd;		/**< input to server */
-	int		out_fd;		/**< output to server */
+	int		i_fd;		/**< input to server */
+	int		i_events;	/**< needed poll(2) events */
+	int		o_fd;		/**< output from server */
+	int		o_events;	/**< needed poll(2) events */
+
+	char		*cert_file;	/**< TLS certificate file */
+	char		*key_file;	/**< TLS key file name */
+	SSL		*ssl;		/**< TLS OpenSSL ssl */
+	char		*tls_info;	/**< TLS cipher, compression, etc. */
+
+	axa_p_user_t	user;		/**< for TCP or UNIX domain socket */
+	bool		connected_tcp;	/**< false if connect() in progress */
+	bool		connected;	/**< TLS or other connection made */
 
 	/**
 	 *  In an AXA client using an ssh pipe and so type==CLIENT_TYPE_SSH_STR,
@@ -268,6 +285,7 @@ typedef struct axa_io {
 	 */
 	int		tun_fd;
 	pid_t		tun_pid;	/**< ssh PID */
+	bool		tun_debug;	/**< enable tunnel debugging */
 
 	char		*tun_buf;	/**< transport error or trace buffer */
 	size_t		tun_buf_size;	/**< length of tun_buf */
@@ -278,12 +296,34 @@ typedef struct axa_io {
 
 	axa_p_hdr_t	recv_hdr;       /**< received header */
 	axa_p_body_t	*recv_body;	/**< received body */
-	size_t		recv_len;	/**< sizeof(recv_hdr) + *recv_body */
+	size_t		recv_body_len;	/**< sizeof(recv_hdr) + *recv_body */
 
-	axa_io_recv_buf_t recv_buf;	/**< unprocessed input data */
+	uint8_t		*recv_buf;	/**< unprocessed input data */
+	ssize_t		recv_buf_len;	/**< size of recv_buf_data */
+	uint8_t		*recv_start;	/**< start of unused in recv_buf_data */
+	ssize_t		recv_bytes;	/**< length of unused data */
+
+	uint8_t		*send_buf;	/**< non-blocking output buffer */
+	size_t		send_buf_len;	/**< non-blocking output buffer size */
+	uint8_t		*send_start;	/**< start of unsent output */
+	size_t		send_bytes;	/**< number of unsent bytes */
 
 	struct timeval	alive;		/**< AXA protocol keepalive timer */
 } axa_io_t;
+
+/**
+ * Check than an AXA I/O context is open.
+ *
+ *  \param[in] io address of an I/O context
+ */
+#define AXA_IO_OPENED(io) ((io)->i_fd >= 0)
+
+/**
+ * check that an AXA I/O context is open and connected
+ *
+ *  \param[in] io address of an I/O context
+ */
+#define AXA_IO_CONNECTED(io) (AXA_IO_OPENED(io) && (io)->connected)
 
 /**
  *  (Re-)initialize an AXA I/O structure with default values.
@@ -296,10 +336,11 @@ extern void axa_io_init(axa_io_t *io);
 
 /**
  *  Flush and free the received AXA protocol message (if any) in an I/O context
+ *  from a previous use of axa_recv_buf() or axa_input().
  *
  *  \param[in] io address of an I/O context
  */
-extern void axa_io_flush(axa_io_t *io);
+extern void axa_recv_flush(axa_io_t *io);
 
 /**
  *  Close the connection and flush and release buffers.
@@ -308,49 +349,40 @@ extern void axa_io_flush(axa_io_t *io);
  */
 extern void axa_io_close(axa_io_t *io);
 
-/**  result codes for axa_io_recv() */
+/**  I/O result codes */
 typedef enum {
-	AXA_IO_RECV_ERR,		/**< fatal error or EOF */
-	AXA_IO_RECV_INCOM,		/**< incomplete; poll() & try again */
-	AXA_IO_RECV_DONE		/**< complete message received */
-} axa_io_recv_result_t;
+	AXA_IO_OK,			/**< operation finished */
+	AXA_IO_BUSY,			/**< incomplete; poll() & try again */
+	AXA_IO_TUNERR,			/**< get text via axa_io_tunerr() */
+	AXA_IO_KEEPALIVE,		/**< need to send keepalive NOP */
+	AXA_IO_ERR			/**< print emsg */
+} axa_io_result_t;
 
-/*
- *  Receive an AXA request or response into a fixed
- *  header buffer and a dynamic body buffer. This function stalls until
- *  something is read, so use poll() or select().
+/**
+ *  Receive some of an AXA request or response into a fixed header buffer and
+ *  a dynamic body buffer.  This function can stall until a byte is read,
+ *  so call axa_io_wait() first or axa_input() instead.
+ *  axa_recv_flush() must be called to discard the AXA message before
+ *  another use of this function.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] io AXA IO context
  *
- *  \retval #AXA_IO_RECV_ERR	fatal error or EOF
- *  \retval #AXA_IO_RECV_INCOM	try again after select()
- *  \retval #AXA_IO_RECV_DONE	message in io->recv_hdr, io->recv_body,
- *				    and io->recv_len
+ *  \retval #AXA_IO_OK	    message in io->recv_hdr, recv_body, and recv_len
+ *  \retval #AXA_IO_BUSY    try again after axa_io_wait()
+ *  \retval #AXA_IO_ERR	    fatal error or EOF
  */
-extern axa_io_recv_result_t axa_io_recv(axa_emsg_t *emsg, axa_io_t *io);
-
-/**  result codes for axa_io_send() */
-typedef enum {
-	AXA_IO_SEND_OK,			/**< the AXA message was sent */
-	AXA_IO_SEND_BUSY,		/**< only part sent--try again later */
-	AXA_IO_SEND_BAD			/**< failed to send the message */
-} axa_io_send_result_t;
+extern axa_io_result_t axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io);
 
 /**
- *  Send an SRA or RAD request or response to the
- *  client or the server.  The message is in 1, 2, or 3 parts.
+ *  Send an AXA request or response to the client or the server.
+ *  The message is in 1, 2, or 3 parts.
  *  hdr always points to the AXA protocol header to build
  *  b1 and b1_len specify an optional second part
  *  b2 and b2_len specify the optional third part.  The second part must
  *  be present if the third part is.
  *
- *  If the function returns AXA_IO_SEND_BUSY, only part of the message was sent
- *  and the caller must figure out how much of the header and each part was
- *  sent and save the unsent data.
- *
- *  \param[out] emsg contains an error message for return values other than
- *	#AXA_IO_SEND_OK
+ *  \param[out] emsg an error message for a result of #AXA_IO_ERR
  *  \param[in] io AXA I/O context
  *  \param[in] tag AXA tag
  *  \param[in] op AXA opcode
@@ -359,26 +391,123 @@ typedef enum {
  *  \param[in] b1_len length of b1
  *  \param[in] b2 NULL or second part of the message
  *  \param[in] b2_len length of b2
- *  \param[out] donep number of sent bytes
  *
- *  \retval #AXA_IO_SEND_BUSY
- *  \retval #AXA_IO_SEND_BAD
- *  \retval #AXA_IO_SEND_OK
+ *  \retval #AXA_IO_OK	    finished or output saved
+ *  \retval #AXA_IO_BUSY    nothing sent; axa_io_wait() and try again
+ *  \retval #AXA_IO_ERR	    fatal error
  */
-extern axa_io_send_result_t axa_io_send(axa_emsg_t *emsg, axa_io_t *io,
-					axa_tag_t tag, axa_p_op_t op,
-					axa_p_hdr_t *hdr,
-					const void *b1, size_t b1_len,
-					const void *b2, size_t b2_len,
-					size_t *donep);
+extern axa_io_result_t axa_send(axa_emsg_t *emsg, axa_io_t *io,
+				axa_tag_t tag, axa_p_op_t op, axa_p_hdr_t *hdr,
+				const void *b1, size_t b1_len,
+				const void *b2, size_t b2_len);
 
 /**
- *  Get anything the ssh process says to stderr.
+ *  Flush the pending output buffer.
  *
+ *  \param[out] emsg contains an error message for return values other than
+ *	#AXA_IO_OK
+ *  \param[in] io AXA I/O context
+ *
+ *  \retval #AXA_IO_OK	    finished
+ *  \retval #AXA_IO_BUSY    incomplete; io->{i,o}_events ready for axa_io_wait()
+ *  \retval #AXA_IO_ERR	    fatal error
+ */
+extern axa_io_result_t axa_send_flush(axa_emsg_t *emsg, axa_io_t *io);
+
+/**
+ *  Save untransmitted data
+ *
+ *  \param[in] io AXA I/O context
+ *  \param[in] done bytes already handled
+ *  \param[out] hdr AXA protocol header
+ *  \param[in] b1 NULL or first part of AXA message after header
+ *  \param[in] b1_len length of b1
+ *  \param[in] b2 NULL or second part of the message
+ *  \param[in] b2_len length of b2
+ */
+extern void axa_send_save(axa_io_t *io, size_t done, const axa_p_hdr_t *hdr,
+			  const void *b1, size_t b1_len,
+			  const void *b2, size_t b2_len);
+
+/**
+ *  Wait for some input activity.
+ *
+ *  \param[out] emsg if something goes wrong, this will contain the reason
+ *  \param[in] io address of the AXA I/O context
+ *  \parma[in] wait_ms wait no longer than this many milliseconds
+ *  \param[in] keepalive true to wake up to send a keep-alive
+ *  \param[in] tun true to pay attention if possible to tunnel messages
+ *
+ *  \retval one of #axa_io_result_t
+ */
+extern axa_io_result_t axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
+				      time_t wait_ms, bool keepalive, bool tun);
+
+/**
+ *  Wait for and read an AXA message from the server into the client context
+ *  axa_recv_flush() must be called to discard the AXA message in the
+ *  client context before another use of this function.
+ *
+ *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of the client context
+ *  \param[in] wait_ms milliseconds to wait
+ *
+ *  \retval one of #axa_io_result_t
+ */
+extern axa_io_result_t axa_input(axa_emsg_t *emsg, axa_io_t *io,
+				    time_t wait_ms);
+
+/**
+ *  Get error or debugging messages from the tunnel (e.g. ssh).
+ *
+ *  \param[in] io address of the AXA I/O context
  *
  *  \retval NULL or pointer to '\0' terminated text
  */
 extern const char *axa_io_tunerr(axa_io_t *io);
+
+
+/** @cond */
+
+extern axa_io_type_t axa_io_type_parse(const char **addr);
+extern const char *axa_io_type_to_str(axa_io_type_t type);
+
+/* Internal function to clean up TLS when shutting down a connection. */
+extern void axa_tls_cleanup(void);
+
+/* Internal function to parse "certfile,keyfile@host,port" */
+extern bool axa_tls_parse(axa_emsg_t *emsg,
+			  char **cert_filep, char **key_filep, char **addr,
+			  const char *spec);
+
+/* Internal functions */
+extern axa_io_result_t axa_tls_start(axa_emsg_t *emsg, axa_io_t *io,
+				     bool srvr);
+extern void axa_tls_stop(axa_io_t *io);
+extern axa_io_result_t axa_tls_write(axa_emsg_t *emsg, axa_io_t *io,
+				     const void *b, size_t b_len);
+extern axa_io_result_t axa_tls_flush(axa_emsg_t *emsg, axa_io_t *io);
+extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
+
+/** @endcond */
+
+/**
+ *  Set TLS certificates directory
+ *
+ *  \param[out] emsg the reason if something went wrong
+ *  \param[in] dir directory containing TLS certificate key files
+ *
+ *  \retval true success
+ *  \retval false error; check emsg
+ */
+extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
+
+extern const char *axa_tls_ciphers;	/**< ciphers such as "HIGH:!aNULL" */
+
+/**
+ *  Clean up AXA I/O functions including freeing TLS data
+ */
+extern void axa_io_cleanup(void);
+
 
 #endif /* AXA_WIRE_H */

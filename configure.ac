@@ -50,9 +50,13 @@ AC_SUBST(strlcpy_LIBS)
 
 PKG_CHECK_MODULES([libedit], [libedit], [], [MY_CHECK_LIBEDIT])
 
-PKG_CHECK_MODULES([libnmsg], [libnmsg >= 0.8.0])
+PKG_CHECK_MODULES([libnmsg], [libnmsg >= 0.9.1])
 
 PKG_CHECK_MODULES([libwdns], [libwdns])
+
+PKG_CHECK_MODULES([libssl], [libssl])
+
+PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
 AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
 AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
@@ -79,11 +83,20 @@ AC_CHECK_HEADERS([nmsg/base/dnsqr.pb-c.h nmsg/base/encode.pb-c.h nmsg/base/packe
 CPPFLAGS="$save_CPPFLAGS"
 
 AX_DEFINE_DIR([CONFDIR], [sysconfdir/axa], [config dir for axa])
-AC_DEFINE_UNQUOTED(FIELDS_FILE,"$CONFDIR/fields",[Fields file])
+AC_DEFINE_UNQUOTED(AXACONFDIR,"$CONFDIR",[config dir for axa])
 
 AC_DEFINE_UNQUOTED(AXA_PVERS_STR,"version $PACKAGE_VERSION", [Version])
 
-AC_CONFIG_FILES([Makefile axa/libaxa.pc doc/doxygen/Doxyfile])
+AC_CONFIG_FILES([Makefile axa/libaxa.pc doc/doxygen/Doxyfile
+                etc/link_certs.sh etc/make_cert.sh])
+
+AC_ARG_WITH([ciphers],
+AS_HELP_STRING([--with-ciphers=list],
+	[TLS cipher list [[HIGH:!aNULL:!MD5:!RC4]]]),
+[TLS_CIPHERS="$withval"],
+[TLS_CIPHERS="HIGH:!aNULL:!MD5:!RC4"])
+AC_DEFINE_UNQUOTED(TLS_CIPHERS,"$TLS_CIPHERS",[TLS cipher list])
+
 AC_OUTPUT
 AC_MSG_RESULT([
     $PACKAGE $VERSION
@@ -99,5 +112,7 @@ AC_MSG_RESULT([
         includedir:             ${includedir}
         pkgconfigdir:           ${pkgconfigdir}
 
-        building html docs:     ${DOC_HTML_MSG} 
+        building html docs:     ${DOC_HTML_MSG}
+
+	TLS ciphers:		$TLS_CIPHERS
 ])

@@ -234,7 +234,7 @@ extern void *axa_zalloc(size_t s);
 #define AXA_SALLOC(t) ((t *)axa_zalloc(sizeof(t)))
 
 /**
- *  A strdup() wrapper that crashes immediately (via AXA_ASSERT()) failure.
+ *  A strdup() wrapper that crashes immediately (via AXA_ASSERT()) on failure.
  *  The caller must free() the result.
  *
  *  \param[in] s the string to duplicate
@@ -242,6 +242,16 @@ extern void *axa_zalloc(size_t s);
  *  \return pointer to the duplicated string
  */
 extern char *axa_strdup(const char *s);
+
+/**
+ *  A strndup() wrapper that crashes immediately (via AXA_ASSERT()) on failure.
+ *  The caller must free() the result.
+ *
+ *  \param[in] s the string to duplicate
+ *
+ *  \return pointer to the duplicated string
+ */
+extern char *axa_strndup(const char *s, size_t len);
 
 /**
  *  A vasprintf() wrapper that crashes immediately (via AXA_ASSERT()) on
@@ -399,7 +409,7 @@ extern void axa_verror_msg(const char *p, va_list args);
 
 /**
  *  Log or print an error message.  This is a variadic wrapper for
- *	axa_vlog_msg with type of AXA_SYSLOG_ERROR with fatal == false.
+ *	axa_vlog_msg with type=AXA_SYSLOG_ERROR with fatal=false.
  *
  *  \param[in] p message
  *  \param[in] ... variable length argument list

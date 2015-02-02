@@ -35,23 +35,16 @@
 #define AXA_MAX_SRVRLEN (4+64+1025+1)
 
 
-/**
- *  AXA client types prefixes
- *	unix:/path/to/socket
- *	tcp:hostname,port
- *	ssh:[user@]host
- */
-#define	AXA_CLIENT_TYPE_UNIX_STR "unix"    /**< UNIX domain socket */
-#define AXA_CLIENT_TYPE_TCP_STR "tcp"      /**< TCP connection */
-#define AXA_CLIENT_TYPE_SSH_STR "ssh"      /**< connection via ssh */
-#define AXA_CLIENT_TYPE_SSH_TLS "tls"      /**< connection via OpenSSL */
+/** @cond */
+/* obsolete but retained for upward compatibility */
+#define	AXA_CLIENT_TYPE_UNIX_STR    AXA_IO_TYPE_UNIX_STR
+#define AXA_CLIENT_TYPE_TCP_STR	    AXA_IO_TYPE_TCP_STR
+#define AXA_CLIENT_TYPE_SSH_STR	    AXA_IO_TYPE_SSH_STR
+/** @endcond */
 
 /** AXA client state */
 typedef struct {
 	axa_io_t	io;		/**< I/O context */
-	bool		debug_on;	/**< enable some debugging messages */
-	axa_p_user_t	user;		/**< for TCP or UNIX domain socket */
-	bool		connected;	/**< false if connect() in progress */
 
 	char		*hello;		/**< HELLO string from server */
 
@@ -67,15 +60,14 @@ typedef struct {
  *
  *  \param[in] client address of a client context
  */
-#define AXA_CLIENT_OPENED(client) ((client)->io.in_fd >= 0)
+#define AXA_CLIENT_OPENED(client) AXA_IO_OPENED(&((client)->io))
 
 /**
  * check that an AXA client context is open and connected
  *
  *  \param[in] client address of a client context
  */
-#define AXA_CLIENT_CONNECTED(client) (AXA_CLIENT_OPENED(client)		\
-				      && (client)->connected)
+#define AXA_CLIENT_CONNECTED(client) AXA_IO_CONNECTED(&((client)->io))
 
 /**
  *  (Re-)initialize an AXA client context with default values.
@@ -119,14 +111,7 @@ extern void axa_client_backoff_reset(axa_client_t *client);
 extern time_t axa_client_again(axa_client_t *client, struct timeval *now);
 
 /**
- *  Flush and free AXA protocol message received from the server
- *
- *  \param[in] client address of a client context
- */
-extern void axa_client_flush(axa_client_t *client);
-
-/**
- *  Close the server connection and flush and release buffers.
+ *  Close the server connection and release buffers.
  *
  *  \param[in] client address of a client context
  */
@@ -138,69 +123,67 @@ extern void axa_client_close(axa_client_t *client);
 typedef enum {
 	/** permanent failure.  The connection has been closed and
 	 * axa_client_backoff() called. Check emsg */
-	AXA_CLIENT_CONNECT_BAD,
+	AXA_CONNECT_ERR,
 
 	/** temporary failure.  The connection has been closed and
 	 * axa_client_backoff() called. Check emsg */
-	AXA_CLIENT_CONNECT_TEMP,
+	AXA_CONNECT_TEMP,
 
 	/** connection is complete */
-	AXA_CLIENT_CONNECT_DONE,
+	AXA_CONNECT_DONE,
 
-	/** non-blocking connection still waiting for TCP syn-ack */
-	AXA_CLIENT_CONNECT_INCOM,
+	/** non-blocking connection waiting for TCP syn-ack or TLS handshake */
+	AXA_CONNECT_INCOM,
 
 	/** connection now completed including sending the initial
 	 *  AXA_P_OP_NOP.  emsg contains the result of
 	 *  axa_p_to_str(emsg->c, sizeof(emsg->c), true, ...) */
-	AXA_CLIENT_CONNECT_NOP,
+	AXA_CONNECT_NOP,
 
 	/** connection now completed including sending the initial
 	 *  AXA_P_OP_USER. An AXA_P_OP_OK or AXA_P_OP_ERROR should
 	 * be coming.  emsg contains the result of
 	 *  axa_p_to_str(emsg->c, sizeof(emsg->c), true, ...) */
-	AXA_CLIENT_CONNECT_USER
-} axa_client_connect_result_t;
+	AXA_CONNECT_USER
+} axa_connect_result_t;
 
 /**
  *  Create a new server connection perhaps after closing an existing
  *	connection.  axa_client_connect() must be called after a result other
- *	than AXA_CLIENT_CONNECT_DONE, AXA_CLIENT_CONNECT_NOP,
- *	or AXA_CLIENT_CONNECT_USER.
+ *	than AXA_CONNECT_DONE, AXA_CONNECT_NOP,	or AXA_CONNECT_USER.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of a client context
  *  \param[in] is_rad true if server is radd isntead of srad
  *  \param[in] addr connect to this AXA server specification
- *  \param[in] debug_on true to turn on debugging output from libaxa without
- *	affecting tracing by the server
+ *  \param[in] tun_debug true to turn on ssh tunnel debugging
  *  \param[in] nonblock true to start the connection without blocking and
  *	to make the connection non-blocking
  *
- *  \retval one of #axa_client_connect_result_t
+ *  \retval one of #axa_connect_result_t
  */
-extern axa_client_connect_result_t axa_client_open(axa_emsg_t *emsg,
-						   axa_client_t *client,
-						   const char *addr,
-						   bool is_rad, bool debug_on,
-						   bool nonblock);
+extern axa_connect_result_t axa_client_open(axa_emsg_t *emsg,
+					    axa_client_t *client,
+					    const char *addr,
+					    bool is_rad, bool tun_debug,
+					    bool nonblock);
 
 /**
  *  Restore previously working or finish a new connection to an SRA or
  *	RAD server.  The connection must have been previously opened with
  *	axa_client_open().  axa_client_connect() must be called again
- *	after a result other than AXA_CLIENT_CONNECT_DONE,
- *	AXA_CLIENT_CONNECT_NOP, or AXA_CLIENT_CONNECT_USER.
+ *	after a result other than AXA_CONNECT_DONE, AXA_CONNECT_NOP,
+ *	or AXA_CONNECT_USER.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of a client context
  *  \param[in] nonblock true for nonblocking
  *
- *  \retval one of #axa_client_connect_result_t
+ *  \retval one of #axa_connect_result_t
  */
-extern axa_client_connect_result_t axa_client_connect(axa_emsg_t *emsg,
-						      axa_client_t *client,
-						      bool nonblock);
+extern axa_connect_result_t axa_client_connect(axa_emsg_t *emsg,
+					       axa_client_t *client,
+					       bool nonblock);
 
 /**
  *  Send an AXA message to the server connected through a client context,
@@ -219,44 +202,6 @@ extern axa_client_connect_result_t axa_client_connect(axa_emsg_t *emsg,
 extern bool axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
 			    axa_tag_t tag, axa_p_op_t op, axa_p_hdr_t *hdr,
 			    const void *body, size_t body_len);
-
-/**
- *  return codes for axa_client_recv() and axa_client_recv_wait()
- */
-typedef enum {
-	/** fatal error or EOF.
-	 * Call axa_client_backoff() and check check emsg. */
-	AXA_CLIENT_RECV_ERR,
-
-	AXA_CLIENT_RECV_TUNERR,		/**< get text via axa_io_tunerr() */
-	AXA_CLIENT_RECV_INCOM,		/**< incomplete; poll() & try again */
-	AXA_CLIENT_RECV_KEEPALIVE,	/**< need to send keepalive NOP */
-	AXA_CLIENT_RECV_DONE		/**< complete message received */
-} axa_client_recv_result_t;
-
-/**
- *  Wait for some input activit.
- *
- *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of the client context
- *
- *  \retval one of #axa_client_recv_result_t
- */
-extern axa_client_recv_result_t
-axa_client_recv_wait(axa_emsg_t *emsg, axa_client_t *client, time_t wait_ms);
-
-/**
- *  Wait for and read an AXA message from the server into the client context
- *
- *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of the client context
- *  \param[in] wait_ms wait at least this long
- *
- *  \retval one of #axa_client_recv_result_t
- */
-extern axa_client_recv_result_t axa_client_recv(axa_emsg_t *emsg,
-						axa_client_t *client,
-						time_t wait_ms);
 
 /**
  *  Examine HELLO message from server to pick a common protocol version

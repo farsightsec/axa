@@ -16,6 +16,9 @@ overrides the default location of the
 .Pa fields
 file that defines relationships among and semantics among SIE message
 fields.
+.It Fl S Ar SSL-certs
+overrides the default directory containing SSL certificates and keys.
+Its default is often /usr/local/etc/axa/certs or /etc/axa/certs.
 .It Fl c Ar cfile
 reads commands from
 .Pa cfile

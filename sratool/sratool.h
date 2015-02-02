@@ -22,6 +22,7 @@
 #include <wdns.h>
 
 #include <config.h>
+#include <axa/axa_endian.h>
 #include <axa/wire.h>
 #include <axa/fields.h>
 

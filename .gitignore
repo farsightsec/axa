@@ -1,7 +1,10 @@
+*.[oad]
+*.[18]
+*.so
+.depend
 .*swp
 *.la
 *.lo
-*.o
 *.tar.gz
 .deps/
 .dirstamp

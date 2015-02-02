@@ -1,0 +1,82 @@
+#! /bin/sh -e
+
+set -e
+
+HELP=
+LIFE=3650
+ORG=
+CERTS_DIR=@CONFDIR@/certs
+CERT_FILE=
+KEY_FILE=
+CN=
+
+USAGE="$0: [-xh] [-l years] [-O org] [-S certsdir]
+	-u user -c cert_file -k key_file"
+
+while getopts "xhl:O:S:u:c:k:" c; do
+    case $c in
+	x) set -x; DEBUG=-x;;
+	h) HELP=yes;;
+	l) LIFE="$OPTARG";;
+	O) ORG="/O=$OPTARG";;
+	S) CERTS_DIR="$OPTARG";;
+	u) CN="$OPTARG";;
+	k) KEY_FILE="$OPTARG";;
+	c) CERT_FILE="$OPTARG";;
+	*) echo "$USAGE" 1>&2; exit 1;;
+    esac
+done
+shift `expr $OPTIND - 1 || true`
+if test "$#" -ne 0; then
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+if test -n "$HELP"; then
+    cat <<EOF
+$USAGE
+
+Create a self-signed certificate and private key (-k) files
+for the AXA client (user) or server named with -u with
+    sh $0 -u user -c cert.pem -k key.pem
+
+If neither the -c certificate nor the -k key file names contain '/',
+they are created in the AXA system certificate directory, which is
+@CONFDIR@/certs unless changed with -S.
+
+The name of the organization can be set with "-O Acme Widgets, inc."
+Override the default lifetime of 10 years with -l
+
+EOF
+    test -z "$OFILE$CERT_FILE$KEY_FILE" && exit
+fi
+
+if test -z "$CN" -o -z "$CERT_FILE" -o -z "$KEY_FILE"; then
+    echo "$USAGE"
+    exit 1
+fi
+
+if ! expr "$CN" : '.\{1,63\}$'; then
+   echo "\"$CN\" is not a valid AXA user name" 1>&2
+   exit 1
+fi
+
+if ! expr "$CERT_FILE$KEY_FILE" : '.*/' >/dev/null; then
+    test -d "$CERTS_DIR" || mkdir "$CERTS_DIR"
+    cd "$CERTS_DIR"
+fi
+
+if test -s "$CERT_FILE"; then
+    echo `pwd`/"$CERT_FILE already exists" 1>&2
+    exit 1
+fi
+if test -s "$KEY_FILE"; then
+    echo `pwd`/"$KEY_FILE already exists" 1>&2
+    exit 1
+fi
+
+openssl req -nodes -new -x509 -batch					\
+    -keyout "$KEY_FILE" -out "$CERT_FILE"				\
+    -days "$LIFE" -subj "$ORG/CN=$CN"
+
+chmod og-rw "$KEY_FILE"

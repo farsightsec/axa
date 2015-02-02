@@ -19,7 +19,6 @@
 #include "sratool.h"
 
 #include <arpa/nameser.h>
-#include <axa/axa_endian.h>
 
 #include <errno.h>
 #include <netinet/ip6.h>

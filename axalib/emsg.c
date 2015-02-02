@@ -79,6 +79,16 @@ axa_strdup(const char *s)
 	return (p);
 }
 
+char *
+axa_strndup(const char *s, size_t len)
+{
+	char *p;
+
+	p = strndup(s, len);
+	AXA_ASSERT(p != NULL);
+	return (p);
+}
+
 void
 axa_vasprintf(char **bufp, const char *p, va_list args)
 {
@@ -288,6 +298,10 @@ axa_parse_log_opt(axa_emsg_t *emsg, const char *arg)
 	return (true);
 }
 
+/*
+ * Initialize AXA default logging.
+ *	axa_parse_log_opt() can override these values.
+ */
 static void
 set_syslog(void)
 {
@@ -393,6 +407,11 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 	size_t buf_len, n;
 	FILE *stdio;
 #	define FMSG "; fatal error"
+
+	/*
+	 * This function cannot use axa_vasprintf() and other axa_*()
+	 * functions that would themselves call this function.
+	 */
 
 	bufp = buf;
 	buf_len = sizeof(buf);

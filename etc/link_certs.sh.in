@@ -1,0 +1,44 @@
+#! /bin/sh -e
+
+set -e
+
+HELP=
+CERTS_DIR=@CONFDIR@/certs
+
+USAGE="$0: [-xh] [-S certsdir]"
+
+while getopts "xhl:O:S:u:c:k:" c; do
+    case $c in
+	x) set -x; DEBUG=-x;;
+	h) HELP=yes;;
+	S) CERTS_DIR="$OPTARG";;
+	*) echo "$USAGE" 1>&2; exit 1;;
+    esac
+done
+shift `expr $OPTIND - 1 || true`
+if test "$#" -ne 0; then
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+if test -n "$HELP"; then
+    cat <<EOF
+$USAGE
+
+Create links to certificate files in the AXA certificates directory
+so that srad and radd can find them when verifying clients.
+
+EOF
+    exit
+fi
+
+cd "$CERTS_DIR"
+
+# remove the old links from the certificates directory but not subdirectories
+find . -type l \( -name .0 -o -name '*.0' \) | grep -v ../ | xargs /bin/rm
+
+# make hash symlinks but not in subdirectories
+find . -type f | xargs file | sed -n 's=\./\([^/]*\): *PEM certificate=\1=p' \
+    | while read NM; do
+	  ln -s $NM `openssl x509 -noout -hash <$NM`.0
+    done

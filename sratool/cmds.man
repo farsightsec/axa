@@ -37,24 +37,39 @@ reads and executes commands from a file.
 .It Xo
 .Ic connect
 .Oo
-.Sm off Ar tcp: Oo Ar user No @ Oc Ar host,port Sm on
+.Sm off Ar tcp: Oo Ar user@ Oc Ar host,port Sm on
 |
-.Sm off Ar unix: Oo Ar user No @ Oc Ar /ud/socket Sm on
+.Sm off Ar unix: Oo Ar user@ Oc Ar /ud/socket Sm on
 |
-.Sm off Ar ssh: Oo Ar user No @ Oc Ar host Sm on
+.Sm off Ar ssh: Oo Ar user@ Oc Ar host Sm on
+|
+.Sm off Ar tls:cert,key@host,port Sm on
 .Oc
 .Xc
-connects to an \*(SR server at an IP address or UNIX domain socket or via SSH
-or show the current connection.
+By itself
+.Ic connect
+shows the current connection.
+Otherwise connect to the specified \*(SR server.
 .Pp
-Connections via
+.Ic Ssh:
+connections use
 .Xr ssh 1
-indicated by the "ssh" label use ssh configuration files and especially
+configuration files including
 .Xr ssh_config 5
 to specify the required public keys
 and optionally the fully qualified host names and user names associated
 with the public key.
 Use the "debug 4" command to diagnose ssh connection problems.
+.Pp
+.Ic Tls:
+connections use the SSL certificate in the
+.Ar cert
+file and the private key in the
+.Ar key
+file.
+If not absolute, the files are in the
+.Fl S Ar SSL-certs
+directory.
 .It Ic disconnect
 disconnects from the \*(SR server.
 .It Ic count Op N | off
