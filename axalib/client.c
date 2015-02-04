@@ -324,7 +324,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 		connect_result = socket_connect(emsg, client, nonblock);
 		if (connect_result != AXA_CONNECT_DONE)
 			return (connect_result);
-		switch (axa_tls_start(emsg, &client->io, false)) {
+		switch (axa_tls_start(emsg, &client->io)) {
 		case AXA_IO_OK:
 			break;
 		case AXA_IO_ERR:

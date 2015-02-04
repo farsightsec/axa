@@ -1968,6 +1968,12 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 		return (AXA_IO_ERR);
 
 	if (io->type == AXA_IO_TYPE_TLS) {
+		/*
+		 * For TLS, save all 3 parts in the overflow output buffer
+		 * so that the AXA message can be sent as a single TLS
+		 * transaction.  This is expensive, but only if you ignore
+		 * the cost of TLS encryption.
+		 */
 		axa_send_save(io, 0, hdr, b1, b1_len, b2, b2_len);
 		return (axa_tls_flush(emsg, io));
 	}
@@ -2023,17 +2029,18 @@ axa_send_save(axa_io_t *io, size_t done, const axa_p_hdr_t *hdr,
 	      const void *b1, size_t b1_len,
 	      const void *b2, size_t b2_len)
 {
-	size_t new_buf_len;
-	ssize_t undone;
+	ssize_t avail_len, new_len;
+	ssize_t undone, chunk;
 	uint8_t *new_buf, *p;
 
 	undone = sizeof(*hdr)+b1_len+b2_len - done;
 	AXA_ASSERT(undone > 0);
 
 	/* Expand the buffer if necessary */
-	if ((ssize_t)(io->send_buf_len - io->send_bytes) < undone) {
-		new_buf_len = io->send_bytes + undone + 512;
-		new_buf = axa_malloc(new_buf_len);
+	avail_len = io->send_buf_len - io->send_bytes;
+	if (avail_len < undone) {
+		new_len = io->send_buf_len + undone + 512;
+		new_buf = axa_malloc(new_len);
 
 		/* Save previously saved data. */
 		if (io->send_buf != NULL) {
@@ -2042,41 +2049,44 @@ axa_send_save(axa_io_t *io, size_t done, const axa_p_hdr_t *hdr,
 			free(io->send_buf);
 		}
 		io->send_buf = new_buf;;
-		io->send_buf_len = new_buf_len;
 		io->send_start = io->send_buf;
+		io->send_buf_len = new_len;
 
-	} else if (io->send_bytes != 0 && io->send_start != io->send_buf) {
+	} else if (avail_len - (io->send_start - io->send_buf) < undone) {
 		/* slide down previously pending data */
-		memmove(io->send_buf, io->send_start, io->send_bytes);
+		if (io->send_bytes != 0)
+			memmove(io->send_buf, io->send_start, io->send_bytes);
 		io->send_start = io->send_buf;
 	}
 
 	/* Copy the unsent parts of the header and two chucks of body */
 	p = io->send_start + io->send_bytes;
 	io->send_bytes += undone;
-	undone = sizeof(*hdr) - done;
-	if (undone > 0) {
+
+	chunk = sizeof(*hdr) - done;
+	if (chunk > 0) {
 		/* Some or all of the header was not sent.
 		 * Save the unsent part. */
-		memcpy(p, (uint8_t *)hdr + done, undone);
-		p += undone;
-		done += undone;
+		memcpy(p, (uint8_t *)hdr + done, chunk);
+		p += chunk;
+		done += chunk;
 	}
 
-	undone = sizeof(*hdr)+b1_len - done;
-	if (undone > 0) {
+	chunk = sizeof(*hdr)+b1_len - done;
+	if (chunk > 0) {
 		/* Some or all of the first chunk of body was not sent.
 		 * Save the unsent part. */
-		memcpy(p, ((uint8_t *)b1)+(b1_len-undone), undone);
-		p += undone;
-		done += undone;
+		memcpy(p, ((uint8_t *)b1)+(b1_len-chunk), chunk);
+		p += chunk;
+		done += chunk;
 	}
 
-	undone = sizeof(*hdr)+b1_len+b2_len - done;
-	if (undone > 0) {
+	chunk = sizeof(*hdr)+b1_len+b2_len - done;
+	if (chunk > 0) {
 		/* Some or all of the second chunk of body was not sent.
 		 * Save the unsent part. */
-		memcpy(p, ((uint8_t *)b2)+(b2_len-undone), undone);
+		memcpy(p, ((uint8_t *)b2)+(b2_len-chunk), chunk);
+		p += chunk;
 	}
 }
 
@@ -2112,8 +2122,6 @@ axa_send_flush(axa_emsg_t *emsg, axa_io_t *io)
 				io->o_events = AXA_POLL_OUT;
 				return (AXA_IO_BUSY);
 			}
-
-			AXA_ASSERT(io->send_bytes >= (size_t)done);
 			io->send_start += done;
 			io->send_bytes -= done;
 

@@ -481,8 +481,7 @@ extern bool axa_tls_parse(axa_emsg_t *emsg,
 			  const char *spec);
 
 /* Internal functions */
-extern axa_io_result_t axa_tls_start(axa_emsg_t *emsg, axa_io_t *io,
-				     bool srvr);
+extern axa_io_result_t axa_tls_start(axa_emsg_t *emsg, axa_io_t *io);
 extern void axa_tls_stop(axa_io_t *io);
 extern axa_io_result_t axa_tls_write(axa_emsg_t *emsg, axa_io_t *io,
 				     const void *b, size_t b_len);
@@ -502,7 +501,20 @@ extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
  */
 extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
 
-extern const char *axa_tls_ciphers;	/**< ciphers such as "HIGH:!aNULL" */
+/** OpenSLL format list of ciphers such as "HIGH:!aNULL" */
+extern const char *axa_tls_ciphers;
+
+/**
+ * Initialize the AXA TLS code including creating a SSL_CTX.
+ *
+ *  \param[out] emsg the reason if something went wrong
+ *  \param[in] srvr true if running as a server.
+ *  \param[in] threaded true if using pthreads.
+ *
+ *  \retval true success
+ *  \retval false error; check emsg
+ */
+extern bool axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded);
 
 /**
  *  Clean up AXA I/O functions including freeing TLS data
