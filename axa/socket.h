@@ -129,8 +129,8 @@ typedef union {
 #define AXA_CONN_WAIT_ERRORS() (errno == EAGAIN || errno == EINPROGRESS	\
 				|| errno == EALREADY)
 
-/** wait this long for a busy port */
-#define AXA_ADDR_WAIT_IN_USE	5
+/** wait this long for a busy port or UNIX domain socket */
+#define AXA_BIND_WAIT_SECS	5
 
 
 /* socket.c */

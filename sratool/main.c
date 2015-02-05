@@ -3351,7 +3351,7 @@ out_ip_pcap_inject(const uint8_t *pkt, size_t caplen)
 
 		/*
 		 * As of June, 2014, there is a bug in pcap_inject()
-		 * on Freebsd that breaks this.  Search for the
+		 * on FreeBSD that breaks this.  Search for the
 		 * mailing list thread between Guy Harris and Fernando Gont
 		 * about "pcap_inject() on loopback (FreeBSD)"
 		 */
@@ -3540,6 +3540,8 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 		print_verbose_nmsg(msg, eq, val);
 		break;
 	}
+
+	nmsg_message_destroy(&msg);
 }
 
 static void
