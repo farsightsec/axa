@@ -347,13 +347,20 @@ axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 	port = buf;
 	host = strsep(&port, ",/");
 	if (*host == '\0') {
-		free(buf);
-		axa_pemsg(emsg, "missing host name in \"%s\"", addr_port);
-		return (false);
+		if (passive) {
+			host = NULL;
+		} else {
+			axa_pemsg(emsg, "missing host name in \"%s\"",
+				  addr_port);
+			free(buf);
+			return (false);
+		}
 	}
+	if (passive && strcmp(host, "*") == 0)
+		host = NULL;
 	if (port == NULL) {
-		free(buf);
 		axa_pemsg(emsg, "missing port in \"%s\"", addr_port);
+		free(buf);
 		return (false);
 	}
 
@@ -379,7 +386,8 @@ axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 
 /* Set socket or other communications file descriptor options */
 bool					/* false=emsg has an error message */
-axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
+axa_set_sock(axa_emsg_t *emsg, int s, const char *label,
+	     int req_bufsize, bool nonblock)
 {
 	int on;
 	int protocol;
@@ -411,38 +419,26 @@ axa_set_sock(axa_emsg_t *emsg, int s, const char *label, bool nonblock)
 			      label, strerror(errno));
 
 	} else if (type != SOCK_STREAM && type != SOCK_DGRAM) {
-		/* Do not worry about not setting socket options on files. */
+		/* Do not try to set socket options on files. */
 		return (true);
 	}
 
-	len = sizeof(bufsize);
-	if (0 > getsockopt(s, SOL_SOCKET, SO_RCVBUF, &bufsize, &len)) {
-		/* Hope for the best despite this error. */
-		axa_trace_msg("getsockopt(%s, SO_RCVBUF): %s",
-			      label, strerror(errno));
-	} else if (bufsize < 128*1024) {
-		/* Set at least modest socket buffer sizes */
-		bufsize = 128*1024;
+	/* We know or are assuming that we have a socket instead of a file. */
+
+	if (req_bufsize > 0) {
+		bufsize = req_bufsize;
 		if (0 > setsockopt(s, SOL_SOCKET, SO_RCVBUF,
 				   &bufsize, sizeof(bufsize))) {
 			/* Hope for the best despite this error. */
-			axa_trace_msg("getsockopt(%s, SO_RCVBUF): %s",
-				      label, strerror(errno));
+			axa_trace_msg("setsockopt(%s, SO_RCVBUF=%d): %s",
+				      label, bufsize, strerror(errno));
 		}
-	}
-	len = sizeof(bufsize);
-	if (0 > getsockopt(s, SOL_SOCKET, SO_SNDBUF, &bufsize, &len)) {
-		/* Hope for the best despite this error. */
-		axa_trace_msg("getsockopt(%s, SO_SNDBUF): %s",
-			      label, strerror(errno));
-	} else if (bufsize < 128*1024) {
-		/* Set at least modest socket buffer sizes */
-		bufsize = 128*1024;
+		bufsize = req_bufsize;
 		if (0 > setsockopt(s, SOL_SOCKET, SO_SNDBUF,
 				   &bufsize, sizeof(bufsize))) {
 			/* Hope for the best despite this error. */
-			axa_trace_msg("getsockopt(%s, SO_RCVBUF): %s",
-				      label, strerror(errno));
+			axa_trace_msg("setsockopt(%s, SO_SNDBUF=%d): %s",
+				      label, bufsize, strerror(errno));
 		}
 	}
 

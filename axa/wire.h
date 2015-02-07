@@ -256,6 +256,7 @@ typedef struct axa_io {
 	axa_io_type_t	type;		/**< type */
 	bool		is_rad;		/**< true=server is radd, not srad */
 	bool		is_client;	/**< true=client instead of server */
+	bool		nonblock;	/**< non-blocking I/O */
 
 	axa_socku_t	su;		/**< peer IP or UDS address */
 
@@ -264,6 +265,7 @@ typedef struct axa_io {
 	/** text to label tracing and error messages, close to addr */
 	char		*label;
 
+	int		bufsize;	/**< SO_RCVBUF and SO_SNDBUF size */
 	int		i_fd;		/**< input to server */
 	int		i_events;	/**< needed poll(2) events */
 	int		o_fd;		/**< output from server */
@@ -326,7 +328,7 @@ typedef struct axa_io {
 #define AXA_IO_CONNECTED(io) (AXA_IO_OPENED(io) && (io)->connected)
 
 /**
- *  (Re-)initialize an AXA I/O structure with default values.
+ *  Initialize an AXA I/O structure with default values.
  *  When re-initializing, all buffers must have been freed and file descriptors
  *  closed.
  *
@@ -491,18 +493,26 @@ extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
 /** @endcond */
 
 /**
- *  Set TLS certificates directory
+ *  Get or set TLS certificates directory
  *
  *  \param[out] emsg the reason if something went wrong
- *  \param[in] dir directory containing TLS certificate key files
+ *  \param[in] dir directory containing TLS certificate key files or NULL
  *
- *  \retval true success
- *  \retval false error; check emsg
+ *  \retval new value if not NULL
+ *  \retval NULL implies an error; check emsg
  */
-extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
+extern const char *axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
 
-/** OpenSLL format list of ciphers such as "HIGH:!aNULL" */
-extern const char *axa_tls_ciphers;
+/**
+ *  Get or set TLS certificate list
+ *
+ *  \param[out] emsg the reason if something went wrong
+ *  \param[in] list OpenSSL format cipher list or NULL
+ *
+ *  \retval NULL implies an error; check emsg
+ *  \retval new value if not NULL
+ */
+extern const char *axa_tls_cipher_list(axa_emsg_t *emsg, const char *list);
 
 /**
  * Initialize the AXA TLS code including creating a SSL_CTX.

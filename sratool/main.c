@@ -114,7 +114,7 @@ static HistEvent el_event;
 static EditLine *el_e = NULL;
 static struct timeval cmd_input;
 static bool no_prompt = false;
-static bool no_reprompt = false;	/* server has been active recently */
+static struct timeval no_reprompt;	/* server has been active recently */
 static struct timeval prompt_cleared;	/* !=0 if prompt & user input erased */
 static struct timeval last_output;
 static size_t prompt_len;		/* length of visible prompt */
@@ -155,6 +155,7 @@ static cmd_t source_cmd;
 static cmd_t disconnect_cmd;
 static cmd_t connect_cmd;
 static cmd_t count_cmd;
+static cmd_t ciphers_cmd;
 static cmd_t out_cmd;
 static cmd_t nop_cmd;
 static cmd_t mode_cmd;
@@ -247,6 +248,10 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " number of packets (including immediately with a number of 0),"
     " show the currently remainint count,"
     " or turn off the packet count limit."},
+{"ciphers",		ciphers_cmd,		BOTH,MB, NO,
+    "ciphers [cipher-list]",
+    "Specify the ciphers to be used with future connections."
+    "  Disconnect the current connection if it uses TLS"},
 {"output",		out_cmd,		BOTH,MB, NO,
     "output [off | nmsg:[tcp:|udp:]host,port [count] | nmsg:file:path [count]\n"
     "               | pcap[-fifo]:file [count] | pcap-if:[dst/]ifname] [count]",
@@ -385,7 +390,7 @@ el_prompt(EditLine *e AXA_UNUSED)
 		prompt = std_prompt;
 
 	prompt_cleared.tv_sec = 0;
-	no_reprompt = false;
+	no_reprompt.tv_sec = 0;
 	prompt_len = strlen(prompt);
 	return (prompt);
 }
@@ -475,7 +480,7 @@ static void
 reprompt(void)
 {
 	prompt_cleared.tv_sec = 0;
-	no_reprompt = false;
+	no_reprompt.tv_sec = 0;
 	el_set(el_e, EL_REFRESH);
 }
 
@@ -657,16 +662,19 @@ io_wait(bool cmds_ok,			/* false=waiting for connect */
 
 			/* Delay restoring the prompt until
 			 * the server has been quiet 0.5 seconds. */
-			if (prompt_cleared.tv_sec != 0
-			    && !no_reprompt) {
-				ms = 500 - axa_elapsed_ms(&now,
+			if (prompt_cleared.tv_sec != 0) {
+				ms = 100 - axa_elapsed_ms(&now, &no_reprompt);
+				if (ms <= 0) {
+					ms = 500 - axa_elapsed_ms(&now,
 							&prompt_cleared);
-				if (ms <= 0 || !AXA_CLIENT_OPENED(&client)) {
-					reprompt();
-					continue;
+					if (ms <= 0
+					    || !AXA_CLIENT_OPENED(&client)) {
+					    reprompt();
+					    continue;
+					}
 				}
-				if (poll_ms > ms)
-					poll_ms = ms;
+				if (poll_ms > 1000)
+					poll_ms = 1000;
 			}
 		}
 
@@ -837,7 +845,7 @@ getcfn(EditLine *e AXA_UNUSED, char *buf)
 static void AXA_NORETURN
 usage(void)
 {
-	error_msg("%s: [-VdN] [-F fields] [-S SSL-certs] [-c cfile]"
+	error_msg("%s: [-VdN] [-F fields] [-E ciphers] [-S certs] [-c cfile]"
 		  " [commands]\n",
 		  axa_prog_name);
 	exit(EX_USAGE);
@@ -891,7 +899,7 @@ main(int argc, char **argv)
 		el_set(el_e, EL_GETCFN, getcfn);
 	}
 
-	while ((i = getopt(argc, argv, "VdNF:S:c:")) != -1) {
+	while ((i = getopt(argc, argv, "VdNF:E:S:c:")) != -1) {
 		switch (i) {
 		case 'V':
 			version = true;
@@ -909,8 +917,13 @@ main(int argc, char **argv)
 			fields_file = optarg;
 			break;
 
+		case 'E':
+			if (axa_tls_cipher_list(&emsg, optarg) == NULL)
+				error_msg("%s", emsg.c);
+			break;
+
 		case 'S':
-			if (!axa_tls_certs_dir(&emsg, optarg))
+			if (axa_tls_certs_dir(&emsg, optarg) == NULL)
 				error_msg("%s", emsg.c);
 			break;
 
@@ -1625,8 +1638,6 @@ disconnect(bool announce)
 	}
 	axa_client_close(&client);
 	out_close(announce && verbose > 0);
-
-	packet_counting = false;
 }
 
 static int
@@ -1641,6 +1652,36 @@ disconnect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	return (1);
 }
 
+static void
+count_print(bool always)
+{
+	if (always && !packet_counting)
+		printf("    packet printing not limited by count\n"
+		       "        %d packets recently printed\n",
+		       0 - packet_count);
+	else if (packet_count < 0)
+		printf("    packet printing stopped by count %d packets ago\n",
+		       0 - packet_count);
+	else
+		printf("    %d packets remaining to print of %d total\n",
+		       packet_count, packet_count_total);
+
+	if (!out_on)
+		return;
+	if (!output_counting)
+		printf("    packet output or forwarding not limited by count\n"
+		       "        %d packets recently output\n",
+		       0 - output_count);
+	else if (output_count < 0)
+		printf("    packet output or forwarding stopped by count"
+		       " %d packets ago\n",
+		       0 - output_count);
+	else
+		printf("    %d packets remaining to output or forward of"
+		       " %d total\n",
+		       output_count, output_count_total);
+}
+
 static int
 connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
@@ -1651,8 +1692,11 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		} else if (client.hello == NULL) {
 			printf("connecting to %s\n", client.io.label);
 		} else {
-			printf("connected to \"%s\"\n    via %s\n",
+			printf("connected to \"%s\"\n    %s\n",
 			       client.hello, client.io.label);
+			if (client.io.tls_info != NULL)
+				printf("    %s\n", client.io.tls_info);
+			count_print(false);
 		}
 		return (1);
 	}
@@ -1662,7 +1706,8 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 
 	axa_client_backoff_reset(&client);
 	switch (axa_client_open(&emsg, &client, arg, mode == RAD,
-				axa_debug > AXA_DEBUG_TRACE, true)) {
+				axa_debug > AXA_DEBUG_TRACE,
+				256*1024, true)) {
 	case AXA_CONNECT_ERR:
 	case AXA_CONNECT_TEMP:
 		error_msg("%s", emsg.c);
@@ -1689,6 +1734,9 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 			io_wait(false, true, INT_MAX);
 		}
 	}
+
+	if (packet_counting)
+		packet_count = packet_count_total;
 
 	return (1);
 }
@@ -2050,6 +2098,7 @@ count_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 			if (packet_counting) {
 				packet_counting = false;
 				packet_count = 0;
+				packet_count_total = 0;
 			}
 		} else {
 			l = strtoul(arg, &p, 10);
@@ -2065,32 +2114,22 @@ count_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		return (1);
 	}
 
-	if (!packet_counting)
-		printf("    packet printing not limited by count\n"
-		       "        %d packets recently printed\n",
-		       0 - packet_count);
-	else if (packet_count < 0)
-		printf("    packet printing stopped by count %d packets ago\n",
-		       0 - packet_count);
-	else
-		printf("    %d packets remaining to print of %d total\n",
-		       packet_count, packet_count_total);
+	count_print(true);
+	return (1);
+}
 
-	if (!out_on)
-		return (1);
-	if (!output_counting)
-		printf("    packet output or forwarding not limited by count\n"
-		       "        %d packets recently output\n",
-		       0 - output_count);
-	else if (output_count < 0)
-		printf("    packet output or forwarding stopped by count"
-		       " %d packets ago\n",
-		       0 - output_count);
-	else
-		printf("    %d packets remaining to output or forward of"
-		       " %d total\n",
-		       output_count, output_count_total);
+static int
+ciphers_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+	   const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	if (arg[0] == '\0') {
+		printf("next cipher list: \"%s\"\n",
+		       axa_tls_cipher_list(&emsg, NULL));
 
+	} else if (axa_tls_cipher_list(&emsg, arg) == NULL) {
+		error_msg("%s", emsg.c);
+		return (0);
+	}
 	return (1);
 }
 
@@ -2335,7 +2374,7 @@ get_rlimit(axa_cnt_t *rlimit, const char *word)
 		return (true);
 	}
 	if (word_cmp(&word, "MAXIMUM") || word_cmp(&word, "NEVER")
-	    || word_cmp(&word, "OFF")) {
+	    || word_cmp(&word, "OFF") || word_cmp(&word, "NONE")) {
 		*rlimit = AXA_H2P64(AXA_RLIMIT_OFF);
 		return (true);
 	}
@@ -3579,7 +3618,7 @@ print_whit(axa_p_whit_t *whit, size_t whit_len,
 			if (ms >= PROGESS_MS) {
 				fputs(out_bar_strs[out_bar_idx], stdout);
 				fflush(stdout);
-				no_reprompt = true;
+				no_reprompt = now;
 				++out_bar_idx;
 				out_bar_idx %= AXA_DIM(out_bar_strs);
 				out_bar_time = now;
@@ -3680,7 +3719,7 @@ read_srvr(void)
 	char buf[AXA_P_STRLEN];
 
 	if (!AXA_CLIENT_CONNECTED(&client)) {
-		switch (axa_client_connect(&emsg, &client, true)) {
+		switch (axa_client_connect(&emsg, &client)) {
 		case AXA_CONNECT_ERR:
 		case AXA_CONNECT_TEMP:
 			error_msg("%s", emsg.c);
@@ -3761,9 +3800,6 @@ read_srvr(void)
 
 		case AXA_P_OP_MISSED:
 		case AXA_P_OP_MISSED_RAD:
-			if (axa_debug == 0
-			    && (packet_counting && packet_count < 0))
-				break;
 			clear_prompt();
 			printf("%s\n",
 			       axa_p_to_str(buf, sizeof(buf), true,

@@ -20,11 +20,12 @@
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
 .Op Fl VdOR
-.Op Fl S Ar SSL-certs
-.Op Fl r Ar rate-limit
 .Op Fl C Ar count
-.Fl s Ar SRA-server
+.Op Fl r Ar rate-limit
+.Op Fl E Ar ciphers
+.Op Fl S Ar certs
 .br
+.Fl s Ar SRA-server
 .Fl c Ar channel
 .Fl w Ar watch
 .Fl a Ar anomaly
@@ -70,19 +71,21 @@ is required
 and
 .Fl c
 is not allowed.
-.It Fl S Ar SSL-certs
-overrides the default directory containing SSL certificates and keys.
-Its default is often /usr/local/etc/axa/certs or /etc/axa/certs.
-.It Fl r Ar rate-limit
-tells the server to send at most
-.Ar rate-limit
-SIE messages and raw IP packets per second.
 .It Fl C Ar count
 stops
 .Nm
 after
 .Ar count
 SIE messages and raw IP packets.
+.It Fl r Ar rate-limit
+tells the server to send at most
+.Ar rate-limit
+SIE messages and raw IP packets per second.
+.It Fl E Ar ciphers
+specifies a list ciphers for TLS connections.
+.It Fl S Ar certs
+overrides the default directory containing SSL certificates and keys.
+Its default is often /usr/local/etc/axa/certs or /etc/axa/certs.
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
@@ -109,7 +112,7 @@ file and the private key in the
 .Ar key
 file.
 If not absolute, the files are in the
-.Fl S Ar SSL-certs
+.Fl S Ar certs
 directory.
 .El
 .It Fl c Ar channel

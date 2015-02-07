@@ -117,18 +117,16 @@ static bool srvr_send(axa_tag_t tag, axa_p_op_t op,
 static void AXA_NORETURN
 usage(const char *msg)
 {
-	static const char *sra =("[-VdtOR] [-r rate-limit] [-S SSL-certs]"
-				 " [-C msg-limit]\n"
-				 "    -s [user@]SRA-server -w watch -c channel"
+	const char *cmn = ("[-VdtOR] [-C count] [-r rate-limit]"
+				 " [-E ciphers] [-S certs]\n");
+	const char *sra =("    -s [user@]SRA-server -w watch -c channel"
 				 " -o out-addr");
-	static const char *rad =("[-VdtOR] [-r rate-limit] [-S SSL-certs]"
-				 " [-C msg-limit]\n"
-				 "    -s [user@]RAD-server -w watch"
+	const char *rad =("    -s [user@]RAD-server -w watch"
 				  " -a anomaly -o out-addr");
 
 	if (msg != NULL)
 		axa_error_msg("%s", msg);
-	axa_error_msg("%s", mode == RAD ? rad : sra);
+	axa_error_msg("%s%s", cmn, mode == RAD ? rad : sra);
 	exit(EX_USAGE);
 }
 
@@ -157,7 +155,7 @@ main(int argc, char **argv)
 		mode = RAD;
 
 	version = false;
-	while ((i = getopt(argc, argv, "VdtORr:S:C:o:s:c:w:a:")) != -1) {
+	while ((i = getopt(argc, argv, "VdtORC:r:E:S:o:s:c:w:a:")) != -1) {
 		switch (i) {
 		case 'V':
 			version = true;
@@ -205,8 +203,13 @@ main(int argc, char **argv)
 			}
 			break;
 
+		case 'E':
+			if (axa_tls_cipher_list(&emsg, optarg) == NULL)
+				axa_error_msg("%s", emsg.c);
+			break;
+
 		case 'S':
-			if (!axa_tls_certs_dir(&emsg, optarg))
+			if (axa_tls_certs_dir(&emsg, optarg) == NULL)
 				axa_error_msg("%s", emsg.c);
 			break;
 
@@ -699,7 +702,7 @@ print_bad_op(const char *adj)
 }
 
 static void
-print_trace()
+print_trace(void)
 {
 	char buf[AXA_P_STRLEN];
 
@@ -910,14 +913,15 @@ srvr_connect(void)
 	if (axa_debug != 0)
 		axa_trace_msg("connecting to %s", srvr_addr);
 	switch (axa_client_open(&emsg, &client, srvr_addr, mode == RAD,
-				axa_debug > AXA_DEBUG_TRACE, false)) {
+				axa_debug > AXA_DEBUG_TRACE,
+				256*1024, false)) {
 	case AXA_CONNECT_ERR:
 		if (axa_debug != 0 || first_time)
 			axa_error_msg("%s", emsg.c);
 		exit(EX_USAGE);
 	case AXA_CONNECT_TEMP:
-		if (axa_debug != 0 || first_time)
-			axa_error_msg("%s", emsg.c);
+		disconnect(axa_debug != 0 || first_time,
+			   "%s", emsg.c);
 		return;			/* Try again after a non-fatal error. */
 	case AXA_CONNECT_DONE:
 		break;

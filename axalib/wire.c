@@ -1529,7 +1529,7 @@ axa_io_type_parse(const char **addrp)
 		   && 0 != (i = strspn(addr+sizeof(AXA_IO_TYPE_SSH_STR)-1,
 				       AXA_WHITESPACE))) {
 		/* allow "ssh " for upward compatibility with old sratool */
-		addr += sizeof(AXA_IO_TYPE_SSH_STR":")-1 + i;
+		addr += sizeof(AXA_IO_TYPE_SSH_STR)-1 + i;
 		result = AXA_IO_TYPE_SSH;
 
 	} else {
@@ -1562,12 +1562,6 @@ axa_io_type_to_str(axa_io_type_t type)
 void
 axa_io_init(axa_io_t *io)
 {
-	bool is_rad, is_client;
-
-	/* Do not change the permanent state. */
-	is_rad = io->is_rad;
-	is_client = io->is_client;
-
 	memset(io, 0, sizeof(*io));
 	io->su.sa.sa_family = -1;
 	io->i_fd = -1;
@@ -1575,12 +1569,6 @@ axa_io_init(axa_io_t *io)
 	io->tun_fd = -1;
 	io->tun_pid = -1;
 	io->pvers = AXA_P_PVERS;
-
-	io->is_rad = is_rad;
-	io->is_client = is_client;
-	/* io->alive is 0 to ensure that clients immediately send
-	 * an AXA_P_OP_NOP (if not an AXA_P_OP_USER) to announce their
-	 * protocol version. */
 }
 
 void
@@ -1644,7 +1632,7 @@ axa_io_close(axa_io_t *io)
 	if (io->tls_info != NULL)
 		free(io->tls_info);
 
-	/* Clear the FDs, PID, buffer pointers, and everything else. */
+	/* Clear the FDs, PID, buffer pointers, etc. */
 	axa_io_init(io);
 }
 
@@ -2039,7 +2027,7 @@ axa_send_save(axa_io_t *io, size_t done, const axa_p_hdr_t *hdr,
 	/* Expand the buffer if necessary */
 	avail_len = io->send_buf_len - io->send_bytes;
 	if (avail_len < undone) {
-		new_len = io->send_buf_len + undone + 512;
+		new_len = (io->send_buf_len + undone + 1024 + 1023) & ~1024;
 		new_buf = axa_malloc(new_len);
 
 		/* Save previously saved data. */
@@ -2095,38 +2083,34 @@ axa_io_result_t
 axa_send_flush(axa_emsg_t *emsg, axa_io_t *io)
 {
 	ssize_t done;
-	axa_io_result_t result;
 
+	if (io->type == AXA_IO_TYPE_TLS)
+		return (axa_tls_flush(emsg, io));
+
+	/* Repeat other transports until nothing flows. */
 	for (;;) {
 		if (io->send_bytes == 0) {
 			io->o_events = 0;
 			return (AXA_IO_OK);
 		}
 
-		if (io->type == AXA_IO_TYPE_TLS) {
-			result = axa_tls_flush(emsg, io);
-			if (result == AXA_IO_OK)
-				return (result);
-
-		} else {
-			done = write(io->o_fd, io->send_start,
-				     io->send_bytes);
-			if (done < 0) {
-				if (errno != EAGAIN && errno != EWOULDBLOCK) {
-					io->send_bytes = 0;
-					axa_pemsg(emsg, "send(): %s",
-						  strerror(errno));
-					return (AXA_IO_ERR);
-				}
-
-				io->o_events = AXA_POLL_OUT;
-				return (AXA_IO_BUSY);
+		done = write(io->o_fd, io->send_start,
+			     io->send_bytes);
+		if (done < 0) {
+			if (errno != EAGAIN && errno != EWOULDBLOCK) {
+				io->send_bytes = 0;
+				axa_pemsg(emsg, "send(): %s",
+					  strerror(errno));
+				return (AXA_IO_ERR);
 			}
-			io->send_start += done;
-			io->send_bytes -= done;
 
-			gettimeofday(&io->alive, NULL);
+			io->o_events = AXA_POLL_OUT;
+			return (AXA_IO_BUSY);
 		}
+		io->send_start += done;
+		io->send_bytes -= done;
+
+		gettimeofday(&io->alive, NULL);
 	}
 }
 

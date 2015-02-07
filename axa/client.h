@@ -46,13 +46,13 @@
 typedef struct {
 	axa_io_t	io;		/**< I/O context */
 
+	struct timeval	retry;		/**< connection retry timer */
+	time_t		backoff;	/**< connection back-off quantum */
+
 	char		*hello;		/**< HELLO string from server */
 
 	bool		have_id;	/**< for AXA_P_OP_JOIN */
 	axa_p_clnt_id_t clnt_id;	/**< unquie client ID */
-
-	struct timeval	retry;		/**< connection retry timer */
-	time_t		backoff;	/**< connection back-off quantum */
 } axa_client_t;
 
 /**
@@ -157,6 +157,7 @@ typedef enum {
  *  \param[in] is_rad true if server is radd isntead of srad
  *  \param[in] addr connect to this AXA server specification
  *  \param[in] tun_debug true to turn on ssh tunnel debugging
+ *  \param[in] bufsize 0 or desired socket buffer sizes
  *  \param[in] nonblock true to start the connection without blocking and
  *	to make the connection non-blocking
  *
@@ -164,26 +165,23 @@ typedef enum {
  */
 extern axa_connect_result_t axa_client_open(axa_emsg_t *emsg,
 					    axa_client_t *client,
-					    const char *addr,
-					    bool is_rad, bool tun_debug,
-					    bool nonblock);
+					    const char *addr, bool is_rad,
+					    bool tun_debug,
+					    int bufsize, bool nonblock);
 
 /**
- *  Restore previously working or finish a new connection to an SRA or
- *	RAD server.  The connection must have been previously opened with
- *	axa_client_open().  axa_client_connect() must be called again
- *	after a result other than AXA_CONNECT_DONE, AXA_CONNECT_NOP,
- *	or AXA_CONNECT_USER.
+ *  Finish a new connection to an SRA or RAD server.
+ *  The connection must have been previously opened with axa_client_open(),
+ *  whioch must have returned #AXA_CONNECT_TEMP.
+ *  axa_client_connect() must be called again when it returns #AXA_CONNECT_TEMP.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of a client context
- *  \param[in] nonblock true for nonblocking
  *
  *  \retval one of #axa_connect_result_t
  */
 extern axa_connect_result_t axa_client_connect(axa_emsg_t *emsg,
-					       axa_client_t *client,
-					       bool nonblock);
+					       axa_client_t *client);
 
 /**
  *  Send an AXA message to the server connected through a client context,

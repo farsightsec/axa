@@ -91,10 +91,8 @@ AC_CONFIG_FILES([Makefile axa/libaxa.pc doc/doxygen/Doxyfile
                 etc/link_certs.sh etc/make_cert.sh])
 
 AC_ARG_WITH([ciphers],
-AS_HELP_STRING([--with-ciphers=list],
-	[TLS cipher list [[HIGH:!aNULL:!MD5:!RC4]]]),
-[TLS_CIPHERS="$withval"],
-[TLS_CIPHERS="HIGH:!aNULL:!MD5:!RC4"])
+AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),
+[TLS_CIPHERS="$withval"],[TLS_CIPHERS=""])
 AC_DEFINE_UNQUOTED(TLS_CIPHERS,"$TLS_CIPHERS",[TLS cipher list])
 
 AC_OUTPUT

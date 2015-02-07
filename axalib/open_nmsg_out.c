@@ -88,7 +88,7 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 			return (0);
 		}
 
-		if (!axa_set_sock(emsg, s, addr, false)) {
+		if (!axa_set_sock(emsg, s, addr, 0, false)) {
 			close(s);
 			return (0);
 		}

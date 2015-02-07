@@ -22,7 +22,8 @@
 .Sh SYNOPSIS
 .Op Fl VdN
 .Op Fl F Ar fields
-.Op Fl S Ar SSL-certs
+.Op Fl E Ar ciphers
+.Op Fl S Ar certs
 .Op Fl c Ar cfile
 .Op commands
 .Sh DESCRIPTION

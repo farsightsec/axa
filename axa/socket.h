@@ -213,14 +213,12 @@ extern void axa_bits_to_mask(struct in6_addr *mask, int bits);
 extern int axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str);
 
 /**
- *  Parse a "hostname,port" string specifying an SRA or RAD server.
- *  If the boolean passive is true, the function sets AI_PASSIVE. As per
- *  getaddrinfo(3), this causes the resulting IP address to be optionally
- *  filled with INADDR_ANY (IPv4)or in6addr_any (IPv6) for a call to bind(2).
+ *  Parse a "hostname,port" string.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] addr_port string of the format "hostname,port"
- *  \param[in] passive boolean, if true, enable AI_PASSIVE
+ *  \param[in] passive, if true, an empty ("") or  asterisk (*) hostname
+ *	results in IP addresses of INADDR_ANY and IN6ADDR_ANY.
  *  \param[out] resp pointer to address of struct addrinfo, results appear here
  *
  *  \retval true success, *resp will have the results
@@ -241,30 +239,31 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
  *      - NMSG over TCP (nmsg:tcp:10.0.0.1,123)
  *      - NMSG over UDP (nmsg:udp:10.0.0.1,123)
  *
- *  There are a handful of code paths that will require this function to be
- *  called, and they won't know ahead of time which of the above connection
- *  primitives was specified. The above alternatives need some the following:
+ *  There are several uses of this function. They won't know which of the
+ *  above connection primitives was specified. Thos primitives need some or all
+ *  of the following:
  *      - close-on-exec (FD_CLOEXEC)
  *      - non-blocking (O_NONBLOCK, set if nonblock is true)
- *      - Nagle Algorithm disabled (TCP and SSH only)
- *      - TCP keepalives enabled (TCP and SSH only)
+ *      - Nagle Algorithm disabled (TCP only)
+ *      - TCP keepalives enabled (TCP only)
+ *      - UDP and TCP socket buffer sizes
  *      - Broadcasting enabled (UDP to broadcast IP address only)
  *
- *  As such, #axa_set_sock() tries to do the right thing for the given
- *  primitive. However, on some platforms, this is a best effort service
- *  (notably OS X which does not support SO_PROTOCOL) and there may be
- *  spurious warnings when AXA attempts to set a socket option that is
- *  non-sequitor for the given primitive.
+ *  #axa_set_sock() tries to do the right thing.  However, some facilities
+ *  are not available on some systems (e.g. OS X does not support SO_PROTOCOL)
+ *  and so there may be spurious warnings when AXA about unsupported socket
+ *  options.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] s socket or fd
- *  \param[in] label descriptive labal referring to s (usually an address)
+ *  \param[in] label descriptive labal for s such as an address
+ *  \param[in] bufsize non-zero to set the SO_RCVBUF and SO_SNDBUF sizes
  *  \param[in] nonblock boolean, if true, set O_NONBLOCK
  *
  *  \retval true success
  *  \retval false something went wrong, check emsg
  */
 extern bool axa_set_sock(axa_emsg_t *emsg, int s, const char *label,
-			 bool nonblock);
+			 int bufsize, bool nonblock);
 
 #endif /* AXA_SOCKET_H */

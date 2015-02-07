@@ -40,7 +40,7 @@ axa_client_init(axa_client_t *client)
 	time_t backoff;
 	struct timeval retry;
 
-	/* Do not change the permanent state. */
+	/* Do not change the back-off clock. */
 	backoff = client->backoff;
 	retry = client->retry;
 
@@ -96,6 +96,9 @@ axa_client_again(axa_client_t *client, struct timeval *now)
 void
 axa_client_close(axa_client_t *client)
 {
+	/* Everything except the reconnection timers must be set again
+	 * if and when it is re-opened. */
+
 	axa_io_close(&client->io);
 
 	if (client->hello != NULL) {
@@ -103,9 +106,8 @@ axa_client_close(axa_client_t *client)
 		client->hello = NULL;
 	}
 
-	/* Everything except the reconnection timers will be set again
-	 * if and when it is re-opened. */
-	axa_client_init(client);
+	client->have_id = false;
+	client->clnt_id = 0;
 }
 
 static bool
@@ -213,11 +215,11 @@ connect_ssh(axa_emsg_t *emsg, axa_client_t *client,
 	close(err_fildes[1]);
 
 	if (!axa_set_sock(emsg, client->io.i_fd, client->io.label,
-			  nonblock)
+			  0, nonblock)
 	    || !axa_set_sock(emsg, client->io.o_fd, client->io.label,
-			     nonblock)
+			     0, nonblock)
 	    || !axa_set_sock(emsg, client->io.tun_fd, client->io.label,
-			     true))  {
+			     0, true))  {
 		return (false);
 	}
 
@@ -225,7 +227,7 @@ connect_ssh(axa_emsg_t *emsg, axa_client_t *client,
 }
 
 static axa_connect_result_t
-socket_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
+socket_connect(axa_emsg_t *emsg, axa_client_t *client)
 {
 	int i;
 
@@ -240,8 +242,8 @@ socket_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 		}
 		client->io.i_fd = client->io.o_fd;
 
-		if (!axa_set_sock(emsg, client->io.o_fd,
-				  client->io.label, nonblock))  {
+		if (!axa_set_sock(emsg, client->io.o_fd, client->io.label,
+				  client->io.bufsize, client->io.nonblock))  {
 			axa_client_backoff_max(client);
 			return (AXA_CONNECT_ERR);
 		}
@@ -257,7 +259,7 @@ socket_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 			client->io.i_events = AXA_POLL_IN;
 			client->io.o_events = 0;
 
-		} else if (nonblock && AXA_CONN_WAIT_ERRORS()) {
+		} else if (client->io.nonblock && AXA_CONN_WAIT_ERRORS()) {
 			/* Non-blocking connection unfinished. */
 			client->io.i_events = AXA_POLL_OUT;
 			client->io.o_events = 0;
@@ -276,7 +278,7 @@ socket_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 }
 
 axa_connect_result_t
-axa_client_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
+axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 {
 	axa_p_hdr_t hdr;
 	axa_connect_result_t connect_result;
@@ -287,7 +289,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 	switch (client->io.type) {
 	case AXA_IO_TYPE_UNIX:
 	case AXA_IO_TYPE_TCP:
-		connect_result = socket_connect(emsg, client, nonblock);
+		connect_result = socket_connect(emsg, client);
 		if (connect_result != AXA_CONNECT_DONE)
 			return (connect_result);
 		client->io.connected = true;
@@ -310,7 +312,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 
 	case AXA_IO_TYPE_SSH:
 		if (!AXA_CLIENT_OPENED(client)) {
-			if (!connect_ssh(emsg, client, nonblock,
+			if (!connect_ssh(emsg, client, client->io.nonblock,
 					 client->io.tun_debug)) {
 				axa_client_backoff_max(client);
 				return (AXA_CONNECT_ERR);
@@ -321,7 +323,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 		break;
 
 	case AXA_IO_TYPE_TLS:
-		connect_result = socket_connect(emsg, client, nonblock);
+		connect_result = socket_connect(emsg, client);
 		if (connect_result != AXA_CONNECT_DONE)
 			return (connect_result);
 		switch (axa_tls_start(emsg, &client->io)) {
@@ -331,7 +333,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 			axa_client_backoff_max(client);
 			return (AXA_CONNECT_ERR);
 		case AXA_IO_BUSY:
-			AXA_ASSERT(nonblock);
+			AXA_ASSERT(client->io.nonblock);
 			return (connect_result);
 		case AXA_IO_TUNERR:
 		case AXA_IO_KEEPALIVE:
@@ -358,8 +360,8 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client, bool nonblock)
 }
 
 axa_connect_result_t
-axa_client_open(axa_emsg_t *emsg, axa_client_t *client,
-		const char *addr, bool is_rad, bool tun_debug, bool nonblock)
+axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
+		bool is_rad, bool tun_debug, int bufsize, bool nonblock)
 {
 	struct addrinfo *ai;
 	const char *p;
@@ -370,6 +372,8 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client,
 	client->io.is_rad = is_rad;
 	client->io.is_client = true;
 	client->io.tun_debug = tun_debug;
+	client->io.nonblock = nonblock;
+	client->io.bufsize = bufsize;
 	gettimeofday(&client->retry, NULL);
 
 	p = strpbrk(addr, AXA_WHITESPACE":");
@@ -466,7 +470,7 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client,
 		AXA_FAIL("impossible client type");
 	}
 
-	return (axa_client_connect(emsg, client, nonblock));
+	return (axa_client_connect(emsg, client));
 }
 
 bool

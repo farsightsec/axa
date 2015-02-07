@@ -32,7 +32,8 @@
 static char certs_dir0[] = AXACONFDIR"/certs";
 static char *certs_dir = certs_dir0;
 
-const char *axa_tls_ciphers = TLS_CIPHERS;
+static char cipher_list0[] = TLS_CIPHERS;
+static char *cipher_list = cipher_list0;
 
 static bool tls_initialized = false;
 static bool tls_srvr = false;
@@ -232,18 +233,67 @@ ck_certs_dir(axa_emsg_t *emsg, const char *dir)
 	return (true);
 }
 
-bool
+const char *
 axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir)
 {
+	int i;
+
+	if (dir == NULL || *dir == '\0')
+		return (certs_dir);
+
 	if (!ck_certs_dir(emsg, dir))
-		return (false);
+		return (NULL);
+
+	/* This is not reentrant */
+	i =__sync_add_and_fetch(&init_critical, 1);
+	AXA_ASSERT(i == 1);
+
+	if (ssl_ctx != NULL
+	    && 0 >= SSL_CTX_load_verify_locations(ssl_ctx, NULL, dir)) {
+		q_pemsg(emsg, "SSL_CTX_load_verify_locations(%s)", dir);
+		i = __sync_sub_and_fetch(&init_critical, 1);
+		AXA_ASSERT(i == 0);
+		return (NULL);
+	}
 
 	if (certs_dir != certs_dir0) {
 		free(certs_dir);
 		certs_dir = certs_dir0;
 	}
 	certs_dir = axa_strdup(dir);
-	return (true);
+
+	i = __sync_sub_and_fetch(&init_critical, 1);
+	AXA_ASSERT(i == 0);
+	return (certs_dir);
+}
+
+const char *
+axa_tls_cipher_list(axa_emsg_t *emsg, const char *list)
+{
+	int i;
+
+	if (list == NULL || *list == '\0')
+		return (cipher_list);
+
+	/* This is not reentrant */
+	i =__sync_add_and_fetch(&init_critical, 1);
+	AXA_ASSERT(i == 1);
+
+	if (cipher_list != cipher_list0)
+		free(cipher_list);
+	cipher_list = axa_strdup(list);
+
+	if (ssl_ctx != NULL
+	    && 0 >= SSL_CTX_set_cipher_list(ssl_ctx, cipher_list)) {
+		q_pemsg(emsg, "SSL_CTX_set_cipher_list(%s)", cipher_list);
+		i = __sync_sub_and_fetch(&init_critical, 1);
+		AXA_ASSERT(i == 0);
+		return (NULL);
+	}
+
+	i = __sync_sub_and_fetch(&init_critical, 1);
+	AXA_ASSERT(i == 0);
+	return (cipher_list);
 }
 
 bool
@@ -254,9 +304,7 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	EC_KEY *ecdh;
 	int i;
 
-	/*
-	 * SSL_library_init() is "not reentrant."
-	 */
+	/* SSL_library_init() is not reentrant. */
 	AXA_ASSERT(__sync_add_and_fetch(&init_critical, 1) == 1);
 
 	/* Do not try to use OpenSSL after releasing it. */
@@ -390,8 +438,9 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 			    | SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION
 			    | SSL_OP_NO_TICKET);
 
-	if (0 >= SSL_CTX_set_cipher_list(ssl_ctx, axa_tls_ciphers)) {
-		q_pemsg(emsg, "SSL_CTX_set_cipher_list(%s)", axa_tls_ciphers);
+	if (*cipher_list != '\0'
+	    && 0 >= SSL_CTX_set_cipher_list(ssl_ctx, cipher_list)) {
+		q_pemsg(emsg, "SSL_CTX_set_cipher_list(%s)", cipher_list);
 		return (false);
 	}
 
@@ -410,6 +459,7 @@ axa_tls_cleanup(void)
 {
 	int i;
 
+	/* You cannot restart OpenSSL after shutting it down. */
 	if (tls_cleaned)
 		return;
 	tls_cleaned = true;
@@ -436,10 +486,13 @@ axa_tls_cleanup(void)
 		ssl_ctx = NULL;
 	}
 
-	if (certs_dir != certs_dir0) {
+	if (certs_dir != certs_dir0)
 		free(certs_dir);
-		certs_dir = certs_dir0;
-	}
+	certs_dir = certs_dir0;
+
+	if (cipher_list != cipher_list0)
+		free(cipher_list);
+	cipher_list = cipher_list0;
 
 	ERR_free_strings();
 	OPENSSL_no_config();
