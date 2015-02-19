@@ -16,11 +16,24 @@ overrides the default location of the
 .Pa fields
 file that defines relationships among and semantics among SIE message
 fields.
+The default is
+.Pa $AXACONF/fields ,
+.Pa ~/.axa/fields ,
+or
+.Pa @CONFDIR@/fields .
 .It Fl E Ar ciphers
 specifies the TLS encryption ciphers to use with TLS connections.
 .It Fl S Ar certs
-overrides the default directory containing SSL certificates and keys.
-Its default is often /usr/local/etc/axa/certs or /etc/axa/certs.
+specifies the directory containing SSL certificates and keys.
+If
+.Fl S
+is not used,
+.Nm
+uses the first directory among
+.Pa $AXACONF/certs ,
+.Pa ~/.axa/certs ,
+and
+.Pa @CONFDIR@/certs .
 .It Fl c Ar cfile
 reads commands from
 .Pa cfile

@@ -26,6 +26,8 @@ dist_config_DATA = etc/fields
 MAN_PROCESS = $(AM_V_GEN) soelim -I. -I`dirname $<` -r $< | sed -e "s/^\.Dd.*/.Dd `date '+%B %d, %Y'`/" >$@
 .man.1:
 	    $(MAN_PROCESS)
+.man.8:
+	    $(MAN_PROCESS)
 
 sratool/sratool.1: sratool/sratool.man \
 	fwd.man watch.man srawatch.man sratool/options.man sratool/cmds.man
@@ -43,17 +45,20 @@ EXTRA_DIST += \
 	radwatch.man \
 	sratool/options.man \
 	sratool/cmds.man \
+	sratool/axa_link_certs.man \
+	sratool/axa_make_cert.man \
+	sratool/axa_server_cert.man \
 	README.md \
 	doc/doxygen/doxygen-input-filter
 
 dist_man_MANS =  \
 	sratool/sratool.1 \
 	sratool/radtool.1 \
-	sratunnel/sratunnel.1
-CLEANFILES += \
-	sratool/sratool.1 \
-	sratool/radtool.1 \
-	sratunnel/sratunnel.1
+	sratunnel/sratunnel.1 \
+	sratool/axa_link_certs.8 \
+	sratool/axa_make_cert.8 \
+	sratool/axa_server_cert.8
+CLEANFILES += $(dist_man_MANS)
 
 #
 ##
@@ -196,6 +201,17 @@ sratunnel_sratunnel_CFLAGS = \
 
 #
 ##
+### scripts
+##
+#
+
+bin_SCRIPTS = \
+	sratool/axa_link_certs \
+	sratool/axa_make_cert \
+	sratool/axa_server_cert
+
+#
+##
 ### documentation 
 ##
 #
@@ -226,6 +242,6 @@ doc: html-local
 
 spotless: distclean
 	rm -fr ar-lib aclocal.m4 autom4te.cache configure config.* Makefile.in \
-	autoscan.log config.h compile depcomp configure.scan       			   \
+	autoscan.log config.h compile depcomp configure.scan       	   \
 	doc/doxygen/Doxyfile missing install-sh ltmain.sh
 

@@ -540,30 +540,59 @@ typedef struct _PK {
 	axa_p_chspec_t	spec;		/**< channel (human readable) */
 } axa_p_clist_t;
 
+/** Request server's current trace value */
+#define AXA_P_OPT_TRACE_REQ ((uint32_t)-1)
+
 /** maximum rlimit */
 #define AXA_RLIMIT_MAX	(1000*1000*1000)
-/** turn off a rate limit */
+/** Turn off a rate limit. */
 #define AXA_RLIMIT_OFF	(AXA_RLIMIT_MAX+1)
-/** rate limit doesn't apply or is not being set */
+/** A rate limit value that doesn't apply or is not being set */
 #define AXA_RLIMIT_NA	((axa_cnt_t)-1)
 
 /** AXA protocol rlimit */
 typedef struct _PK {
-	axa_cnt_t	max_pkts_per_sec;   /**< maximum packets/sec */
-	axa_cnt_t	cur_pkts_per_sec;   /**< current packets/sec */
+	/**
+	 *  When in an option AXA_P_OP_OPT message sent by the client,
+	 *  request the server to send no more than this many AXA AXA_P_OP_WHIT
+	 *  or AXA_P_OP_AHIT messages per second.  Use AXA_RLIMIT_OFF to
+	 *  request no limit.  AXA_RLIMIT_NA to not change th
+	 */
+	axa_cnt_t	max_pkts_per_sec;
+	/**
+	 *  This is the current value of the server's rate limit counter.
+	 *  The counter is incremented each time a relevant AXA message
+	 *  is considered for sending to the client.  If the new value is
+	 *  greater than the rate limit, the message dropped.  The counter
+	 *  is reset every second.
+	 */
+	axa_cnt_t	cur_pkts_per_sec;
 	axa_cnt_t	unused1;	/**< reserved */
 	axa_cnt_t	unused2;	/**< reserved */
 	/**
 	 * The minimum number of seconds between reports of rate limiting.
-	 * It's effectively a rate limit on rate limit reports.
+	 * It is a rate limit on rate limit reports.
 	 */
 	axa_cnt_t	report_secs;
 } axa_p_rlimit_t;
 
+/** Request the output sampling ratio */
+#define	AXA_P_OPT_SAMPLE_REQ	0
+/** Request the output sampling ratio */
+#define	AXA_P_OPT_SAMPLE_SCALE	10000
+/** maximum scaled output sampling ratio */
+#define	AXA_P_OPT_SAMPLE_MAX	(AXA_P_OPT_SAMPLE_SCALE*100)
+
+/** Request the TCP buffer size ratio */
+#define	AXA_P_OPT_SNDBUF_REQ	0
+#define	AXA_P_OPT_SNDBUF_MIN	1024
+
 /** AXA protocol options type */
 typedef enum {
-	AXA_P_OPT_TRACE    =0,		/**< server tracing level */
-	AXA_P_OPT_RLIMIT   =1,		/**< server rate limiting */
+	AXA_P_OPT_TRACE	    =0,		/**< server tracing level */
+	AXA_P_OPT_RLIMIT    =1,		/**< server rate limiting */
+	AXA_P_OPT_SAMPLE    =2,		/**< sample an output stream. */
+	AXA_P_OPT_SNDBUF    =3,		/**< set TCP buffer or window size */
 } axa_p_opt_type_t;
 
 /** AXA protocol options */
@@ -571,9 +600,11 @@ typedef struct _PK {
 	uint8_t		type;		/**< option type */
 	uint8_t		pad[7];		/**< to 0 mod 8 for axa_p_rlimit_t */
 	union axa_p_opt_u {
-		uint32_t	trace;	/**< tracing level */
-		axa_p_rlimit_t	rlimit;	/**< rate limits */
-	} u;				/**< tracing or rate limiting */
+		uint32_t	trace;	/**< AXA_P_OPT_TRACE: tracing level */
+		axa_p_rlimit_t	rlimit;	/**< AXA_P_OPT_RLIMIT rate limits */
+		uint32_t	sample;	/**< AXA_P_OPT_SAMPLE percent*1000 */
+		uint32_t	bufsize;/**< AXA_P_OPT_SNDBUF bytes */
+	} u;
 } axa_p_opt_t;
 
 

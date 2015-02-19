@@ -353,11 +353,12 @@ extern void axa_io_close(axa_io_t *io);
 
 /**  I/O result codes */
 typedef enum {
+	AXA_IO_ERR,			/**< print emsg */
 	AXA_IO_OK,			/**< operation finished */
 	AXA_IO_BUSY,			/**< incomplete; poll() & try again */
 	AXA_IO_TUNERR,			/**< get text via axa_io_tunerr() */
 	AXA_IO_KEEPALIVE,		/**< need to send keepalive NOP */
-	AXA_IO_ERR			/**< print emsg */
+/*	AXA_IO_AUTHERR,			**< authentication error */
 } axa_io_result_t;
 
 /**
@@ -498,10 +499,10 @@ extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
  *  \param[out] emsg the reason if something went wrong
  *  \param[in] dir directory containing TLS certificate key files or NULL
  *
- *  \retval new value if not NULL
- *  \retval NULL implies an error; check emsg
+ *  \retval true success
+ *  \retval false error; check emsg
  */
-extern const char *axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
+extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
 
 /**
  *  Get or set TLS certificate list

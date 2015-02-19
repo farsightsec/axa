@@ -209,7 +209,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'S':
-			if (axa_tls_certs_dir(&emsg, optarg) == NULL)
+			if (!axa_tls_certs_dir(&emsg, optarg))
 				axa_error_msg("%s", emsg.c);
 			break;
 
@@ -943,7 +943,7 @@ srvr_connect(void)
 	if (trace != 0) {
 		memset(&opt, 0, sizeof(opt));
 		opt.type = AXA_P_OPT_TRACE;
-		opt.u.trace = trace;
+		opt.u.trace = AXA_H2P32(trace);
 		if (!srvr_cmd(AXA_TAG_MIN, AXA_P_OP_OPT, &opt,
 			      sizeof(opt) - sizeof(opt.u)
 			      + sizeof(opt.u.trace),

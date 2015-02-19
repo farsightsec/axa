@@ -17,6 +17,7 @@
  */
 
 #include <axa/fields.h>
+#include <config.h>
 
 #include <nmsg/base/defs.h>
 #include <nmsg/base/encode.pb-c.h>
@@ -266,8 +267,9 @@ get_subsubval(char *subval)
  * message types, and fields.
  */
 void
-axa_load_fields(const char *fields_file)
+axa_load_fields(const char *fields_file0)
 {
+	char *fields_file;
 	FILE *f;
 	char *line_buf;
 	size_t line_buf_size;
@@ -287,10 +289,45 @@ axa_load_fields(const char *fields_file)
 
 	axa_unload_fields();
 
-	f = fopen(fields_file, "r");
+	/*
+	 * Use a specified file, or default to $AXACONF/fields,
+	 * or $HOME/.axa/fields, or AXACONFDIR/fields.
+	 */
+	if (fields_file0 != NULL && *fields_file0 != '\0') {
+		fields_file = axa_strdup(fields_file0);
+		f = fopen(fields_file, "r");
+	} else {
+		f = NULL;
+		p = getenv("AXACONF");
+		if (p == NULL) {
+			fields_file = NULL;
+		} else {
+			axa_asprintf(&fields_file, "%s/%s",
+				     p, "fields");
+			f = fopen(fields_file, "r");
+		}
+		if (f == NULL) {
+			if (fields_file != NULL)
+				free(fields_file);
+			p = getenv("HOME");
+			if (p == NULL) {
+				fields_file = NULL;
+			} else {
+				axa_asprintf(&fields_file, "%s/%s", p, "fields");
+				f = fopen(fields_file, "r");
+			}
+		}
+		if (f == NULL) {
+			if (fields_file != NULL)
+				free(fields_file);
+			fields_file = strdup(AXACONFDIR"/fields");
+			f = fopen(fields_file, "r");
+		}
+	}
 	if (f == NULL) {
-		axa_error_msg("cannot open \"-F %s\": %s",
+		axa_error_msg("cannot open \"%s\": %s",
 			      fields_file, strerror(errno));
+		free(fields_file);
 		return;
 	}
 
@@ -572,6 +609,7 @@ next_line:
 
 	if (num_vm == 0) {
 		axa_error_msg("no fields defined in \"%s\"", fields_file);
+		free(fields_file);
 		return;
 	}
 
@@ -588,6 +626,8 @@ next_line:
 		vm->next = *vmp;
 		*vmp = vm;
 	}
+
+	free(fields_file);
 }
 
 /* Get the contents of a "helper" field for a fields file line */

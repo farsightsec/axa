@@ -346,6 +346,23 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	return (buf);
 }
 
+static const char *
+axa_opt_to_str(char *buf, size_t buflen, axa_p_opt_type_t opt)
+{
+	switch (opt) {
+	case AXA_P_OPT_TRACE:	strlcpy(buf, "TRACE",	    buflen); break;
+	case AXA_P_OPT_RLIMIT:	strlcpy(buf, "Rate LIMIT",  buflen); break;
+	case AXA_P_OPT_SAMPLE:	strlcpy(buf, "SAMPLE",	    buflen); break;
+	case AXA_P_OPT_SNDBUF:	strlcpy(buf, "SNDBUF",	    buflen); break;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
+	default:
+		snprintf(buf, buflen, "unknown option type #%d", opt);
+#pragma clang diagnostic pop
+	}
+	return (buf);
+}
+
 const char *
 axa_tag_op_to_str(char *buf, size_t buf_len,
 		  axa_tag_t tag, axa_p_op_t op)
@@ -473,10 +490,11 @@ axa_watch_to_str(char *buf, size_t buf_len,
 
 static void
 watch_add_str(char **bufp, size_t *buf_lenp,
-	      const axa_p_watch_t *watch, size_t watch_len)
+	      const char *op_sp, const axa_p_watch_t *watch, size_t watch_len)
 {
 	size_t len;
 
+	axa_buf_print(bufp, buf_lenp, "%s", op_sp);
 	axa_watch_to_str(*bufp, *buf_lenp, watch, watch_len);
 	len = strlen(*bufp);
 	*bufp += len;
@@ -485,17 +503,19 @@ watch_add_str(char **bufp, size_t *buf_lenp,
 
 static void
 whit_add_str(char **bufp, size_t *buf_lenp,
-	    const axa_p_whit_t *whit, size_t whit_len)
+	     const char *op_sp, const axa_p_whit_t *whit, size_t whit_len)
 {
 	char ip_str[INET6_ADDRSTRLEN];
 
 	if (whit->hdr.type == AXA_P_WHIT_NMSG) {
-		axa_buf_print(bufp, buf_lenp, "ch%d nmsg", whit->hdr.ch);
+		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d nmsg",
+			      op_sp, whit->hdr.ch);
 		return;
 	}
 
 	if (whit->hdr.type != AXA_P_WHIT_IP) {
-		axa_buf_print(bufp, buf_lenp, "ch%d ???", whit->hdr.ch);
+		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d ???",
+			      op_sp, whit->hdr.ch);
 		return;
 	}
 
@@ -504,19 +524,20 @@ whit_add_str(char **bufp, size_t *buf_lenp,
 		watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET,
 				AXA_OFFSET(whit->ip.b, struct ip, ip_src),
 				4, 32);
-		axa_buf_print(bufp, buf_lenp,
-			      "ch%d src %s", whit->hdr.ch, ip_str);
+		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d src %s",
+			      op_sp, whit->hdr.ch, ip_str);
 
 	} else if (whit_len >= sizeof(struct ip6_hdr)
 	    && (whit->ip.b[0] & 0xf0) == 0x60) {
 		watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET6,
 				AXA_OFFSET(whit->ip.b, struct ip6_hdr, ip6_src),
 				16, 128);
-		axa_buf_print(bufp, buf_lenp,
-			      "ch%d src %s", whit->hdr.ch, ip_str);
+		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d src %s",
+			      op_sp, whit->hdr.ch, ip_str);
 
 	} else {
-		axa_buf_print(bufp, buf_lenp, "ch%d ???", whit->hdr.ch);
+		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d ???",
+			      op_sp, whit->hdr.ch);
 	}
 }
 
@@ -553,7 +574,7 @@ rlimit_add_str(char **bufp, size_t *buf_lenp,
 
 static void
 missed_add_str(char **bufp, size_t *buf_lenp,
-	       const axa_p_missed_t *missed)
+	       const char *op_nl, const axa_p_missed_t *missed)
 {
 	time_t epoch;
 	char time_buf[32];
@@ -563,11 +584,13 @@ missed_add_str(char **bufp, size_t *buf_lenp,
 		 localtime(&epoch));
 
 	axa_buf_print(bufp, buf_lenp,
+		      "%s"
 		      "    missed %"PRIu64" input packets,"
 		      " dropped %"PRIu64" for congestion,\n"
 		      "\tdropped %"PRIu64" for rate limit,"
 		      " filtered %"PRIu64"\n"
 		      "\tsince %s",
+		      op_nl,
 		      AXA_P2H64(missed->missed),
 		      AXA_P2H64(missed->dropped),
 		      AXA_P2H64(missed->rlimit),
@@ -577,7 +600,7 @@ missed_add_str(char **bufp, size_t *buf_lenp,
 
 static void
 missed_rad_add_str(char **bufp, size_t *buf_lenp,
-		   const axa_p_missed_rad_t *missed)
+		   const char *op_nl, const axa_p_missed_rad_t *missed)
 {
 	time_t epoch;
 	char time_buf[32];
@@ -587,6 +610,7 @@ missed_rad_add_str(char **bufp, size_t *buf_lenp,
 		 localtime(&epoch));
 
 	axa_buf_print(bufp, buf_lenp,
+		      "%s"
 		      "    missed %"PRIu64" input packets at SRA server,"
 		      " dropped %"PRIu64" for SRA->RAD congestion,\n"
 		      "\tdropped %"PRIu64" for SRA->RAD rate limit,"
@@ -595,6 +619,7 @@ missed_rad_add_str(char **bufp, size_t *buf_lenp,
 		      " dropped %"PRIu64" for RAD rate limit,\n"
 		      "\tfiltered %"PRIu64" by RAD modules"
 		      " since %s",
+		      op_nl,
 		      AXA_P2H64(missed->sra_missed),
 		      AXA_P2H64(missed->sra_dropped),
 		      AXA_P2H64(missed->sra_rlimit),
@@ -754,36 +779,42 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 {
 	char tag_op_buf[AXA_TAG_STRLEN+AXA_P_OP_STRLEN];
 	char *buf;
+	char opt_buf[AXA_P_OP_STRLEN];
+	const char *op_sp, *op_nl;
+	uint32_t sample, bufsize;
 
 	buf = buf0;
 	buf[0] = '\0';
-	if (print_op)
+	if (print_op) {
 		axa_buf_print(&buf, &buf_len, "%s",
 			      axa_tag_op_to_str(tag_op_buf, sizeof(tag_op_buf),
 						AXA_P2H_TAG(hdr->tag),
 						hdr->op));
+		op_sp = " ";
+		op_nl = "\n";
+	} else {
+		op_sp = "";
+		op_nl = "";
+	}
 
 	switch ((axa_p_op_t)hdr->op) {
 	case AXA_P_OP_NOP:
 		break;
 
 	case AXA_P_OP_HELLO:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, " ");
-		axa_buf_print(&buf, &buf_len, "%s", body->hello.str);
+		axa_buf_print(&buf, &buf_len, "%s%s", op_sp, body->hello.str);
 		break;
 
 	case AXA_P_OP_OK:
 	case AXA_P_OP_ERROR:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, " ");
 		if (body->result.orig_op == AXA_P_OP_OK
 		    || body->result.orig_op == AXA_P_OP_NOP
 		    || body->result.orig_op == AXA_P_OP_ERROR) {
-			axa_buf_print(&buf, &buf_len, "%s",
-				      body->result.str);
+			axa_buf_print(&buf, &buf_len, "%s%s",
+				      op_sp, body->result.str);
 		} else {
-			axa_buf_print(&buf, &buf_len, "%s %s",
+			axa_buf_print(&buf, &buf_len, "%s%s %s",
+				      op_sp,
 				      axa_op_to_str(tag_op_buf,
 						    sizeof(tag_op_buf),
 						    body->result.orig_op),
@@ -792,48 +823,38 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 		break;
 
 	case AXA_P_OP_MISSED:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, "\n");
-		missed_add_str(&buf, &buf_len, &body->missed);
+		missed_add_str(&buf, &buf_len, op_nl, &body->missed);
 		break;
 
 	case AXA_P_OP_MISSED_RAD:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, "\n");
-		missed_rad_add_str(&buf, &buf_len, &body->missed_rad);
+		missed_rad_add_str(&buf, &buf_len, op_nl, &body->missed_rad);
 		break;
 
 	case AXA_P_OP_WHIT:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, " ");
-		whit_add_str(&buf, &buf_len, &body->whit,
+		whit_add_str(&buf, &buf_len, op_sp, &body->whit,
 			      (AXA_P2H32(hdr->len) - sizeof(*hdr)));
 		break;
 
 	case AXA_P_OP_WATCH:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, " ");
-		watch_add_str(&buf, &buf_len, &body->watch,
+		watch_add_str(&buf, &buf_len, op_sp, &body->watch,
 			      (AXA_P2H32(hdr->len) - sizeof(*hdr)));
 		break;
 
 	case AXA_P_OP_ANOM:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, " ");
-		axa_buf_print(&buf, &buf_len, "%s", body->anom.an.c);
+		axa_buf_print(&buf, &buf_len, "%s%s", op_sp, body->anom.an.c);
 		if (AXA_P2H32(hdr->len)-sizeof(*hdr) > sizeof(body->anom.an.c)
 		    && body->anom.parms[0] != '\0')
 			axa_buf_print(&buf, &buf_len, " %s", body->anom.parms);
 		break;
 
 	case AXA_P_OP_CHANNEL:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, " ");
 		if (body->channel.ch == AXA_P2H_CH(AXA_OP_CH_ALL)) {
-			snprintf(buf, buf_len, AXA_OP_CH_ALLSTR" %s",
+			snprintf(buf, buf_len, "%s"AXA_OP_CH_ALLSTR" %s",
+				 op_sp,
 				 (body->channel.on != 0) ? "on" : "off");
 		} else {
-			snprintf(buf, buf_len, AXA_OP_CH_PREFIX"%d %s",
+			snprintf(buf, buf_len, "%s"AXA_OP_CH_PREFIX"%d %s",
+				 op_sp,
 				 AXA_P2H_CH(body->channel.ch),
 				 (body->channel.on != 0) ? "on" : "off");
 		}
@@ -846,17 +867,15 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 						     sizeof(tag_op_buf),
 						     AXA_P2H_TAG(body
 							 ->wlist.cur_tag)));
-		watch_add_str(&buf, &buf_len, &body->wlist.w,
+		watch_add_str(&buf, &buf_len, op_sp, &body->wlist.w,
 			      (AXA_P2H32(hdr->len) - sizeof(*hdr)
 			       - (sizeof(body->wlist)
 				  - sizeof(body->wlist.w))));
 		break;
 
 	case AXA_P_OP_AHIT:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, " ");
-		axa_buf_print(&buf, &buf_len, "%s ", body->ahit.an.c);
-		whit_add_str(&buf, &buf_len, &body->ahit.whit,
+		axa_buf_print(&buf, &buf_len, "%s%s ", op_sp, body->ahit.an.c);
+		whit_add_str(&buf, &buf_len, op_sp, &body->ahit.whit,
 			      (AXA_P2H32(hdr->len) - sizeof(*hdr)));
 		break;
 
@@ -876,23 +895,20 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 		break;
 
 	case AXA_P_OP_USER:
-		if (print_op)
-			axa_buf_print(&buf, &buf_len, " ");
-		axa_buf_print(&buf, &buf_len, "'%s'", body->user.name);
+		axa_buf_print(&buf, &buf_len, "%s'%s'",
+			      op_sp, body->user.name);
 		break;
 
 	case AXA_P_OP_OPT:
 		switch ((axa_p_opt_type_t)body->opt.type) {
 		case AXA_P_OPT_TRACE:
-			if (print_op)
-				axa_buf_print(&buf, &buf_len, " TRACE ");
-			axa_buf_print(&buf, &buf_len, "trace=%d",
-				      body->opt.u.trace);
+			axa_buf_print(&buf, &buf_len, "%strace=%d", op_sp,
+				      AXA_P2H32(body->opt.u.trace));
 			break;
 		case AXA_P_OPT_RLIMIT:
-			if (print_op)
-				axa_buf_print(&buf, &buf_len, " ");
-			axa_buf_print(&buf, &buf_len, "RATE LIMITS");
+			axa_buf_print(&buf, &buf_len, "%s%s", op_sp,
+				      axa_opt_to_str(opt_buf, sizeof(opt_buf),
+						     body->opt.type));
 			rlimit_add_str(&buf, &buf_len,
 				       body->opt.u.rlimit.max_pkts_per_sec,
 				       body->opt.u.rlimit.cur_pkts_per_sec,
@@ -908,6 +924,29 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 					      " seconds between reports",
 					      AXA_P2H64(body->opt.u.
 							rlimit.report_secs));
+			break;
+		case AXA_P_OPT_SAMPLE:
+			sample = AXA_P2H32(body->opt.u.sample);
+			if (sample == AXA_P_OPT_SAMPLE_REQ)
+				axa_buf_print(&buf, &buf_len,
+					      "%srequest sample rate",
+					      op_sp);
+			else
+				axa_buf_print(&buf, &buf_len,
+					      "%ssample %.2f%%",
+					      op_sp,
+					      sample
+					      / (AXA_P_OPT_SAMPLE_SCALE*1.0));
+			break;
+		case AXA_P_OPT_SNDBUF:
+			bufsize = AXA_P2H32(body->opt.u.bufsize);
+			if (bufsize == AXA_P_OPT_SNDBUF_REQ)
+				axa_buf_print(&buf, &buf_len,
+					      "%srequest bufsize",
+					      op_sp);
+			else
+				axa_buf_print(&buf, &buf_len, "%sbufsize=%d",
+				      op_sp, bufsize);
 			break;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
@@ -1094,9 +1133,8 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
 		break;
 	case AXA_P_OP_OPT:
-		max_len = sizeof(body->opt);
-		min_len = max_len - (sizeof(body->opt.u)
-				     - sizeof(body->opt.u.trace));
+		min_len = sizeof(body->opt) - sizeof(body->opt.u);
+		max_len = min_len + 1024;
 		tagged = 0;
 		dir_ok = true;
 		break;
@@ -1398,37 +1436,43 @@ ck_opt(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_opt_t *opt, size_t opt_len)
 {
 	size_t val_len;
 	char op_buf[AXA_P_OP_STRLEN];
+	char opt_buf[AXA_P_OP_STRLEN];
 
-	AXA_ASSERT(opt_len >= sizeof(axa_p_opt_t) - sizeof(opt->u)
-		   && opt_len <= sizeof(axa_p_opt_t ));
+	AXA_ASSERT(opt_len >= sizeof(axa_p_opt_t) - sizeof(opt->u));
+
 	val_len = opt_len - (sizeof(axa_p_opt_t) - sizeof(opt->u));
 
 	switch ((axa_p_opt_type_t)opt->type) {
 	case AXA_P_OPT_TRACE:
-		if (val_len != sizeof(opt->u.trace)) {
-			axa_pemsg(emsg, "%s bad trace option length %zd",
-				  axa_op_to_str(op_buf, sizeof(op_buf), op),
-				  opt_len);
-			return (false);
-		}
+		val_len = sizeof(opt->u.trace);
 		break;
 	case AXA_P_OPT_RLIMIT:
-		if (val_len != sizeof(opt->u.rlimit)) {
-			axa_pemsg(emsg, "%s bad rate limit option length %zd",
-				  axa_op_to_str(op_buf, sizeof(op_buf), op),
-				  opt_len);
-			return (false);
-		}
+		val_len = sizeof(opt->u.rlimit);
+		break;
+	case AXA_P_OPT_SAMPLE:
+		val_len = sizeof(opt->u.sample);
+		break;
+	case AXA_P_OPT_SNDBUF:
+		val_len = sizeof(opt->u.bufsize);
 		break;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
-		axa_pemsg(emsg, "%s unrecognized option type %d",
+		axa_pemsg(emsg, "%s %s",
 			  axa_op_to_str(op_buf, sizeof(op_buf), op),
-			  opt->type);
+			  axa_opt_to_str(opt_buf, sizeof(opt_buf), opt->type));
 		return (false);
 #pragma clang diagnostic pop
 	}
+
+	if (val_len != opt_len - (sizeof(axa_p_opt_t) - sizeof(opt->u))) {
+		axa_pemsg(emsg, "%s %s bad rate limit option length %zd",
+			  axa_op_to_str(op_buf, sizeof(op_buf), op),
+			  axa_opt_to_str(opt_buf, sizeof(opt_buf), opt->type),
+			  opt_len);
+		return (false);
+	}
+
 	return (true);
 }
 

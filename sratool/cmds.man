@@ -103,8 +103,14 @@ command to the server.
 .Op Ar -|MAX|per-sec op
 .Op Ar -|NEVER|report-secs
 .Oc
-Tell the \*(SR server to reports its rate limits
+Tell the \*(SR server to report its rate limits
 or set rate limits and the interval between rate limit reports.
+Hits in excess of the rate limit are discarded by the server.
+.It Ic sample Op Ar X%
+Get and optionally set the percentage of hits that the \*(SR servers sends.
+.It Ic window Op Ar bufsize
+Get and optionally set the TCP output buffer size or maximum send window
+used by the server.
 .It Ic pause
 Tell the \*(SR server to stop sending data.
 .It Ic go

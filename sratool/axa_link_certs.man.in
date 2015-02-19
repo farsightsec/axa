@@ -1,0 +1,68 @@
+.\" Copyright (c) 2014-2015 by Farsight Security, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"  http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.Dd current-date via make
+.Dt axa_link_certs 8 AXA
+.Os " "
+.Sh NAME
+.Nm axa_link_certs
+.Nd Create AXA Certificate Links
+.Sh SYNOPSIS
+.Op Fl xDL
+.Op Fl S Ar certsdir
+.Sh DESCRIPTION
+.Nm Axa_link_certs
+creates the symbolic links to certificate files that are required by OpenSSL
+after new AXA certificates have been installed manually or with
+.Xr axa_make_cert 8
+or
+.Xr axa_server_cert 8 .
+Also delete old certificate files.
+It is similar to
+.Xr c_rehash 1 .
+.Ss OPTIONS
+.Bl -tag -width 3n
+.It Fl x
+enables debugging output.
+.It Fl D
+deletes the oldest duplicate among certificates for the same subject.
+.It Fl L
+disables linking all of the certificates in
+.Pa @CONFDIR@/certs
+to the target directory.
+This linking is intended to copy AXA server certificates to a private
+AXA certificate directory such as
+.Pa ~/.axa/certs .
+.It Fl S Ar certsdir
+sets the target AXA SSL certificate to
+.Ar certsdir .
+By default,
+.Nm
+looks for
+.Pa $AXACONF/certs ,
+.Pa ~/.axa/certs ,
+or
+.Pa @CONFDIR@/certs .
+.El
+.Sh ENVIRONMENT VARIABLES
+If set, AXACONF specifies the AXA configuration directory instead of,
+.Pa ~/.axa
+or
+.Pa @CONFDIR@ .
+.Sh SEE ALSO
+.Xr axa_make_cert 8 ,
+.Xr axa_server_cert 8 ,
+.Xr sratool 1 ,
+and
+.Xr sratunnel 1 .

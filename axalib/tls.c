@@ -29,8 +29,7 @@
 #include <unistd.h>
 
 
-static char certs_dir0[] = AXACONFDIR"/certs";
-static char *certs_dir = certs_dir0;
+static char *certs_dir = NULL;
 
 static char cipher_list0[] = TLS_CIPHERS;
 static char *cipher_list = cipher_list0;
@@ -78,7 +77,7 @@ q_pemsg(axa_emsg_t *emsg, const char *p, ...)
 	va_list args;
 
 	va_start(args, p);
-	axa_asprintf(&msg, p, args);
+	axa_vasprintf(&msg, p, args);
 	va_end(args);
 	qstr = reason_string(ERR_get_error());
 	axa_pemsg(emsg, "%s: %s", msg, qstr);
@@ -209,62 +208,97 @@ dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
 }
 
 static bool
-ck_certs_dir(axa_emsg_t *emsg, const char *dir)
+ck_certs_dir(axa_emsg_t *emsg, char *dir)
 {
 	struct stat sb;
 
-	if (0 > stat(dir, &sb)) {
+	AXA_ASSERT(init_critical == 1);
+
+	if (dir != NULL) {
+		if (certs_dir != NULL)
+			free(certs_dir);
+		certs_dir = dir;
+	}
+
+	if (*certs_dir == '\0') {
+		axa_pemsg(emsg, "\"\" is an invalid certificates directory");
+		return (false);
+	}
+
+	if (0 > stat(certs_dir, &sb)) {
 		axa_pemsg(emsg, "certificate directory %s: %s",
-			  dir, strerror(errno));
+			  certs_dir, strerror(errno));
 		return (false);
 	}
 
 	if (!S_ISDIR(sb.st_mode)) {
-		axa_pemsg(emsg, "%s is not a certificate directory", dir);
+			axa_pemsg(emsg, "%s is not a certificate directory",
+				  certs_dir);
 		return (false);
 	}
 
-	if (0 > eaccess(dir, X_OK)) {
+	if (0 > eaccess(certs_dir, X_OK)) {
 		axa_pemsg(emsg, "certificate %s directory: %s",
-			  dir, strerror(errno));
+			  certs_dir, strerror(errno));
 		return (false);
+	}
+
+	/* Tell the SSL library about the new directory only when it
+	 * knows about the previous directory. */
+	if (ssl_ctx != NULL
+	    && 0 >= SSL_CTX_load_verify_locations(ssl_ctx, NULL, certs_dir)) {
+		q_pemsg(emsg, "SSL_CTX_load_verify_locations(%s)", certs_dir);
+		return (NULL);
 	}
 
 	return (true);
 }
 
-const char *
+static bool
+ck_env_certs_dir(axa_emsg_t *emsg, const char *name, const char *subdir)
+{
+	const char *val;
+	char *dir;
+
+	val = getenv(name);
+	if (val == NULL)
+		return (false);
+	axa_asprintf(&dir, "%s/%s", val, subdir);
+	return (ck_certs_dir(emsg, dir));
+}
+
+static bool
+sub_tls_certs_dir(axa_emsg_t *emsg, const char *dir)
+{
+
+	if (dir != NULL)
+		return (ck_certs_dir(emsg, axa_strdup(dir)));
+
+	if (certs_dir != NULL)
+		return (ck_certs_dir(emsg, NULL));
+
+	/* Find a default if we are not supplied with a directory name. */
+	if (ck_env_certs_dir(emsg, "AXACONF", "certs"))
+		return (true);
+	if (ck_env_certs_dir(emsg, "HOME", ".axa/certs"))
+		return (true);
+	return (ck_certs_dir(emsg, axa_strdup(AXACONFDIR"/certs")));
+}
+
+bool
 axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir)
 {
+	bool result;
 	int i;
-
-	if (dir == NULL || *dir == '\0')
-		return (certs_dir);
-
-	if (!ck_certs_dir(emsg, dir))
-		return (NULL);
 
 	/* This is not reentrant */
 	i =__sync_add_and_fetch(&init_critical, 1);
 	AXA_ASSERT(i == 1);
 
-	if (ssl_ctx != NULL
-	    && 0 >= SSL_CTX_load_verify_locations(ssl_ctx, NULL, dir)) {
-		q_pemsg(emsg, "SSL_CTX_load_verify_locations(%s)", dir);
-		i = __sync_sub_and_fetch(&init_critical, 1);
-		AXA_ASSERT(i == 0);
-		return (NULL);
-	}
+	result = sub_tls_certs_dir(emsg, dir);
 
-	if (certs_dir != certs_dir0) {
-		free(certs_dir);
-		certs_dir = certs_dir0;
-	}
-	certs_dir = axa_strdup(dir);
-
-	i = __sync_sub_and_fetch(&init_critical, 1);
-	AXA_ASSERT(i == 0);
-	return (certs_dir);
+	AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
+	return (result);
 }
 
 const char *
@@ -323,6 +357,7 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 		if (!tls_threaded)
 			AXA_ASSERT(pthread_self() == init_id);
 
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (true);
 	}
 
@@ -366,6 +401,7 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 #ifndef OPENSSL_NO_COMP
 	if (0 != SSL_COMP_add_compression_method(1, COMP_zlib())) {
 		q_pemsg(emsg, "SSL_CTX_new()");
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 #endif
@@ -373,6 +409,7 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	ssl_ctx = SSL_CTX_new(SSLv23_method());
 	if (ssl_ctx == NULL) {
 		q_pemsg(emsg, "SSL_CTX_new()");
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 
@@ -381,23 +418,27 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	dsa = DSA_new();
 	if (dsa == NULL) {
 		q_pemsg(emsg, "DSA_new()");
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 	if (!DSA_generate_parameters_ex(dsa, 1024, NULL, 0,
 					NULL, NULL, NULL)) {
 		q_pemsg(emsg, "DSA_generate_parameters_ex()");
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 	dh = DSA_dup_DH(dsa);
 	if (dh == NULL) {
 		q_pemsg(emsg, "DSA_dup_DH()");
 		DSA_free(dsa);
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 	DSA_free(dsa);
 	if (!SSL_CTX_set_tmp_dh(ssl_ctx, dh)) {
 		DH_free(dh);
 		q_pemsg(emsg, "SSL_CTX_set_tmp_dh()");
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 	DH_free(dh);
@@ -406,6 +447,7 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	if (ecdh == NULL) {
 		q_pemsg(emsg,
 			  "EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)");
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 	SSL_CTX_set_tmp_ecdh(ssl_ctx, ecdh);
@@ -441,16 +483,16 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	if (*cipher_list != '\0'
 	    && 0 >= SSL_CTX_set_cipher_list(ssl_ctx, cipher_list)) {
 		q_pemsg(emsg, "SSL_CTX_set_cipher_list(%s)", cipher_list);
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 
-	if (0 >= SSL_CTX_load_verify_locations(ssl_ctx, NULL, certs_dir)) {
-		q_pemsg(emsg, "SSL_CTX_load_verify_locations(%s)", certs_dir);
+	if (!sub_tls_certs_dir(emsg, NULL)) {
+		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
 
 	AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
-
 	return (true);
 }
 
@@ -486,99 +528,100 @@ axa_tls_cleanup(void)
 		ssl_ctx = NULL;
 	}
 
-	if (certs_dir != certs_dir0)
+	if (certs_dir != NULL) {
 		free(certs_dir);
-	certs_dir = certs_dir0;
+		certs_dir = NULL;
+	}
 
-	if (cipher_list != cipher_list0)
+	if (cipher_list != cipher_list0) {
 		free(cipher_list);
-	cipher_list = cipher_list0;
+		cipher_list = cipher_list0;
+	}
 
 	ERR_free_strings();
 	OPENSSL_no_config();
 }
 
-static bool
-try_alt(char **cert_filep, char **key_filep,
-	const char *dir, const char *slash, const char *pem)
-{
-	char *cert_file, *key_file;
-	struct stat sb;
-
-	axa_asprintf(&cert_file, "%s%s%s%s", dir, slash, *cert_filep, pem);
-	axa_asprintf(&key_file, "%s%s%s%s", dir, slash, *key_filep, pem);
-	if (0 <= stat(cert_file, &sb) && 0 <= stat(key_file, &sb)) {
-		free(*cert_filep);
-		*cert_filep = cert_file;
-		free(*key_filep);
-		*key_filep = key_file;
-		return (true);
-	}
-
-	free(cert_file);
-	free(key_file);
-	return (false);
-}
-
 /*
- * Parse "certfile,keyfile@host,port" for a TLS connection.
- * Do not allow '@' or ',' in the file or directory names.
+ * Parse "certfile,keyfile@host,port" or "user@host,port" for a TLS connection.
+ *	Take everything before the first '@' as the file or user name.
+ *	Given "user", assume the file names are user.pem and user.key
+ *	User names must not contain '/' or ','.
+ *	Look first in the current directory.
+ *	If the files are not found in the current directory
+ *	and if they do not contain '/', prepend certs_dir and try again.
  */
 bool
 axa_tls_parse(axa_emsg_t *emsg,
 	      char **cert_filep, char **key_filep, char **addrp,
 	      const char *spec)
 {
-	char *key_file, *addr, *file;
-	int file_errno;
+	const char *comma, *at;
 	struct stat sb;
-#	define EMSG "\"tls:%s\" is not \"tls:cert_file,key_file@user,port\""
+	char *p;
 
-	if (!ck_certs_dir(emsg, certs_dir))
+	AXA_ASSERT(*cert_filep == NULL && *key_filep == NULL && *addrp == NULL);
+
+	/* Just assume we are an un-threaded client
+	 * if we have not been told. */
+	if (!tls_initialized
+	    && !axa_tls_init(emsg, false, false))
 		return (false);
 
-	key_file = strchr(spec, ',');
-	if (key_file == NULL || key_file == spec) {
-		axa_pemsg(emsg, EMSG, spec);
-		return (false);
-	}
-	++key_file;
+	at = strchr(spec, '@');
+	comma = strpbrk(spec, ",@");
 
-	addr = strchr(spec, '@');
-	if (addr == NULL) {
-		axa_pemsg(emsg, EMSG, spec);
-		return (false);
-	}
-	if (addr == key_file) {
-		axa_pemsg(emsg, EMSG, spec);
+	if (at == NULL || at == spec) {
+		axa_pemsg(emsg, "\"tls:%s\" has no user name or cert files",
+			  spec);
 		return (false);
 	}
 
-	*addrp = axa_strdup(addr+1);
-	*cert_filep = axa_strndup(spec, key_file - spec - 1);
-	*key_filep = axa_strndup(key_file, addr - key_file);
+	if (comma == at) {
+		/* Without a comma, assume we have a user name. */
+		axa_asprintf(cert_filep, "%.*s.pem",
+			     (int)(comma - spec), spec);
+		axa_asprintf(key_filep, "%.*s.key",
+			     (int)(comma - spec), spec);
+	} else {
+		*cert_filep = axa_strndup(spec, comma - spec);
+		*key_filep = axa_strndup(comma+1, at - (comma+1));
+	}
+	*addrp = axa_strdup(at+1);
+
+	/* Try the naked file names. */
+	if (0 > stat(*cert_filep, &sb)) {
+		axa_pemsg(emsg, "\"%s\" %s: %s",
+			  spec, *cert_filep, strerror(errno));
+	} else if (0 <= stat(*key_filep, &sb)) {
+		return (true);
+	}
+	axa_pemsg(emsg, "\"%s\" %s: %s",
+		  spec, *key_filep, strerror(errno));
+
+	/* If that failed,
+	 * look in the certs directory if neither file name is a path. */
+	if (strchr(*cert_filep, '/') != NULL
+	    || strchr(*cert_filep, '/') != NULL)
+		return (false);
+
+	axa_asprintf(&p, "%s/%s", certs_dir, *cert_filep);
+	free(*cert_filep);
+	*cert_filep = p;
+
+	axa_asprintf(&p, "%s/%s", certs_dir, *key_filep);
+	free(*key_filep);
+	*key_filep = p;
 
 	if (0 > stat(*cert_filep, &sb)) {
-		file = *cert_filep;
-		file_errno = errno;
-	} else if (0 > stat(*key_filep, &sb)) {
-		file = *key_filep;
-		file_errno = errno;
-	} else {
+		axa_pemsg(emsg, "\"%s\" %s: %s",
+			  spec, *cert_filep, strerror(errno));
+	} else if (0 <= stat(*key_filep, &sb)) {
 		return (true);
 	}
+	axa_pemsg(emsg, "\"%s\" %s: %s",
+		  spec, *key_filep, strerror(errno));
 
-	/* Look for the files in the directory and with ".pem". */
-	if (try_alt(cert_filep, key_filep, "", "", ".pem"))
-		return (true);
-	if (**cert_filep == '/' || **key_filep == '/')
-		return (false);
-	if (try_alt(cert_filep, key_filep, certs_dir, "/", ""))
-		return (true);
-	if (try_alt(cert_filep, key_filep, certs_dir, "/", ".pem"))
-		return (true);
-
-	axa_pemsg(emsg, "\"%s\" %s: %s", spec, file, strerror(file_errno));
 	free(*addrp);
 	*addrp = NULL;
 	free(*cert_filep);
@@ -667,14 +710,7 @@ axa_tls_start(axa_emsg_t *emsg, axa_io_t *io)
 		return (AXA_IO_ERR);
 	}
 
-	/* The TLS handshaking is finished. */
-	io->i_events = AXA_POLL_IN;
-	io->o_events = 0;
-
-	/*
-	 * Require a verified certificate.
-	 * Is this redundant given SSL_VERIFY_FAIL_IF_NO_PEER_CERT?
-	 */
+	/* Require a verified certificate. */
 	l = SSL_get_verify_result(io->ssl);
 	if (l != X509_V_OK) {
 		axa_pemsg(emsg, "verify(): %s",
@@ -682,6 +718,7 @@ axa_tls_start(axa_emsg_t *emsg, axa_io_t *io)
 		return (AXA_IO_ERR);
 	}
 
+	/* Get information about the connection and the peer. */
 	AXA_ASSERT(io->tls_info == NULL);
 	comp = SSL_COMP_get_name(SSL_get_current_compression(io->ssl));
 	if (comp == NULL)
@@ -723,9 +760,13 @@ axa_tls_start(axa_emsg_t *emsg, axa_io_t *io)
 		return (AXA_IO_ERR);
 	}
 	j = X509_NAME_get_text_by_NID(subject, NID_commonName,
-				       io->user.name, sizeof(io->user.name));
+				      io->user.name, sizeof(io->user.name));
 	AXA_ASSERT(i == j);
 	X509_free(cert);
+
+	/* The TLS handshaking is finished. */
+	io->i_events = AXA_POLL_IN;
+	io->o_events = 0;
 
 	io->connected = true;
 	return (AXA_IO_OK);

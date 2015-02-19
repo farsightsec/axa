@@ -1,0 +1,139 @@
+#! /bin/sh -e
+
+# set -e in case we are run using `sh axa_link_certs`
+set -e
+
+DEBUG=
+XARGS_DEBUG=
+DELETE=yes
+NOLINK=
+CERTS_DIR=
+
+ME=`basename $0`
+USAGE="$ME: [-xL] [-S certsdir]"
+
+while getopts "xDLS:" c; do
+    case $c in
+	x) set -x; DEBUG=-x; XARGS_DEBUG=-t;;
+	D) DELETE=yes;;
+	L) NOLINK=yes;;
+	S) CERTS_DIR="$OPTARG";;
+	*) echo "$USAGE" 1>&2; exit 1;;
+    esac
+done
+shift `expr $OPTIND - 1 || true`
+if test "$#" -ne 0; then
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+
+# Function to get the CN of a certificate
+cn () {
+    openssl x509 -noout -subject | sed -e 's/.*CN=\([^=\/]*\).*/\1/'
+}
+
+# Function to get the exiry date of a certificate
+edate () {
+    local D
+    D=`openssl x509 -noout -enddate -in "$1" | sed -e 's/notAfter=//'`
+    if test `uname` = Linux; then
+	date -d "$D" +%s
+    else
+	# assume we have the FreeBSD date command if not Linux
+	date -j -f '%b %d %T %Y %Z' +%s "$D"
+    fi
+}
+
+
+# Function to create a hash link
+link () {
+    local NM LINK_NM HASH SUBJECT SUBJECT2 NM2
+    NM=$1
+
+    HASH=`openssl x509 -noout -subject_hash -in "$NM"`
+    SUBJECT=`cn <"$NM"`
+
+    # find a free name
+    for N in 0 1 2 3 4 5 6 7 8 9 ""; do
+	if test -z "$N"; then
+	    echo "11 certs with hash $HASH including $NM" 1>&2
+	    exit 1
+	fi
+
+	LINK_NM="$CERTS_DIR/$HASH.$N"
+
+	# stop on a free name
+	test ! -e "$LINK_NM" && break
+
+	SUBJECT2=`cn <"$LINK_NM"`
+	test "$SUBJECT" != "$SUBJECT2" && continue
+
+	# silently forget a link to @CONFDIR@/certs
+	expr "$NM" : '.*\/' >/dev/null && return
+	NM2=`ls -l $LINK_NM | sed -e 's/.*-> //'`
+	expr "$NM2" : '.*\/' >/dev/null && break
+
+	echo "$NM and $NM2 are duplicate certificates for \"$SUBJECT\"" 2>&1
+
+	if test `edate "$NM"` -le `edate "$NM2"`; then
+	    # Delete or ignore the new file if it expires first.
+	    test -n "$DELETE" && rm -f "$NM"
+	    return
+	fi
+
+	# Delete or take the link of the older file if it expires first.
+	test -n "$DELETE" && rm "$NM2"
+	rm "$LINK_NM"
+	break
+    done
+
+    ln -s "$NM" "$LINK_NM"
+}
+
+
+# Get the target directory
+if test -n "$CERTS_DIR"; then
+    MSG="$CERTS_DIR"
+elif test -n "$AXACONF"; then
+    # If $AXACONF is set, insist on using it $AXACONF/certs
+    CERTS_DIR="$AXACONF/certs"
+    MSG="\$AXACONF/certs or $AXACONF/certs"
+elif test -d ~/.axa; then
+    CERTS_DIR=~/.axa/certs
+    MSG="~/.axa/certs"
+else
+    CERTS_DIR=@CONFDIR@/certs
+    MSG=@CONFDIR@/certs
+fi
+if test ! -d "$CERTS_DIR"; then
+    read -p "$MSG does not exist.  Create it? " YES
+    case "$YES" in
+	[yY]|[yY][eE][sS]) mkdir -p "$CERTS_DIR";;
+    esac
+fi
+cd $CERTS_DIR
+if test ! -w $CERTS_DIR; then
+    echo "$CERTS_DIR is not writable" 1>&2
+    exit 1
+fi
+
+
+# remove old hash links (including files) from the target directory
+find . -maxdepth 1 -name '*.[0-9]'  | xargs -r $XARGS_DEBUG rm
+
+# Link certificate files (but not keys) from @CONFDIR@/certs.
+SRCS=.
+if test -z "$NOLINK" -a $CERTS_DIR != @CONFDIR@/certs			\
+	-a -d @CONFDIR@/certs; then
+    SRCS=". @CONFDIR@/certs"
+fi
+
+
+# make hash symlinks
+find $SRCS -maxdepth 1 -type f						\
+    | xargs -r $XARGS_DEBUG file					\
+    | sed -E -n 's/(\.\/)?(.*): *PEM certificate/\2/p'			\
+    | while read L; do
+	link $L
+    done

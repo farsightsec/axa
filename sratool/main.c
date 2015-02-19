@@ -169,6 +169,8 @@ static cmd_t delete_cmd;
 static cmd_t channel_cmd;
 static cmd_t anom_cmd;
 static cmd_t rlimits_cmd;
+static cmd_t sample_cmd;
+static cmd_t sndbuf_cmd;
 static cmd_t acct_cmd;
 static cmd_t pause_cmd;
 static cmd_t trace_cmd;
@@ -282,11 +284,11 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"watch",		sra_watch_cmd,		SRA, MB, YES,
     "tag watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
-    " from, or contain the specified IP addresses,\n"
-    " that contain the specified domain name,\n"
-    " that arrived at the server on the specifed SIE channel,\n"
-    " or are SIE messages that could not be decoded.\n"
-    " The \"tag\" is the number labeling the watch"},
+    " from, or contain the specified IP addresses,"
+    " that contain the specified domain name,"
+    " that arrived at the server on the specifed SIE channel,"
+    " or are SIE messages that could not be decoded."
+    " The \"tag\" is the integer labeling the watch"},
 {"watches",		sra_watch_cmd,		SRA, MB, YES,
     NULL,
     NULL},
@@ -305,7 +307,7 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     NULL},
 {"watch",		rad_watch_cmd,		RAD, MB, YES,
     "tag watch {ip=IP[/n] | dns=[*.]dom}",
-    "Tell the RAD server about address and domains of interest.\n"},
+    "Tell the RAD server about address and domains of interest."},
 {"list anomaly",	list_cmd,		RAD, NO, YES,
     "[tag] list anomaly",
     "List a specified or all available anomaly detection modules. "},
@@ -342,14 +344,22 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " \"Tag\" is the number labeling the module."},
 {"rate limits",		rlimits_cmd,		BOTH,MB, YES,
     "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
-    "Ask the server to report its rate limits\n"
-    " or set rate limits and the interval between rate limit reports."},
+    "Ask the server to report its rate limits"
+    " or to set rate limits and the interval between rate limit reports."},
 {"rlimits",		rlimits_cmd,		BOTH,MB, YES,
     NULL,
     NULL},
 {"limits",		rlimits_cmd,		BOTH,MB, YES,
     NULL,
     NULL},
+{"sample",		sample_cmd,		BOTH,MB, YES,
+    "sample [percent]",
+    "Ask the server to report its current output sampling rate"
+    " or to set its sampling rate."},
+{"window",		sndbuf_cmd,		BOTH,MB, YES,
+    "window [bytes]",
+    "Ask the server to report its current TCP output buffer size on TLS and"
+    " TCP connections or to set its output buffer size."},
 {"pause",		pause_cmd,		BOTH,NO, YES,
     "pause",
     "Tell the server to stop sending data."},
@@ -854,7 +864,7 @@ usage(void)
 int
 main(int argc, char **argv)
 {
-	const char *fields_file = AXACONFDIR"/fields";
+	const char *fields_file = "";
 	char cmd_buf[500];
 	const char *cmd;
 	int cmd_len;
@@ -923,7 +933,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'S':
-			if (axa_tls_certs_dir(&emsg, optarg) == NULL)
+			if (!axa_tls_certs_dir(&emsg, optarg))
 				error_msg("%s", emsg.c);
 			break;
 
@@ -2200,7 +2210,7 @@ user_cmd(axa_tag_t tag, const char *arg,
 	axa_p_user_t user;
 
 	if (strlen(arg) >= sizeof(user.name)) {
-		error_msg("user name \"%s\" too long", arg);
+		error_msg("user name \"%s\" is too long", arg);
 		return (0);
 	}
 	strncpy(user.name, arg, sizeof(user.name));
@@ -2397,7 +2407,9 @@ rlimits_cmd(axa_tag_t tag, const char *arg,
 	memset(&opt, 0, sizeof(opt));
 	opt.type = AXA_P_OPT_RLIMIT;
 
+	/* Ignore " limits" if present. */
 	word_cmp(&arg, "limits");
+
 	if (0 > axa_get_token(sec_buf, sizeof(sec_buf),
 			      &arg, AXA_WHITESPACE)
 	    || 0 > axa_get_token(report_secs_buf, sizeof(report_secs_buf),
@@ -2413,6 +2425,70 @@ rlimits_cmd(axa_tag_t tag, const char *arg,
 	opt.u.rlimit.cur_pkts_per_sec = AXA_RLIMIT_NA;
 	return (srvr_send(tag, AXA_P_OP_OPT, &opt,
 			  sizeof(opt) - sizeof(opt.u) + sizeof(opt.u.rlimit)));
+}
+
+static int
+sample_cmd(axa_tag_t tag, const char *arg,
+	   const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	axa_p_opt_t opt;
+	double d;
+	char *p;
+
+	memset(&opt, 0, sizeof(opt));
+	opt.type = AXA_P_OPT_SAMPLE;
+
+	if (*arg == '\0') {
+		opt.u.sample = AXA_H2P32(AXA_P_OPT_SAMPLE_REQ);
+
+	} else {
+		d = strtod(arg, &p);
+		if (*p != '\0' && *p != '%' && p[1] != '\0')
+			return (-1);
+		if (d <= 0.0 || d > 100.0) {
+			error_msg("\"%s\" is an invalid sampling rate", arg);
+			return (0);
+		}
+		opt.u.sample = AXA_H2P32(d * AXA_P_OPT_SAMPLE_SCALE);
+	}
+
+	return (srvr_send(tag, AXA_P_OP_OPT, &opt,
+			  sizeof(opt) - sizeof(opt.u) + sizeof(opt.u.sample)));
+}
+
+static int
+sndbuf_cmd(axa_tag_t tag, const char *arg,
+	   const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	axa_p_opt_t opt;
+	char *p;
+
+	memset(&opt, 0, sizeof(opt));
+	opt.type = AXA_P_OPT_SNDBUF;
+
+	if (client.io.type != AXA_IO_TYPE_TCP
+	    && client.io.type != AXA_IO_TYPE_TLS) {
+		error_msg("cannot change the buffer size on %s connections",
+			  axa_io_type_to_str(client.io.type));
+		return (0);
+	}
+
+	if (*arg == '\0') {
+		opt.u.bufsize = AXA_H2P32(AXA_P_OPT_SNDBUF_REQ);
+
+	} else {
+		opt.u.bufsize = strtoul(arg, &p, 0);
+		if (*p != '\0')
+			return (-1);
+		if (opt.u.bufsize < AXA_P_OPT_SNDBUF_MIN) {
+			error_msg("invalid output window size of %s", arg);
+			return (0);
+		}
+		opt.u.bufsize = AXA_H2P32(opt.u.bufsize);
+	}
+
+	return (srvr_send(tag, AXA_P_OP_OPT, &opt,
+			  sizeof(opt) - sizeof(opt.u) + sizeof(opt.u.bufsize)));
 }
 
 static int
@@ -2462,7 +2538,7 @@ trace_cmd(axa_tag_t tag, const char *arg,
 	}
 	memset(&opt, 0, sizeof(opt));
 	opt.type = AXA_P_OPT_TRACE;
-	opt.u.trace = l;
+	opt.u.trace = AXA_H2P32(l);
 	return (srvr_send(tag, AXA_P_OP_OPT, &opt,
 			  sizeof(opt) - sizeof(opt.u) + sizeof(opt.u.trace)));
 }

@@ -87,8 +87,16 @@ AC_DEFINE_UNQUOTED(AXACONFDIR,"$CONFDIR",[config dir for axa])
 
 AC_DEFINE_UNQUOTED(AXA_PVERS_STR,"version $PACKAGE_VERSION", [Version])
 
-AC_CONFIG_FILES([Makefile axa/libaxa.pc doc/doxygen/Doxyfile
-                etc/link_certs.sh etc/make_cert.sh])
+AC_CONFIG_FILES([Makefile axa/libaxa.pc doc/doxygen/Doxyfile])
+
+AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
+		sratunnel/sratunnel.man
+                sratool/axa_link_certs.man sratool/axa_make_cert.man
+		sratool/axa_server_cert.man])
+
+AC_CONFIG_FILES([sratool/axa_link_certs], [chmod +x sratool/axa_link_certs])
+AC_CONFIG_FILES([sratool/axa_make_cert], [chmod +x sratool/axa_make_cert])
+AC_CONFIG_FILES([sratool/axa_server_cert], [chmod +x sratool/axa_server_cert])
 
 AC_ARG_WITH([ciphers],
 AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),

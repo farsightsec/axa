@@ -1,0 +1,148 @@
+#! /bin/sh -e
+
+# set -e in case we are run using `sh axa_link_certs`
+set -e
+
+DEBUG=
+XARGS_DEBUG=
+FORCE=
+CERT_FILE=
+SERVER=
+
+ME=`basename $0`
+USAGE="$ME: [-xf] [-S certsdir] [-o cert_file] -s server,port"
+
+while getopts "xfS:o:s:" c; do
+    case $c in
+	x) set -x; DEBUG=-x; XARGS_DEBUG=-t;;
+	f) FORCE=yes;;
+	S) CERTS_DIR="$OPTARG";;
+	o) CERT_FILE="$OPTARG";;
+	s) SERVER="$OPTARG";;
+	*) echo "$USAGE" 1>&2; exit 1;;
+    esac
+done
+shift `expr $OPTIND - 1 || true`
+if test "$#" -ne 0; then
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+if expr "$CERT_FILE" : '.*\/' >/dev/null; then
+    echo "\"-o cert_file\" must be a file instead of a path" 1>&2
+    exit 1
+fi
+
+# require a server and port number
+SERVER=`echo "$SERVER" | sed -n 's/,\([0-9][0-9]*\)$/:\1/p'`
+if test -z "$SERVER"; then
+    echo "\"-server,port\" is required" 1>&2
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+
+# Function to get permission
+yesno () {
+    read -p "$1" YES
+    case "$YES" in
+	[yY]|[yY][eE][sS]);;
+	*)
+	    echo "?" 2>&1
+	    exit 1
+	    ;;
+    esac
+}
+
+# Function to get the CN of a certificate
+cn () {
+    openssl x509 -noout -subject | sed -e 's/.*CN=\([^=\/]*\).*/\1/'
+}
+
+# Get the target directory
+if test -n "$CERTS_DIR"; then
+    MSG="$CERTS_DIR"
+elif test -n "$AXACONF"; then
+    # If $AXACONF is set, insist on using it $AXACONF/certs
+    CERTS_DIR="$AXACONF/certs"
+    MSG="\$AXACONF/certs or $AXACONF/certs"
+elif test -d ~/.axa; then
+    CERTS_DIR=~/.axa/certs
+    MSG="~/.axa/certs"
+else
+    CERTS_DIR=@CONFDIR@/certs
+    MSG=@CONFDIR@/certs
+fi
+if test ! -d "$CERTS_DIR"; then
+    read -p "$MSG does not exist.  Create it? " YES
+    case "$YES" in
+	[yY]|[yY][eE][sS]) mkdir -p "$CERTS_DIR";;
+    esac
+fi
+cd $CERTS_DIR
+if test ! -w .; then
+    echo "$CERTS_DIR is not writable" 1>&2
+    exit 1
+fi
+
+
+CERT=`openssl s_client -connect "$SERVER" </dev/null 2>&1		\
+    | sed -n '/--BEGIN CERTIFICATE--/,/--END CERTIFICATE---/p'`
+
+if test -z "$CERT"; then
+    echo "failed to get certificate from $SERVER" 1>&2
+    exit 1
+fi
+
+SUBJECT=`echo "$CERT" | cn`
+FPRINT=`echo "$CERT" | openssl x509 -noout -fingerprint`
+HASH=`echo "$CERT" | openssl x509 -noout -subject_hash`
+
+echo "Obtained certificate for \"$SUBJECT\" with"
+echo "$FPRINT"
+
+test -z "$CERT_FILE" && CERT_FILE="$SUBJECT.pem"
+if ! expr "$CERT_FILE" : '[-._a-zA-Z0-9][-._a-zA-Z0-9]*$' >/dev/null; then
+    echo "\"$CERT_FILE\" is not a suitable certificate file name" 1>&2
+    exit 1
+fi
+
+DELETE=
+if test -e "$CERT_FILE"; then
+    if test -z "$FORCE"; then
+	echo "$CERT_FILE already exists" 1>&2
+	exit 1
+    else
+	DELETE=yes
+    fi
+fi
+
+yesno " Install it in $CERTS_DIR/$CERT_FILE? "
+
+test -n "$DELETE" && rm "$CERT_FILE"
+
+# Look for an existing certificate and a free link name.
+for N in 0 1 2 3 4 5 6 7 8 9 ""; do
+    LINK_CERT_FILE=$HASH.$N
+    test ! -e "$LINK_CERT_FILE" && break
+
+    SUBJECT2=`cn <"$LINK_CERT_FILE"`
+    test "$SUBJECT" != "$SUBJECT2" && continue
+
+    # Delete the old certificate unless it is a link from @CONFDIR@
+    CERT_FILE2=`ls -l $LINK_CERT_FILE | sed -e 's/.*-> //'`
+    if ! expr "$CERT_FILE2" : '.*\/' >/dev/null; then
+	if test -z "$FORCE"; then
+	    echo "$CERTS_DIR/$CERT_FILE2 is an existing certificate for \"$SUBJECT\""
+	    test -z "$FORCE" && yesno "  Delete $CERTS_DIR/$CERT_FILE2? "
+	fi
+	rm "$CERT_FILE2"
+    fi
+
+    # Delete the old link
+    rm "$LINK_CERT_FILE"
+    break
+done
+
+echo "$CERT" >$CERT_FILE
+ln -f -s $CERT_FILE $LINK_CERT_FILE

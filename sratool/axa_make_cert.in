@@ -1,0 +1,88 @@
+#! /bin/sh -e
+
+# set -e in case we are run using `sh axa_link_certs`
+set -e
+
+DEBUG=
+XARGS_DEBUG=
+LIFE=365
+CERTS_DIR=
+CN=
+
+ME=`basename $0`
+USAGE="$ME: [-x] [-l days] [-S certsdir] -n name"
+
+while getopts "xl:L:S:u:" c; do
+    case $c in
+	x) set -x; DEBUG=-x; XARGS_DEBUG=-t;;
+	l) LIFE="$OPTARG";;
+	S) CERTS_DIR="$OPTARG";;
+	u) CN="$OPTARG";;
+	*) echo "$USAGE" 1>&2; exit 1;;
+    esac
+done
+shift `expr $OPTIND - 1 || true`
+if test "$#" -ne 0; then
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+
+# require a user name
+if ! expr "$CN" : '[-._a-zA-Z0-9][-._a-zA-Z0-9]*$' >/dev/null; then
+    echo "\"$CN\" is not a valid AXA user name" 1>&2
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+
+CERT_FILE="$CN.pem"
+KEY_FILE="$CN.key"
+
+
+# Get the target directory
+if test -n "$CERTS_DIR"; then
+    MSG="$CERTS_DIR"
+elif test -n "$AXACONF"; then
+    # If $AXACONF is set, insist on using it $AXACONF/certs
+    CERTS_DIR="$AXACONF/certs"
+    MSG="\$AXACONF/certs or $AXACONF/certs"
+elif test -d ~/.axa; then
+    CERTS_DIR=~/.axa/certs
+    MSG="~/.axa/certs"
+else
+    CERTS_DIR=@CONFDIR@/certs
+    MSG=@CONFDIR@/certs
+fi
+if test ! -d "$CERTS_DIR"; then
+    read -p "$MSG does not exist.  Create it? " YES
+    case "$YES" in
+	[yY]|[yY][eE][sS]) mkdir -p "$CERTS_DIR";;
+    esac
+fi
+cd $CERTS_DIR
+if test ! -w $CERTS_DIR; then
+    echo "$CERTS_DIR is not writable" 1>&2
+    exit 1
+fi
+
+
+if test -e "$CERT_FILE"; then
+    echo "$CERT_FILE already exists" 1>&2
+    exit 1
+fi
+if test -e "$KEY_FILE"; then
+    echo "$KEY_FILE already exists" 1>&2
+    exit 1
+fi
+
+
+# Allow only the CN in the subject to align these certificates with
+#   AXA user file entries and to avoid complications when replacing or
+#   invalidating certificates.  OpenSSL treats certificates with the same CN
+#   but differing other parts of the subject as entirely different.
+openssl req -nodes -new -x509 -batch -in /dev/null -set_serial 0	\
+	-keyout "$KEY_FILE" -out "$CERT_FILE" -days "$LIFE"		\
+	 -subj "/CN=$CN"
+
+chmod og-rw "$KEY_FILE"

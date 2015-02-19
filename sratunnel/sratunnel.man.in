@@ -85,7 +85,8 @@ SIE messages and raw IP packets per second.
 specifies a list ciphers for TLS connections.
 .It Fl S Ar certs
 overrides the default directory containing SSL certificates and keys.
-Its default is often /usr/local/etc/axa/certs or /etc/axa/certs.
+Its default is
+.Pa @CONFDIR@/certs .
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
@@ -167,7 +168,7 @@ The following sends all new domain reports on channel 212
 seen by the SRA server at example.com
 to the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-sratunnel -s "ssh user@example.com" -o nmsg:127.1,8000 \\
+sratunnel -s ssh:user@example.com -o nmsg:127.1,8000 \\
 	-c ch212 -w ch=ch212
 .Ed
 .Pp
@@ -176,23 +177,32 @@ between the server and
 .Nm .
 The following is likely to be only a network stress test:
 .Bd -literal -offset 4n
-sratunnel -s "ssh user@example.com" -o nmsg:127.1,8000 \\
+sratunnel -s ssh:user@example.com -o nmsg:127.1,8000 \\
 	-c all -w ip=128.0/1  -w ip=0/1
 .Ed
 .Sh FILES
 .Bl -tag -width config
+.It Ar certs
+is the directory set with
+.Fl S
+that contains TLS certificate and key files.
 .It Ar config
 is the
 .Xr ssh_config 5
 configuration file used with
-.Ar connect\ ssh\ ...
+.Ar connect\ ssh:...
 connections.
 "Host" stanzas in the file can simplify connections to \*(SR servers.
 .El
+.Sh ENVIRONMENT VARIABLES
+If set, AXACONF specifies the AXA configuration directory instead of the
+default,
+.Pa ~/.axa
+or
+.Pa @CONFDIR@ .
 .Sh SEE ALSO
 .Xr sratool 1 ,
 .Xr radtool 1 ,
 .Xr mkfifo 1 ,
-.Xr nmsgtool 1 ,
 and
-.Xr srad 8 .
+.Xr nmsgtool 1 .
