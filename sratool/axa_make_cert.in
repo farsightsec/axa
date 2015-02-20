@@ -40,28 +40,81 @@ CERT_FILE="$CN.pem"
 KEY_FILE="$CN.key"
 
 
-# Get the target directory
-if test -n "$CERTS_DIR"; then
-    MSG="$CERTS_DIR"
-elif test -n "$AXACONF"; then
-    # If $AXACONF is set, insist on using it $AXACONF/certs
-    CERTS_DIR="$AXACONF/certs"
-    MSG="\$AXACONF/certs or $AXACONF/certs"
-elif test -d ~/.axa; then
-    CERTS_DIR=~/.axa/certs
-    MSG="~/.axa/certs"
-else
-    CERTS_DIR=@CONFDIR@/certs
-    MSG=@CONFDIR@/certs
-fi
-if test ! -d "$CERTS_DIR"; then
-    read -p "$MSG does not exist.  Create it? " YES
+# Function to get permission
+yesno () {
+    read -p "$1" YES
     case "$YES" in
-	[yY]|[yY][eE][sS]) mkdir -p "$CERTS_DIR";;
+	[yY]|[yY][eE][sS])
+	    return 0
+	    ;;
+	*)
+	    if test -n "$2"; then
+		echo "?" 2>&1
+		exit 1
+	    fi
+	    return 1
+	    ;;
     esac
+}
+
+
+# Get the target directory
+#   The user's expressed preference overrides.
+#   Otherwise, take the first existing directory among $AXACONF/certs,
+#	~/.axa/certs, and @CONFDIR@/certs even if it is not writable,
+#	because it will be used by AXA clients
+#   Otherwise, offer to create a certs directory
+#	in the first existing and writable among  $AXACONF, ~/.axa,
+#	and @CONFDIR@
+#   Otherwise, give up
+if test -n "$CERTS_DIR"; then
+    if test ! -e "$CERTS_DIR"; then
+	yesno "Create $CERTS_DIR? " X
+	mkdir -p "$CERTS_DIR"
+    fi
+else
+    NEW1=
+    NEW2=
+    NEW3=
+    if test -n "$AXACONF" -a -d "$AXACONF"; then
+	if test -e "$AXACONF/certs"; then
+	    if test -d "$AXACONF/certs" -a -x "$AXACONF/certs"; then
+		$CERTS_DIR="$AXACONF/certs"
+	    fi
+	elif test -w "$AXACONF"; then
+	    NEW1="$AXACONF/certs"
+	fi
+    fi
+    if test -z "$CERTS_DIR" -a -d ~/.axa -a -x ~/.axa; then
+	if test -e ~/.axa/certs; then
+	    if test -d ~/.axa/certs; then
+		CERTS_DIR=~/.axa/certs
+	    fi
+	elif test -w ~/.axa; then
+	    NEW2=~/.axa/certs
+	fi
+    fi
+    if test -z "$CERTS_DIR"; then
+	if test -e @CONFDIR@/certs; then
+	    if test -d @CONFDIR@/certs -a -x @CONFDIR@/certs; then
+		CERTS_DIR=@CONFDIR@/certs
+	    fi
+	elif test -w @CONFDIR@; then
+	    NEW3=@CONFDIR@/certs
+	fi
+    fi
+    if test -z "$CERTS_DIR" -a -n "$NEW1" && yesno "Create $NEW1? "; then
+	mkdir "$NEW1" && CERTS_DIR="$NEW1"
+    fi
+    if test -z "$CERTS_DIR" -a -n "$NEW2" && yesno "Create $NEW2? "; then
+	mkdir "$NEW2" && CERTS_DIR="$NEW2"
+    fi
+    if test -z "$CERTS_DIR" -a -n "$NEW3" && yesno "Create $NEW3? "; then
+	mkdir "$NEW3" && CERTS_DIR="$NEW3"
+    fi
 fi
-cd $CERTS_DIR
-if test ! -w $CERTS_DIR; then
+cd ${CERTS_DIR:=@CONFDIR@/certs}
+if test ! -w .; then
     echo "$CERTS_DIR is not writable" 1>&2
     exit 1
 fi
