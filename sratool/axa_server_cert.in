@@ -3,6 +3,8 @@
 # set -e in case we are run using `sh axa_link_certs`
 set -e
 
+OPENSSL=openssl
+
 DEBUG=
 XARGS_DEBUG=
 FORCE=
@@ -61,7 +63,7 @@ yesno () {
 
 # Function to get the CN of a certificate
 cn () {
-    openssl x509 -noout -subject | sed -e 's/.*CN=\([^=\/]*\).*/\1/'
+    $OPENSSL x509 -noout -subject | sed -e 's/.*CN=\([^=\/]*\).*/\1/'
 }
 
 # Get the target directory
@@ -126,7 +128,7 @@ if test ! -w .; then
 fi
 
 
-CERT=`openssl s_client -connect "$SERVER" </dev/null 2>&1		\
+CERT=`$OPENSSL s_client -connect "$SERVER" </dev/null 2>&1		\
     | sed -n '/--BEGIN CERTIFICATE--/,/--END CERTIFICATE---/p'`
 
 if test -z "$CERT"; then
@@ -135,8 +137,8 @@ if test -z "$CERT"; then
 fi
 
 SUBJECT=`echo "$CERT" | cn`
-FPRINT=`echo "$CERT" | openssl x509 -noout -fingerprint`
-HASH=`echo "$CERT" | openssl x509 -noout -subject_hash`
+FPRINT=`echo "$CERT" | $OPENSSL x509 -noout -fingerprint`
+HASH=`echo "$CERT" | $OPENSSL x509 -noout -subject_hash`
 
 echo "Obtained certificate for \"$SUBJECT\" with"
 echo "$FPRINT"

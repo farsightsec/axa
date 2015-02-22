@@ -2132,9 +2132,18 @@ static int
 ciphers_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	   const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
+	const char *cipher;
+
 	if (arg[0] == '\0') {
-		printf("next cipher list: \"%s\"\n",
-		       axa_tls_cipher_list(&emsg, NULL));
+		cipher = axa_tls_cipher_list(&emsg, NULL);
+		if (cipher == NULL || *cipher == '\0')
+			printf("next TLS cipher: \"\"\n");
+		else
+			printf("next TLS cipher: %s\n",
+			       cipher);
+		if (client.io.tls_info != NULL)
+			printf("    current: %s\n",
+			       client.io.tls_info);
 
 	} else if (axa_tls_cipher_list(&emsg, arg) == NULL) {
 		error_msg("%s", emsg.c);

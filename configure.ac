@@ -100,7 +100,7 @@ AC_CONFIG_FILES([sratool/axa_server_cert], [chmod +x sratool/axa_server_cert])
 
 AC_ARG_WITH([ciphers],
 AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),
-[TLS_CIPHERS="$withval"],[TLS_CIPHERS=""])
+[TLS_CIPHERS="$withval"],[TLS_CIPHERS="ALL"])
 AC_DEFINE_UNQUOTED(TLS_CIPHERS,"$TLS_CIPHERS",[TLS cipher list])
 
 AC_OUTPUT

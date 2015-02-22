@@ -3,6 +3,8 @@
 # set -e in case we are run using `sh axa_link_certs`
 set -e
 
+OPENSSL=openssl
+
 DEBUG=
 XARGS_DEBUG=
 LIFE=365
@@ -10,7 +12,7 @@ CERTS_DIR=
 CN=
 
 ME=`basename $0`
-USAGE="$ME: [-x] [-l days] [-S certsdir] -n name"
+USAGE="$ME: [-x] [-l days] [-S certsdir] -u name"
 
 while getopts "xl:L:S:u:" c; do
     case $c in
@@ -134,8 +136,8 @@ fi
 #   AXA user file entries and to avoid complications when replacing or
 #   invalidating certificates.  OpenSSL treats certificates with the same CN
 #   but differing other parts of the subject as entirely different.
-openssl req -nodes -new -x509 -batch -in /dev/null -set_serial 0	\
+$OPENSSL req -nodes -new -x509 -batch -in /dev/null -set_serial 0	\
 	-keyout "$KEY_FILE" -out "$CERT_FILE" -days "$LIFE"		\
-	 -subj "/CN=$CN"
+	-newkey rsa:2048 -subj "/CN=$CN"
 
 chmod og-rw "$KEY_FILE"

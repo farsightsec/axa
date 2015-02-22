@@ -3,9 +3,11 @@
 # set -e in case we are run using `sh axa_link_certs`
 set -e
 
+OPENSSL=openssl
+
 DEBUG=
 XARGS_DEBUG=
-DELETE=yes
+DELETE=
 NOLINK=
 CERTS_DIR=
 
@@ -47,13 +49,13 @@ yesno () {
 
 # Function to get the CN of a certificate
 cn () {
-    openssl x509 -noout -subject | sed -e 's/.*CN=\([^=\/]*\).*/\1/'
+    $OPENSSL x509 -noout -subject | sed -e 's/.*CN=\([^=\/]*\).*/\1/'
 }
 
 # Function to get the exiry date of a certificate
 edate () {
     local D
-    D=`openssl x509 -noout -enddate -in "$1" | sed -e 's/notAfter=//'`
+    D=`$OPENSSL x509 -noout -enddate -in "$1" | sed -e 's/notAfter=//'`
     if test `uname` = Linux; then
 	date -d "$D" +%s
     else
@@ -68,7 +70,7 @@ link () {
     local NM LINK_NM HASH SUBJECT SUBJECT2 NM2
     NM=$1
 
-    HASH=`openssl x509 -noout -subject_hash -in "$NM"`
+    HASH=`$OPENSSL x509 -noout -subject_hash -in "$NM"`
     SUBJECT=`cn <"$NM"`
 
     # find a free name
@@ -188,7 +190,12 @@ fi
 # make hash symlinks
 find $SRCS -maxdepth 1 -type f						\
     | xargs -r $XARGS_DEBUG file					\
-    | sed -E -n 's/(\.\/)?(.*): *PEM certificate/\2/p'			\
+    | sed -n 's/\(\.\/\)\{0,1\}\(.*\): *PEM certificate/\2/p'		\
     | while read L; do
-	link $L
-    done
+	  if ! $OPENSSL x509 -in $L -noout -checkend 3600; then
+	      echo "$L is stale" 2>&1
+	      test -n "$DELETE" && rm -f $L
+	      continue
+	  fi
+	  link $L
+      done

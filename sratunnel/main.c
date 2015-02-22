@@ -114,8 +114,8 @@ static bool srvr_send(axa_tag_t tag, axa_p_op_t op,
 		      const void *b, size_t b_len);
 
 
-static void AXA_NORETURN
-usage(const char *msg)
+static void AXA_NORETURN AXA_PF(1,2)
+usage(const char *msg, ...)
 {
 	const char *cmn = ("[-VdtOR] [-C count] [-r rate-limit]"
 				 " [-E ciphers] [-S certs]\n");
@@ -123,9 +123,13 @@ usage(const char *msg)
 				 " -o out-addr");
 	const char *rad =("    -s [user@]RAD-server -w watch"
 				  " -a anomaly -o out-addr");
+	va_list args;
 
-	if (msg != NULL)
-		axa_error_msg("%s", msg);
+	if (msg != NULL) {
+		va_start(args, msg);
+		axa_verror_msg(msg, args);
+		va_end(args);
+	}
 	axa_error_msg("%s%s", cmn, mode == RAD ? rad : sra);
 	exit(EX_USAGE);
 }
@@ -244,8 +248,9 @@ main(int argc, char **argv)
 	}
 	argc -= optind;
 	argv += optind;
-	if (argc != 0)
-		usage(argv[0]);
+	if (argc != 0) {
+		usage("unrecognized \"%s\"", argv[0]);
+	}
 
 	if (version) {
 		axa_trace_msg(AXA_PVERS_STR" AXA protocol %d", AXA_P_PVERS);

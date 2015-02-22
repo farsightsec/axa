@@ -225,24 +225,6 @@ ck_certs_dir(axa_emsg_t *emsg, char *dir)
 		return (false);
 	}
 
-	if (0 > stat(certs_dir, &sb)) {
-		axa_pemsg(emsg, "certificate directory %s: %s",
-			  certs_dir, strerror(errno));
-		return (false);
-	}
-
-	if (!S_ISDIR(sb.st_mode)) {
-			axa_pemsg(emsg, "%s is not a certificate directory",
-				  certs_dir);
-		return (false);
-	}
-
-	if (0 > eaccess(certs_dir, X_OK)) {
-		axa_pemsg(emsg, "certificate %s directory: %s",
-			  certs_dir, strerror(errno));
-		return (false);
-	}
-
 	/* Tell the SSL library about the new directory only when it
 	 * knows about the previous directory. */
 	if (ssl_ctx != NULL
