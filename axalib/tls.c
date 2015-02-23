@@ -210,8 +210,6 @@ dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
 static bool
 ck_certs_dir(axa_emsg_t *emsg, char *dir)
 {
-	struct stat sb;
-
 	AXA_ASSERT(init_critical == 1);
 
 	if (dir != NULL) {
@@ -274,7 +272,7 @@ axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir)
 	int i;
 
 	/* This is not reentrant */
-	i =__sync_add_and_fetch(&init_critical, 1);
+	i = __sync_add_and_fetch(&init_critical, 1);
 	AXA_ASSERT(i == 1);
 
 	result = sub_tls_certs_dir(emsg, dir);
@@ -292,7 +290,7 @@ axa_tls_cipher_list(axa_emsg_t *emsg, const char *list)
 		return (cipher_list);
 
 	/* This is not reentrant */
-	i =__sync_add_and_fetch(&init_critical, 1);
+	i = __sync_add_and_fetch(&init_critical, 1);
 	AXA_ASSERT(i == 1);
 
 	if (cipher_list != cipher_list0)
