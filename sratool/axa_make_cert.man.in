@@ -1,0 +1,75 @@
+.\" Copyright (c) 2014-2015 by Farsight Security, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"  http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.Dd current-date via make
+.Dt axa_make_cert 8 AXA
+.Os " "
+.Sh NAME
+.Nm axa_make_cert
+.Nd Make AXA an Certificate
+.Sh SYNOPSIS
+.Op Fl x
+.Op Fl S Ar certsdir
+.Op Fl l Ar days
+.Fl n Ar name
+.Sh DESCRIPTION
+.Nm axa_make_cert
+creates self-signed AXA certificate,
+.Pa name.pem ,
+and private key files,
+.Pa name.key ,
+where
+.Ar name
+has been set with
+.Fl n .
+.Ar Name
+should be an AXA user name
+or the name of an AXA server.
+The files are created in the
+.Fl S Ar certs
+directory.
+.Ss OPTIONS
+.Bl -tag -width 3n
+.It Fl x
+enables debugging output.
+.It Fl S Ar certsdir
+sets the target AXA SSL certificate to
+.Ar certsdir .
+By default,
+.Nm
+looks for a writable
+.Pa $AXACONF/certs ,
+.Pa ~/.axa/certs ,
+or
+.Pa @CONFDIR@/certs .
+It tries to create a directory in the same order if that search fails.
+.It Fl l Ar days
+sets the lifetime of the certificate to
+.Ar days
+instead of the default 365.
+.It Fl n Ar name
+sets the CN (common name) for the certificate.
+The CN identifies the AXA user to a server or a server to an AXA client.
+.El
+.Sh ENVIRONMENT VARIABLES
+If set, AXACONF specifies the AXA configuration directory instead of,
+.Pa ~/.axa
+or
+.Pa @CONFDIR@ .
+.Sh SEE ALSO
+.Xr axa_link_certs 8 ,
+.Xr axa_server_cert 8 ,
+.Xr sratool 1 ,
+and
+.Xr sratunnel 1 .

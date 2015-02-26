@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) protocol definitions
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *	These protocols should not allow the client ask for the server to
  *	run any program or do anything else that might change any permanent
@@ -14,7 +14,7 @@
  *
  * This file is used outside the AXA programs.
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -72,26 +72,25 @@
  */
 typedef uint16_t	axa_tag_t;
 
-/** no tag */
-#define AXA_TAG_NONE	0
-/** maximum tag */
-#define AXA_TAG_MAX	((axa_tag_t)-1)
+#define AXA_TAG_NONE	0		/**< no tag */
+#define AXA_TAG_MIN	1		/**< minimum tag */
+#define AXA_TAG_MAX	((axa_tag_t)-1)	/**< maximum tag */
 
 /**
- *  Convert tag from protocol to host order byte order.
+ *  Convert tag from protocol to host byte order.
  *
  *  \param[in] t tag
  *
- *  \return host ordered tag
+ *  \return host byte ordered tag
  */
 #define AXA_P2H_TAG(t)	AXA_P2H16(t)
 
 /**
- *  Convert tag from host to protocol order byte order.
+ *  Convert tag from host to protocol byte order.
  *
  *  \param[in] t tag
  *
- *  \return protocol ordered tag
+ *  \return protocol byte ordered tag
  */
 #define AXA_H2P_TAG(t)	AXA_H2P16(t)
 
@@ -105,6 +104,9 @@ typedef uint8_t		axa_p_pvers_t;
 #define AXA_P_PVERS_MIN	AXA_P_PVERS1
 /** minimum understood protocol version */
 #define AXA_P_PVERS_MAX	AXA_P_PVERS1
+
+/** a number of messages or seconds */
+typedef uint64_t	axa_cnt_t;
 
 
 /**
@@ -120,7 +122,7 @@ typedef uint8_t		axa_p_pvers_t;
  *
  *  \param x value to convert
  *
- *  \return protocol ordered 16-bit value
+ *  \return protocol byte ordered 16-bit value
  */
 #define AXA_H2P16(x)	htole16(x)
 /**
@@ -128,7 +130,7 @@ typedef uint8_t		axa_p_pvers_t;
  *
  *  \param x value to convert
  *
- *  \return protocol ordered 32-bit value
+ *  \return protocol byte ordered 32-bit value
  */
 #define AXA_H2P32(x)	htole32(x)
 /**
@@ -136,7 +138,7 @@ typedef uint8_t		axa_p_pvers_t;
  *
  *  \param x value to convert
  *
- *  \return protocol ordered 64-bit value
+ *  \return protocol byte ordered 64-bit value
  */
 #define AXA_H2P64(x)	htole64(x)
 /**
@@ -144,7 +146,7 @@ typedef uint8_t		axa_p_pvers_t;
  *
  *  \param x value to convert
  *
- *  \return host ordered 16-bit value
+ *  \return host byte ordered 16-bit value
  */
 #define AXA_P2H16(x)	le16toh(x)
 /**
@@ -152,7 +154,7 @@ typedef uint8_t		axa_p_pvers_t;
  *
  *  \param x value to convert
  *
- *  \return host ordered 32-bit value
+ *  \return host byte ordered 32-bit value
  */
 #define AXA_P2H32(x)	le32toh(x)
 /**
@@ -160,7 +162,7 @@ typedef uint8_t		axa_p_pvers_t;
  *
  *  \param x value to convert
  *
- *  \return host ordered 64-bit value
+ *  \return host byte ordered 64-bit value
  */
 #define AXA_P2H64(x)	le64toh(x)
 #else
@@ -220,6 +222,7 @@ typedef enum {
 	AXA_P_OP_AHIT	    =7,		/**< axa_p_ahit_t */
 	AXA_P_OP_ALIST	    =8,		/**< axa_p_alist_t */
 	AXA_P_OP_CLIST	    =9,		/**< axa_p_clist_t */
+	AXA_P_OP_MISSED_RAD =10,	/**< axa_p_missed_rad_t */
 
 	/** from client to SRA or RAD server */
 	AXA_P_OP_USER	    =129,	/**< axa_p_user_t */
@@ -244,13 +247,13 @@ typedef uint64_t axa_p_clnt_id_t;
 
 /**
  *  RAD and SRA servers start the client-server conversation with a
- *  AXA_P_OP_HELLO annoucing the protocol versions that the server understands,
+ *  AXA_P_OP_HELLO announcing the protocol versions that the server understands,
  *  a version string, and an ID unique among connections to a single server.
  *  Clients can include those IDs in AXA_P_OP_JOIN messages to flag
  *  connections that are part of a bundle.
  *  Because AXA_P_OP_HELLO is sent before the client has said anything and so
- *  declared its protocol version,
- *  AXA_P_OP_HELLO must remain the same in all protocol versions.
+ *  declared its protocol version, AXA_P_OP_HELLO must remain the same in
+ *  all versions of the AXA protocol.
  */
 typedef struct _PK {
 	axa_p_clnt_id_t	id;		/**< client ID for bundled TCP */
@@ -271,40 +274,41 @@ typedef struct _PK {
 
 /** AXA protocol result */
 typedef struct _PK {
-	uint8_t		op;		/**< original axa_p_op_t */
-#define	AXA_P_RESULT_LEN 512		/**< maximum length of result string */
+	uint8_t		orig_op;	/**< original axa_p_op_t */
 	/**
 	 *  Human readable string containing an error, success, or other
 	 *  about the recent operation in .op with the tag the header of
 	 *  this message.  It is variable length string up to 512 bytes the
 	 *  including terminating null.
 	 */
-	char		str[AXA_P_RESULT_LEN];
+	char		str[512];
 } axa_p_result_t;
 
-/** AXA protocol missed */
+/** AXA protocol SRA missed data */
 typedef struct _PK {
 	/**
-	 *  The number of packets (SIE messages or raw IP packets) lost or
-	 * dropped by the server because it was too busy.  For an SRA server,
-	 * it is the total SIE (nmsg) and pcap messages lost because the SRA
-	 * server was too busy or because of network congestion from the SIE
-	 * sources and the SRA server.
+	 *  The number of packets (SIE messages or raw IP packets) lost in
+	 *  the network between the source and the SRA server or dropped by
+	 *  the SRA server because it was too busy.
 	 */
-	uint64_t	input_dropped;
-	/**
-	 *  The number of packets discarded by the server instead of being
-	 *  transmitted, because of server-to-client congestion.
-	 */
-	uint64_t	dropped;
-	/**
-	 *  The number of packets discarded by the server because of
-	 *  per-second rate limiting.
-	 */
-	uint64_t	sec_rlimited;
-	uint64_t	unused;		/**< reserved */
-	uint32_t	last_reported;  /**< UNIX epoch of the previous report */
+	axa_cnt_t	missed;
+	axa_cnt_t	dropped;	/**< by SRA client-server congestion */
+	axa_cnt_t	rlimit;		/**< dropped by rate limiting */
+	axa_cnt_t	filtered;	/**< total considered */
+	uint32_t	last_report;	/**< UNIX epoch of previous report */
 } axa_p_missed_t;
+
+/** AXA protocol RAD missed data */
+typedef struct _PK {
+	axa_cnt_t	sra_missed;	/**< missed by all SRA servers */
+	axa_cnt_t	sra_dropped;	/**< for SRA client-server contestion */
+	axa_cnt_t	sra_rlimit;	/**< discarded to SRA rate limit */
+	axa_cnt_t	sra_filtered;	/**< considered by SRA servers */
+	axa_cnt_t	dropped;	/**< for RAD client-server contestion */
+	axa_cnt_t	rlimit;		/**< discarded to RAD rate limit */
+	axa_cnt_t	filtered;	/**< considered by RAD modules */
+	uint32_t	last_report;	/**< UNIX epoch of previous report */
+} axa_p_missed_rad_t;
 
 /** AXA protocol user name */
 typedef struct _PK {
@@ -335,22 +339,23 @@ typedef uint16_t axa_p_ch_t;
 #define AXA_OP_CH_MAX	4095
 
 /**
- *  Convert binary channel number from protocol to host order
+ *  Convert binary channel number from protocol to host byte order
  *
  *  \param[in] ch channel
  *
- *  \return host ordered channel
+ *  \return host byte ordered SIE channel number
  */
 #define AXA_P2H_CH(ch)	AXA_P2H16(ch)
 
 /**
- *  Convert channel number from host to protocol order
+ *  Convert channel number from host to protocol byte order
  *
  *  \param[in] ch channel
  *
- *  \return protocol ordered channel
+ *  \return protocol byte ordered SIE channel number
  */
 #define AXA_H2P_CH(ch)	AXA_H2P16(ch)
+
 
 /** type of AXA watch "hit" being reported to the client */
 typedef enum {
@@ -358,7 +363,7 @@ typedef enum {
 	AXA_P_WHIT_IP	=1,		/**< IP */
 } axa_p_whit_enum_t;
 
-/** AXA protocol top level watch hit header */
+/** AXA protocol header before all watch hits */
 typedef struct _PK {
 	axa_p_ch_t	ch;		/**< channel number */
 	uint8_t		type;		/**< axa_p_whit_enum_t */
@@ -377,42 +382,41 @@ typedef uint16_t		axa_nmsg_idx_t;
 #define AXA_NMSG_IDX_DARK	(AXA_NMSG_IDX_RSVD+3)
 
 /**
- *  Convert axa_nmsg_idx_t index from protocol to host order
+ *  Convert axa_nmsg_idx_t index from protocol to host byte order
  *
  *  \param[in] idx index
  *
- *  \return host ordered index
+ *  \return host byte ordered index, vendor number, etc.
  */
 #define AXA_P2H_IDX(idx)	AXA_P2H16(idx)
 
 /**
- *  Convert axa_nmsg_idx_t index from host to protocol order
+ *  Convert axa_nmsg_idx_t index from host to protocol byte order
  *
  *  \param[in] idx index
  *
- *  \return protocol ordered index
+ *  \return protocol byte ordered index
  */
 #define AXA_H2P_IDX(idx)	AXA_H2P16(idx)
 
-/** AXA protocol watch hit nmsg header */
+/** AXA protocol watch hit header before an nmsg message */
 typedef struct _PK {
-	axa_p_whit_hdr_t mhdr;		/**< top level watch hit header */
+	axa_p_whit_hdr_t hdr;		/**< header for all watch hits */
 	axa_nmsg_idx_t	field_idx;	/**< triggering field index */
 	axa_nmsg_idx_t	val_idx;	/**< which value of field */
 	axa_nmsg_idx_t	vid;		/**< nmsg vendor ID */
 	axa_nmsg_idx_t	type;		/**< nmsg type */
-    /** packed timestamp */
+	/** timestamp when the nmsg message was reported. */
 	struct _PK {
 		uint32_t    tv_sec;	/**< seconds */
 		uint32_t    tv_nsec;	/**< nanoseconds */
 	} ts;				/**< timestamp */
-	uint8_t		msg[0];		/**< the message */
 } axa_p_whit_nmsg_hdr_t;
 
-/** AXA protocol watch hit IP header */
+/** AXA protocol watch hit header before an IP packet */
 typedef struct _PK {
-	axa_p_whit_hdr_t mhdr;		/**< top level watch hit header */
-	/** timestamp */
+	axa_p_whit_hdr_t hdr;		/**< header for all watch hits */
+	/** timestamp when the packet was captureed */
 	struct _PK {
 		uint32_t    tv_sec;	/**< seconds */
 		uint32_t    tv_usec;	/**< microseconds */
@@ -420,33 +424,34 @@ typedef struct _PK {
 	uint32_t	ip_len;		/**< packet length on the wire */
 } axa_p_whit_ip_hdr_t;
 
-/** AXA protocol watch hit nmsg */
+/** AXA protocol watch hit an nmsg message */
 typedef	struct _PK {
 	axa_p_whit_nmsg_hdr_t hdr;	/**< watch hit nmsg header */
 #define AXA_P_WHIT_NMSG_MAX (3*(2<<16))	/**< some nmsg have >1 DNS packet */
 	uint8_t	    b[0];		/**< start of SIE message */
 }  axa_p_whit_nmsg_t;
 
-/** AXA protocol watch hit IP */
+/** AXA protocol watch hit an IP packet */
 typedef struct _PK {
 	axa_p_whit_ip_hdr_t hdr;	/**< watch hit IP header */
 # define AXA_P_WHIT_IP_MAX  (2<<16)	/**< IPv6 can be bigger */
 	uint8_t	    b[0];		/**< start of IP packet */
 } axa_p_whit_ip_t;
 
-/** AXA protocol watch hit */
+/** generic AXA protocol watch hit */
 typedef union {
-	axa_p_whit_hdr_t hdr;		/**< top level watch hit header */
-	axa_p_whit_nmsg_t nmsg;		/**< watch hit nmsg header */
-	axa_p_whit_ip_t	ip;		/**< watch hit IP header */
+	axa_p_whit_hdr_t    hdr;	/**< top level watch hit header */
+	axa_p_whit_nmsg_t   nmsg;	/**< an nmsg message */
+	axa_p_whit_ip_t	    ip;		/**< an IP packet */
 } axa_p_whit_t;
 
 /** Smallest watch hit */
-#define AXA_WHIT_MIN_LEN min(sizeof(axa_p_whit_ip_t),			\
-			     sizeof(axa_p_whit_nmsg_t))
+#define AXA_WHIT_MIN_LEN min(sizeof(axa_p_whit_ip_t)+1,			\
+			     sizeof(axa_p_whit_nmsg_t)+1)
 /** Largest watch hit */
 #define AXA_WHIT_MAX_LEN max(sizeof(axa_p_whit_ip_t)+AXA_P_WHIT_IP_MAX,	\
 			     sizeof(axa_p_whit_nmsg_t)+AXA_P_WHIT_NMSG_MAX)
+
 
 /** AXA protocol watch type */
 typedef enum {
@@ -489,7 +494,7 @@ typedef struct _PK {
 #define AXA_OP_AN_PREFIX "an;"
 /**< @endcond */
 
-/** AXA protocol anomaly name */
+/** AXA protocol anomaly module name */
 typedef struct _PK {			/**< anomaly module name */
 	char		c[32];		/**< wastefully null terminated */
 } axa_p_an_t;
@@ -500,7 +505,7 @@ typedef struct _PK {
 	char		parms[1024];	/**< parameters, null terminated */
 } axa_p_anom_t;
 
-/** AXA protocol anomaly watch hit */
+/** AXA protocol anomaly module hit */
 typedef struct _PK {
 	axa_p_an_t	an;		/**< module that detected the anomaly */
 	axa_p_whit_t	whit;		/**< anomalous SIE message or packet */
@@ -531,76 +536,102 @@ typedef struct _PK {
 /** AXA protocol channel list */
 typedef struct _PK {
 	axa_p_ch_t	ch;		/**< channel (binary) */
-	/**
-	 * Zero or non-zero to indicate that the SRA server is monitoring this
-	 * channel.
-	 */
-	uint8_t		on;
+	uint8_t		on;		/** < !=0 if on */
 	axa_p_chspec_t	spec;		/**< channel (human readable) */
 } axa_p_clist_t;
 
-/** a rate limiting number messages or seconds or a total number of messages */
-typedef uint64_t	axa_rlimit_t;
+/** Request server's current trace value */
+#define AXA_P_OPT_TRACE_REQ ((uint32_t)-1)
 
 /** maximum rlimit */
 #define AXA_RLIMIT_MAX	(1000*1000*1000)
-/** turn off a rate limit */
+/** Turn off a rate limit. */
 #define AXA_RLIMIT_OFF	(AXA_RLIMIT_MAX+1)
-/** rate limit doesn't apply or is not being set */
-#define AXA_RLIMIT_NA	((axa_rlimit_t)-1)
+/** A rate limit value that doesn't apply or is not being set */
+#define AXA_RLIMIT_NA	((axa_cnt_t)-1)
 
 /** AXA protocol rlimit */
 typedef struct _PK {
-	axa_rlimit_t	max_pkts_per_sec;   /**< maximum packets/sec */
-	axa_rlimit_t	cur_pkts_per_sec;   /**< current packets/sec */
-	axa_rlimit_t	unused1;	/**< reserved */
-	axa_rlimit_t	unused2;	/**< reserved */
+	/**
+	 *  When in an option AXA_P_OP_OPT message sent by the client,
+	 *  request the server to send no more than this many AXA AXA_P_OP_WHIT
+	 *  or AXA_P_OP_AHIT messages per second.  Use AXA_RLIMIT_OFF to
+	 *  request no limit.  AXA_RLIMIT_NA to not change th
+	 */
+	axa_cnt_t	max_pkts_per_sec;
+	/**
+	 *  This is the current value of the server's rate limit counter.
+	 *  The counter is incremented each time a relevant AXA message
+	 *  is considered for sending to the client.  If the new value is
+	 *  greater than the rate limit, the message dropped.  The counter
+	 *  is reset every second.
+	 */
+	axa_cnt_t	cur_pkts_per_sec;
+	axa_cnt_t	unused1;	/**< reserved */
+	axa_cnt_t	unused2;	/**< reserved */
 	/**
 	 * The minimum number of seconds between reports of rate limiting.
-	 * It's effectively a rate limit on rate limit reports.
+	 * It is a rate limit on rate limit reports.
 	 */
-	axa_rlimit_t	report_secs;
+	axa_cnt_t	report_secs;
 } axa_p_rlimit_t;
+
+/** Request the output sampling ratio */
+#define	AXA_P_OPT_SAMPLE_REQ	0
+/** Request the output sampling ratio */
+#define	AXA_P_OPT_SAMPLE_SCALE	10000
+/** maximum scaled output sampling ratio */
+#define	AXA_P_OPT_SAMPLE_MAX	(AXA_P_OPT_SAMPLE_SCALE*100)
+
+/** Request the TCP buffer size ratio */
+#define	AXA_P_OPT_SNDBUF_REQ	0
+#define	AXA_P_OPT_SNDBUF_MIN	1024
 
 /** AXA protocol options type */
 typedef enum {
-	AXA_P_OPT_DEBUG    =0,		/**< debugging */
-	AXA_P_OPT_RLIMIT   =1,		/**< rate limiting */
+	AXA_P_OPT_TRACE	    =0,		/**< server tracing level */
+	AXA_P_OPT_RLIMIT    =1,		/**< server rate limiting */
+	AXA_P_OPT_SAMPLE    =2,		/**< sample an output stream. */
+	AXA_P_OPT_SNDBUF    =3,		/**< set TCP buffer or window size */
 } axa_p_opt_type_t;
 
 /** AXA protocol options */
 typedef struct _PK {
 	uint8_t		type;		/**< option type */
 	uint8_t		pad[7];		/**< to 0 mod 8 for axa_p_rlimit_t */
-	union {
-		uint32_t	debug;	/**< debugging */
-		axa_p_rlimit_t	rlimit;	/**< rlimit */
-	} u;				/**< option: debugging/rate limiting */
+	union axa_p_opt_u {
+		uint32_t	trace;	/**< AXA_P_OPT_TRACE: tracing level */
+		axa_p_rlimit_t	rlimit;	/**< AXA_P_OPT_RLIMIT rate limits */
+		uint32_t	sample;	/**< AXA_P_OPT_SAMPLE percent*1000 */
+		uint32_t	bufsize;/**< AXA_P_OPT_SNDBUF bytes */
+	} u;
 } axa_p_opt_t;
 
 
 /** AXA protocol body */
-typedef union axa_p_body {
-	axa_p_hello_t	hello;		/**< hello */
-	axa_p_result_t	result;		/**< result */
-	axa_p_missed_t	missed;		/**< missed */
+typedef union {
+	axa_p_hello_t	hello;		/**< hello to client */
+	axa_p_result_t	result;		/**< result of client request */
+	axa_p_missed_t	missed;		/**< report missed data by SRA */
 	axa_p_whit_t	whit;		/**< watch hit */
-	axa_p_wlist_t	wlist;		/**< watch hit list */
+	axa_p_wlist_t	wlist;		/**< list an watch */
 	axa_p_ahit_t	ahit;		/**< anomaly hit */
-	axa_p_alist_t	alist;		/**< anomaly list */
+	axa_p_alist_t	alist;		/**< list an anomaly */
+	axa_p_clist_t	clist;		/**< channel list */
+	axa_p_missed_rad_t missed_rad;	/**< report missed data by RAD*/
 
-	axa_p_user_t    user;		/**< user */
-	axa_p_join_t    join;		/**< join */
-	axa_p_watch_t	watch;		/**< watch */
-	axa_p_anom_t	anom;		/**< anom */
-	axa_p_channel_t	channel;	/**< channel */
-	axa_p_clist_t	clist;		/**< clist */
+	axa_p_user_t    user;		/**< tell server which user */
+	axa_p_join_t    join;		/**< bundle TCP */
+	axa_p_watch_t	watch;		/**< ask for a watch on the server */
+	axa_p_anom_t	anom;		/**< ask anomaly detection */
+	axa_p_channel_t	channel;	/**< enable or disable a channel */
 	axa_p_opt_t	opt;		/**< options */
 
 	uint8_t		b[1];		/**< ... */
 } axa_p_body_t;
 
 /**< @cond */
+/* Handshake from the program run by sshd, axaproxy, to srad or radd. */
 typedef struct {			/**< not packed because it is local */
 	char		magic[16];
 #	 define AXA_PROXY_SSH_MAGIC "PROXY_SSH_0"
