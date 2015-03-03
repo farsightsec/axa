@@ -1,11 +1,11 @@
 # Farsight AXA
 
 The purpose of Farsight's SRA (SIE Remote Access) toolkit is to bring the 
-capabilties of the Farsight Security Information Exchange (SIE) right to the 
-subscriber's network rather than requirng a direct connection to Farsight SIE. 
+capabilities of the Farsight Security Information Exchange (SIE) right to the 
+subscriber's network rather than requiring a direct connection to Farsight SIE. 
 
 The SRA service is delivered via Farsight's Advanced Exchange Access (AXA) 
-protocol which allows SRA session initators to control a number of parameters
+protocol which allows SRA session initiators to control a number of parameters
 include:
 
 * select and deselect SIE channels
@@ -23,7 +23,7 @@ or more SRA channels:
 * `libaxa`: middleware for AXA protocol including connection and 
 encapsulation/decapsulation
 * `sratunnel`: a tool that copies remote SIE data to the local network
-* `sratool`: a debuging interface to exercise and examine AXA protocol 
+* `sratool`: a debugging interface to exercise and examine AXA protocol 
 operations
 
 The `sratunnel` source code is intended as a working example of calling 
@@ -34,10 +34,10 @@ other SRA applications, or get a quicker start by running the `sratunnel`
 program which will make the remote data available locally, and then use 
 [`pcap`](http://www.tcpdump.org/) (for SIE channel 14) or 
 [`nmsg`](https://github.com/farsightsec/nmsg) (for all other SIE channels) 
-as they would on an analysis server directly conected to SIE itself. 
+as they would on an analysis server directly connected to SIE itself. 
 
 Of note, SRA can perform filtering. This feature is
-highly desirable due to the very high volume of data caried by SIE which can
+highly desirable due to the very high volume of data carried by SIE which can
 burst to hundreds of megabits per second in a single channel. On the flip side, 
 when using SRA to access low volume channels, entire 
 channels can be selected for remote distribution. However, when remotely 
@@ -47,9 +47,9 @@ server can filter out everything else, and send to the subscriber only a
 subset of that channel's SIE data.
 
 Also of note, AXA is a deliberately lossy protocol. If a subscriber requests 
-more data than the network can carry, data overruns will occurr. When 
+more data than the network can carry, data overruns will occur. When 
 this happens, "loss markers" are transmitted reliably within the AXA stream 
-to inform the subscriber. At this point, the subscriber's possible mitgation 
+to inform the subscriber. At this point, the subscriber's possible mitigation 
 strategies include:
 
 * ask for less data,
@@ -58,7 +58,7 @@ strategies include:
 total SIE data. 
 
 The `sratool` program is intended primarily as a protocol demonstration and 
-debuging interface, although it can also perform the same functions as 
+debugging interface, although it can also perform the same functions as 
 `sratunnel`. The distributed AXA package constitutes the 
 authoritative documentation of the AXA protocol. Farsight advises SRA 
 subscribers to utilize the `libaxa` library for session management and data 
@@ -104,7 +104,7 @@ The `axa` suite has the following external dependencies:
 
 Optional dependency:
 
-* [doxygen](http://www.stack.nl/~dimitri/doxygen/) (verion 1.8.3 or newer that 
+* [doxygen](http://www.stack.nl/~dimitri/doxygen/) (version 1.8.3 or newer that 
 supports inlining markdown files)
     
 After satisfying the above, build with something like:
@@ -120,7 +120,7 @@ Finally, to give the `axa` suite a home, `sudo make install`.
 
 ### Debian package install
 
-On Debian systesm, the following packages should be installed:
+On Debian systems, the following packages should be installed:
 
  * `pkg-config`
  * `libpcap0.8-dev`
@@ -183,7 +183,7 @@ channel according to our authentication and authorization level.
 (with no rate limiting or filtering), which is a common choice for 212 since 
 its volume is low.
 
-### 2. In-line subcommanding and rate-limting
+### 2. In-line subcommanding and rate-limiting
 
 Next, we introduce in-line connections and show rate limiting of SIE channel
 204 (filtered passive DNS RRsets):
@@ -224,7 +224,7 @@ shortcut that allows the first subcommand to come from the command line, while
 subsequent subdomains wil come from the control terminal. 
 2. `> count 5`: we again asked for a limit of five total records 
 3. `> limit 1`: this time we asked the remote end to limit our output to one 
-mesage per second. 
+message per second. 
 4. `> channel 204 on`: as before, switch on channel 204
 5. `> 10 watch ch=204`: as before, watch channel 204
 6. `MISSED`: We then saw one message from channel 204, followed immediately 
@@ -303,7 +303,7 @@ $ kill %sratunnel
 
 1. `sratunnel -s 'ssh sra-service@sra-eft.sie-remote.net' -c ch212 -w 'ch=212' 
 -o nmsg:127.0.0.1,5000 &`: here, we started a background process to access 
-remote SIE channel 212, and to deposit all received mesages in NMSG format 
+remote SIE channel 212, and to deposit all received messages in NMSG format 
 using UDP on a local socket (host 127.0.0.1, port 5000). As before, no IP 
 address or DNS name filters were used, since channel 212 is known to be very 
 low volume. 
@@ -311,7 +311,7 @@ low volume.
 show that packets were being received on the local socket. 
 3. `nmsgtool -V SIE -T newdomain -l 127.0.0.1/5000 -c 3`: We ran `nmsgtool`, 
 specifying our input with the `-V`, `-T`, and `-l` options since the `nmsgtool` 
-shortcut for channel notation (`-C`) only works for directly conected SIE 
+shortcut for channel notation (`-C`) only works for directly connected SIE 
 clients. `nmsgtool` displayed three messages and exited. We then killed the 
 background `sratunnel` process, concluding the demo.
 
@@ -388,7 +388,7 @@ protocol.
 response from the server, or data from the server. The universe of opcodes is
 discussed below.
 
-For a detailed dicussions of the AXA protocol message types, see the doxygen
+For a detailed discussions of the AXA protocol message types, see the doxygen
 generated page for `protocol.h`
 
 ### AXA protocol specification quick reference
@@ -400,7 +400,7 @@ developers building `axalib` programs.
 `axalib/protocol.h`
  * VAL: The numerical value of the opcode.
  * SENT BY: Who can send the message
- * TAG: Boolean value indidcating if header tag must be valid or non-zero,
+ * TAG: Boolean value indicating if header tag must be valid or non-zero,
 as described above
  * DESCRIPTION: Short blurb describing opcode
 
@@ -408,8 +408,8 @@ as described above
 | ------------------- |----:|----------------:| -----:|----------------------------------------------------------------------------------------------:|
 | `AXA_P_OP_NOP`      | 0   | CLIENT / SERVER | NO    | carries no data, is intended only to ensure that the TCP connection is still up               |
 | `AXA_P_OP_HELLO`    | 1   | SERVER          | NO    | helps the client choose a compatible AXA protocol version                                     |
-| `AXA_P_OP_OK`       | 2   | SERVER          | YES   | indicates the success of the preceeding client request with the same tag                      |
-| `AXA_P_OP_ERROR`    | 3   | SERVER          | YES   | indicates the failure of a preceeding client request with the same tag                        |
+| `AXA_P_OP_OK`       | 2   | SERVER          | YES   | indicates the success of the preceding client request with the same tag                      |
+| `AXA_P_OP_ERROR`    | 3   | SERVER          | YES   | indicates the failure of a preceeing client request with the same tag                        |
 | `AXA_P_OP_MISSED`   | 4   | SERVER          | NO    | carries details about data or packet loss due to rate limiting or network congestion          |
 | `AXA_P_OP_WHIT`     | 5   | SERVER (SRA)    | YES   | reports a "watch hit" or packet or nmsg message that matched an SRA watch with the same tag   |
 | `AXA_P_OP_WLIST`    | 6   | SERVER (SRA)    | YES   | reports a current watch in response to `AXA_P_OP_WGET` from the client referenced by tag      |
