@@ -9,22 +9,27 @@ protocol which allows SRA session initiators to control a number of parameters
 include:
 
 * select and deselect SIE channels
-* specify search patterns
-* control rate limits and packet counts
+* specify DNS and IP address watch patterns
+* control packet rate limits, packet counts, sampling rate, and window sizes
+* set anomaly watches
 
 After SRA session parameters have been established, SIE data is encrypted and 
 streamed to the SRA subscriber via TCP/IP, using an SSH transport (similar to 
 applications like [rsync](http://troy.jdmz.net/rsync/) or 
-[git](http://git-scm.com/book/en/Git-on-the-Server-Setting-Up-the-Server)).
+[git](http://git-scm.com/book/en/Git-on-the-Server-Setting-Up-the-Server) or
+using TLS).
 
 The following tools are provided to Farsight customers that subscribe to one
 or more SRA channels:
 
 * `libaxa`: middleware for AXA protocol including connection and 
 encapsulation/decapsulation
-* `sratunnel`: a tool that copies remote SIE data to the local network
-* `sratool`: a debugging interface to exercise and examine AXA protocol 
-operations
+* `sratunnel`: SRA Tunnel. A tool that copies remote SIE data to the local
+network.
+* `sratool`: A command line tool used to connect to an SRA server, send AXA
+protocol messages and stream responses.
+* `radtool`: A command line tool used to connect to a RAD server, set anomaly
+watches, and stream responses.
 
 The `sratunnel` source code is intended as a working example of calling 
 `libaxa` to set up an SRA session, turn on an SIE channel, set a single and 
@@ -63,13 +68,10 @@ debugging interface, although it can also perform the same functions as
 authoritative documentation of the AXA protocol. Farsight advises SRA 
 subscribers to utilize the `libaxa` library for session management and data 
 decapsulation rather than crafting hand drawn logic to perform these functions.
-A later version of the AXA software is expected to include Python and Perl 
-language bindings.
+A later version of the AXA software will include Python language bindings.
 
-This document covers version `1.0.0`.
-
-For specific details on `sratool` and `sratunnel` please see the respective
-man pages included in the distribution.
+For specific details on `sratool`, `radtool`, and `sratunnel` please see the
+respective man pages included in the distribution.
 
 ## SRA server SSH details
 
@@ -97,10 +99,15 @@ packages.
 The `axa` suite has the following external dependencies:
 
  * C compiler (gcc or llvm)
+ * [libpcap](http://www.tcpdump.org/)
+ * [zlib](http://www.zlib.net/)
  * [nmsg](https://github.com/farsightsec/nmsg)
+ * [protobuf-c](https://github.com/protobuf-c/protobuf-c)
+ * [sie-nmsg](https://github.com/farsightsec/sie-nmsg)
  * [wdns](https://github.com/farsightsec/wdns)
  * [libedit](http://thrysoee.dk/editline/)
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed on BSDish systems)
+ * [libssl](http://openssl.org/)
 
 Optional dependency:
 
@@ -127,11 +134,11 @@ On Debian systems, the following packages should be installed:
  * `zlib1g-dev`
  * `libbsd-dev`
  * `libedit-dev`
- * `libprotobuf-c0-dev`
+ * `libprotobuf-c0-dev (>= 1.0.1)`
  * `protobuf-c-compiler`
- * `libwdns-dev (>= 0.5)`
- * `libnmsg-dev (>= 0.8.0)`
- * `nmsg-msg-module-sie-dev (>= 0.16)`
+ * `libwdns-dev (>= 0.6.0)`
+ * `libnmsg-dev (>= 0.9.1)`
+ * `nmsg-msg-module-sie-dev (>= 1.0.0)`
 
 The binary packages of AXA and its dependencies are available from 
 [a Debian package repository maintained by Farsight Security](https://archive.farsightsecurity.com/SIE_Software_Installation_Debian/). These packages should be
