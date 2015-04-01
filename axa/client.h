@@ -22,7 +22,7 @@
 /*! \file client.h
  *  \brief Common code for RAD and SRA clients
  *
- *  This file contains AXA client macros, datatypes definitions, and function
+ *  This file contains AXA client macros, data type definitions, and function
  *  prototypes.
  */
 
@@ -44,26 +44,26 @@
 
 /** AXA client state */
 typedef struct {
-	axa_io_t	io;		/**< I/O context */
+	axa_io_t	io;		        /**< I/O context */
 
 	struct timeval	retry;		/**< connection retry timer */
-	time_t		backoff;	/**< connection back-off quantum */
+	time_t		backoff;	    /**< connection back-off quantum */
 
-	char		*hello;		/**< HELLO string from server */
+	char		*hello;		    /**< HELLO string from server */
 
-	bool		have_id;	/**< for AXA_P_OP_JOIN */
-	axa_p_clnt_id_t clnt_id;	/**< unquie client ID */
+	bool		have_id;	    /**< for AXA_P_OP_JOIN */
+	axa_p_clnt_id_t clnt_id;	/**< unique client ID */
 } axa_client_t;
 
 /**
- * Check than an AXA client context is closed
+ *  Check than an AXA client context is closed.
  *
  *  \param[in] client address of a client context
  */
 #define AXA_CLIENT_OPENED(client) AXA_IO_OPENED(&((client)->io))
 
 /**
- * check that an AXA client context is open and connected
+ *  Check that an AXA client context is open and connected.
  *
  *  \param[in] client address of a client context
  */
@@ -77,16 +77,15 @@ typedef struct {
 extern void axa_client_init(axa_client_t *client);
 
 /**
- *  Disconnect from the server
- *  and increase the delay before trying again.
+ *  Disconnect from the server and increase the delay before trying again.
  *
  *  \param[in] client address of a client context
  */
 extern void axa_client_backoff(axa_client_t *client);
 
 /**
- *  Disconnect from the server and increase
- *  the delay before trying again to the maximum.
+ *  Disconnect from the server and increase the delay before trying again to
+ *  the maximum.
  *
  *  \param[in] client address of a client context
  */
@@ -100,8 +99,8 @@ extern void axa_client_backoff_max(axa_client_t *client);
 extern void axa_client_backoff_reset(axa_client_t *client);
 
 /**
- *  Get the number of milliseconds before the server connection should
- *  be attempted again.
+ *  Get the number of milliseconds before the server connection should be
+ *  attempted again.
  *
  *  \param[in] client address of a client context
  *  \param[out] now current wall clock time or NULL
@@ -117,16 +116,18 @@ extern time_t axa_client_again(axa_client_t *client, struct timeval *now);
  */
 extern void axa_client_close(axa_client_t *client);
 
-/**
- *  return codes for axa_client_open() and axa_client_connect()
- */
+/** return codes for axa_client_open() and axa_client_connect() */
 typedef enum {
-	/** permanent failure.  The connection has been closed and
-	 * axa_client_backoff() called. Check emsg */
+	/**
+     * Permanent failure.  The connection has been closed and
+	 * axa_client_backoff() called. Check emsg.
+     */
 	AXA_CONNECT_ERR,
 
-	/** temporary failure.  The connection has been closed and
-	 * axa_client_backoff() called. Check emsg */
+	/**
+     * Temporary failure.  The connection has been closed and
+	 * axa_client_backoff() called. Check emsg
+     */
 	AXA_CONNECT_TEMP,
 
 	/** connection is complete */
@@ -135,15 +136,18 @@ typedef enum {
 	/** non-blocking connection waiting for TCP syn-ack or TLS handshake */
 	AXA_CONNECT_INCOM,
 
-	/** connection now completed including sending the initial
-	 *  AXA_P_OP_NOP.  emsg contains the result of
-	 *  axa_p_to_str(emsg->c, sizeof(emsg->c), true, ...) */
+	/**
+     *  Connection now completed including sending the initial AXA_P_OP_NOP.
+     *  emsg contains the result of
+     *  axa_p_to_str(emsg->c, sizeof(emsg->c), true, ...)
+     */
 	AXA_CONNECT_NOP,
 
-	/** connection now completed including sending the initial
-	 *  AXA_P_OP_USER. An AXA_P_OP_OK or AXA_P_OP_ERROR should
-	 * be coming.  emsg contains the result of
-	 *  axa_p_to_str(emsg->c, sizeof(emsg->c), true, ...) */
+	/**
+     *  Connection now completed including sending the initial AXA_P_OP_USER.
+     *  An AXA_P_OP_OK or AXA_P_OP_ERROR should be coming. emsg contains the
+     *  result of axa_p_to_str(emsg->c, sizeof(emsg->c), true, ...)
+     */
 	AXA_CONNECT_USER
 } axa_connect_result_t;
 
@@ -154,7 +158,7 @@ typedef enum {
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of a client context
- *  \param[in] is_rad true if server is radd isntead of srad
+ *  \param[in] is_rad true if server is radd instead of srad
  *  \param[in] addr connect to this AXA server specification
  *  \param[in] tun_debug true to turn on ssh tunnel debugging
  *  \param[in] bufsize 0 or desired socket buffer sizes
@@ -172,7 +176,7 @@ extern axa_connect_result_t axa_client_open(axa_emsg_t *emsg,
 /**
  *  Finish a new connection to an SRA or RAD server.
  *  The connection must have been previously opened with axa_client_open(),
- *  whioch must have returned #AXA_CONNECT_TEMP.
+ *  which must have returned #AXA_CONNECT_TEMP.
  *  axa_client_connect() must be called again when it returns #AXA_CONNECT_TEMP.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
@@ -186,6 +190,7 @@ extern axa_connect_result_t axa_client_connect(axa_emsg_t *emsg,
 /**
  *  Send an AXA message to the server connected through a client context,
  *	blocking until finished.
+ *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of a client context
  *  \param[in] tag AXA tag

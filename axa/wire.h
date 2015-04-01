@@ -21,7 +21,6 @@
 
 /*! \file wire.h
  *  \brief AXA wire protocol function declarations.
- *
  */
 
 
@@ -174,7 +173,7 @@ extern bool axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen,
  *
  *  \param[out] buf will hold the message string
  *  \param[in] buf_len length of buf (should be AXA_P_STRLEN)
- *  \param[in] print_op if true, preprend the tag and opcode to string
+ *  \param[in] print_op if true, prepend the tag and opcode to string
  *  \param[in] hdr protocol header
  *  \param[in] cmd AXA command to parse into a string
  *
@@ -418,7 +417,7 @@ extern axa_io_result_t axa_send(axa_emsg_t *emsg, axa_io_t *io,
 extern axa_io_result_t axa_send_flush(axa_emsg_t *emsg, axa_io_t *io);
 
 /**
- *  Save untransmitted data
+ *  Save un-transmitted data.
  *
  *  \param[in] io AXA I/O context
  *  \param[in] done bytes already handled
@@ -447,7 +446,8 @@ extern axa_io_result_t axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
 				      time_t wait_ms, bool keepalive, bool tun);
 
 /**
- *  Wait for and read an AXA message from the server into the client context
+ *  Wait for and read an AXA message from the server into the client context.
+ *
  *  axa_recv_flush() must be called to discard the AXA message in the
  *  client context before another use of this function.
  *
@@ -494,7 +494,7 @@ extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
 /** @endcond */
 
 /**
- *  Get or set TLS certificates directory
+ *  Get or set TLS certificates directory.
  *
  *  \param[out] emsg the reason if something went wrong
  *  \param[in] dir directory containing TLS certificate key files or NULL
@@ -505,7 +505,7 @@ extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
 extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
 
 /**
- *  Get or set TLS certificate list
+ *  Get or set TLS certificate list.
  *
  *  \param[out] emsg the reason if something went wrong
  *  \param[in] list OpenSSL format cipher list or NULL

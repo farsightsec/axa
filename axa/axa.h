@@ -204,7 +204,7 @@ extern const char *axa_domain_to_str(const uint8_t *src, size_t src_len,
 
 /* emsg.c */
 /**
- *  A mcalloc() wrapper that crashes immediately (via AXA_ASSERT()) on malloc
+ *  A malloc() wrapper that crashes immediately (via AXA_ASSERT()) on malloc
  *  failures.
  *
  *  \param[in] s size of memory to allocate
@@ -317,22 +317,31 @@ extern char axa_prog_name[];
  */
 extern bool axa_parse_log_opt(axa_emsg_t *emsg, const char *arg);
 
-/** initialize the AXA syslog interface.
+/**
+ *  Initialize the AXA syslog interface.
+ *
  *  Call this function after calling axa_parse_log_opt() and axa_set_me(),
- *  and before calling any AXA logging, accouting, or tracing function. */
+ *  and before calling any AXA logging, accounting, or tracing function.
+ */
 extern void axa_syslog_init(void);
 
 
 /** generate trace syslog messages about watches, anomalies, and channels */
 #define AXA_DEBUG_WATCH		2
-/** also generate trace syslog messages about client AXA messages
- * and non-routine AXA messages. */
+/**
+ *  also generate trace syslog messages about client AXA messages and
+ *  non-routine AXA messages
+ */
 #define AXA_DEBUG_TRACE		3
-/** also generate trace syslog messages about routine AXA messages
- * and transport related messages such as from `ssh` */
+/**
+ *  also generate trace syslog messages about routine AXA messages
+ *  and transport related messages such as from `ssh`
+ */
 #define AXA_DEBUG_MORE_TRACE	4
-/** also generate trace syslog messages from libnmsg and client-to-server
- * rate limiting or congestion */
+/**
+ *  also generate trace syslog messages from libnmsg and client-to-server
+ *  rate limiting or congestion
+ */
 #define AXA_DEBUG_NMSG		5
 
 /** convert AXA debug level to nmsg debug level */
@@ -347,7 +356,7 @@ extern void axa_syslog_init(void);
  *  Add text to an error or other message buffer.
  *  If we run out of room, add "...".
  *
- *  \param[in,out] bufp in: the orignal string, out: the concatenated strings
+ *  \param[in,out] bufp in: the original string, out: the concatenated strings
  *  \param[in,out] buf_lenp in: the length of bufp string, out: new length
  *  \param[in] p the format string to copy over
  *  \param[in] ... va_args business
@@ -360,7 +369,7 @@ extern void axa_buf_print(char **bufp, size_t *buf_lenp,
 extern void axa_clean_stdio(void);
 
 /**
- *  Generate an erorr message string in a buffer, if we have a buffer.
+ *  Generate an error message string in a buffer, if we have a buffer.
  *  Log or print the message with axa_vlog_msg() if there is no buffer.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
@@ -418,7 +427,7 @@ extern void axa_error_msg(const char *p, ...) AXA_PF(1,2);
 
 /**
  *  Log an error message for an I/O function that has returned either
- *	a negative read or write length or the wrong length..  Complain
+ *	a negative read or write length or the wrong length. Complain
  *	about a non-negative length or decode errno for a negative length.
  *
  *  \param[in] op canonical string referring to the I/O event that caused the
@@ -613,7 +622,7 @@ extern time_t axa_tv_diff2ms(const struct timeval *tv1,
  *  Compute the positive elapsed time between two timevals in milliseconds,
  *  but limited or clamped to at least 0 ms and at most 1 day.
  *  Negative elapsed time implies that the system clock was set back.
- *  In that csae, set the 'then' timestamp to 'now' and return 0.
+ *  In that case, set the 'then' timestamp to 'now' and return 0.
  *
  *  \param[in] now const struct timeval * current time
  *  \param[in] then struct timeval * past value, which will be set to the

@@ -7,8 +7,8 @@
  *	run any program or do anything else that might change any permanent
  *	state on the server other than logging and accounting.
  *	A client should only be able to set its only filter criteria and
- *	receive packets and messags matching those criteria.  Other than
- *	inevitiable side channels such as system load, one client must
+ *	receive packets and messages matching those criteria.  Other than
+ *	inevitable side channels such as system load, one client must
  *	not be able to affect any other client.  A client must treat the
  *	packets and messages it receives as pure data and not commands.
  *
@@ -33,12 +33,12 @@
 #define AXA_PROTOCOL_H
 
 /*! \file protocol.h
- *  \brief AXA protocol datatypes and macros.
+ *  \brief AXA protocol data types and macros.
  *
- *  This file contains the AXA protocol datatypes and macros.
- *  This protocol uses network byte order to accomodate that SRA clients
+ *  This file contains the AXA protocol data types and macros.
+ *  This protocol uses network byte order to accommodate that SRA clients
  *  on a modest variety of 32-bit and 64-bit *BSD and Linux systems.
- *  It might need adjustment to accomodate clients on ARM and other
+ *  It might need adjustment to accommodate clients on ARM and other
  *  platforms other than amd64 and x86.
  */
 
@@ -176,18 +176,20 @@ typedef uint64_t	axa_cnt_t;
 /**< @endcond */
 #endif
 
-
-/** Room for more than two full sized UDP packets. */
+/** room for more than two full sized UDP packets */
 #define AXA_P_MAX_BODY_LEN	(64*1024*3)
 
-/** Clients must authenticate themselves to the AXA server within this
- * many seconds after connect(). */
+/**
+ *  Clients must authenticate themselves to the AXA server within this
+ *  many seconds after connect().
+ */
 #define AXA_AUTH_DELAY	30
 
 /**
- *  AXA protocol header
- *  This header starts all messages in either direction.
- *  At 8 bytes, it is alignment friendly.
+ *  AXA protocol header.
+ *
+ *  This header starts all messages in either direction. At 8 bytes, it is
+ *  alignment friendly.
  */
 typedef struct _PK {
 	uint32_t	len;		/**< total length including header */
@@ -241,8 +243,10 @@ typedef enum {
 	AXA_P_OP_ACCT	    =142,	/**< no data */
 } axa_p_op_t;
 
-/** The AXA client ID is assigned by AXA server and echoed by the client
- *  to the server to bundle TCP connections. */
+/**
+ *  The AXA client ID is assigned by AXA server and echoed by the client
+ *  to the server to bundle TCP connections.
+ */
 typedef uint64_t axa_p_clnt_id_t;
 
 /**
@@ -256,13 +260,13 @@ typedef uint64_t axa_p_clnt_id_t;
  *  all versions of the AXA protocol.
  */
 typedef struct _PK {
-	axa_p_clnt_id_t	id;		/**< client ID for bundled TCP */
+	axa_p_clnt_id_t	id;		    /**< client ID for bundled TCP */
 	axa_p_pvers_t	pvers_min;	/**< min protocol version accepted */
 	axa_p_pvers_t	pvers_max;	/**< max protocol version accepted */
 	/**
 	 *  Human readable string containing name and version of the SRA or RAD
 	 *  server.  It is a variable length string up to 512 bytes including
-	 * terminating  NULL.
+	 *  terminating  NULL.
 	 */
 	char		str[512];
 } axa_p_hello_t;
@@ -300,31 +304,31 @@ typedef struct _PK {
 
 /** AXA protocol RAD missed data */
 typedef struct _PK {
-	axa_cnt_t	sra_missed;	/**< missed by all SRA servers */
-	axa_cnt_t	sra_dropped;	/**< for SRA client-server contestion */
-	axa_cnt_t	sra_rlimit;	/**< discarded to SRA rate limit */
+	axa_cnt_t	sra_missed;	    /**< missed by all SRA servers */
+	axa_cnt_t	sra_dropped;	/**< for SRA client-server congestion */
+	axa_cnt_t	sra_rlimit;	    /**< discarded to SRA rate limit */
 	axa_cnt_t	sra_filtered;	/**< considered by SRA servers */
-	axa_cnt_t	dropped;	/**< for RAD client-server contestion */
-	axa_cnt_t	rlimit;		/**< discarded to RAD rate limit */
-	axa_cnt_t	filtered;	/**< considered by RAD modules */
+	axa_cnt_t	dropped;	    /**< for RAD client-server congestion */
+	axa_cnt_t	rlimit;		    /**< discarded to RAD rate limit */
+	axa_cnt_t	filtered;	    /**< considered by RAD modules */
 	uint32_t	last_report;	/**< UNIX epoch of previous report */
 } axa_p_missed_rad_t;
 
 /** AXA protocol user name */
 typedef struct _PK {
-	/**
-	 *  ASCII, variable length, null terminated  user name
-	 */
+	 /** ASCII, variable length, null terminated user name */
 	char		name[64];
 } axa_p_user_t;
 
-/** Null terminated ASCII string naming an SIE channel in configuration files,
- *  sratool commands, and sratunnel args. */
+/**
+ *  Null terminated ASCII string naming an SIE channel in configuration files,
+ *  sratool commands, and sratunnel args.
+ */
 typedef struct {
 	char c[16];			/**< channel string */
 } axa_p_ch_buf_t;
 
-/** SIE channel name prefix in configuration files, commands, and args. */
+/** SIE channel name prefix in configuration files, commands, and args */
 #define AXA_OP_CH_PREFIX "ch"
 
 /** a binary SIE channel number in the AXA protocol */
@@ -416,7 +420,7 @@ typedef struct _PK {
 /** AXA protocol watch hit header before an IP packet */
 typedef struct _PK {
 	axa_p_whit_hdr_t hdr;		/**< header for all watch hits */
-	/** timestamp when the packet was captureed */
+	/** timestamp when the packet was captured */
 	struct _PK {
 		uint32_t    tv_sec;	/**< seconds */
 		uint32_t    tv_usec;	/**< microseconds */

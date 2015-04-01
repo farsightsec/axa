@@ -21,7 +21,6 @@
 
 /*! \file socket.h
  *  \brief AXA socket and IP address macros and function declarations.
- *
  */
 
 #include <axa/axa.h>
@@ -95,7 +94,7 @@ typedef union {
 
 /** interesting poll(2) flags for an input socket */
 #define AXA_POLL_IN	(POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI)
-/** intersting poll(2) flags for an output socket */
+/** interesting poll(2) flags for an output socket */
 #define AXA_POLL_OUT	(POLLOUT | POLLWRNORM | POLLWRBAND)
 /** poll(2) flags for noticing disconnect */
 #define AXA_POLL_OFF	(POLLERR | POLLHUP | POLLNVAL)
@@ -142,13 +141,14 @@ typedef union {
 /**
  *  Extract IP address and port information from AXA socket union into
  *  a string.
+ *
  *  The finished string will be of the format "[IP][separator char][PORT]".
  *  If the address family of su is unrecognized, the function will crash with
  *  AXA_FAIL().
  *
  *  \param[out] str a char buffer of size str_len that will contain the
  *  finished string
- *  \param[in] str_len length of str; AXA_SU_TO_STR_LEN is sufficent
+ *  \param[in] str_len length of str; AXA_SU_TO_STR_LEN is sufficient
  *  \param[in] portc char to separate the IP address and port such as '.' or '/'
  *  \param[in] su pointer to source axa_socku_t
  *
