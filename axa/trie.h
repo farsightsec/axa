@@ -4,7 +4,7 @@
  *	The trie code is in the server library and so in radd and so available
  *	to RAD modules.
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@
 #ifndef AXA_TRIE_H
 #define AXA_TRIE_H
 
-/*! \file trie.h
- *  \brief Top-level interface specification for libaxa
+/**
+ *  \defgroup axa_trie axa_trie
  *
- * This file contains AXA trie or patricia tree macros, datatype definitions
+ * `axa_trie` contains AXA trie or patricia tree macros, data type definitions
  * and function declarations.
  *
  * These trie functions use patricia trees to recognize IP addresses and
@@ -42,6 +42,8 @@
  *
  * IPv4, IPv6, and domain names are.maintained internally in separate three
  * tries that can be viewed as a single trie from the outside.
+ *
+ * @{
  */
 
 #include <axa/bits.h>
@@ -50,9 +52,10 @@
 
 typedef uint32_t tval_t;		/**< A value at a trie node */
 
-/**@{*/
-/** Pack and unpack trie node value into a pair of values such as an
- * SRA client ID and an nmsg index
+/** @cond unused currently */
+/**
+ *  Pack and unpack trie node value into a pair of values such as an
+ *  SRA client ID and an NMSG index.
  */
 typedef uint16_t tval_idx_t;
 #define TVAL_IDX_BITS		16
@@ -63,10 +66,11 @@ typedef uint16_t tval_idx_t;
 #define TAG_ID_TO_TVAL(t, i) (tval_t)((((axa_tag_t )(t)) << TVAL_IDX_BITS)  \
 				      | (((tval_idx_t)(i)) & TVAL_IDX_MASK))
 
-/**@}*/
+/** @endcond */
 
-/** An array of values for a trie node. */
+/** trie value list */
 typedef struct tval_list tval_list_t;
+/** an array of values for a trie node */
 struct tval_list {
 	tval_list_t	*free;		/**< chain while awaiting destruction */
 	uint16_t	len;		/**< Total length of the array */
@@ -75,12 +79,14 @@ struct tval_list {
 };
 
 
-/** A single value for a key found in the trie and hints about the source
- * of the data that matched the key. */
+/**
+ *  A single value for a key found in the trie and hints about the source
+ *  of the data that matched the key.
+ */
 typedef struct hit {
 	tval_t		tval;		/**< Value for the key in the trie. */
-	axa_nmsg_idx_t	field_idx;	/**< nmsg field index from caller */
-	axa_nmsg_idx_t	val_idx;	/**< nmsg value index from caller */
+	axa_nmsg_idx_t	field_idx;	/**< NMSG field index from caller */
+	axa_nmsg_idx_t	val_idx;	/**< NMSG value index from caller */
 } hit_t;
 
 /** The successful result of looking up a key is an array of "hits" */
@@ -93,7 +99,10 @@ typedef struct {
 
 typedef struct trie_node trie_node_t;	/**< a trie node */
 
-/** Each externally visible trie consists of one each of these internal types. */
+/**
+ *  Each externally visible trie consists of one each of these internal
+ *  types.
+ */
 typedef enum {
 	TRIE_IPV4,			/**< IPv4 addresses */
 	TRIE_IPV6,			/**< IPv6 addresses */
@@ -176,100 +185,103 @@ typedef struct {
 
 
 /**
- * Delete a value from an array of trie node values.
+ *  Delete a value from an array of trie node values.
  *
- * \param[in] roots handle on the trie.
- * \param[in] tval_listp pointer to array from which the value should be removed
- * \param[in] val remove the first instance of this value if present
+ *  \param[in] roots handle on the trie.
+ *  \param[in] tval_listp pointer to array from which the value should be
+ *      removed
+ *  \param[in] val remove the first instance of this value if present
  *
- * \retval true if an instance of the value was found and removed
- * \retval false if an instance of the value was not found
+ *  \retval true if an instance of the value was found and removed
+ *  \retval false if an instance of the value was not found
  */
 extern bool axa_tval_delete(trie_roots_t *roots, tval_list_t **tval_listp,
 			    tval_t val);
 
 /**
- * Add a value to an array of values
+ *  Add a value to an array of values
  *
- * \param[in] roots handle on the trie.
- * \param[in] tval_listp pointer to array to which the value should be added
- * \param[in] new value to add
- * \param[in] padded_len 0 or new length of the array including optional
+ *  \param[in] roots handle on the trie.
+ *  \param[in] tval_listp pointer to array to which the value should be added
+ *  \param[in] new value to add
+ *  \param[in] padded_len 0 or new length of the array including optional
  *		padding for future additions
- * \param[in] lock_free true if lock-free searching is supported by the trie.
+ *  \param[in] lock_free true if lock-free searching is supported by the trie.
  */
 extern void axa_tval_add(trie_roots_t *roots, tval_list_t **tval_listp,
 			 tval_t new, uint padded_len, bool lock_free);
 
 /**
- * Convert the key in a trie node to an AXA watch.
+ *  Convert the key in a trie node to an AXA watch.
  *
- * \param[out] w existing watch that will be filled.
- * \param[in] node convert the key in this AXA trie node
- * \param[in] node_type TRIE_IPV4, TRIE_IPV6, or TRIE_DOM
- * \param[in] is_wild true if the resulting watch should be for an IP address
+ *  \param[out] w existing watch that will be filled.
+ *  \param[in] node convert the key in this AXA trie node
+ *  \param[in] node_type TRIE_IPV4, TRIE_IPV6, or TRIE_DOM
+ *  \param[in] is_wild true if the resulting watch should be for an IP address
  *		CIDR block or a DNS wild card
  *
- * \return overall size of the watch
+ *  \return overall size of the watch
  */
 extern size_t axa_trie_to_watch(axa_p_watch_t *w, const trie_node_t *node,
 				trie_type_t node_type, bool is_wild);
 
 /**
- * Free a trie node including its arrays of values.  The node must have
- * already been deleted from the trie.
+ *  Free a trie node including its arrays of values.  The node must have
+ *  already been deleted from the trie.
  *
- * \param[in] node to be destroyed
+ *  \param[in] node to be destroyed
  */
 extern void axa_trie_node_free(trie_node_t *node);
 
 /**
- * Remove a value from an AXA trie node and then delete the node from
- * the trie if it is empty.
+ *  Remove a value from an AXA trie node and then delete the node from
+ *  the trie if it is empty.
  *
- * \param[in] roots handle on the trie
- * \param[in] trie_type TRIE_IPV4, TRIE_IPV6, or TRIE_DOM
- * \param[in] node to be changed
- * \param[in] is_wild true if the value is for a CIDR block or DNS wild card
- * \param[in] tval value to be removed
+ *  \param[in] roots handle on the trie
+ *  \param[in] trie_type TRIE_IPV4, TRIE_IPV6, or TRIE_DOM
+ *  \param[in] node to be changed
+ *  \param[in] is_wild true if the value is for a CIDR block or DNS wild card
+ *  \param[in] tval value to be removed
  */
 extern void axa_trie_node_delete(trie_roots_t *roots, trie_type_t trie_type,
 				 trie_node_t *node, bool is_wild, tval_t tval);
 
 /**
- * Add a watch to an AXA trie.
- * Create a node with a key derived from the watch if the node
- * does not already exist and then add value to the node.
+ *  Add a watch to an AXA trie.
  *
- * \param[out] emsg will contain the reason for a false result.
- * \param[in] roots handle on the trie
- * \param[out] node will point to the node if not NULL.
- * \param[in] watch provides the IP address or domain name for the key
- * \param[in] watch_len is the length of the watch.  It is usually
+ *  Create a node with a key derived from the watch if the node
+ *  does not already exist and then add value to the node.
+ *
+ *  \param[out] emsg will contain the reason for a false result.
+ *  \param[in] roots handle on the trie
+ *  \param[out] node will point to the node if not NULL.
+ *  \param[in] watch provides the IP address or domain name for the key
+ *  \param[in] watch_len is the length of the watch.  It is usually
  *	   less than sizeof(axa_p_watch_t) because maximum sized domain names
  *	   are rare.
- * \param[in] tval is the value that will be added to either the "wild" or
+ *  \param[in] tval is the value that will be added to either the "wild" or
  *	    "exact" array of values in the node.
  *
- * \retval true if no errors were encountered.  Node will be set if not NULL
- * \retval false error was was encountered and emsg will contain the reason
+ *  \retval true if no errors were encountered.  Node will be set if not NULL
+ *  \retval false error was was encountered and emsg will contain the reason
  */
 extern bool axa_trie_watch_add(axa_emsg_t *emsg, trie_roots_t *roots,
 			       trie_node_t **node, const axa_p_watch_t *watch,
 			       size_t watch_len, tval_t tval);
 
 /**
- * Search an AXA trie for an IP address
+ *  Search an AXA trie for an IP address
  *
- * \param[in] roots handle on the trie
- * \param[in] su points to an axa_socku_t union containing the IP address
- * \param[in,out] hitlistp the array of values in found trie nodes is appended to
- *		this array.  It is created if *hitlistp is NULL and a value
- *		is found.  More than one trie node can contribute values;
- *		for example a search for 10.2.3.4 can match nodes with
- *		keys 10.0.0.0/8, 10.2.0.0/16, and 10.2.3.4.
- * \param[in] field_idx is associated with each value added to the hitlistp array
- *		to let the caller remember which nmsg value caused each "hit"
+ *  \param[in] roots handle on the trie
+ *  \param[in] su points to an axa_socku_t union containing the IP address
+ *  \param[in,out] hitlistp the array of values in found trie nodes is
+ *      appended to this array.  It is created if *hitlistp is NULL and a value
+ *	    is found.  More than one trie node can contribute values; for example a
+ *	    search for 10.2.3.4 can match nodes with keys 10.0.0.0/8, 10.2.0.0/16,
+ *	    and 10.2.3.4.
+ *  \param[in] field_idx is associated with each value added to the hitlistp
+ *      array
+ *		to let the caller remember which NMSG value caused each "hit"
  * \param[in] val_idx is associated with each value added to the hitlistp array
  */
 extern void axa_trie_search_su(trie_roots_t *roots, const axa_socku_t *su,
@@ -278,19 +290,20 @@ extern void axa_trie_search_su(trie_roots_t *roots, const axa_socku_t *su,
 			       axa_nmsg_idx_t val_idx);
 
 /**
- * Search an AXA trie for a DNS domain.
+ *  Search an AXA trie for a DNS domain.
  *
- * \param[out] emsg will contain the reason for a false result.
- * \param[in] roots handle on the trie
- * \param[in] name points to the domain in wire format
- * \param[in] name_len is the length of the domain
- * \param[in,out] hitlistp The array of values in found trie nodes is appended to
+ *  \param[out] emsg will contain the reason for a false result.
+ *  \param[in] roots handle on the trie
+ *  \param[in] name points to the domain in wire format
+ *  \param[in] name_len is the length of the domain
+ *  \param[in,out] hitlistp The array of values in found trie nodes is
+ *      appended to
  *		this array.  It is created if *hitlistp is NULL and a value
  *		is found.  More than one trie node can contribute values;
  *		for example a search for www.example.com can match nodes with
  *		keys www.example.com and *.com.
  * \param[in] field_idx is associated with each value added to the hit list
- *		to let the caller remember which nmsg value caused each "hit"
+ *		to let the caller remember which NMSG value caused each "hit"
  * \param[in] val_idx is associated with each value added to the hitlistp array
  *
  * \retval true if no errors were encountered.
@@ -318,7 +331,7 @@ extern void axa_tries_free(trie_roots_t *roots);
  *		will be added.
  * \param[in] tval_list is the list of values
  * \param[in] field_idx is associated with each value added to the hit list
- *		to let the caller remember which nmsg value caused each "hit".
+ *		to let the caller remember which NMSG value caused each "hit".
  * \param[in] val_idx is associated with each value added to the hitlistp array
  */
 extern void axa_hitlist_append(const trie_roots_t *roots,
@@ -326,5 +339,7 @@ extern void axa_hitlist_append(const trie_roots_t *roots,
 			       const tval_list_t *tval_list,
 			       axa_nmsg_idx_t field_idx,
 			       axa_nmsg_idx_t val_idx);
+
+/**@}*/
 
 #endif /* AXA_TRIE_H */

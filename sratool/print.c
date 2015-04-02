@@ -1,7 +1,7 @@
 /*
  * Print a dark channel packet
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 #include "sratool.h"
 
 #include <arpa/nameser.h>
-#include <axa/axa_endian.h>
 
 #include <errno.h>
 #include <netinet/ip6.h>
@@ -125,265 +124,67 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 	return (true);
 }
 
-
-static void AXA_PF(4,5)
-add_str(char *buf, size_t buf_len, size_t *buf_pos, const char *p, ...)
-{
-	size_t len;
-	int i;
-	va_list args;
-
-	if (*buf_pos >= buf_len)
-		return;
-	len = buf_len - *buf_pos;
-	va_start(args, p);
-	i = vsnprintf(&buf[*buf_pos], len, p, args);
-	va_end(args);
-	if (i < 0) {
-		error_msg("vsnprintf(): %s", strerror(errno));
-		*buf_pos = buf_len;
-	} else if ((size_t)i > len) {
-		strcpy(&buf[buf_len-4], "...");
-		*buf_pos = buf_len;
-	} else {
-		*buf_pos += i;
-	}
-}
-
-static bool
-ck_ipdg(const char *protocol,
-	size_t min_len, const void *ptr, size_t actual_len,
-	const axa_p_whit_t *whit, char *err_buf, size_t err_buf_len)
-{
-	if (ptr == NULL) {
-		if (err_buf == NULL)
-			error_msg("missing %s header from "
-				  AXA_OP_CH_PREFIX"%d",
-				  protocol, AXA_P2H_CH(whit->hdr.ch));
-		else
-			snprintf(err_buf, err_buf_len,
-				 " missing %s header from "
-				 AXA_OP_CH_PREFIX"%d",
-				 protocol, AXA_P2H_CH(whit->hdr.ch));
-		return (false);
-	}
-	if (actual_len < min_len) {
-		if (err_buf == NULL)
-			error_msg("truncated %s header of "
-				  "%zd bytes from "AXA_OP_CH_PREFIX"%d",
-				  protocol, actual_len,
-				  AXA_P2H_CH(whit->hdr.ch));
-		else
-			snprintf(err_buf, err_buf_len,
-				 " truncated %s header of %zd bytes from "
-				 AXA_OP_CH_PREFIX"%d",
-				 protocol, actual_len,
-				 AXA_P2H_CH(whit->hdr.ch));
-		return (false);
-	}
-	return (true);
-}
-
-static void
-print_src_dst(char *srcip, size_t srcip_len, char *dstip, size_t dstip_len,
-	      const axa_socku_t *src_su, const axa_socku_t *dst_su,
-	      uint ttl, const char *info)
-{
-	/* Separate port numbers with '.' for consistency with nmsg
-	 * presentation form and ignore the nmsgtool preference for '/'
-	 * for channels or confusion with CIDR blocks. */
-	printf(" %20s > %-20s IP TTL=%d %s\n",
-	       axa_su_to_str(srcip, srcip_len, '.', src_su),
-	       axa_su_to_str(dstip, dstip_len, '.', dst_su),
-	       ttl, info);
-}
-
-#define ADD_INFO(...) add_str(info, sizeof(info), &info_pos, __VA_ARGS__)
-#define ADD_CHARS(...) add_str(chars, sizeof(chars), &chars_pos, __VA_ARGS__)
-
 void
 print_raw(const uint8_t *pkt, size_t pkt_len)
 {
-	char info[64];
-	size_t info_pos;
-	char chars[18];
-	size_t chars_pos;
+	char info_buf[64], *info;
+	char chars_buf[18], *chars;
+	size_t info_len, chars_len;
 	uint pay_pos;
 	u_char c;
 
-	info_pos = 0;
-	chars_pos = 0;
+	info = info_buf;
+	info_len = sizeof(info_buf);
+	chars = chars_buf;
+	chars_len = sizeof(chars_buf);
 	for (pay_pos = 0; pay_pos < pkt_len; ++pay_pos) {
-		if (info_pos == 0) {
+		if (info_len == sizeof(info_buf)) {
 			if (pay_pos > 256) {
 				fputs(NMSG_LEADER2"...\n", stdout);
 				break;
 			}
-			ADD_INFO("%7d:", pay_pos);
+			axa_buf_print(&info, &info_len, "%7d:", pay_pos);
 		}
 		c = pkt[pay_pos];
-		ADD_INFO(" %02x", c);
+		axa_buf_print(&info, &info_len, " %02x", c);
 		if (c >= '!' && c <= '~')
-			ADD_CHARS("%c", c);
+			axa_buf_print(&chars, &chars_len, "%c", c);
 		else
-			ADD_CHARS(".");
-		if (chars_pos == 8) {
-			ADD_INFO(" ");
-			ADD_CHARS(" ");
-		} else if (chars_pos == 17) {
-			printf("%55s  %s\n", info, chars);
-			info_pos = 0;
-			chars_pos = 0;
+			axa_buf_print(&chars, &chars_len, ".");
+		if (chars_len == sizeof(chars_buf) - 8) {
+			axa_buf_print(&info, &info_len, " ");
+			axa_buf_print(&chars, &chars_len, " ");
+		} else if (chars_len == sizeof(chars_buf) - 17) {
+			printf("%55s  %s\n", info_buf, chars_buf);
+			info = info_buf;
+			info_len = sizeof(info_buf);
+			chars = chars_buf;
+			chars_len = sizeof(chars_buf);
 		}
 	}
-	if (info_pos != 0)
-		printf("%-57s  %s\n", info, chars);
+	if (info_len != sizeof(info_buf))
+		printf("%-57s  %s\n", info_buf, chars_buf);
 }
 
 void
-print_raw_ip(const uint8_t *pkt_data, size_t caplen,
-	     const axa_p_whit_t *whit)
+print_raw_ip(const uint8_t *pkt_data, size_t caplen, axa_p_ch_t ch)
 {
-	struct nmsg_ipdg dg;
-	struct ip ip_hdr;
-	uint ttl;
-	struct ip6_hdr ip6_hdr;
-	struct tcphdr tcp_hdr;
-	struct udphdr udp_hdr;
-	uint uh_ulen;
-	char err_buf[80];
-	char info[64];
-	size_t info_pos;
-	char dstip[INET6_ADDRSTRLEN], srcip[INET6_ADDRSTRLEN];
 	axa_socku_t dst_su, src_su;
-	nmsg_res res;
-
+	char dst[AXA_SU_TO_STR_LEN], src[AXA_SU_TO_STR_LEN];
+	char info[80];
 
 	clear_prompt();
 
-	memset(&dg, 0, sizeof(dg));
-	res = nmsg_ipdg_parse_pcap_raw(&dg, DLT_RAW, pkt_data, caplen);
-	if (res != nmsg_res_success && dg.len_network == 0) {
-		/* Postpone dealing with whine from nmsg_ipdg_parse_pcap_raw()
-		 * if it got something. */
-		fputs(" unknown packet\n", stdout);
-		if (verbose > 1)
-			print_raw(pkt_data, caplen);
-		return;
-	}
-
-	switch (dg.proto_network) {
-	case AF_INET:
-		if (!ck_ipdg("IP", sizeof(ip_hdr),
-			     dg.network, dg.len_network, whit, NULL, 0))
-			return;
-		memcpy(&ip_hdr, dg.network, sizeof(ip_hdr));
-		axa_ip_to_su(&dst_su, &ip_hdr.ip_dst, AF_INET);
-		axa_ip_to_su(&src_su, &ip_hdr.ip_src, AF_INET);
-		ttl = ip_hdr.ip_ttl;
-		break;
-	case AF_INET6:
-		if (!ck_ipdg("IPv6", sizeof(ip6_hdr),
-			     dg.network, dg.len_network, whit, NULL, 0))
-			return;
-		memcpy(&ip6_hdr, dg.network, sizeof(ip6_hdr));
-		axa_ip_to_su(&dst_su, &ip6_hdr.ip6_dst, AF_INET6);
-		axa_ip_to_su(&src_su, &ip6_hdr.ip6_src, AF_INET6);
-		ttl = ip6_hdr.ip6_hlim;
-		break;
-	default:
-		printf(" unknown AF %d\n", dg.proto_network);
-		if (verbose > 1)
-			print_raw(dg.network, dg.len_network);
-		return;
-	}
-
-	info_pos = 0;
-	switch (dg.proto_transport) {
-	case IPPROTO_ICMP:
-		ADD_INFO("ICMP");
-		if (dg.transport == NULL)
-			ADD_INFO(" later fragment");
-		else
-			ADD_INFO(" %d bytes", ntohs(ip_hdr.ip_len));
-		print_src_dst(srcip, sizeof(srcip), dstip, sizeof(dstip),
-			      &src_su, &dst_su, ttl, info);
-		break;
-
-	case IPPROTO_ICMPV6:
-		ADD_INFO("ICMPv6");
-		if (dg.transport == NULL)
-			ADD_INFO(" later fragment");
-		print_src_dst(srcip, sizeof(srcip), dstip, sizeof(dstip),
-			      &src_su, &dst_su, ttl, info);
-		break;
-
-	case IPPROTO_TCP:
-		ADD_INFO("TCP");
-		if (dg.transport == NULL) {
-			ADD_INFO(" later fragment");
-		} else if (!ck_ipdg("TCP", sizeof(tcp_hdr),
-				    dg.transport, dg.len_transport,
-				    whit, err_buf, sizeof(err_buf))) {
-			add_str(info, sizeof(info), &info_pos,
-				"\n%s\n", err_buf);
-		} else {
-			memcpy(&tcp_hdr, dg.transport, sizeof(tcp_hdr));
-			AXA_SU_PORT(&dst_su) = tcp_hdr.th_dport;
-			AXA_SU_PORT(&src_su) = tcp_hdr.th_sport;
-			if ((tcp_hdr.th_flags & TH_FIN) != 0)
-				ADD_INFO(" FIN");
-			if ((tcp_hdr.th_flags & TH_SYN) != 0)
-				ADD_INFO(" SYN");
-			if ((tcp_hdr.th_flags & TH_ACK) != 0)
-				ADD_INFO(" ACK");
-			if ((tcp_hdr.th_flags & TH_RST) != 0)
-				ADD_INFO(" RST");
-		}
-		print_src_dst(srcip, sizeof(srcip), dstip, sizeof(dstip),
-			      &src_su, &dst_su, ttl, info);
-		break;
-
-	case IPPROTO_UDP:
-		ADD_INFO("UDP");
-		if (dg.transport == NULL) {
-			ADD_INFO(" later fragment");
-			uh_ulen = 0;
-		} else if (!ck_ipdg("UDP", sizeof(udp_hdr),
-				    dg.transport, dg.len_transport,
-				    whit, err_buf, sizeof(err_buf))) {
-			add_str(info, sizeof(info), &info_pos,
-				"\n%s\n", err_buf);
-			uh_ulen = 0;
-		} else {
-			memcpy(&udp_hdr, dg.transport, sizeof(udp_hdr));
-			AXA_SU_PORT(&dst_su) = udp_hdr.uh_dport;
-			AXA_SU_PORT(&src_su) = udp_hdr.uh_sport;
-			uh_ulen = ntohs(udp_hdr.uh_ulen);
-			ADD_INFO(" %d bytes", uh_ulen);
-			if (uh_ulen != dg.len_payload+sizeof(udp_hdr))
-				ADD_INFO("  fragment");
-		}
-		print_src_dst(srcip, sizeof(srcip), dstip, sizeof(dstip),
-			      &src_su, &dst_su, ttl, info);
-
-		/* Try to print DNS if is plausible and DNS printing works. */
-		if (dg.transport != NULL
-		    && (AXA_SU_PORT(&dst_su) == htons(53)
-			|| AXA_SU_PORT(&src_su) == htons(53))
-		    && uh_ulen == dg.len_payload+sizeof(udp_hdr)
-		    && print_dns_pkt(dg.payload, dg.len_payload, ""))
-			return;
-		break;
-
-	default:
-		snprintf(info, sizeof(info), " IP protocol %d",
-			 dg.proto_transport);
-		print_src_dst(srcip, sizeof(srcip), dstip, sizeof(dstip),
-			      &src_su, &dst_su, ttl, info);
-		break;
+	if (axa_ipdg_parse(pkt_data, caplen, ch, &dst_su, &src_su,
+			    info, sizeof(info))) {
+		printf(" %20s > %-20s %s\n",
+		       axa_su_to_str(src, sizeof(src), '.', &src_su),
+		       axa_su_to_str(dst, sizeof(dst), '.', &dst_su),
+		       info);
+	} else {
+		printf(" %s\n", info);
 	}
 
 	if (verbose > 1)
-		print_raw(dg.payload, dg.len_payload);
+		print_raw(pkt_data, caplen);
 }

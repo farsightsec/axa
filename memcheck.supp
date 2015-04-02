@@ -1,0 +1,51 @@
+# Use this with sratool by:
+#
+# /usr/bin/valgrind.bin --tool=memcheck --leak-check=full --show-reachable=yes --track-origins=yes --suppressions=../memcheck.supp ./sratool  "count 100; connect ssh:sra-service@sra-dev.sie-remote.net; 1 watch ch 204; ch 204 on"
+#
+# Use it with sratunnel by
+#
+# /usr/bin/valgrind.bin --tool=memcheck --leak-check=full --show-reachable=yes --track-origins=yes --suppressions=../memcheck.supp ./sratunnel -C 100 -s ssh:sra-service@sra-dev.sie-remote.net -w "ch 204" -c 204  -o nmsg:127.0.0.1,9001
+
+
+
+
+# libnmsg has no cleanup function
+{
+   libnmsg
+   Memcheck:Leak
+   fun:calloc
+   fun:_dlerror_run
+   ...
+   obj:*/libnmsg.*
+   fun:nmsg_init
+   ...
+}
+
+
+# Editline has no cleanup function
+{
+   editline1
+   Memcheck:Leak
+   ...
+   obj:*/libedit.so*
+   fun:el_init
+   fun:main
+}
+{
+   editline2
+   Memcheck:Leak
+   ...
+   obj:*/libedit.so*
+   fun:el_gets
+   fun:main
+}
+
+
+# There is too much noise from OpenSSL to find anything real.
+{
+   OpenSSL/config
+   Memcheck:Leak
+   ...
+   obj:*/libcrypto.so*
+   ...
+}

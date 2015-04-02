@@ -1,5 +1,7 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.0.0])
+AC_INIT([axa], [1.1.0])
+PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
+AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules subdir-objects])
@@ -50,9 +52,13 @@ AC_SUBST(strlcpy_LIBS)
 
 PKG_CHECK_MODULES([libedit], [libedit], [], [MY_CHECK_LIBEDIT])
 
-PKG_CHECK_MODULES([libnmsg], [libnmsg >= 0.8.0])
+PKG_CHECK_MODULES([libnmsg], [libnmsg >= 0.9.1])
 
 PKG_CHECK_MODULES([libwdns], [libwdns])
+
+PKG_CHECK_MODULES([libssl], [libssl])
+
+PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
 AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
 AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
@@ -64,6 +70,9 @@ if test -n "$DOXYGEN"; then
         AC_MSG_CHECKING(doxygen version)
         MY_CHECK_DOXYGEN
         AC_MSG_RESULT($DOXYGEN_version)
+        AC_CONFIG_FILES([Doxyfile])
+        DOXYGEN_INPUT="${srcdir}/axa ${srcdir}/README.md"
+        AC_SUBST(DOXYGEN_INPUT)
         if test $DOXYGEN_version == "oldish"; then
             AC_MSG_WARN(old Doxygen version found API documentation may not render as intended consider upgrading to version 1.8.3 or newer)
         fi
@@ -79,11 +88,26 @@ AC_CHECK_HEADERS([nmsg/base/dnsqr.pb-c.h nmsg/base/encode.pb-c.h nmsg/base/packe
 CPPFLAGS="$save_CPPFLAGS"
 
 AX_DEFINE_DIR([CONFDIR], [sysconfdir/axa], [config dir for axa])
-AC_DEFINE_UNQUOTED(FIELDS_FILE,"$CONFDIR/fields",[Fields file])
+AC_DEFINE_UNQUOTED(AXACONFDIR,"$CONFDIR",[config dir for axa])
 
 AC_DEFINE_UNQUOTED(AXA_PVERS_STR,"version $PACKAGE_VERSION", [Version])
 
-AC_CONFIG_FILES([Makefile axa/libaxa.pc doc/doxygen/Doxyfile])
+AC_CONFIG_FILES([Makefile axa/libaxa.pc])
+
+AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
+		sratunnel/sratunnel.man
+                sratool/axa_link_certs.man sratool/axa_make_cert.man
+		sratool/axa_server_cert.man])
+
+AC_CONFIG_FILES([sratool/axa_link_certs], [chmod +x sratool/axa_link_certs])
+AC_CONFIG_FILES([sratool/axa_make_cert], [chmod +x sratool/axa_make_cert])
+AC_CONFIG_FILES([sratool/axa_server_cert], [chmod +x sratool/axa_server_cert])
+
+AC_ARG_WITH([ciphers],
+AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),
+[TLS_CIPHERS="$withval"],[TLS_CIPHERS="ALL"])
+AC_DEFINE_UNQUOTED(TLS_CIPHERS,"$TLS_CIPHERS",[TLS cipher list])
+
 AC_OUTPUT
 AC_MSG_RESULT([
     $PACKAGE $VERSION
@@ -99,5 +123,7 @@ AC_MSG_RESULT([
         includedir:             ${includedir}
         pkgconfigdir:           ${pkgconfigdir}
 
-        building html docs:     ${DOC_HTML_MSG} 
+        building html docs:     ${DOC_HTML_MSG}
+
+	TLS ciphers:		$TLS_CIPHERS
 ])

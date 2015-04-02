@@ -1,7 +1,7 @@
 /*
  * Parse "chN"
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -62,7 +62,8 @@ axa_parse_ch(axa_emsg_t *emsg,
 	}
 
 	l = strtoul(s, &p, 10);
-	if ((*p != '\0' && strspn(p, AXA_WHITESPACE) != strlen(p))
+	if (*s == '\0'
+	    || (*p != '\0' && strspn(p, AXA_WHITESPACE) != strlen(p))
 	    || l > AXA_OP_CH_MAX) {
 		if (emsg != NULL)
 			axa_pemsg(emsg, "invalid channel \"%s\"", buf.c);
