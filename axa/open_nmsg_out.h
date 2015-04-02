@@ -19,10 +19,12 @@
 #ifndef AXA_OPEN_NMSG_OUT_H
 #define AXA_OPEN_NMSG_OUT_H
 
-/*! \file open_nmsg_out.h
- *  \brief NMSG stream API for AXA
+/**
+ *  \defgroup axa_open_nmsg_out axa_open_nmsg_out
  *
- *  This file contains the NMSG stream function declaration.
+ *  `axa_open_nmsg_out` contains NMSG stream function declaration.
+ *
+ * @{
  */
 
 #include <axa/axa.h>
@@ -46,5 +48,7 @@
  */
 extern int axa_open_nmsg_out(axa_emsg_t *emsg, nmsg_output_t *out_nmsg_output,
 			     int *out_sock_type, const char *addr);
+
+/**@}*/
 
 #endif /* AXA_OPEN_NMSG_OUT_H */

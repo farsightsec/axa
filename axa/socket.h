@@ -19,9 +19,15 @@
 #ifndef AXA_SOCKET_H
 #define AXA_SOCKET_H
 
-/*! \file socket.h
- *  \brief AXA socket and IP address macros and function declarations.
+/**
+ *  \defgroup axa_socket axa_socket
+ *
+ *  `axa_socket` contains socket and IP address macros and function
+ *  declarations.
+ *
+ * @{
  */
+
 
 #include <axa/axa.h>
 
@@ -194,7 +200,7 @@ extern bool axa_ip_to_su(axa_socku_t *su, const void *ip, uint family);
 extern bool axa_str_to_su(axa_socku_t *su, const char *str);
 
 /**
- *  Get an IP prefix mask
+ *  Get an IP prefix mask.
  *
  *  \param[out] mask IPv6 address
  *  \param[in] bits number of bits
@@ -217,8 +223,8 @@ extern int axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str);
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] addr_port string of the format "hostname,port"
- *  \param[in] passive, if true, an empty ("") or  asterisk (*) hostname
- *	results in IP addresses of INADDR_ANY and IN6ADDR_ANY.
+ *  \param[in] passive if true, an empty ("") or asterisk (*) hostname
+ *	    results in IP addresses of INADDR_ANY and IN6ADDR_ANY
  *  \param[out] resp pointer to address of struct addrinfo, results appear here
  *
  *  \retval true success, *resp will have the results
@@ -265,5 +271,7 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
  */
 extern bool axa_set_sock(axa_emsg_t *emsg, int s, const char *label,
 			 int bufsize, bool nonblock);
+
+/** @}*/
 
 #endif /* AXA_SOCKET_H */

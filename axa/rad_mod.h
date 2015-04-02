@@ -19,10 +19,10 @@
 #ifndef RAD_MOD_H
 #define RAD_MOD_H
 
-/*! \file rad_mod.h
- *  \brief AXA RAD data types and function declarations.
+/**
+ *  \defgroup axa_rad_mod axa_rad_mod
  *
- *  This file contains the RAD data types and function declarations for a
+ *  `axa_rad_mod` contains the RAD data types and function declarations for a
  *  RAD module.  Before including this file,
  *  \#define RAD_MOD_PREFIX xxx
  *  where "xxx" is the name of the module to declare
@@ -33,10 +33,12 @@
  *  start SRA watches based on a list of axa_rad_parm_t parameters that
  *  the module has computed from an optional list of watches and channels
  *  as well as optional strings from the users file and the RAD client.
- *  The RAD daemon delivers AXA messages containing nmsg or SIE messages and
+ *  The RAD daemon delivers AXA messages containing NMSG or SIE messages and
  *  dark channel packets matching those watches to the RAD module.  The module
  *  tells the RAD daemon to send copies of the AXA messages that the module
  *  considers anomalous to the RAD client.
+ *
+ * @{
  */
 
 #include <axa/wire.h>
@@ -52,8 +54,9 @@ typedef struct {
 	axa_p_body_t	body;		/**< variable size AXA message body */
 } axa_rad_p_t;
 
-/** a member of a linked list of RAD module parameters */
+/** AXA RAD paramter */
 typedef struct axa_rad_parm axa_rad_parm_t;
+/** a member of a linked list of RAD module parameters */
 struct axa_rad_parm {
 	axa_rad_parm_t	*fwd;		/**< next item in list */
 	axa_rad_p_t	p;		        /**< RAD struct */
@@ -86,8 +89,8 @@ struct axa_rad_parm {
  *	\param[in] cparms an ASCII string of parameters from the RAD client.
  *	    invalid after the open function returns.
  *
- *	\retval true, success
- *	\retval false, failure
+ *	\retval true success
+ *	\retval false failure
  */
 typedef bool (axa_rad_open_t)(void **ctxt, char **errmsg,
 			      const axa_rad_parm_t **out_parms,
@@ -102,12 +105,12 @@ typedef bool (axa_rad_open_t)(void **ctxt, char **errmsg,
  *	\param[in] ctxt context for this instance of the module
  *	\param[in] errmsg NULL except after an error return when it contains an
  *	    string explaining the error and that must be freed by the caller.
- *	\param[in] whit watch "hit" containing an SIE nmsg message or dark
+ *	\param[in] whit watch "hit" containing an SIE NMSG message or dark
  *	    channel that matched one of watches specified by the module when it
  *	    was opened.
  *	\param[in] whit_len the length of whit
- *	\param[in] msg nmsg message from whit decoded by axa_whit2nmsg if
- *	    whit->hdr.type==AXA_P_WHIT_NMSG
+ *	\param[in] msg NMSG message from whit decoded by #axa_whit2nmsg() if
+ *	    whit->hdr.type == #AXA_P_WHIT_NMSG
  *	\param[in] dgp IP packet from whit decoded by nmsg_ipdg_parse_pcap_raw()
  *
  *	\retval -1 error with text in errmsg
@@ -126,7 +129,7 @@ typedef int (axa_rad_whit_t)(void *ctxt, char **errmsg,
  *  including the list of axa_rad_parm_t parameters given by the module
  *  to the RAD daemon via the out_parms parameter of its open() function.
  *
- *	\param[in] ctxt
+ *	\param[in] ctxt context for this instance of the module
  */
 typedef void (axa_rad_close_t)(void *ctxt);
 
@@ -144,16 +147,19 @@ typedef void (axa_rad_close_t)(void *ctxt);
  */
 #define RAD_PREFIX "axa_rad_"
 
+/** @cond */
 #ifdef AXA_RAD_MOD
-/**
+/*
  *  Generate prototypes for a RAD module's exported functions.
- *	#AXA_RAD_MOD_OPEN, #AXA_RAD_MOD_WHIT, and #AXA_RAD_MOD_CLOSE are defined
+ *	AXA_RAD_MOD_OPEN, AXA_RAD_MOD_WHIT, and AXA_RAD_MOD_CLOSE are defined
  *	in Makefile.inc to be the correct function names of the modules.
  */
 axa_rad_open_t AXA_RAD_MOD_OPEN;
 axa_rad_whit_t AXA_RAD_MOD_WHIT;
 axa_rad_close_t AXA_RAD_MOD_CLOSE;
 #endif
+/** @endcond */
 
+/**@}*/
 
 #endif /* RAD_MOD_H */

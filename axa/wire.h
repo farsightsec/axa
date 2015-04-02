@@ -19,10 +19,14 @@
 #ifndef AXA_WIRE_H
 #define AXA_WIRE_H
 
-/*! \file wire.h
- *  \brief AXA wire protocol function declarations.
+/**
+ *  \defgroup axa_wire axa_wire
+ *
+ *  `axa_wire` is an interface for wire protocol data types and function
+ *  declarations.
+ *
+ * @{
  */
-
 
 #include <axa/axa.h>
 #include <axa/protocol.h>
@@ -123,7 +127,7 @@ extern const char *axa_tag_to_str(char *buf, size_t buf_len, axa_tag_t tag);
  *  AXA, the buffer will contain the string "unknown op n".
  *
  *  \param[out] buf will hold the opcode string
- *  \param[in] buf_len length of buf (should be AXA_P_OP_STRLEN)
+ *  \param[in] buf_len length of buf (should be #AXA_P_OP_STRLEN)
  *  \param[in] op the opcode to look up
  *
  *  \return buf
@@ -134,8 +138,9 @@ extern const char *axa_op_to_str(char *buf, size_t buf_len, axa_p_op_t op);
  *   Convert AXA tag and opcode to their string equivalents separated by ' '.
  *
  *  \param[out] buf for the result
- *  \param[in] buf_len length of buf (AXA_P_TAG_STRLEN+AXA_P_OP_STRLEN)
- *  \param[in] op
+ *  \param[in] buf_len length of buf (should be #AXA_P_OP_STRLEN)
+ *  \param[in] tag the tag to convert
+ *  \param[in] op the opcode to convert
  *
  *  \return buf
  */
@@ -230,16 +235,25 @@ extern bool axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op,
 			const axa_p_body_t *body, size_t body_len);
 
 /**
- *  AXA I/O type prefixes
- *	unix:/path/to/socket
- *	tcp:hostname,port
- *	ssh:[user@]host
- *	tls:certfile,keyfile[,certdir]@host[,port]
+ *  AXA I/O type prefix: UNIX domain socket
+ *  unix:/path/to/socket
  */
-#define	AXA_IO_TYPE_UNIX_STR "unix"	/**< UNIX domain socket */
-#define AXA_IO_TYPE_TCP_STR "tcp"	/**< TCP connection */
-#define AXA_IO_TYPE_SSH_STR "ssh"	/**< connection via ssh */
-#define AXA_IO_TYPE_TLS_STR "tls"	/**< TLS connection */
+#define	AXA_IO_TYPE_UNIX_STR "unix"	
+/**
+ *  AXA I/O type prefix: TCP connection
+ *  tcp:hostname,port
+ */
+#define AXA_IO_TYPE_TCP_STR "tcp"
+/**
+ *  AXA I/O type prefix: ssh connection
+ *  ssh:[user\@]host
+ */
+#define AXA_IO_TYPE_SSH_STR "ssh"
+/**
+ *  AXA I/O type prefix: tls connection
+ *  tls:certfile,keyfile[,certdir]\@host[,port]
+ */
+#define AXA_IO_TYPE_TLS_STR "tls"
 
 /** AXA I/O context types */
 typedef enum {
@@ -436,7 +450,7 @@ extern void axa_send_save(axa_io_t *io, size_t done, const axa_p_hdr_t *hdr,
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] io address of the AXA I/O context
- *  \parma[in] wait_ms wait no longer than this many milliseconds
+ *  \param[in] wait_ms wait no longer than this many milliseconds
  *  \param[in] keepalive true to wake up to send a keep-alive
  *  \param[in] tun true to pay attention if possible to tunnel messages
  *
@@ -448,11 +462,11 @@ extern axa_io_result_t axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
 /**
  *  Wait for and read an AXA message from the server into the client context.
  *
- *  axa_recv_flush() must be called to discard the AXA message in the
+ *  #axa_recv_flush() must be called to discard the AXA message in the
  *  client context before another use of this function.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[in] client address of the client context
+ *  \param[in] io address of the AXA I/O context
  *  \param[in] wait_ms milliseconds to wait
  *
  *  \retval one of #axa_io_result_t
@@ -532,5 +546,6 @@ extern bool axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded);
  */
 extern void axa_io_cleanup(void);
 
+/**@}*/
 
 #endif /* AXA_WIRE_H */

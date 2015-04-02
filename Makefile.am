@@ -49,7 +49,8 @@ EXTRA_DIST += \
 	sratool/axa_make_cert.man \
 	sratool/axa_server_cert.man \
 	README.md \
-	doc/doxygen/doxygen-input-filter
+	Doxyfile.in \
+	DoxygenLayout.xml
 
 dist_man_MANS =  \
 	sratool/sratool.1 \
@@ -234,14 +235,18 @@ EXTRA_DIST += \
 	sratunnel/README
 
 if HAVE_DOXYGEN
-html-local: doc/doxygen/Doxyfile
-	$(AM_V_GEN) cd doc/doxygen && $(DOXYGEN)
+stamp-html: $(DOXYGEN_INPUT_FILES) $(top_builddir)/Doxyfile $(top_srcdir)/DoxygenLayout.xml $(include_HEADERS) $(nobase_include_HEADERS)
+	$(AM_V_GEN) $(DOXYGEN)
+	@touch $@
+html-local: stamp-html
+doc: html-local
+clean-local:
+	rm -rf $(top_builddir)/html $(top_builddir)/stamp-html
 endif
 
-doc: html-local
-
 spotless: distclean
-	rm -fr ar-lib aclocal.m4 autom4te.cache configure config.* Makefile.in \
-	autoscan.log config.h compile depcomp configure.scan       	   \
-	doc/doxygen/Doxyfile missing install-sh ltmain.sh
+	rm -fr ar-lib aclocal.m4 autom4te.cache configure config.* Makefile.in  \
+	autoscan.log config.h compile depcomp configure.scan       	   			\
+	missing install-sh ltmain.sh $(top_builddir)/html						\
+	$(top_builddir)/stamp-html
 

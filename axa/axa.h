@@ -19,12 +19,15 @@
 #ifndef AXA_AXA_H
 #define AXA_AXA_H
 
-/*! \file axa.h
- *  \brief Top-level interface specification for libaxa
+/**
+ *  \defgroup axa_axa axa_axa
  *
- *  This file contains AXA macros, datatype definitions and function
+ *  `axa_axa` contains top-level macros, datatype definitions and function
  *  declarations.
+ *
+ * @{
  */
+
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -234,7 +237,7 @@ extern void *axa_zalloc(size_t s);
 #define AXA_SALLOC(t) ((t *)axa_zalloc(sizeof(t)))
 
 /**
- *  A strdup() wrapper that crashes immediately (via AXA_ASSERT()) on failure.
+ *  A strdup() wrapper that crashes immediately (via #AXA_ASSERT()) on failure.
  *  The caller must free() the result.
  *
  *  \param[in] s the string to duplicate
@@ -244,17 +247,18 @@ extern void *axa_zalloc(size_t s);
 extern char *axa_strdup(const char *s);
 
 /**
- *  A strndup() wrapper that crashes immediately (via AXA_ASSERT()) on failure.
+ *  A strndup() wrapper that crashes immediately (via #AXA_ASSERT()) on failure.
  *  The caller must free() the result.
  *
  *  \param[in] s the string to duplicate
+ *  \param[in] len length of string
  *
  *  \return pointer to the duplicated string
  */
 extern char *axa_strndup(const char *s, size_t len);
 
 /**
- *  A vasprintf() wrapper that crashes immediately (via AXA_ASSERT()) on
+ *  A vasprintf() wrapper that crashes immediately (via #AXA_ASSERT()) on
  *  vasprintf failures. When you're done with it, bufp should be freed.
  *
  *  \param[out] bufp a pointer to the newly minted and formated string
@@ -264,7 +268,7 @@ extern char *axa_strndup(const char *s, size_t len);
 extern void axa_vasprintf(char **bufp, const char *p, va_list args);
 
 /**
- *  An asprintf() wrapper that crashes immediately (via AXA_ASSERT()) on
+ *  An asprintf() wrapper that crashes immediately (via #AXA_ASSERT()) on
  *  asprintf failures. When you're done with it, bufp should be	freed.
  *
  *  \param[out] bufp a pointer to the newly minted and formated string
@@ -282,18 +286,18 @@ typedef struct {
 } axa_emsg_t;
 
 /**
- *  Set the global program name before axa_syslog_init() is called.
+ *  Set the global program name before #axa_syslog_init() is called.
  *  \param[in] me argv[0]
  */
 extern void axa_set_me(const char *me);
 
 /** @cond */
-/** AXA program name (should be set via axa_set_me()) */
+/** AXA program name (should be set via #axa_set_me()) */
 extern char axa_prog_name[];
 /** @endcond */
 
 /**
- *  Parse and set logging options before calling axa_syslog_init()
+ *  Parse and set logging options before calling #axa_syslog_init()
  *
  *  \param[out] emsg error message if something is wrong
  *  \param[in] arg comma separated string with the following options:
@@ -320,7 +324,7 @@ extern bool axa_parse_log_opt(axa_emsg_t *emsg, const char *arg);
 /**
  *  Initialize the AXA syslog interface.
  *
- *  Call this function after calling axa_parse_log_opt() and axa_set_me(),
+ *  Call this function after calling #axa_parse_log_opt() and #axa_set_me(),
  *  and before calling any AXA logging, accounting, or tracing function.
  */
 extern void axa_syslog_init(void);
@@ -344,7 +348,7 @@ extern void axa_syslog_init(void);
  */
 #define AXA_DEBUG_NMSG		5
 
-/** convert AXA debug level to nmsg debug level */
+/** convert AXA debug level to NMSG debug level */
 #define AXA_DEBUG_TO_NMSG(lvl) nmsg_set_debug((lvl) <= AXA_DEBUG_NMSG	\
 					      ? 0 : ((lvl)-AXA_DEBUG_NMSG))
 
@@ -370,7 +374,7 @@ extern void axa_clean_stdio(void);
 
 /**
  *  Generate an error message string in a buffer, if we have a buffer.
- *  Log or print the message with axa_vlog_msg() if there is no buffer.
+ *  Log or print the message with #axa_vlog_msg() if there is no buffer.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] msg message
@@ -379,7 +383,7 @@ extern void axa_clean_stdio(void);
 extern void axa_vpemsg(axa_emsg_t *emsg, const char *msg, va_list args);
 
 /**
- *  axa_vpemsg() wrapper using the variadic stdarg macros (va_start(),
+ *  #axa_vpemsg() wrapper using the variadic stdarg macros (va_start(),
  *  va_end()).
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
@@ -396,7 +400,7 @@ typedef enum {
 } axa_syslog_type_t;
 
 /**
- *  Log an AXA message. Depending on type and calls to axa_parse_log_opt(),
+ *  Log an AXA message. Depending on type and calls to #axa_parse_log_opt(),
  *  this function could write to stdout stderr, and/or syslog.
  *
  *  \param[in] type one of axa_syslog_type_t
@@ -408,8 +412,8 @@ extern void axa_vlog_msg(axa_syslog_type_t type, bool fatal,
 			 const char *p, va_list args);
 
 /**
- *  Log or print an error message.  This is a wrapper for axa_vlog_msg with
- *	type of AXA_SYSLOG_ERROR with fatal == false.
+ *  Log or print an error message.  This is a wrapper for #axa_vlog_msg() with
+ *	type of #AXA_SYSLOG_ERROR with fatal == false.
  *
  *  \param[in] p message
  *  \param[in] args variadic argument list
@@ -418,7 +422,7 @@ extern void axa_verror_msg(const char *p, va_list args);
 
 /**
  *  Log or print an error message.  This is a variadic wrapper for
- *	axa_vlog_msg with type=AXA_SYSLOG_ERROR with fatal=false.
+ *	#axa_vlog_msg() with type of #AXA_SYSLOG_ERROR with fatal == false.
  *
  *  \param[in] p message
  *  \param[in] ... variable length argument list
@@ -447,8 +451,8 @@ extern void axa_io_error(const char *op, const char *src, ssize_t len);
 extern void axa_vtrace_msg(const char *p, va_list args);
 
 /**
- *  Log a trace message in the tracing stream or AXA_SYSLOG_TRACE
- *  as opposed to the error or AXA_SYSLOG_ERROR stream.
+ *  Log a trace message in the tracing stream or #AXA_SYSLOG_TRACE
+ *  as opposed to the error or #AXA_SYSLOG_ERROR stream.
  *
  *  \param[in] p message
  *  \param[in] ... variable length argument list
@@ -529,8 +533,8 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
 
 /**
  *  Crash with a message if a condition is false.
- *  AXA_ASSERT_MSG can have required side effects such as stopping on a fatal
- *  condition, and so cannot be #ifdef'ed out.
+ *  #AXA_ASSERT_MSG() can have required side effects such as stopping on a
+ *  fatal condition, and so cannot be \#ifdef'ed out.
  *
  *  \param[in] c condition to assert
  *  \param[in] p pattern or message
@@ -543,7 +547,7 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
 
 /**
  *  Crash if a condition is false.
- *  AXA_ASSERT can have required side effects, usually stopping on a fatal
+ *  #AXA_ASSERT() can have required side effects, usually stopping on a fatal
  *  condition.
  *
  *  \param[in] c condition to assert
@@ -604,8 +608,8 @@ extern bool axa_parse_ch(axa_emsg_t *emsg, uint16_t *chp,
 
 /* time.c */
 
-#define AXA_DAY_SECS (24*60*60)		/** one day of seconds */
-#define AXA_DAY_MS  (AXA_DAY_SECS*1000)	/** one day of milliseconds */
+#define AXA_DAY_SECS (24*60*60)		    /**< one day of seconds */
+#define AXA_DAY_MS  (AXA_DAY_SECS*1000)	/**< one day of milliseconds */
 
 /**
  *  Compute (tv1 - tv2) in milliseconds, but limited or clamped to 1 day.
@@ -631,5 +635,7 @@ extern time_t axa_tv_diff2ms(const struct timeval *tv1,
  *  \return the difference between the two tv_sec values, in ms
  */
 extern time_t axa_elapsed_ms(const struct timeval *now, struct timeval *then);
+
+/**@}*/
 
 #endif /* AXA_AXA_H */

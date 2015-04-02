@@ -1,5 +1,7 @@
 AC_PREREQ(2.60)
 AC_INIT([axa], [1.1.0])
+PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
+AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules subdir-objects])
@@ -68,6 +70,9 @@ if test -n "$DOXYGEN"; then
         AC_MSG_CHECKING(doxygen version)
         MY_CHECK_DOXYGEN
         AC_MSG_RESULT($DOXYGEN_version)
+        AC_CONFIG_FILES([Doxyfile])
+        DOXYGEN_INPUT="${srcdir}/axa ${srcdir}/README.md"
+        AC_SUBST(DOXYGEN_INPUT)
         if test $DOXYGEN_version == "oldish"; then
             AC_MSG_WARN(old Doxygen version found API documentation may not render as intended consider upgrading to version 1.8.3 or newer)
         fi
@@ -87,7 +92,7 @@ AC_DEFINE_UNQUOTED(AXACONFDIR,"$CONFDIR",[config dir for axa])
 
 AC_DEFINE_UNQUOTED(AXA_PVERS_STR,"version $PACKAGE_VERSION", [Version])
 
-AC_CONFIG_FILES([Makefile axa/libaxa.pc doc/doxygen/Doxyfile])
+AC_CONFIG_FILES([Makefile axa/libaxa.pc])
 
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
 		sratunnel/sratunnel.man

@@ -22,10 +22,10 @@
 #ifndef AXA_TRIE_H
 #define AXA_TRIE_H
 
-/*! \file trie.h
- *  \brief Top-level interface specification for libaxa
+/**
+ *  \defgroup axa_trie axa_trie
  *
- * This file contains AXA trie or patricia tree macros, data type definitions
+ * `axa_trie` contains AXA trie or patricia tree macros, data type definitions
  * and function declarations.
  *
  * These trie functions use patricia trees to recognize IP addresses and
@@ -42,6 +42,8 @@
  *
  * IPv4, IPv6, and domain names are.maintained internally in separate three
  * tries that can be viewed as a single trie from the outside.
+ *
+ * @{
  */
 
 #include <axa/bits.h>
@@ -50,10 +52,10 @@
 
 typedef uint32_t tval_t;		/**< A value at a trie node */
 
-/**@{*/
+/** @cond unused currently */
 /**
  *  Pack and unpack trie node value into a pair of values such as an
- *  SRA client ID and an nmsg index.
+ *  SRA client ID and an NMSG index.
  */
 typedef uint16_t tval_idx_t;
 #define TVAL_IDX_BITS		16
@@ -64,10 +66,11 @@ typedef uint16_t tval_idx_t;
 #define TAG_ID_TO_TVAL(t, i) (tval_t)((((axa_tag_t )(t)) << TVAL_IDX_BITS)  \
 				      | (((tval_idx_t)(i)) & TVAL_IDX_MASK))
 
-/**@}*/
+/** @endcond */
 
-/** an array of values for a trie node */
+/** trie value list */
 typedef struct tval_list tval_list_t;
+/** an array of values for a trie node */
 struct tval_list {
 	tval_list_t	*free;		/**< chain while awaiting destruction */
 	uint16_t	len;		/**< Total length of the array */
@@ -82,8 +85,8 @@ struct tval_list {
  */
 typedef struct hit {
 	tval_t		tval;		/**< Value for the key in the trie. */
-	axa_nmsg_idx_t	field_idx;	/**< nmsg field index from caller */
-	axa_nmsg_idx_t	val_idx;	/**< nmsg value index from caller */
+	axa_nmsg_idx_t	field_idx;	/**< NMSG field index from caller */
+	axa_nmsg_idx_t	val_idx;	/**< NMSG value index from caller */
 } hit_t;
 
 /** The successful result of looking up a key is an array of "hits" */
@@ -278,7 +281,7 @@ extern bool axa_trie_watch_add(axa_emsg_t *emsg, trie_roots_t *roots,
  *	    and 10.2.3.4.
  *  \param[in] field_idx is associated with each value added to the hitlistp
  *      array
- *		to let the caller remember which nmsg value caused each "hit"
+ *		to let the caller remember which NMSG value caused each "hit"
  * \param[in] val_idx is associated with each value added to the hitlistp array
  */
 extern void axa_trie_search_su(trie_roots_t *roots, const axa_socku_t *su,
@@ -300,7 +303,7 @@ extern void axa_trie_search_su(trie_roots_t *roots, const axa_socku_t *su,
  *		for example a search for www.example.com can match nodes with
  *		keys www.example.com and *.com.
  * \param[in] field_idx is associated with each value added to the hit list
- *		to let the caller remember which nmsg value caused each "hit"
+ *		to let the caller remember which NMSG value caused each "hit"
  * \param[in] val_idx is associated with each value added to the hitlistp array
  *
  * \retval true if no errors were encountered.
@@ -328,7 +331,7 @@ extern void axa_tries_free(trie_roots_t *roots);
  *		will be added.
  * \param[in] tval_list is the list of values
  * \param[in] field_idx is associated with each value added to the hit list
- *		to let the caller remember which nmsg value caused each "hit".
+ *		to let the caller remember which NMSG value caused each "hit".
  * \param[in] val_idx is associated with each value added to the hitlistp array
  */
 extern void axa_hitlist_append(const trie_roots_t *roots,
@@ -336,5 +339,7 @@ extern void axa_hitlist_append(const trie_roots_t *roots,
 			       const tval_list_t *tval_list,
 			       axa_nmsg_idx_t field_idx,
 			       axa_nmsg_idx_t val_idx);
+
+/**@}*/
 
 #endif /* AXA_TRIE_H */
