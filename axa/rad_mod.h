@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) Realtime Anomaly Detector (RAD) modules
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -42,33 +42,31 @@
 #include <axa/wire.h>
 
 /**
- *  A single RAD parameter specifying an SRA channel to enable or watch to
- *  start in the form of an AXA message header and body.
- *  Only hdr.len and hdr.op are valid in the header.  hdr.len is in
- *  host byte-order but body is in wire format.
+ *  A RAD parameter specifying an SRA channel to enable or a watch to start
+ *  in the form of an AXA message header and body. Only hdr.len and hdr.op are
+ *  valid in the header.  hdr.len is in host byte-order but body is in wire
+ *  format.
  */
 typedef struct {
-	axa_p_hdr_t	hdr;		/**< AXA protocol header */
+	axa_p_hdr_t	hdr;		    /**< AXA protocol header */
 	axa_p_body_t	body;		/**< variable size AXA message body */
 } axa_rad_p_t;
 
-/**
- *  A member of a linked list RAD module parameters.
- */
+/** a member of a linked list of RAD module parameters */
 typedef struct axa_rad_parm axa_rad_parm_t;
 struct axa_rad_parm {
 	axa_rad_parm_t	*fwd;		/**< next item in list */
-	axa_rad_p_t	p;		/**< RAD struct */
+	axa_rad_p_t	p;		        /**< RAD struct */
 };
 
 
 /**
  *  Open a RAD module.
+ *
  *	All of these functions can be called concurrently by two or more
- *	RAD server threads and so must protect their data.
- *	A module's close function will be called by the RAD daemon if its
- *	open() function returns a non-null ctxt even if the open() function
- *	fails.
+ *	RAD server threads and so must protect their data. A module's close
+ *	function will be called by the RAD daemon if its open() function returns a
+ *	non-null ctxt even if the open() function fails.
  *
  *	\param[out] ctxt a non-null context for this instance of the module
  *	    that must be freed by the module in its close() function.
@@ -81,7 +79,7 @@ struct axa_rad_parm {
  *	    and freed by the module's close() function.
  *	\param[in] in_parms a linked list of axa_rad_parm_t parameters
  *	    consisting of the AXA watches specified by the RAD client with
- *	    AXA messages before the AXA_P_OP_ANOM message.
+ *	    AXA messages before the #AXA_P_OP_ANOM message.
  *	    These watches are given to all anomaly modules with the same tag.
  *	\param[in] uparms an ASCII string of parameters from the users file.
  *	    invalid after the open function returns.
@@ -98,6 +96,7 @@ typedef bool (axa_rad_open_t)(void **ctxt, char **errmsg,
 
 /**
  *  RAD module watch hit.
+ *
  *  Say whether to forward an AXA watch "hit" to the RAD client.
  *
  *	\param[in] ctxt context for this instance of the module
@@ -121,7 +120,8 @@ typedef int (axa_rad_whit_t)(void *ctxt, char **errmsg,
 			     const struct nmsg_ipdg *dgp);
 
 /**
- *  RAD module close
+ *  RAD module close.
+ *
  *  The module should free its context, ctxt, and any other resources
  *  including the list of axa_rad_parm_t parameters given by the module
  *  to the RAD daemon via the out_parms parameter of its open() function.
@@ -131,20 +131,25 @@ typedef int (axa_rad_whit_t)(void *ctxt, char **errmsg,
 typedef void (axa_rad_close_t)(void *ctxt);
 
 
-/** This string among the parameters for a RAD module in the users file
+/**
+ *  This string when among the parameters for a RAD module in the users file,
  *  allows the RAD client to specify parameters for the module when the
- *  client sends its AXA_P_OP_ANOM message. */
+ *  client sends its #AXA_P_OP_ANOM message.
+ */
 #define AXA_RAD_CPARMS_ALLOWED	"+"
 
-/** The names of the three functions exported by a RAD module start with
- * this string/prefix. */
+/**
+ *  The names of the three functions exported by a RAD module start with
+ *  this string/prefix.
+ */
 #define RAD_PREFIX "axa_rad_"
 
 #ifdef AXA_RAD_MOD
-/* Generate prototypes for a RAD module's exported functions.
- *	AXA_RAD_MOD_OPEN, AXA_RAD_MOD_WHIT, and AXA_RAD_MOD_CLOSE are
- *	defined in Makefile.inc to be the correct function names of the
- *	modules. */
+/**
+ *  Generate prototypes for a RAD module's exported functions.
+ *	#AXA_RAD_MOD_OPEN, #AXA_RAD_MOD_WHIT, and #AXA_RAD_MOD_CLOSE are defined
+ *	in Makefile.inc to be the correct function names of the modules.
+ */
 axa_rad_open_t AXA_RAD_MOD_OPEN;
 axa_rad_whit_t AXA_RAD_MOD_WHIT;
 axa_rad_close_t AXA_RAD_MOD_CLOSE;

@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) nmsg stream API
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@
 #define AXA_OPEN_NMSG_OUT_H
 
 /*! \file open_nmsg_out.h
- *  \brief Nmsg stream API for AXA
+ *  \brief NMSG stream API for AXA
  *
- *  This file contains the nmsg stream function declaration.
+ *  This file contains the NMSG stream function declaration.
  */
 
 #include <axa/axa.h>
@@ -30,10 +30,10 @@
 #include <nmsg.h>
 
 /**
- *  Open an output nmsg stream for output or forwarding by sratunnel or sratool.
+ *  Open an output NMSG stream for output or forwarding by sratunnel or sratool.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
- *  \param[out] out_nmsg_output nmsg_output_t of the newly opened nmsg
+ *  \param[out] out_nmsg_output nmsg_output_t of the newly opened NMSG
  *	connection
  *  \param[out] out_sock_type will hold the type of output socket
  *	(SOCK_STREAM or SOCK_DGRAM)

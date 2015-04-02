@@ -37,24 +37,39 @@ reads and executes commands from a file.
 .It Xo
 .Ic connect
 .Oo
-.Sm off Ar tcp: Oo Ar user No @ Oc Ar host,port Sm on
+.Sm off Ar tcp: Oo Ar user@ Oc Ar host,port Sm on
 |
-.Sm off Ar unix: Oo Ar user No @ Oc Ar /ud/socket Sm on
+.Sm off Ar unix: Oo Ar user@ Oc Ar /ud/socket Sm on
 |
-.Sm off Ar ssh: Oo Ar user No @ Oc Ar host Sm on
+.Sm off Ar ssh: Oo Ar user@ Oc Ar host Sm on
+|
+.Sm off Ar tls:cert,key@host,port Sm on
 .Oc
 .Xc
-connects to an \*(SR server at an IP address or UNIX domain socket or via SSH
-or show the current connection.
+By itself
+.Ic connect
+shows the current connection.
+Otherwise connect to the specified \*(SR server.
 .Pp
-Connections via
+.Ic Ssh:
+connections use
 .Xr ssh 1
-indicated by the "ssh" label use ssh configuration files and especially
+configuration files including
 .Xr ssh_config 5
 to specify the required public keys
 and optionally the fully qualified host names and user names associated
 with the public key.
 Use the "debug 4" command to diagnose ssh connection problems.
+.Pp
+.Ic Tls:
+connections use the SSL certificate in the
+.Ar cert
+file and the private key in the
+.Ar key
+file.
+If not absolute, the files are in the
+.Fl S Ar certs
+directory.
 .It Ic disconnect
 disconnects from the \*(SR server.
 .It Ic count Op N | off
@@ -62,6 +77,9 @@ sets terminal output to stop displaying packets after a
 number of packets (including immediately with a number of 0),
 show the currently remaining count,
 or turn off the packet count limit.
+.It Ic ciphers Op cipher-list
+set the list of ciphers for the next TLS connection or show the current
+contents of the list.
 .It Ic output
 Start, stop or show the state of forwarding packets received from the server.
 Received msg messages and IP packets can be forwarded as nmsg messages to
@@ -85,8 +103,14 @@ command to the server.
 .Op Ar -|MAX|per-sec op
 .Op Ar -|NEVER|report-secs
 .Oc
-Tell the \*(SR server to reports its rate limits
+Tell the \*(SR server to report its rate limits
 or set rate limits and the interval between rate limit reports.
+Hits in excess of the rate limit are discarded by the server.
+.It Ic sample Op Ar X%
+Get and optionally set the percentage of hits that the \*(SR servers sends.
+.It Ic window Op Ar bufsize
+Get and optionally set the TCP output buffer size or maximum send window
+used by the server.
 .It Ic pause
 Tell the \*(SR server to stop sending data.
 .It Ic go

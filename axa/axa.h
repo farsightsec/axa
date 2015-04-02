@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) definitions
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,15 +53,21 @@
  */
 #define AXA_LAST(_a)    (&(_a)[AXA_DIM(_a)-1])
 
-/** @cond */
-/* Produce a pointer to a byte in a buffer that corresponds to a structure
- * tag.  This works where a cast to the structure would not work or
- * would give the wrong answer because of word mis-alignment of the buffer
- * or other reasons. */
+/**
+ *  Produce a pointer to a byte in a buffer that corresponds to a structure
+ *  tag.  This works where a cast to the structure would not work or
+ *  would give the wrong answer because of word mis-alignment of the buffer
+ *  or other reasons.
+ *
+ *  \param[in] _p pointer to source data
+ *  \param[in] _s name of desired structure
+ *  \param[in] _t desired tag in the structure
+ *
+ *  \retval pointer to byte in source data corresponding to the tag.
+ *	The pointer might not be properly aligned.
+ */
 #define AXA_OFFSET(_p,_s,_t)  ((uint8_t *)(_p)				\
 			       + ((uint8_t *)&((_s *)0)->_t  - (uint8_t *)0))
-
-/** @endcond */
 
 /**
  *  Test a char to see if it's whitespace. AXA ignores locales to get
@@ -177,31 +183,6 @@
  */
 #define AXA_CLITCMP(_b,_s)  (strncasecmp((_b), (_s), sizeof(_s)-1) == 0)
 
-/** for reference counting */
-typedef int32_t		axa_ref_cnt_t;
-
-/**
- *  Wrapper for compiler builtin __sync_and_add_fetch(c,1). This function
- *  atomically adds 1 to the variable that c points to. If the variable would
- *  be less than 0, AXA_ASSERT() will be called and the program will exit.
- *
- *  \param[in] c pointer to the variable to be incremented
- *
- *  \return the new value of what c points to
- */
-#define AXA_INC_REF(c)	AXA_ASSERT(__sync_add_and_fetch(&(c), 1) > 0)
-
-/**
- *  Wrapper for compiler builtin __sync_and_sub_fetch(c,1). This function
- *  atomically subtracts 1 from the variable that c points to. If the variable
- *  would be less than 0, AXA_ASSERT() will be called and the program will exit.
- *
- *  \param[in] c pointer to the variable to be decremented
- *
- *  \return the new value of what c points to
- */
-#define AXA_DEC_REF(c)	AXA_ASSERT(__sync_sub_and_fetch(&(c), 1) >= 0)
-
 
 /* domain_to_str.c */
 /**
@@ -223,6 +204,16 @@ extern const char *axa_domain_to_str(const uint8_t *src, size_t src_len,
 
 /* emsg.c */
 /**
+ *  A malloc() wrapper that crashes immediately (via AXA_ASSERT()) on malloc
+ *  failures.
+ *
+ *  \param[in] s size of memory to allocate
+ *
+ *  \return pointer to the allocated memory
+ */
+extern void *axa_malloc(size_t s);
+
+/**
  *  A calloc() wrapper that crashes immediately (via AXA_ASSERT()) on malloc
  *  failures. The memory region will be zero-filled.
  *
@@ -233,7 +224,7 @@ extern const char *axa_domain_to_str(const uint8_t *src, size_t src_len,
 extern void *axa_zalloc(size_t s);
 
 /**
- *  A axa_zalloc() wrapper that returns zero-filled memory of size sizeof (t)
+ *  A calloc() wrapper that returns zero-filled memory of size sizeof (t)
  *  that is cast to (t *).
  *
  *  \param[in] t object to allocate memory for
@@ -243,9 +234,8 @@ extern void *axa_zalloc(size_t s);
 #define AXA_SALLOC(t) ((t *)axa_zalloc(sizeof(t)))
 
 /**
- *  A strdup() wrapper that crashes immediately (via AXA_ASSERT()) on a strdup()
- *  failure (which should be ENOMEM). You should free the memory referenced by
- *  the string this function returns.
+ *  A strdup() wrapper that crashes immediately (via AXA_ASSERT()) on failure.
+ *  The caller must free() the result.
  *
  *  \param[in] s the string to duplicate
  *
@@ -254,9 +244,18 @@ extern void *axa_zalloc(size_t s);
 extern char *axa_strdup(const char *s);
 
 /**
+ *  A strndup() wrapper that crashes immediately (via AXA_ASSERT()) on failure.
+ *  The caller must free() the result.
+ *
+ *  \param[in] s the string to duplicate
+ *
+ *  \return pointer to the duplicated string
+ */
+extern char *axa_strndup(const char *s, size_t len);
+
+/**
  *  A vasprintf() wrapper that crashes immediately (via AXA_ASSERT()) on
- *  vasprintf failures. When you're done with it, bufp should be subsequently
- *  freed.
+ *  vasprintf failures. When you're done with it, bufp should be freed.
  *
  *  \param[out] bufp a pointer to the newly minted and formated string
  *  \param[in] p the format string
@@ -266,8 +265,7 @@ extern void axa_vasprintf(char **bufp, const char *p, va_list args);
 
 /**
  *  An asprintf() wrapper that crashes immediately (via AXA_ASSERT()) on
- *  asprintf failures. When you're done with it, bufp should be subsequently
- *  freed.
+ *  asprintf failures. When you're done with it, bufp should be	freed.
  *
  *  \param[out] bufp a pointer to the newly minted and formated string
  *  \param[in] p the format string
@@ -279,65 +277,86 @@ extern void axa_asprintf(char **bufp, const char *p, ...) AXA_PF(2,3);
 extern void axa_set_core(void);
 
 /** AXA error message datatype */
-typedef struct axa_emsg {
+typedef struct {
 	char	c[120];			/**< error strings go here */
 } axa_emsg_t;
 
-/** AXA debug control.  0 is off.  More positive values generate more messages.
- * See #AXA_DEBUG_WATCH, #AXA_DEBUG_TRACE, and so forth */
-extern uint axa_debug;
-
-/** value for axa_debug to generate messages related to watches, anomaly
- *  modules, and channels */
-#define AXA_DEBUG_WATCH	2
-/** value for axa_debug to also generate messages about
- * AXA message sending and receiving */
-#define AXA_DEBUG_TRACE	3
-/** value for axa_debug to see nmsg related debugging messages */
-#define AXA_DEBUG_NMSG	4
-
-/** convert AXA debug level to nmsg debug level */
-#define AXA_DEBUG_TO_NMSG() nmsg_set_debug(axa_debug <= AXA_DEBUG_NMSG	\
-					   ? 0 : axa_debug - AXA_DEBUG_NMSG)
-
-/** maximum value for axa_debug */
-#define AXA_DEBUG_MAX	10
-
 /**
- *  Set the global program name, the syslog logging stuff needs this to be
- *  called first.
+ *  Set the global program name before axa_syslog_init() is called.
  *  \param[in] me argv[0]
  */
 extern void axa_set_me(const char *me);
 
+/** @cond */
 /** AXA program name (should be set via axa_set_me()) */
 extern char axa_prog_name[];
+/** @endcond */
 
 /**
- *  Parse log options string
- *  \param[in] arg CSV string with the following options:
- *  {trace|error|acct},{off|FACILITY.LEVEL}[,{none,stderr,stdout}]
- *  "trace", "error" and "acct" correspond to the members of axa_syslog_type_t.
- *  The following settings for "trace", "error" and "acct" are assumed:
- *	trace,LOG_DEBUG.LOG_DAEMON
- *	error.LOG_ERR,LOG_DAEMON
- *	acct,LOG_NOTICE.LOG_AUTH,none
+ *  Parse and set logging options before calling axa_syslog_init()
+ *
+ *  \param[out] emsg error message if something is wrong
+ *  \param[in] arg comma separated string with the following options:
+ *	{trace|error|acct},{off|FACILITY.LEVEL}[,{none,stderr,stdout}]
+ *	{trace|error|acct} selects one of three streams of information
+ *	"off" or "FACILITY.LEVEL" disable or turn on syslog for the
+ *	    chosen "trace", "error" and "acct" streams.
+ *	{none,stderr,stdout} directs the stream independently of how
+ *	    it is sent to the system log.  A stream can be sent to
+ *	    either, both, or neither the system log and stderr or stdout.
+ *
+ *	The following settings for "trace", "error" and "acct" are assumed
+ *	to send the "trace" and "error" streams to the system log and stderr
+ *	and the "acct" stream to only the system log:
+ *	    trace,LOG_DEBUG.LOG_DAEMON
+ *	    error.LOG_ERR,LOG_DAEMON
+ *	    acct,LOG_NOTICE.LOG_AUTH,none
  *
  *  \retval true if string is valid
  *  \retval false if not
  */
-extern bool axa_parse_log_opt(const char *arg);
+extern bool axa_parse_log_opt(axa_emsg_t *emsg, const char *arg);
 
-/** initialize the AXA syslog interface.
+/**
+ *  Initialize the AXA syslog interface.
+ *
  *  Call this function after calling axa_parse_log_opt() and axa_set_me(),
- *  and before calling any AXA logging, accouting, or tracing function. */
+ *  and before calling any AXA logging, accounting, or tracing function.
+ */
 extern void axa_syslog_init(void);
+
+
+/** generate trace syslog messages about watches, anomalies, and channels */
+#define AXA_DEBUG_WATCH		2
+/**
+ *  also generate trace syslog messages about client AXA messages and
+ *  non-routine AXA messages
+ */
+#define AXA_DEBUG_TRACE		3
+/**
+ *  also generate trace syslog messages about routine AXA messages
+ *  and transport related messages such as from `ssh`
+ */
+#define AXA_DEBUG_MORE_TRACE	4
+/**
+ *  also generate trace syslog messages from libnmsg and client-to-server
+ *  rate limiting or congestion
+ */
+#define AXA_DEBUG_NMSG		5
+
+/** convert AXA debug level to nmsg debug level */
+#define AXA_DEBUG_TO_NMSG(lvl) nmsg_set_debug((lvl) <= AXA_DEBUG_NMSG	\
+					      ? 0 : ((lvl)-AXA_DEBUG_NMSG))
+
+/** maximum debugging level */
+#define AXA_DEBUG_MAX	10
+
 
 /**
  *  Add text to an error or other message buffer.
  *  If we run out of room, add "...".
  *
- *  \param[in,out] bufp in: the orignal string, out: the concatenated strings
+ *  \param[in,out] bufp in: the original string, out: the concatenated strings
  *  \param[in,out] buf_lenp in: the length of bufp string, out: new length
  *  \param[in] p the format string to copy over
  *  \param[in] ... va_args business
@@ -350,7 +369,7 @@ extern void axa_buf_print(char **bufp, size_t *buf_lenp,
 extern void axa_clean_stdio(void);
 
 /**
- *  Generate an erorr message string in a buffer, if we have a buffer.
+ *  Generate an error message string in a buffer, if we have a buffer.
  *  Log or print the message with axa_vlog_msg() if there is no buffer.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
@@ -399,7 +418,7 @@ extern void axa_verror_msg(const char *p, va_list args);
 
 /**
  *  Log or print an error message.  This is a variadic wrapper for
- *	axa_vlog_msg with type of AXA_SYSLOG_ERROR with fatal == false.
+ *	axa_vlog_msg with type=AXA_SYSLOG_ERROR with fatal=false.
  *
  *  \param[in] p message
  *  \param[in] ... variable length argument list
@@ -408,7 +427,7 @@ extern void axa_error_msg(const char *p, ...) AXA_PF(1,2);
 
 /**
  *  Log an error message for an I/O function that has returned either
- *	a negative read or write length or the wrong length..  Complain
+ *	a negative read or write length or the wrong length. Complain
  *	about a non-negative length or decode errno for a negative length.
  *
  *  \param[in] op canonical string referring to the I/O event that caused the
@@ -509,31 +528,31 @@ extern ssize_t axa_get_token(char *token, size_t token_len,
 			     const char **stringp, const char *seps);
 
 /**
- *  Assert and bail if false.
- *  Macro checks if c is true, if so it does nothing, if c is false it
- *  calls axa_fatal_msg() with an exit code of 0 and the supplied variadic
- *  arguments.
+ *  Crash with a message if a condition is false.
+ *  AXA_ASSERT_MSG can have required side effects such as stopping on a fatal
+ *  condition, and so cannot be #ifdef'ed out.
  *
  *  \param[in] c condition to assert
- *  \param[in] ... variadic arguments (should be a string and any trailing
+ *  \param[in] p pattern or message
+ *  \param[in] ... optional variadic arguments for pattern
  *  parameters)
- *
- *  \retval 0 if c is true (otherwise call axa_fatal_msg() and exit)
  */
-#define AXA_ASSERT_MSG(c,...) ((c) ? 0 : axa_fatal_msg(0, __VA_ARGS__))
+#define AXA_ASSERT_MSG(c,p,...) ((c) ? 0				    \
+				 : axa_fatal_msg(0, __FILE__":%d " p,	    \
+						 __LINE__, ##__VA_ARGS__))
 
 /**
- *  Wrapper for AXA_ASSERT_MSG() with the string "<condition> is false".
+ *  Crash if a condition is false.
+ *  AXA_ASSERT can have required side effects, usually stopping on a fatal
+ *  condition.
  *
  *  \param[in] c condition to assert
- *
- *  \retval 0 if c is true (otherwise call axa_fatal_msg() and exit)
  */
 #define AXA_ASSERT(c) AXA_ASSERT_MSG((c), "\""#c"\" is false")
 
+
 /**
- *  Wrapper for axa_fatal_msg() with an exit code of 0 and the supplied
- *  variadic arguments.
+ *  Crash with a message.
  *
  *  \param[in] ... variadic arguments
  */
@@ -584,9 +603,12 @@ extern bool axa_parse_ch(axa_emsg_t *emsg, uint16_t *chp,
 			 bool all_ok, bool number_ok);
 
 /* time.c */
+
+#define AXA_DAY_SECS (24*60*60)		/** one day of seconds */
+#define AXA_DAY_MS  (AXA_DAY_SECS*1000)	/** one day of milliseconds */
+
 /**
- *  Compute (tv1 - tv2) in milliseconds, but limited or clamped to 1 day
- *  or between  +/- 24*60*60*1000.
+ *  Compute (tv1 - tv2) in milliseconds, but limited or clamped to 1 day.
  *
  *  \param[in] tv1 const struct timeval * to first time value
  *  \param[in] tv2 const struct timeval * to second time value
@@ -598,12 +620,13 @@ extern time_t axa_tv_diff2ms(const struct timeval *tv1,
 
 /**
  *  Compute the positive elapsed time between two timevals in milliseconds,
- *  but limited or clamped to at least 0 ms and at most 1 day
- *  or between 0 and 24*60*60*1000.  Negative elapsed time is impossible
- *  except when the system clock is changed.
+ *  but limited or clamped to at least 0 ms and at most 1 day.
+ *  Negative elapsed time implies that the system clock was set back.
+ *  In that case, set the 'then' timestamp to 'now' and return 0.
  *
- *  \param[in] now const struct timeval * to first time value
- *  \param[in] then const struct timeval * to second time value
+ *  \param[in] now const struct timeval * current time
+ *  \param[in] then struct timeval * past value, which will be set to the
+ *	current time if it in the future of the current time.
  *
  *  \return the difference between the two tv_sec values, in ms
  */

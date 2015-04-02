@@ -1,7 +1,7 @@
 /*
- * Advanced Exchange Access (AXA) semanatics for DNS packets and fields
+ * Advanced Exchange Access (AXA) semantics for DNS packets and fields
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ typedef const char axa_walks_t;
 /** The context of a domain. */
 typedef enum {
 	AXA_WALK_DOM_QUESTION,		/**< DNS question */
-	AXA_WALK_DOM_OWNER,		/**< rdata owner domain */
+	AXA_WALK_DOM_OWNER,		    /**< rdata owner domain */
 	AXA_WALK_DOM_RDATA1,		/**< 1st or only domain in rdata */
 	AXA_WALK_DOM_RDATA2,		/**< 2nd rdata domain in such as SOA */
 } axa_walk_dom_t;
@@ -67,7 +67,7 @@ typedef void (axa_walk_error_t)(void *ctxt, const char *p, va_list args);
  *  \param[in] ctxt caller's context
  *  \param[in] ip found IP address
  *  \param[in] ip_len length of IP and so either 4 or 16
- *  \param[in] sec name of the DNS secction where the IP address was found
+ *  \param[in] sec name of the DNS section where the IP address was found
  *
  *  \retval true continue walking
  *  \retval false stop walking or parsing after an error
@@ -86,7 +86,7 @@ typedef bool (axa_walk_ip_t)(void *ctxt,
  *  \param[in] name_len length of name
  *  \param[in] dtype context in which name was found
  *  \param[in] rtype rtype of owned or containing rdata
- *  \param[in] sec name of the DNS secction where the domain was found
+ *  \param[in] sec name of the DNS section where the domain was found
  *
  *  \retval true continue walking
  *  \retval false stop walking or parsing after an error
@@ -149,7 +149,7 @@ extern axa_walk_rdata_t axa_walk_rdata;
 extern axa_walk_rdata_t axa_skip_rdata;
 
 /**
- *  Walk over or examine a DNS packet
+ *  Walk over or examine a DNS packet.
  *
  *  \param[in] ctxt caller's context given callback functions
  *  \param[in] ops list of callback functions

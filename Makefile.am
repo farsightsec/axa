@@ -26,6 +26,8 @@ dist_config_DATA = etc/fields
 MAN_PROCESS = $(AM_V_GEN) soelim -I. -I`dirname $<` -r $< | sed -e "s/^\.Dd.*/.Dd `date '+%B %d, %Y'`/" >$@
 .man.1:
 	    $(MAN_PROCESS)
+.man.8:
+	    $(MAN_PROCESS)
 
 sratool/sratool.1: sratool/sratool.man \
 	fwd.man watch.man srawatch.man sratool/options.man sratool/cmds.man
@@ -43,17 +45,20 @@ EXTRA_DIST += \
 	radwatch.man \
 	sratool/options.man \
 	sratool/cmds.man \
+	sratool/axa_link_certs.man \
+	sratool/axa_make_cert.man \
+	sratool/axa_server_cert.man \
 	README.md \
 	doc/doxygen/doxygen-input-filter
 
 dist_man_MANS =  \
 	sratool/sratool.1 \
 	sratool/radtool.1 \
-	sratunnel/sratunnel.1
-CLEANFILES += \
-	sratool/sratool.1 \
-	sratool/radtool.1 \
-	sratunnel/sratunnel.1
+	sratunnel/sratunnel.1 \
+	sratool/axa_link_certs.8 \
+	sratool/axa_make_cert.8 \
+	sratool/axa_server_cert.8
+CLEANFILES += $(dist_man_MANS)
 
 #
 ##
@@ -104,6 +109,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/parse_ch.c \
 	axalib/socket.c \
 	axalib/time.c \
+	axalib/tls.c \
 	axalib/trie.c \
 	axalib/wdns_res.c \
 	axalib/wdns_rtype.c \
@@ -113,12 +119,16 @@ axa_libaxa_la_SOURCES = \
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBAXA_CURRENT):$(LIBAXA_REVISION):$(LIBAXA_AGE) \
 	-export-symbols-regex "^(axa_[a-z].*)" \
+	${libssl_LIBS} \
+	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
 	${libwdns_LIBS} \
 	${libnmsg_LIBS} \
 	${strlcpy_LIBS}
 axa_libaxa_la_CFLAGS = \
 	${AM_CFLAGS} \
+	${libssl_CFLAGS} \
+	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
 	${libwdns_CFLAGS} \
 	${libnmsg_CFLAGS} \
@@ -149,16 +159,20 @@ sratool_sratool_SOURCES = \
 	sratool/sratool.h
 sratool_sratool_LDADD = \
 	axa/libaxa.la \
-	${libprotobuf_c_LIBS} \
+	${libssl_LIBS} \
+	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
+	${libprotobuf_c_LIBS} \
 	${libnmsg_LIBS} \
 	${libz_LIBS} \
 	${libwdns_LIBS} \
 	${libedit_LIBS}
 sratool_sratool_CFLAGS = \
 	${AM_CFLAGS} \
-	${libprotobuf_c_CFLAGS} \
+	${libssl_CFLAGS} \
+	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
+	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${libz_CFLAGS} \
 	${libwdns_CFLAGS} \
@@ -175,11 +189,26 @@ sratunnel_sratunnel_SOURCES = \
 sratunnel_sratunnel_LDADD = \
 	axa/libaxa.la \
 	${libnmsg_LIBS} \
+	${libssl_LIBS} \
+	${libcrypto_LIBS} \
 	${libpcap_LIBS}
 sratunnel_sratunnel_CFLAGS = \
 	${AM_CFLAGS} \
 	${libnmsg_CFLAGS} \
+	${libssl_CFLAGS} \
+	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS}
+
+#
+##
+### scripts
+##
+#
+
+bin_SCRIPTS = \
+	sratool/axa_link_certs \
+	sratool/axa_make_cert \
+	sratool/axa_server_cert
 
 #
 ##
@@ -213,6 +242,6 @@ doc: html-local
 
 spotless: distclean
 	rm -fr ar-lib aclocal.m4 autom4te.cache configure config.* Makefile.in \
-	autoscan.log config.h compile depcomp configure.scan       			   \
+	autoscan.log config.h compile depcomp configure.scan       	   \
 	doc/doxygen/Doxyfile missing install-sh ltmain.sh
 
