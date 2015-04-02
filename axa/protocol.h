@@ -3,15 +3,6 @@
  *
  *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
- *	These protocols should not allow the client ask for the server to
- *	run any program or do anything else that might change any permanent
- *	state on the server other than logging and accounting.
- *	A client should only be able to set its only filter criteria and
- *	receive packets and messages matching those criteria.  Other than
- *	inevitable side channels such as system load, one client must
- *	not be able to affect any other client.  A client must treat the
- *	packets and messages it receives as pure data and not commands.
- *
  * This file is used outside the AXA programs.
  *
  *  Copyright (c) 2014-2015 by Farsight Security, Inc.
@@ -32,14 +23,28 @@
 #ifndef AXA_PROTOCOL_H
 #define AXA_PROTOCOL_H
 
-/*! \file protocol.h
- *  \brief AXA protocol data types and macros.
+/**
+ *  \defgroup axa_protocol axa_protocol
  *
- *  This file contains the AXA protocol data types and macros.
- *  This protocol uses network byte order to accommodate that SRA clients
- *  on a modest variety of 32-bit and 64-bit *BSD and Linux systems.
- *  It might need adjustment to accommodate clients on ARM and other
- *  platforms other than amd64 and x86.
+ * `axa_protocol` contains the AXA protocol data types and macros.
+ *
+ * This protocol uses network byte order to accommodate SRA clients
+ * on a modest variety of 32-bit and 64-bit *BSD and Linux systems.
+ *
+ * It might need adjustment to accommodate clients on ARM and other
+ * platforms other than amd64 and x86.
+ *
+ *  These protocols should not allow the client ask for the server to run
+ *  any program or do anything else that might change any permanent state on
+ *  the server other than logging and accounting.
+ *
+ *  A client should only be able to set its only filter criteria and
+ *  receive packets and messages matching those criteria.  Other than
+ *  inevitable side channels such as system load, one client must
+ *  not be able to affect any other client.  A client must treat the
+ *  packets and messages it receives as pure data and not commands.
+ *
+ * @{
  */
 
 #include <sys/types.h>
@@ -48,8 +53,10 @@
 
 #include <axa/socket.h>
 
-/** Pack AXA structures in messages to make them the same for all platforms
- *  regardless of their word alignment restrictions. */
+/**
+ *  Pack AXA structures in messages to make them the same for all platforms
+ *  regardless of their word alignment restrictions.
+ */
 #define _PK __attribute__ ((__packed__))
 
 /** Send an AXA_P_OP_NOP after this many seconds of silence */
@@ -216,7 +223,7 @@ typedef enum {
 
 	/** from SRA or RAD server to client */
 	AXA_P_OP_HELLO	    =1,		/**< axa_p_hello_t */
-	AXA_P_OP_OK	    =2,		/**< axa_p_result_t */
+	AXA_P_OP_OK	        =2,		/**< axa_p_result_t */
 	AXA_P_OP_ERROR	    =3,		/**< axa_p_result_t */
 	AXA_P_OP_MISSED	    =4,		/**< axa_p_missed_t */
 	AXA_P_OP_WHIT	    =5,		/**< axa_p_whit_t */
@@ -363,7 +370,7 @@ typedef uint16_t axa_p_ch_t;
 
 /** type of AXA watch "hit" being reported to the client */
 typedef enum {
-	AXA_P_WHIT_NMSG =0,		/**< nmsg or SIE message */
+	AXA_P_WHIT_NMSG =0,		/**< NMSG or SIE message */
 	AXA_P_WHIT_IP	=1,		/**< IP */
 } axa_p_whit_enum_t;
 
@@ -374,11 +381,11 @@ typedef struct _PK {
 	uint8_t		pad;		/**< to 0 mod 4 */
 } axa_p_whit_hdr_t;
 
-/** nmsg (SIE) field or value index or a special flag */
+/** NMSG (SIE) field or value index or a special flag */
 typedef uint16_t		axa_nmsg_idx_t;
-/** values >= than this are not nmsg indices but flags */
+/** values >= than this are not NMSG indices but flags */
 #define AXA_NMSG_IDX_RSVD	((axa_nmsg_idx_t)-16)
-/** no nmsg index */
+/** no NMSG index */
 #define AXA_NMSG_IDX_NONE	(AXA_NMSG_IDX_RSVD+1)
 /** the SIE packet made no sense */
 #define AXA_NMSG_IDX_ERROR	(AXA_NMSG_IDX_RSVD+2)
@@ -386,7 +393,7 @@ typedef uint16_t		axa_nmsg_idx_t;
 #define AXA_NMSG_IDX_DARK	(AXA_NMSG_IDX_RSVD+3)
 
 /**
- *  Convert axa_nmsg_idx_t index from protocol to host byte order
+ *  Convert #axa_nmsg_idx_t index from protocol to host byte order
  *
  *  \param[in] idx index
  *
@@ -395,7 +402,7 @@ typedef uint16_t		axa_nmsg_idx_t;
 #define AXA_P2H_IDX(idx)	AXA_P2H16(idx)
 
 /**
- *  Convert axa_nmsg_idx_t index from host to protocol byte order
+ *  Convert #axa_nmsg_idx_t index from host to protocol byte order
  *
  *  \param[in] idx index
  *
@@ -403,14 +410,14 @@ typedef uint16_t		axa_nmsg_idx_t;
  */
 #define AXA_H2P_IDX(idx)	AXA_H2P16(idx)
 
-/** AXA protocol watch hit header before an nmsg message */
+/** AXA protocol watch hit header before an NMSG message */
 typedef struct _PK {
 	axa_p_whit_hdr_t hdr;		/**< header for all watch hits */
 	axa_nmsg_idx_t	field_idx;	/**< triggering field index */
 	axa_nmsg_idx_t	val_idx;	/**< which value of field */
-	axa_nmsg_idx_t	vid;		/**< nmsg vendor ID */
-	axa_nmsg_idx_t	type;		/**< nmsg type */
-	/** timestamp when the nmsg message was reported. */
+	axa_nmsg_idx_t	vid;		/**< NMSG vendor ID */
+	axa_nmsg_idx_t	type;		/**< NMSG type */
+	/** timestamp when the NMSG message was reported. */
 	struct _PK {
 		uint32_t    tv_sec;	/**< seconds */
 		uint32_t    tv_nsec;	/**< nanoseconds */
@@ -428,10 +435,10 @@ typedef struct _PK {
 	uint32_t	ip_len;		/**< packet length on the wire */
 } axa_p_whit_ip_hdr_t;
 
-/** AXA protocol watch hit an nmsg message */
+/** AXA protocol watch hit an NMSG message */
 typedef	struct _PK {
-	axa_p_whit_nmsg_hdr_t hdr;	/**< watch hit nmsg header */
-#define AXA_P_WHIT_NMSG_MAX (3*(2<<16))	/**< some nmsg have >1 DNS packet */
+	axa_p_whit_nmsg_hdr_t hdr;	/**< watch hit NMSG header */
+#define AXA_P_WHIT_NMSG_MAX (3*(2<<16))	/**< some NMSGs have >1 DNS packet */
 	uint8_t	    b[0];		/**< start of SIE message */
 }  axa_p_whit_nmsg_t;
 
@@ -445,7 +452,7 @@ typedef struct _PK {
 /** generic AXA protocol watch hit */
 typedef union {
 	axa_p_whit_hdr_t    hdr;	/**< top level watch hit header */
-	axa_p_whit_nmsg_t   nmsg;	/**< an nmsg message */
+	axa_p_whit_nmsg_t   nmsg;	/**< an NMSG message */
 	axa_p_whit_ip_t	    ip;		/**< an IP packet */
 } axa_p_whit_t;
 
@@ -589,6 +596,7 @@ typedef struct _PK {
 
 /** Request the TCP buffer size ratio */
 #define	AXA_P_OPT_SNDBUF_REQ	0
+/** TCP buffer minimum window size */
 #define	AXA_P_OPT_SNDBUF_MIN	1024
 
 /** AXA protocol options type */
@@ -603,12 +611,13 @@ typedef enum {
 typedef struct _PK {
 	uint8_t		type;		/**< option type */
 	uint8_t		pad[7];		/**< to 0 mod 8 for axa_p_rlimit_t */
+    /** option union */
 	union axa_p_opt_u {
-		uint32_t	trace;	/**< AXA_P_OPT_TRACE: tracing level */
+		uint32_t	trace;	    /**< AXA_P_OPT_TRACE: tracing level */
 		axa_p_rlimit_t	rlimit;	/**< AXA_P_OPT_RLIMIT rate limits */
-		uint32_t	sample;	/**< AXA_P_OPT_SAMPLE percent*1000 */
-		uint32_t	bufsize;/**< AXA_P_OPT_SNDBUF bytes */
-	} u;
+		uint32_t	sample;	    /**< AXA_P_OPT_SAMPLE percent*1000 */
+		uint32_t	bufsize;    /**< AXA_P_OPT_SNDBUF bytes */
+	} u;                        /**< holds actual option */
 } axa_p_opt_t;
 
 
@@ -645,6 +654,7 @@ typedef struct {			/**< not packed because it is local */
 } axa_proxy_ssh_t;
 /**< @endcond */
 
+/**@}*/
 
 #undef _PK
 #endif /* AXA_PROTOCOL_H */

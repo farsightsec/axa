@@ -19,11 +19,13 @@
 #ifndef AXA_CLIENT_H
 #define AXA_CLIENT_H
 
-/*! \file client.h
- *  \brief Common code for RAD and SRA clients
+/**
+ *  \defgroup axa_client axa_client
  *
- *  This file contains AXA client macros, data type definitions, and function
- *  prototypes.
+ *  `axa_client` contains AXA client macros, data type definitions, and
+ *  function prototypes.
+ *
+ * @{
  */
 
 #include <axa/axa.h>
@@ -221,5 +223,7 @@ extern bool axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
  */
 extern bool axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 			     const axa_p_hello_t* hello);
+
+/**@}*/
 
 #endif /* AXA_CLIENT_H */

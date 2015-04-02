@@ -19,11 +19,13 @@
 #ifndef AXA_FIELDS_H
 #define AXA_FIELDS_H
 
-/*! \file fields.h
- *  \brief Nmsg definitions for libaxa
+/**
+ *  \defgroup axa_fields axa_fields
  *
- *  This file contains NMSG field related data type definitions and function
+ *  `axa_fields` contains NMSG field related data type definitions and function
  *  declarations.
+ *
+ * @{
  */
 
 #include <axa/protocol.h>
@@ -239,5 +241,6 @@ extern bool axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
 			  nmsg_message_t *msgp,
 			  axa_p_whit_t *whit, size_t whit_len);
 
+/**@}*/
 
 #endif /* AXA_FIELDS_H */

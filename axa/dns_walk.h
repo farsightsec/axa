@@ -19,15 +19,17 @@
 #ifndef AXA_DNS_WALK_H
 #define AXA_DNS_WALK_H
 
-/*! \file dns_walk.h
- *  \brief DNS semantic framework
+/**
+ *  \defgroup axa_dns_walk axa_dns_walk
  *
- *  The DNS Walk facility takes a DNS packet or rdata field, additional
+ *  `dns_walk` facility takes a DNS packet or rdata field, additional
  *  information if required, and a set of functions that should be applied
  *  to parts of the packet or rdata.  The functions usually make decisions
  *  based on the contents (i.e.. filter it).  Domains are assembled by
  *  combining fragments of "compressed" domains.  Parts that are uninteresting
  *  for filter, such as MX precedence values, are skipped.
+ *
+ * @{
  */
 
 #include <axa/axa.h>
@@ -158,5 +160,7 @@ extern axa_walk_rdata_t axa_skip_rdata;
  */
 extern void axa_walk_dns(void *ctxt, axa_walk_ops_t *ops,
 			 axa_walkb_t *pkt_base, size_t pkt_len);
+
+/**@}*/
 
 #endif /* AXA_DNS_WALK_H */

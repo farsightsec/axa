@@ -18,10 +18,10 @@
 /configure
 /libtool
 /stamp-h1
+/stamp-html
 TAGS
 axa/libaxa.pc
 axa/version.h
-doc/doxygen/Doxyfile
-doc/doxygen/doxygen-warnings.txt
-doc/doxygen/html
-doc/doxygen/latex
+Doxyfile
+/html
+/latex
