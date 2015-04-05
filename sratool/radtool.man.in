@@ -131,6 +131,12 @@ the usual
 sequence is used, starting with
 .Pa ~/.ssh/config .
 "Host" stanzas in the file can simplify connections to \*(SR servers.
+.It Pa ~/.sratool_history
+contains the command history from previous
+.Nm radtool
+and/or
+.Nm sratool
+invocations
 .El
 .Sh ENVIRONMENT VARIABLES
 If set, AXACONF specifies the AXA configuration directory instead of,
