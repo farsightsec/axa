@@ -385,8 +385,10 @@ static const char *
 el_prompt(EditLine *e AXA_UNUSED)
 {
 	static const char null_prompt[] = "";
-	static const char std_prompt[] = "> ";
-	static const char out_prompt[] = "output> ";
+	static const char rad_std_prompt[] = "rad> ";
+	static const char sra_std_prompt[] = "sra> ";
+	static const char rad_out_prompt[] = "output-rad> ";
+	static const char sra_out_prompt[] = "output-sra> ";
 	const char *prompt;
 
 	if (interrupted)
@@ -395,9 +397,9 @@ el_prompt(EditLine *e AXA_UNUSED)
 	if (no_prompt)
 		prompt = null_prompt;
 	else if (out_on)
-		prompt = out_prompt;
+		prompt = mode == RAD ? rad_out_prompt : sra_out_prompt;
 	else
-		prompt = std_prompt;
+		prompt = mode == RAD ? rad_std_prompt : sra_std_prompt;
 
 	prompt_cleared.tv_sec = 0;
 	no_reprompt.tv_sec = 0;
