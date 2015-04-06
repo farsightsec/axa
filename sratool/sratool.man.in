@@ -88,10 +88,10 @@ The following commands are available:
 .Bl -tag -width 3n
 .so cmds.man
 .It Ar tag Ic watch Brq Ar ip=IP[/n] | dns=[*.]dom | ch=chN | errors
-Tell the SRA server to send nmsg messages or IP packets that are to,
+Tell the SRA server to send NMSG messages or IP packets that are to,
 from, or contain the specified IP addresses,
 that contain the specified domain name,
-that arrived at the server on the specifed SIE channel,
+that arrived at the server on the specified SIE channel,
 or are SIE messages or IP packets that could not be decoded.
 .Ar Tag
 is a number labeling the watch.
@@ -108,19 +108,22 @@ one or all SIE channels.
 The following captures and displays one SIE
 .Ic newdomain
 message.
-The "dns=*." watch or pattern was matched by the "ehost-services131.com"
-domain in DNS CNAME rdata.
+The "dns=*." watch or pattern was matched by the "ns1.xserver.jp"
+domain in DNS NS rdata.
 .Bd -literal -offset 4n
-% sratool
-> connect ssh:uname@srvr.example.com
- HELLO srad version 0.1.0 SRA protocol 1
-1 OK USER uname authorized
-> ch 211 on
+$ sratool 
+sra> connect ssh:sra-service@sra-server.example.com
+* HELLO srad version 1.1.0 sb6 AXA protocol 1
+sra> count 1
+sra> channel 211 on
 * OK CHANNEL ON/OFF channel ch211 on
-> 1 watch dns=*.
+sra> 1 watch dns=*.
 1 OK WATCH started
-1 ch211 SIE newdomain rdata=CNAME ehost-services131.com
-www.naturalgassuppliers.org/CNAME: naturalgassuppliers.org
+1 ch211  SIE newdomain rdata=NS ns1.xserver.jp
+ atopy100days.com/NS: atopy100days.com
+
+packet count limit exceeded
+sra> exit
 .Ed
 .Sh FILES
 .Bl -tag -width config
@@ -138,6 +141,12 @@ configuration file used with
 .Ar connect\ ssh:...
 connections.
 "Host" stanzas in the file can simplify connections to \*(SR servers.
+.It Pa ~/.sratool_history
+contains the command history from previous
+.Nm sratool
+and/or
+.Nm radtool
+invocations
 .El
 .Sh ENVIRONMENT VARIABLES
 If set, AXACONF specifies the AXA configuration directory instead of the
