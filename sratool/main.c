@@ -226,7 +226,8 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"mode",		mode_cmd,		BOTH,MB, NO,
     "mode [SRA | RAD]",
     "Show the current command mode or"
-    " expect to connect to an SRA or RAD server."},
+    " expect to connect to an SRA or RAD server. Mode cannot be changed"
+    " while connected to server."},
 {"srad",		sra_mode_cmd,		BOTH,MB, NO,
     NULL,
     NULL},
@@ -2193,8 +2194,16 @@ mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	setting = arg;
 	if (setting[0] != '\0') {
 		if (word_cmp(&setting, "sra")) {
+            if (mode == RAD && AXA_CLIENT_CONNECTED(&client)) {
+                printf("  can't change mode while connected to server\n");
+                return (-1);
+            }
 			mode = SRA;
 		} else if (word_cmp(&setting, "rad")) {
+            if (mode == SRA && AXA_CLIENT_CONNECTED(&client)) {
+                printf("  can't change mode while connected to server\n");
+                return (-1);
+            }
 			mode = RAD;
 		} else {
 			return (-1);
