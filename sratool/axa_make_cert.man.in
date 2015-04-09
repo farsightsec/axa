@@ -22,7 +22,7 @@
 .Op Fl x
 .Op Fl S Ar certsdir
 .Op Fl l Ar days
-.Fl n Ar name
+.Fl u Ar name
 .Sh DESCRIPTION
 .Nm axa_make_cert
 creates self-signed AXA certificate,
@@ -32,7 +32,7 @@ and private key files,
 where
 .Ar name
 has been set with
-.Fl n .
+.Fl u .
 .Ar Name
 should be an AXA user name
 or the name of an AXA server.
@@ -57,8 +57,8 @@ It tries to create a directory in the same order if that search fails.
 .It Fl l Ar days
 sets the lifetime of the certificate to
 .Ar days
-instead of the default 365.
-.It Fl n Ar name
+instead of the default 3650.
+.It Fl u Ar name
 sets the CN (common name) for the certificate.
 The CN identifies the AXA user to a server or a server to an AXA client.
 .El
@@ -71,5 +71,7 @@ or
 .Xr axa_link_certs 8 ,
 .Xr axa_server_cert 8 ,
 .Xr sratool 1 ,
-and
+.Xr radtool 1 ,
 .Xr sratunnel 1 .
+and
+.Xr radtunnel 1 .

@@ -64,5 +64,7 @@ or
 .Xr axa_make_cert 8 ,
 .Xr axa_server_cert 8 ,
 .Xr sratool 1 ,
-and
+.Xr radtool 1 ,
 .Xr sratunnel 1 .
+and
+.Xr radtunnel 1 .

@@ -28,7 +28,6 @@
 .Fl s Ar SRA-server
 .Fl c Ar channel
 .Fl w Ar watch
-.Fl a Ar anomaly
 .Fl o Ar out-addr
 .Sh DESCRIPTION
 .Nm Sratunnel
@@ -146,13 +145,6 @@ and
 .Ar
 dns
 watches to indicate addresses or domains that are not used exclusively.
-.It Fl a Ar anomaly Op parameters
-specifies an RAD anomaly detection module and its parameters with
-.Fl R
-and so in RAD mode.
-There must be at least one
-.Fl a
-in RAD mode.
 .It Fl o Ar out-addr
 specifies
 the destination of the SIE data.
@@ -201,6 +193,7 @@ default,
 or
 .Pa @CONFDIR@ .
 .Sh SEE ALSO
+.Xr radtunnel 1 ,
 .Xr sratool 1 ,
 .Xr radtool 1 ,
 .Xr mkfifo 1 ,

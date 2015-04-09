@@ -33,7 +33,7 @@ connects and sends Advanced Exchange Access (AXA) protocol messages
 to Realtime Anomaly Detector (RAD) servers
 and displays the responses.
 It can also tunnel SIE data like
-.Xr sratunnel 1 .
+.Xr radtunnel 1 .
 .Pp
 .Nm Radtool
 is a programming example for the Advanced Exchange Access (AXA)
@@ -148,6 +148,7 @@ or
 .Xr dns_binding 1 ,
 .Xr sratool 1 ,
 .Xr sratunnel 1 ,
+.Xr radtunnel 1 ,
 .Xr mkfifo 1 ,
 and
 .Xr nmsgtool 1 .
