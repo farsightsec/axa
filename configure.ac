@@ -95,7 +95,7 @@ AC_DEFINE_UNQUOTED(AXA_PVERS_STR,"version $PACKAGE_VERSION", [Version])
 AC_CONFIG_FILES([Makefile axa/libaxa.pc])
 
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
-		sratunnel/sratunnel.man
+		sratunnel/sratunnel.man sratunnel/radtunnel.man
                 sratool/axa_link_certs.man sratool/axa_make_cert.man
 		sratool/axa_server_cert.man])
 

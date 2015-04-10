@@ -47,6 +47,7 @@
 #include <unistd.h>
 
 #include <histedit.h>
+#include <pwd.h>
 
 
 #define MAX_IN_FILES 10
@@ -111,6 +112,7 @@ static bool output_counting;
 /* Use editline() instead of readline() to avoid GPL pollution. */
 static History *el_history;
 static HistEvent el_event;
+static char *history_savefile = NULL;
 static EditLine *el_e = NULL;
 static struct timeval cmd_input;
 static bool no_prompt = false;
@@ -131,6 +133,7 @@ static void out_flush(void);
 static void read_srvr(void);
 static int srvr_send(axa_tag_t tag, axa_p_op_t op,
 		     const void *b, size_t b_len);
+static void history_get_savefile(void);
 
 static axa_emsg_t emsg;
 
@@ -223,7 +226,8 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"mode",		mode_cmd,		BOTH,MB, NO,
     "mode [SRA | RAD]",
     "Show the current command mode or"
-    " expect to connect to an SRA or RAD server."},
+    " expect to connect to an SRA or RAD server. Mode cannot be changed"
+    " while connected to server."},
 {"srad",		sra_mode_cmd,		BOTH,MB, NO,
     NULL,
     NULL},
@@ -385,8 +389,10 @@ static const char *
 el_prompt(EditLine *e AXA_UNUSED)
 {
 	static const char null_prompt[] = "";
-	static const char std_prompt[] = "> ";
-	static const char out_prompt[] = "output> ";
+	static const char rad_std_prompt[] = "rad> ";
+	static const char sra_std_prompt[] = "sra> ";
+	static const char rad_out_prompt[] = "output-rad> ";
+	static const char sra_out_prompt[] = "output-sra> ";
 	const char *prompt;
 
 	if (interrupted)
@@ -395,9 +401,9 @@ el_prompt(EditLine *e AXA_UNUSED)
 	if (no_prompt)
 		prompt = null_prompt;
 	else if (out_on)
-		prompt = out_prompt;
+		prompt = mode == RAD ? rad_out_prompt : sra_out_prompt;
 	else
-		prompt = std_prompt;
+		prompt = mode == RAD ? rad_std_prompt : sra_std_prompt;
 
 	prompt_cleared.tv_sec = 0;
 	no_reprompt.tv_sec = 0;
@@ -536,6 +542,7 @@ stop(int status)
 {
 	if (el_e != NULL) {
 		if (el_history)
+            history(el_history, &el_event, H_SAVE, history_savefile);
 			history_end(el_history);
 		el_end(el_e);
 	}
@@ -861,6 +868,23 @@ usage(void)
 	exit(EX_USAGE);
 }
 
+void
+history_get_savefile(void)
+{
+    int n;
+    struct passwd *pw;
+    const char *histfile_name  = ".sratool_history";
+    static char buf[MAXPATHLEN + 1];
+
+    pw = getpwuid(getuid());
+    if (pw == NULL)
+        return;
+    n = snprintf(buf, sizeof(buf), "%s", pw->pw_dir);
+    snprintf(buf + n, sizeof(buf) - n, "/%s", histfile_name);
+
+    history_savefile = buf;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -903,6 +927,8 @@ main(int argc, char **argv)
 		el_source(el_e, NULL);
 		el_history = history_init();
 		history(el_history, &el_event, H_SETSIZE, 800);
+		history_get_savefile();
+		history(el_history, &el_event, H_LOAD, history_savefile);
 		el_set(el_e, EL_HIST, history, el_history);
 		el_set(el_e, EL_PROMPT, el_prompt);
 		el_set(el_e, EL_SIGNAL, 1);
@@ -2168,8 +2194,16 @@ mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	setting = arg;
 	if (setting[0] != '\0') {
 		if (word_cmp(&setting, "sra")) {
+            if (mode == RAD && AXA_CLIENT_CONNECTED(&client)) {
+                printf("  can't change mode while connected to server\n");
+                return (-1);
+            }
 			mode = SRA;
 		} else if (word_cmp(&setting, "rad")) {
+            if (mode == SRA && AXA_CLIENT_CONNECTED(&client)) {
+                printf("  can't change mode while connected to server\n");
+                return (-1);
+            }
 			mode = RAD;
 		} else {
 			return (-1);
