@@ -138,16 +138,14 @@ The binary packages of AXA and its dependencies are available from
 used instead of building from source on Debian-based systems.
 
 On a clean Debian install, the following brings in everything "external"
-that is needed:
+that is needed and then install all of thw AXA tools and `libaxa`:
 
 ~~~
-$ apt-get install build-essential autoconf libpcap-dev      \
+# apt-get install build-essential autoconf libpcap-dev      \
                   zlib1g-dev libedit-dev libbsd-dev libtool \
                   libssl-dev pkg-config curl unzip
+# apt-get install axa-tools libaxa-dev
 ~~~
-
-`unzip` is needed if you download the "zip" of the git repos and `curl` is
-needed during the build of `protobuf`.
 
 ## SRA and RAD Server Encrypted Transport
 After SRA and/or RAD session parameters have been established, SIE data is
@@ -239,12 +237,7 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
         SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
         Install it in /usr/local/etc/axa/certs/farsight.pem? yes
 
- 5. Create AXA certificate links:
-
-        # axa_link_certs
-        Making new links in /usr/local/etc/axa/certs/
-
- 6. Email your public certificate (`username.pem`) to your Farsight Security
+ 5. Email your public certificate (`username.pem`) to your Farsight Security
     account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`username.key`).
     This is the private half of your generate key pair that you should
     keep safe. As soon as your account is provisioned you will receive
