@@ -17,14 +17,15 @@
 .Os " "
 .Sh NAME
 .Nm axa_server_cert
-.Nd
+.Nd Retrieve AXA Server Certificate Fingerprint
 .Sh SYNOPSIS
 .Op Fl x
 .Op Fl S Ar certsdir
 .Op Fl o Ar cert_file
 .Fl s Ar server,port
 .Sh DESCRIPTION
-.Nm axa_server_cert
+.Nm Axa_server_cert
+retrieves the AXA server certificate fingerprint.
 .Ss OPTIONS
 .Bl -tag -width 3n
 .It Fl x
@@ -61,5 +62,7 @@ or
 .Xr axa_make_cert 8 ,
 .Xr axa_link_certs 8 ,
 .Xr sratool 1 ,
+.Xr radtool 1 ,
+.Xr radtunnel 1 .
 and
 .Xr sratunnel 1 .

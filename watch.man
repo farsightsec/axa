@@ -1,6 +1,6 @@
 .\" watch.man
-.\" common text describing common features of sratool, radtool, and sratunnel
-.\" watches.  It does not include the terminal .El
+.\" common text describing common features of sratool, radtool, sratunnel, and
+.\" radtunnel watches.  It does not include the terminal .El
 .Bl -tag -width dns=.*..dom -compact
 .It \&
 .It Xo

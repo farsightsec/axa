@@ -13,11 +13,11 @@
 .\" limitations under the License.
 .\"
 .Dd current-date via make
-.Dt sratunnel 1 AXA
+.Dt radtunnel 1 AXA
 .Os " "
 .Sh NAME
-.Nm sratunnel
-.Nd SIE Remote Access (SRA) Tunnel
+.Nm radtunnel
+.Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
 .Op Fl VdOR
 .Op Fl C Ar count
@@ -25,18 +25,18 @@
 .Op Fl E Ar ciphers
 .Op Fl S Ar certs
 .br
-.Fl s Ar SRA-server
-.Fl c Ar channel
+.Fl s Ar RAD-server
 .Fl w Ar watch
+.Fl a Ar anomaly
 .Fl o Ar out-addr
 .Sh DESCRIPTION
-.Nm Sratunnel
+.Nm Radtunnel
 transfers selected Security Information Exchange (SIE) data
-from remote servers to the local network.
+from Realtime Anomaly Detector (RAD) servers to the local network.
 The connection to the server is created and restored after problems
 with binary exponential delays between retries.
 .Pp
-.Nm Sratunnel
+.Nm Radtunnel
 is a programming example for using the Advanced Exchange Access (AXA)
 applications programming interface, the AXA protocol.
 It also demonstrates the use of the AXA helper library,
@@ -57,7 +57,7 @@ enable tracing reports on the server or increase them after the first
 .It Fl O
 enable a spinning bar output indicator on stdout.
 .It Fl R
-switches from SRA to RAD mode.
+switches from RAD to SRA mode.
 In SRA mode,
 .Fl a
 is not allowed
@@ -115,23 +115,12 @@ If not absolute, the files are in the
 .Fl S Ar certs
 directory.
 .El
-.It Fl c Ar channel
-There must be at least one
-.Fl c
-argument naming an SIE channel that server will watch for interesting
-.Em nmsg
-messages or IP packets.
-.Pp
-Channels are specified as
-.Ar chXX
-or
-.Ar all
 .It Fl w Ar watch
 There must be at least one
 .Fl w
-with an SRA or RAD watch to specify the interesting SIE messages or
+with a RAD watch to specify the interesting SIE messages or
 dark channel IP packets.
-.so srawatch.man
+.so radwatch.man
 .El
 .Pp
 With
@@ -145,6 +134,13 @@ and
 .Ar
 dns
 watches to indicate addresses or domains that are not used exclusively.
+.It Fl a Ar anomaly Op parameters
+specifies an RAD anomaly detection module and its parameters with
+.Fl R
+and so in RAD mode.
+There must be at least one
+.Fl a
+in RAD mode.
 .It Fl o Ar out-addr
 specifies
 the destination of the SIE data.
@@ -156,21 +152,12 @@ or as raw IP packets to a file, FIFO, or network interface.
 .so fwd.man
 .El
 .Sh EXAMPLES
-The following sends all new domain reports on channel 212
-seen by the SRA server at example.com
+The following sends all IP traffic matching the watches using the
+ip_probe anomaly module as seen by the RAD server at example.com
 to the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-sratunnel -s ssh:user@example.com -o nmsg:127.1,8000 \\
-	-c ch212 -w ch=ch212
-.Ed
-.Pp
-Beware of specifying more data than will fit in the TCP/IP connections
-between the server and
-.Nm .
-The following is likely to be only a network stress test:
-.Bd -literal -offset 4n
-sratunnel -s ssh:user@example.com -o nmsg:127.1,8000 \\
-	-c all -w ip=128.0/1  -w ip=0/1
+radtunnel -s ssh:rad-service@example.com -o nmsg:127.1,8000 \\
+	-w ip=0/1 -w ip=128.0/1 -a ip14-80
 .Ed
 .Sh FILES
 .Bl -tag -width config
@@ -193,7 +180,7 @@ default,
 or
 .Pa @CONFDIR@ .
 .Sh SEE ALSO
-.Xr radtunnel 1 ,
+.Xr sratunnel 1 ,
 .Xr sratool 1 ,
 .Xr radtool 1 ,
 .Xr mkfifo 1 ,

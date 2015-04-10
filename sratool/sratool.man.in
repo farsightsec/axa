@@ -157,6 +157,7 @@ or
 .Sh SEE ALSO
 .Xr sratool 1 ,
 .Xr sratunnel 1 ,
+.Xr radtunnel 1 ,
 .Xr mkfifo 1 ,
 and
 .Xr nmsgtool 1 .
