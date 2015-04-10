@@ -365,7 +365,7 @@ main(int argc, char **argv)
 			forward();
 			break;
 		default:
-			AXA_FAIL("impossible axa_client_recv() result");
+			AXA_FAIL("impossible axa_io_wait() result");
 		}
 	}
 }
