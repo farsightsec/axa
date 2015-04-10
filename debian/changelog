@@ -1,6 +1,9 @@
 axa (1.1.0) UNRELEASED; urgency=low
 
   * Add TLS support
+  * Add radtunnel
+  * Add mode prompt to sratool and radtool
+  * Add command-file history to sratool and radtool
   * Add new sratool command: "window" to set TCP buffer size over TLS
   * Add new sratool command: "sample" to set sampling rate
   * Add new sratunnel option "-C count" to specify packet count
