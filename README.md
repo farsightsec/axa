@@ -210,7 +210,7 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
  1. Install axa-tools (as per above). Installed alongside the AXA tools are
     three TLS helper scripts:
    * axa_make_cert: Generate AXA certificate and private key files
-   * axa_server_cert: Retrieves the AXA server certificate fingerprint
+   * axa_server_cert: Retrieve the AXA server certificate fingerprint
    * axa_link_certs: Create AXA certificate links
  2. Generate and install the AXA user TLS certificates. This needs to be done
     as root because the install script copies the files to the AXA certs
@@ -228,8 +228,11 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
 
         # chown user. /usr/local/etc/axa/certs/username.key
 
- 4. Retrieve the AXA server certificate. This can be done from either SRA or
-    RAD since they both share the same TLS certificate:
+ 4. Retrieve and install the AXA server certificate. This is the equivalent of
+    when you SSH to a new host for the first time and receive the "Are you
+    sure you want to continue connecting (yes/no)?" message. This can be done
+    bu connecting to either SRA or RAD since they both share the same TLS
+    certificate:
 
         # axa_server_cert -s sra.sie-remote.net,443
         Obtained certificate for "farsight" with
