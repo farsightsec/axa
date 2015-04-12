@@ -155,9 +155,9 @@ encrypted and streamed to the SRA subscriber using either an SSH transport
 using TLS).
 
 While both transports offer comparable encryption and compression, Farsight
-recommends using TLS over SSH. On most systems, TLS performance should be
-faster as it doesn't have to deal with piping data to or from the SSH server
-process.
+recommends using TLS in preference to SSH. On most systems, TLS performance
+should be faster as it doesn't have to deal with piping data to or from the
+SSH server process.
 
 Before either method can be used, you first need to generate new
 authentication keys and submit the public half to Farsight Security. 
