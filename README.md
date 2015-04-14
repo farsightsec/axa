@@ -155,9 +155,9 @@ encrypted and streamed to the SRA subscriber using either an SSH transport
 using TLS).
 
 While both transports offer comparable encryption and compression, Farsight
-recommends using TLS over SSH. On most systems, TLS performance should be
-faster as it doesn't have to deal with piping data to or from the SSH server
-process.
+recommends using TLS in preference to SSH. On most systems, TLS performance
+should be faster as it doesn't have to deal with piping data to or from the
+SSH server process.
 
 Before either method can be used, you first need to generate new
 authentication keys and submit the public half to Farsight Security. 
@@ -197,11 +197,11 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
 As of the time of this writing, the SRA and RAD servers answer at the following 
 addresses via the TLS transport:
 
- * **SRA**: sra.sie-remote.net,443
- * **RAD**: rad.sie-remote.net,80
+ * **SRA**: sra.sie-remote.net,1021
+ * **RAD**: rad.sie-remote.net,1022
 
-The TCP port numbers 443 and 80 were chosen simply because of their ubiquity
-in being let through firewalls.
+The TCP port numbers 1021 and 1022 are IANA "[RFC3692](https://tools.ietf.org/html/rfc3692)-style Experiment 1" port numbers and were chosen in consideration
+of that document.
 
 To setup TLS access for SRA and/or RAD, you need to do the following:
 
@@ -232,7 +232,7 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
     bu connecting to either SRA or RAD since they both share the same TLS
     certificate:
 
-        # axa_server_cert -s sra.sie-remote.net,443
+        # axa_server_cert -s sra.sie-remote.net,1021
         Obtained certificate for "farsight" with
         SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
         Install it in /usr/local/etc/axa/certs/farsight.pem? yes
@@ -481,7 +481,7 @@ Using `radtunnel` is much the same process as using `sratunnel`. First
 invoke `radtunnel` with the same anomaly watches as `radtool`:
 
 ~~~
-$ radtunnel -s tls:user@rad.sie-remote.net,80 -w ip=0.0.0.0/1 \
+$ radtunnel -s tls:user@rad.sie-remote.net,1022 -w ip=0.0.0.0/1 \
 -w ip=128.0.0.0/1 -a ip14-80 -o nmsg:127.0.0.1,8000 &
 [2]+ radtunnel ...
 ~~~
@@ -552,7 +552,7 @@ $ kill %radtunnel
 [2]- Exit 15 radtunnel ...
 ~~~
 
- 1. `radtunnel -s tls:user@rad.sie-remote.net,80 -w ip=0.0.0.0/1 -w ip=128.0.0.0/1 -a ip14-80 -o nmsg:127.0.0.1,8000 &`: here, we started a background process
+ 1. `radtunnel -s tls:user@rad.sie-remote.net,1022 -w ip=0.0.0.0/1 -w ip=128.0.0.0/1 -a ip14-80 -o nmsg:127.0.0.1,8000 &`: here, we started a background process
     to watch for the same IP-based amomalies as the `radtool` example, but this
     time the results will be sent in NMSG format using UDP on a local socket
     (host 127.0.0.1, port 8000).
