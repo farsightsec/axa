@@ -255,7 +255,7 @@ SIE channel 212 (Newly Observed Domains):
 ~~~
 $ sratool 
 sra> connect ssh:sra-service@sra-eft.sie-remote.net
-* HELLO srad version 1.1.0 sb6 AXA protocol 1
+* HELLO srad version 1.1.1 sb6 AXA protocol 1
 sra> count 5
 sra> channel 212 on
 * OK CHANNEL ON/OFF channel ch212 on
@@ -297,7 +297,7 @@ Next, we introduce in-line connections and show rate limiting of SIE channel
 
 ~~~
 $ sratool 'connect sra-service@sra-eft.sie-remote.net'
-* HELLO srad version 1.1.0 sb6 AXA protocol 1
+* HELLO srad version 1.1.1 sb6 AXA protocol 1
 sra> count 5
 sra> limit 1 5
 * OPTION Rate LIMIT
@@ -434,7 +434,7 @@ investigation.
 
 ~~~
 rad> connect ssh:rad-service@rad-eft.sie-remote.net
-* HELLO radd version 1.1.0 sb6 AXA protocol 1
+* HELLO radd version 1.1.1 sb6 AXA protocol 1
 rad> count 5
 rad> 1 watch ip=0.0.0.0/1
 1 OK WATCH saved
