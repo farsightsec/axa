@@ -1,3 +1,10 @@
+axa (1.1.1) UNRELEASED; urgency=low
+
+  * Fix case where TLS flushing could cause a crash
+  * Fix client debug level overflow
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 15 Apr 2015 15:46:59 +0000
+
 axa (1.1.0) UNRELEASED; urgency=low
 
   * Add TLS support
