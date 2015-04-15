@@ -1569,7 +1569,8 @@ debug_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 			l = strtoul(setting, &p, 10);
 			if (*p != '\0')
 				return (-1);
-			axa_debug = l;
+			axa_debug = l <= AXA_DEBUG_MAX ? l :
+				AXA_DEBUG_MAX;
 			quiet = false;
 		}
 		AXA_DEBUG_TO_NMSG(axa_debug);

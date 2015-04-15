@@ -801,33 +801,33 @@ axa_tls_flush(axa_emsg_t *emsg, axa_io_t *io)
 {
 	int ret, ssl_errno;
 
-	ERR_clear_error();
-	ret = SSL_write(io->ssl, io->send_start, io->send_bytes);
-	ssl_errno = get_ssl_pemsg(emsg, io->ssl, ret,
-				  "SSL_write(%d)", io->send_bytes);
-	switch (ssl_errno) {
-	case SSL_ERROR_NONE:
-		break;
-	case SSL_ERROR_WANT_READ:
-		io->o_events = AXA_POLL_IN;
-		return (AXA_IO_BUSY);
-	case SSL_ERROR_WANT_WRITE:
-		io->o_events = AXA_POLL_OUT;
-		return (AXA_IO_BUSY);
-	default:
+	for (;;) {
+		ERR_clear_error();
+		ret = SSL_write(io->ssl, io->send_start, io->send_bytes);
+		ssl_errno = get_ssl_pemsg(emsg, io->ssl, ret,
+				"SSL_write(%d)", io->send_bytes);
+		switch (ssl_errno) {
+			 case SSL_ERROR_NONE:
+				 break;
+			 case SSL_ERROR_WANT_READ:
+				 io->o_events = AXA_POLL_IN;
+				 return (AXA_IO_BUSY);
+			 case SSL_ERROR_WANT_WRITE:
+				 io->o_events = AXA_POLL_OUT;
+				 return (AXA_IO_BUSY);
+			 default:
+				 io->o_events = 0;
+				 return (AXA_IO_ERR);
+		}
+
+		AXA_ASSERT(io->send_bytes >= (size_t)ret);
+		io->send_start += ret;
+		io->send_bytes -= ret;
+		if (io->send_bytes != 0)
+			continue;
+
 		io->o_events = 0;
-		return (AXA_IO_ERR);
+		gettimeofday(&io->alive, NULL);
+		return (AXA_IO_OK);
 	}
-
-	AXA_ASSERT(io->send_bytes >= (size_t)ret);
-	io->send_start += ret;
-	io->send_bytes -= ret;
-	if (io->send_bytes != 0)
-		io->o_events = AXA_POLL_OUT;
-	else
-		io->o_events = 0;
-
-	gettimeofday(&io->alive, NULL);
-
-	return (AXA_IO_OK);
 }
