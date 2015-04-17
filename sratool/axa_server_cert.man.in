@@ -1,0 +1,68 @@
+.\" Copyright (c) 2014-2015 by Farsight Security, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"  http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.Dd current-date via make
+.Dt axa_server_cert 8 AXA
+.Os " "
+.Sh NAME
+.Nm axa_server_cert
+.Nd Retrieve AXA Server Certificate Fingerprint
+.Sh SYNOPSIS
+.Op Fl x
+.Op Fl S Ar certsdir
+.Op Fl o Ar cert_file
+.Fl s Ar server,port
+.Sh DESCRIPTION
+.Nm Axa_server_cert
+retrieves the AXA server certificate fingerprint.
+.Ss OPTIONS
+.Bl -tag -width 3n
+.It Fl x
+enables debugging output.
+.It Fl S Ar certsdir
+sets the target AXA SSL certificate to
+.Ar certsdir .
+By default,
+.Nm
+looks for a writable
+.Pa $AXACONF/certs ,
+.Pa ~/.axa/certs ,
+or
+.Pa @CONFDIR@/certs .
+It tries to create a directory in the same order if that search fails.
+.It Fl o Ar cert_file
+specifies the file in which to put the server certificate.
+The default is
+.Pa subj.pem
+where
+.Ar subj
+is the subject common name (CN) of the certificate.
+.It Fl s Ar server,port
+specifies the AXA server host name or IP address
+and the port number from which to get an AXA TLS server
+certificate.
+.El
+.Sh ENVIRONMENT VARIABLES
+If set, AXACONF specifies the AXA configuration directory instead of,
+.Pa ~/.axa
+or
+.Pa @CONFDIR@ .
+.Sh SEE ALSO
+.Xr axa_make_cert 8 ,
+.Xr axa_link_certs 8 ,
+.Xr sratool 1 ,
+.Xr radtool 1 ,
+.Xr radtunnel 1 .
+and
+.Xr sratunnel 1 .

@@ -1,7 +1,7 @@
 /*
  * time utilities
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,9 +20,7 @@
 #include <axa/axa.h>
 
 
-#define FOREVER_SECS (24*60*60)
-
-/* compute (tv1 - tv2) in milliseconds, but clamped to FOREVER_SECS */
+/* compute (tv1 - tv2) in milliseconds, but clamped to AXA_DAY_SECS */
 time_t
 axa_tv_diff2ms(const struct timeval *tv1, const struct timeval *tv2)
 {
@@ -30,10 +28,10 @@ axa_tv_diff2ms(const struct timeval *tv1, const struct timeval *tv2)
 
 	/* prevent overflow */
 	ms = tv1->tv_sec - tv2->tv_sec;
-	if (ms <= -FOREVER_SECS)
-		return (-FOREVER_SECS*1000);
-	if (ms >= FOREVER_SECS)
-		return (FOREVER_SECS*1000);
+	if (ms <= -AXA_DAY_SECS)
+		return (-AXA_DAY_SECS*1000);
+	if (ms >= AXA_DAY_SECS)
+		return (AXA_DAY_SECS*1000);
 	ms = ms*1000 + (tv1->tv_usec - tv2->tv_usec)/1000;
 	return (ms);
 }

@@ -1,5 +1,5 @@
 .\" fwd.man
-.\" common text describing sratool and sratunnel output specifications
+.\" common text describing sratool, sratunnel, and radtunnel output specs
 .\" use .ds CT to set that string to either "" or "Op Ar count"
 .\"
 .Bl -tag -width 4n

@@ -26,34 +26,43 @@ dist_config_DATA = etc/fields
 MAN_PROCESS = $(AM_V_GEN) soelim -I. -I`dirname $<` -r $< | sed -e "s/^\.Dd.*/.Dd `date '+%B %d, %Y'`/" >$@
 .man.1:
 	    $(MAN_PROCESS)
+.man.8:
+	    $(MAN_PROCESS)
 
 sratool/sratool.1: sratool/sratool.man \
 	fwd.man watch.man srawatch.man sratool/options.man sratool/cmds.man
 sratool/radtool.1: sratool/radtool.man \
 	fwd.man watch.man radwatch.man sratool/options.man sratool/cmds.man
 sratunnel/sratunnel.1: sratunnel/sratunnel.man fwd.man srawatch.man watch.man
+sratunnel/radtunnel.1: sratunnel/radtunnel.man fwd.man srawatch.man watch.man
 
 EXTRA_DIST += \
 	sratool/sratool.man \
 	sratool/radtool.man \
 	sratunnel/sratunnel.man \
+	sratunnel/radtunnel.man \
 	fwd.man \
 	watch.man \
 	srawatch.man \
 	radwatch.man \
 	sratool/options.man \
 	sratool/cmds.man \
+	sratool/axa_link_certs.man \
+	sratool/axa_make_cert.man \
+	sratool/axa_server_cert.man \
 	README.md \
-	doc/doxygen/doxygen-input-filter
+	Doxyfile.in \
+	DoxygenLayout.xml
 
 dist_man_MANS =  \
 	sratool/sratool.1 \
 	sratool/radtool.1 \
-	sratunnel/sratunnel.1
-CLEANFILES += \
-	sratool/sratool.1 \
-	sratool/radtool.1 \
-	sratunnel/sratunnel.1
+	sratunnel/sratunnel.1 \
+	sratunnel/radtunnel.1 \
+	sratool/axa_link_certs.8 \
+	sratool/axa_make_cert.8 \
+	sratool/axa_server_cert.8
+CLEANFILES += $(dist_man_MANS)
 
 #
 ##
@@ -104,6 +113,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/parse_ch.c \
 	axalib/socket.c \
 	axalib/time.c \
+	axalib/tls.c \
 	axalib/trie.c \
 	axalib/wdns_res.c \
 	axalib/wdns_rtype.c \
@@ -113,12 +123,16 @@ axa_libaxa_la_SOURCES = \
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBAXA_CURRENT):$(LIBAXA_REVISION):$(LIBAXA_AGE) \
 	-export-symbols-regex "^(axa_[a-z].*)" \
+	${libssl_LIBS} \
+	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
 	${libwdns_LIBS} \
 	${libnmsg_LIBS} \
 	${strlcpy_LIBS}
 axa_libaxa_la_CFLAGS = \
 	${AM_CFLAGS} \
+	${libssl_CFLAGS} \
+	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
 	${libwdns_CFLAGS} \
 	${libnmsg_CFLAGS} \
@@ -149,16 +163,22 @@ sratool_sratool_SOURCES = \
 	sratool/sratool.h
 sratool_sratool_LDADD = \
 	axa/libaxa.la \
-	${libprotobuf_c_LIBS} \
+	${libssl_LIBS} \
+	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
+	${libprotobuf_c_LIBS} \
 	${libnmsg_LIBS} \
 	${libz_LIBS} \
 	${libwdns_LIBS} \
-	${libedit_LIBS}
+	${libedit_LIBS} \
+	${libbsd_LIBS}
+
 sratool_sratool_CFLAGS = \
 	${AM_CFLAGS} \
-	${libprotobuf_c_CFLAGS} \
+	${libssl_CFLAGS} \
+	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
+	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${libz_CFLAGS} \
 	${libwdns_CFLAGS} \
@@ -175,11 +195,33 @@ sratunnel_sratunnel_SOURCES = \
 sratunnel_sratunnel_LDADD = \
 	axa/libaxa.la \
 	${libnmsg_LIBS} \
-	${libpcap_LIBS}
+	${libssl_LIBS} \
+	${libcrypto_LIBS} \
+	${libpcap_LIBS} \
+	${libbsd_LIBS}
+
 sratunnel_sratunnel_CFLAGS = \
 	${AM_CFLAGS} \
 	${libnmsg_CFLAGS} \
+	${libssl_CFLAGS} \
+	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS}
+
+bin_PROGRAMS += sratunnel/radtunnel
+sratunnel_radtunnel_SOURCES = ${sratunnel_sratunnel_SOURCES}
+sratunnel_radtunnel_LDADD = ${sratunnel_sratunnel_LDADD}
+sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
+
+#
+##
+### scripts
+##
+#
+
+bin_SCRIPTS = \
+	sratool/axa_link_certs \
+	sratool/axa_make_cert \
+	sratool/axa_server_cert
 
 #
 ##
@@ -205,14 +247,18 @@ EXTRA_DIST += \
 	sratunnel/README
 
 if HAVE_DOXYGEN
-html-local: doc/doxygen/Doxyfile
-	$(AM_V_GEN) cd doc/doxygen && $(DOXYGEN)
+stamp-html: $(DOXYGEN_INPUT_FILES) $(top_builddir)/Doxyfile $(top_srcdir)/DoxygenLayout.xml $(include_HEADERS) $(nobase_include_HEADERS)
+	$(AM_V_GEN) $(DOXYGEN)
+	@touch $@
+html-local: stamp-html
+doc: html-local
+clean-local:
+	rm -rf $(top_builddir)/html $(top_builddir)/stamp-html
 endif
 
-doc: html-local
-
 spotless: distclean
-	rm -fr ar-lib aclocal.m4 autom4te.cache configure config.* Makefile.in \
-	autoscan.log config.h compile depcomp configure.scan       			   \
-	doc/doxygen/Doxyfile missing install-sh ltmain.sh
+	rm -fr ar-lib aclocal.m4 autom4te.cache configure config.* Makefile.in  \
+	autoscan.log config.h compile depcomp configure.scan       	   			\
+	missing install-sh ltmain.sh $(top_builddir)/html						\
+	$(top_builddir)/stamp-html
 
