@@ -113,9 +113,9 @@ After satisfying the above, build with something like:
 `./autogen.sh` followed by `./configure` and `make`
 
 To generate the API documentation (including an HTMLized version of this
-document): `./make doc`. The html documentation will be in `doc/doxygen/html`
-and can be rendered in any modern browser. Something like
-`$ open html/index.html` should get you started.
+document): `./make doc`. The html documentation will be in `html` and can be
+rendered in any modern browser. Something like `$ open html/index.html`
+should get you started.
 
 Finally, to give the AXA suite a home, `sudo make install`.
 
