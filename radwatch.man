@@ -1,5 +1,5 @@
 .\" radwatch.man
-.\" text describing common features of radtool watches.
+.\" text describing common features of radtool and radtunnel watches.
 The optional
 .Op Ar (shared)
 suffix marks IP addresses or domains that are not exclusively used

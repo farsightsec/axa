@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) Bits in words
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,10 +19,12 @@
 #ifndef AXA_BITS_H
 #define AXA_BITS_H
 
-/*! \file bits.h
- *  \brief Bit-wise functions and macros for libaxa
+/**
+ *  \defgroup axa_bits axa_bits
  *
- *  This file contains bitwise macros and function declarations for libaxa.
+ *  `axa_bits` contains bitwise macros and function declarations for libaxa.
+ *
+ * @{
  */
 
 #include <sys/types.h>
@@ -148,5 +150,7 @@ axa_clr_bitwords(axa_word_t *w, uint bit_num)
  *  \return index of the first bit set or bits_len * 64 if no bits are set
  */
 extern uint axa_find_bitwords(axa_word_t *w, uint bits_len);
+
+/**@}*/
 
 #endif /* AXA_BITS_H */

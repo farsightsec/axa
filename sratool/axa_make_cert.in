@@ -1,0 +1,143 @@
+#! /bin/sh -e
+
+# set -e in case we are run using `sh axa_link_certs`
+set -e
+
+OPENSSL=openssl
+
+DEBUG=
+XARGS_DEBUG=
+LIFE=3650
+CERTS_DIR=
+CN=
+
+ME=`basename $0`
+USAGE="$ME: [-x] [-l days] [-S certsdir] -u name"
+
+while getopts "xl:L:S:u:" c; do
+    case $c in
+	x) set -x; DEBUG=-x; XARGS_DEBUG=-t;;
+	l) LIFE="$OPTARG";;
+	S) CERTS_DIR="$OPTARG";;
+	u) CN="$OPTARG";;
+	*) echo "$USAGE" 1>&2; exit 1;;
+    esac
+done
+shift `expr $OPTIND - 1 || true`
+if test "$#" -ne 0; then
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+
+# require a user name
+if ! expr "$CN" : '[-._a-zA-Z0-9][-._a-zA-Z0-9]*$' >/dev/null; then
+    echo "\"$CN\" is not a valid AXA user name" 1>&2
+    echo "$USAGE" 1>&2
+    exit 1
+fi
+
+
+CERT_FILE="$CN.pem"
+KEY_FILE="$CN.key"
+
+
+# Function to get permission
+yesno () {
+    read -p "$1" YES
+    case "$YES" in
+	[yY]|[yY][eE][sS])
+	    return 0
+	    ;;
+	*)
+	    if test -n "$2"; then
+		echo "?" 2>&1
+		exit 1
+	    fi
+	    return 1
+	    ;;
+    esac
+}
+
+
+# Get the target directory
+#   The user's expressed preference overrides.
+#   Otherwise, take the first existing directory among $AXACONF/certs,
+#	~/.axa/certs, and @CONFDIR@/certs even if it is not writable,
+#	because it will be used by AXA clients
+#   Otherwise, offer to create a certs directory
+#	in the first existing and writable among  $AXACONF, ~/.axa,
+#	and @CONFDIR@
+#   Otherwise, give up
+if test -n "$CERTS_DIR"; then
+    if test ! -e "$CERTS_DIR"; then
+	yesno "Create $CERTS_DIR? " X
+	mkdir -p "$CERTS_DIR"
+    fi
+else
+    NEW1=
+    NEW2=
+    NEW3=
+    if test -n "$AXACONF" -a -d "$AXACONF"; then
+	if test -e "$AXACONF/certs"; then
+	    if test -d "$AXACONF/certs" -a -x "$AXACONF/certs"; then
+		$CERTS_DIR="$AXACONF/certs"
+	    fi
+	elif test -w "$AXACONF"; then
+	    NEW1="$AXACONF/certs"
+	fi
+    fi
+    if test -z "$CERTS_DIR" -a -d ~/.axa -a -x ~/.axa; then
+	if test -e ~/.axa/certs; then
+	    if test -d ~/.axa/certs; then
+		CERTS_DIR=~/.axa/certs
+	    fi
+	elif test -w ~/.axa; then
+	    NEW2=~/.axa/certs
+	fi
+    fi
+    if test -z "$CERTS_DIR"; then
+	if test -e @CONFDIR@/certs; then
+	    if test -d @CONFDIR@/certs -a -x @CONFDIR@/certs; then
+		CERTS_DIR=@CONFDIR@/certs
+	    fi
+	elif test -w @CONFDIR@; then
+	    NEW3=@CONFDIR@/certs
+	fi
+    fi
+    if test -z "$CERTS_DIR" -a -n "$NEW1" && yesno "Create $NEW1? "; then
+	mkdir "$NEW1" && CERTS_DIR="$NEW1"
+    fi
+    if test -z "$CERTS_DIR" -a -n "$NEW2" && yesno "Create $NEW2? "; then
+	mkdir "$NEW2" && CERTS_DIR="$NEW2"
+    fi
+    if test -z "$CERTS_DIR" -a -n "$NEW3" && yesno "Create $NEW3? "; then
+	mkdir "$NEW3" && CERTS_DIR="$NEW3"
+    fi
+fi
+cd ${CERTS_DIR:=@CONFDIR@/certs}
+if test ! -w .; then
+    echo "$CERTS_DIR is not writable" 1>&2
+    exit 1
+fi
+
+
+if test -e "$CERT_FILE"; then
+    echo "$CERT_FILE already exists" 1>&2
+    exit 1
+fi
+if test -e "$KEY_FILE"; then
+    echo "$KEY_FILE already exists" 1>&2
+    exit 1
+fi
+
+
+# Allow only the CN in the subject to align these certificates with
+#   AXA user file entries and to avoid complications when replacing or
+#   invalidating certificates.  OpenSSL treats certificates with the same CN
+#   but differing other parts of the subject as entirely different.
+$OPENSSL req -nodes -new -x509 -batch -in /dev/null -set_serial 0	\
+	-keyout "$KEY_FILE" -out "$CERT_FILE" -days "$LIFE"		\
+	-newkey rsa:2048 -subj "/CN=$CN"
+
+chmod og-rw "$KEY_FILE"

@@ -13,7 +13,7 @@
  * Domain names are kept in uint64_t words in host bit order and
  * padded with zero bits.
  *
- *  Copyright (c) 2014 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2015 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -926,8 +926,7 @@ hitlist_create(uint len)
 /* Add one entry to a list of outputs that should receive a message.
  *	Locking is unneeded because hit lists are private. */
 static void
-hitlist_add(const trie_roots_t *roots, hitlist_t **hitlistp,
-	    tval_t tval, int extra,
+hitlist_add(const trie_roots_t *roots, hitlist_t **hitlistp, tval_t tval,
 	    axa_nmsg_idx_t field_idx, axa_nmsg_idx_t val_idx)
 {
 	hitlist_t *hitlist, *new_hitlist;
@@ -936,7 +935,7 @@ hitlist_add(const trie_roots_t *roots, hitlist_t **hitlistp,
 
 	hitlist = *hitlistp;
 	if (hitlist == NULL) {
-		hitlist = hitlist_create(1);
+		hitlist = hitlist_create(2);
 		*hitlistp = hitlist;
 	} else {
 		/* Declare success if an entry for the same client
@@ -945,6 +944,7 @@ hitlist_add(const trie_roots_t *roots, hitlist_t **hitlistp,
 		    && roots->hitlist_find(hitlist, tval))
 			return;
 
+		/* Otherwise expand the list it has no room. */
 		if (hitlist->in_use >= hitlist->len) {
 			if (roots->hitlist_max == 0)
 				hitlist_max = 10;
@@ -953,8 +953,9 @@ hitlist_add(const trie_roots_t *roots, hitlist_t **hitlistp,
 
 			AXA_ASSERT(hitlist->in_use == hitlist->len);
 			AXA_ASSERT(hitlist->len < hitlist_max);
-			newlen = min(hitlist->len+1+extra,
-				     hitlist_max - hitlist->len);
+			newlen = hitlist->len * 2;
+			if (newlen > hitlist_max)
+				newlen = hitlist_max;
 			new_hitlist = hitlist_create(newlen);
 			new_hitlist->in_use = hitlist->in_use;
 			memcpy(new_hitlist->hits, hitlist->hits,
@@ -986,7 +987,7 @@ axa_hitlist_append(const trie_roots_t *roots,
 	/* Add the values of a trie node to a hit list
 	 * Add hits in the order in which they were defined. */
 	for (i = 0; i < tval_list->in_use; ++i) {
-		hitlist_add(roots, hitlistp, tval_list->tvals[i], i,
+		hitlist_add(roots, hitlistp, tval_list->tvals[i],
 			    field_idx, val_idx);
 	}
 }

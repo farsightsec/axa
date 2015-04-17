@@ -1,1 +1,2 @@
-Tunnel SIE data from an SRA server to a local network, socket, FIFO or file
+Tunnel SIE data from an SRA or RAD server to a local network, socket, FIFO or
+file
