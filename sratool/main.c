@@ -48,6 +48,7 @@
 
 #include <histedit.h>
 #include <pwd.h>
+#include <math.h>
 
 
 #define MAX_IN_FILES 10
@@ -78,6 +79,7 @@ static nmsg_output_t nmsg_pres;
 
 /* Connection to the SRA server. */
 static axa_client_t client;
+static struct timeval connect_time;
 
 /* Output or forward packets to this socket. */
 static bool out_on;
@@ -134,6 +136,25 @@ static void read_srvr(void);
 static int srvr_send(axa_tag_t tag, axa_p_op_t op,
 		     const void *b, size_t b_len);
 static void history_get_savefile(void);
+static const char *convert_timeval(struct timeval *t);
+static void convert_seconds(uint32_t seconds, uint32_t *d, uint32_t *h,
+		     uint32_t *m, uint32_t *s);
+/*
+ *  Simple way to subtract timeval based timers, subtracts `uvp` from `tvp`.
+ *
+ *  \param[in] tvp pointer to timeval structure (first value)
+ *  \param[in] uvp pointer to timeval structure (second value)
+ *  \param[out] vvp pointer to timeval (result timeval)
+ */
+#define PTIMERSUB(tvp, uvp, vvp)				\
+do {								\
+	(vvp)->tv_sec  = (tvp)->tv_sec  - (uvp)->tv_sec;	\
+	(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;	\
+	if ((vvp)->tv_usec < 0) {				\
+        (vvp)->tv_sec--;					\
+        (vvp)->tv_usec += 1000000;				\
+	}							\
+} while (0)
 
 static axa_emsg_t emsg;
 
@@ -245,6 +266,9 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " 'ssh:[user@]host' via SSH"
     " or with 'tls:cert,key@host,port"
 },
+{"status",		connect_cmd,		BOTH,NO, NO,
+    "status",
+    "get server status"},
 {"disconnect",		disconnect_cmd,		BOTH,NO, NO,
     "disconnect",
     "Disconnect from the server"},
@@ -1731,6 +1755,8 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		} else {
 			printf("connected to \"%s\"\n    %s\n",
 			       client.hello, client.io.label);
+			printf("    connected for: %s\n",
+				convert_timeval(&connect_time));
 			if (client.io.tls_info != NULL)
 				printf("    %s\n", client.io.tls_info);
 			count_print(false);
@@ -1775,6 +1801,7 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	if (packet_counting)
 		packet_count = packet_count_total;
 
+	gettimeofday(&connect_time, NULL);
 	return (1);
 }
 
@@ -3995,4 +4022,59 @@ srvr_send(axa_tag_t tag, axa_p_op_t op, const void *body, size_t body_len)
 		       axa_p_to_str(pbuf, sizeof(pbuf), true, &hdr, body));
 	}
 	return (1);
+}
+
+const char *
+convert_timeval(struct timeval *t)
+{
+	int n;
+	struct timeval r, e;
+	static char buf[BUFSIZ];
+	uint32_t day, hour, min, sec;
+
+	gettimeofday(&e, NULL);
+	PTIMERSUB(&e, t, &r);
+	convert_seconds((u_int32_t)r.tv_sec, &day, &hour, &min, &sec);
+	n = 0;
+	if (day) {
+		n += snprintf(buf + n, BUFSIZ,
+		(day  == 1 ? "%d day "   : "%d days "), day);
+	}
+	if (hour) {
+		n += snprintf(buf + n, BUFSIZ,
+		(hour == 1 ? "%d hour "  : "%d hours "), hour);
+	}
+	if (min) {
+		n += snprintf(buf + n, BUFSIZ,
+		(min  == 1 ? "%d minute ": "%d minutes "), min);
+	}
+	if (sec) {
+		n += snprintf(buf + n, BUFSIZ,
+		(sec  == 1 ? "%d second ": "%d seconds "), sec);
+	}
+	if (n == 0) {
+		n = snprintf(buf + n, BUFSIZ, "<1 second");
+	}
+	buf[n] = 0;
+
+	return buf;
+}
+
+void
+convert_seconds(uint32_t seconds, uint32_t *d, uint32_t *h, uint32_t *m,
+	uint32_t *s)
+{
+	uint32_t d1, s1;
+
+	d1 = floor(seconds / 86400);
+	s1 = seconds - 86400 * d1;
+
+	*d = d1;
+	*s = s1;
+
+	*h = floor((*s) / 3600);
+	*s -= 3600 * (*h);
+
+	*m = floor((*s) / 60);
+	*s -= 60 * (*m);
 }

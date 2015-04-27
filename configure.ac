@@ -26,6 +26,8 @@ my_CFLAGS=" \
 -Wformat-security"
 AC_SUBST([my_CFLAGS])
 
+AC_CHECK_FUNCS([floor gettimeofday])
+
 AC_CONFIG_HEADERS(config.h)
 
 PKG_PROG_PKG_CONFIG
