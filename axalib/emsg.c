@@ -722,11 +722,10 @@ axa_get_token(char *buf,		/* put the token here */
 			continue;
 		}
 
-		if (c == '\\' && esc_ok)
-			c = *++string;
 		++string;
-
-		if (strchr(seps, c) != NULL) {
+		if (c == '\\' && esc_ok) {
+			c = *string++;
+		} else if (strchr(seps, c) != NULL) {
 			/* We found a separator.  Eat it and stop.
 			 * If it is whitespace, then eat all trailing
 			 * whitespace. */
