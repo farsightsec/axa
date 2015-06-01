@@ -77,3 +77,8 @@ SIE	newdomain   rdata	rdata	class=rrclass rtype=rrtype oname=rrname
 #SIE	newdomain   response	dns
 
 #SIE	qr
+
+#SIE   dnsnx
+SIE    dnsnx   qname           domain  class=qclass
+SIE    dnsnx   soa_rrname      domain
+SIE    dnsnx   response_ip     IP
