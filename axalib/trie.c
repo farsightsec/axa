@@ -212,45 +212,6 @@ axa_word_mask(uint b)
 	return (m);
 }
 
-static inline void
-ip_to_key(trie_key_t *key, const void *addr, uint family, uint prefix)
-{
-	u_int32_t addr_mask;
-
-	AXA_ASSERT(AXA_WORD_BITS == 64);
-
-	switch (family) {
-	case AF_INET:
-		/* Use 64 bits for IPv4 keys.
-		 * Copy 32 bits of IPv4 address to key->addr[0].
-		 * Then clear the 32 bits not copied
-		 * and the bits beyond the prefix. */
-		memcpy(&key->addr[(MAX_TRIE_IPV4_PREFIX)/32-1], addr,
-		       sizeof(key->addr[1]));
-		addr_mask = (u_int32_t)-1;
-		if (prefix != 0)
-			addr_mask <<= sizeof(addr_mask)*8 - prefix;
-		key->w[0] = be64toh(key->w[0]) & addr_mask;
-		break;
-
-	case AF_INET6:
-		/* Use 64 or 128 bits for IPv6 keys. */
-		memcpy(&key->addr6, addr, sizeof(key->addr6));
-		key->w[0] = be64toh(key->w[0]);
-		if (prefix < AXA_WORD_BITS) {
-			key->w[0] &= axa_word_mask(prefix);
-			key->w[1] = 0;
-		} else if (prefix > AXA_WORD_BITS) {
-			key->w[1] = (be64toh(key->w[1])
-				     & axa_word_mask(prefix-64));
-		}
-		break;
-
-	default:
-		AXA_FAIL("impossible AF %d", family);
-	}
-}
-
 static bool
 dns_to_key(axa_emsg_t *emsg, trie_key_t *key, trie_bitlen_t *prefixp,
 	   const uint8_t *name, size_t name_len)
@@ -308,6 +269,9 @@ watch_to_trie_key(axa_emsg_t *emsg, trie_key_t *key,
 		  const axa_p_watch_pat_t *pat, size_t len)
 {
 	trie_bitlen_t prefix;
+	u_int32_t addr_mask;
+
+	AXA_ASSERT(AXA_WORD_BITS == 64);
 
 	memset(key, 0, sizeof(*key));
 	prefix = *prefixp;
@@ -320,7 +284,17 @@ watch_to_trie_key(axa_emsg_t *emsg, trie_key_t *key,
 			return (false);
 		if (!ck_num(emsg, "address length", len, (prefix+7)/8, 4))
 			return (false);
-		ip_to_key(key, &pat->addr, AF_INET, prefix);
+		/* Use 64 bits for IPv4 keys.
+		 * Copy 32 bits of IPv4 address to key->addr[0].
+		 * Then clear the 32 bits not copied
+		 * and the bits beyond the prefix. */
+		memcpy(&key->addr[(MAX_TRIE_IPV4_PREFIX)/32-1], &pat->addr, 
+			 sizeof(key->addr[1]));
+		addr_mask = (u_int32_t)-1;
+		if (*prefixp != 0)
+			 addr_mask <<= sizeof(addr_mask)*8 - *prefixp;
+		key->w[0] = be64toh(key->w[0]) & addr_mask;
+
 		prefix += MAX_TRIE_IPV4_PREFIX-32;
 		*prefixp = prefix;
 		return (true);
@@ -332,7 +306,16 @@ watch_to_trie_key(axa_emsg_t *emsg, trie_key_t *key,
 			return (false);
 		if (!ck_num(emsg, "address length", len, (prefix+7)/8, 16))
 			return (false);
-		ip_to_key(key, &pat->addr6, AF_INET6, prefix);
+		/* Use 64 or 128 bits for IPv6 keys. */
+		memcpy(&key->addr6, &pat->addr6, sizeof(key->addr6));
+		key->w[0] = be64toh(key->w[0]);
+		if (prefix < AXA_WORD_BITS) {
+			key->w[0] &= axa_word_mask(*prefixp);
+			key->w[1] = 0;
+		} else if (prefix > AXA_WORD_BITS) {
+			key->w[1] = (be64toh(key->w[1])
+				& axa_word_mask(*prefixp-64));
+		}
 		return (true);
 
 	case AXA_P_WATCH_DNS:
@@ -412,7 +395,7 @@ new_node(trie_roots_t *roots, const trie_key_t *key, size_t bitlen,
 	trie_node_t *new;
 	size_t keylen, newlen;
 
-	AXA_ASSERT(bitlen > 0 && bitlen < AXA_WORDS_TO_BYTES(sizeof(*key)));
+	AXA_ASSERT(bitlen > 0 && bitlen < sizeof(*key)*8);
 	keylen = BITS_TO_TRIE_KEYLEN(bitlen);
 	newlen = sizeof(*new) - sizeof(new->key) + keylen;
 	new = axa_zalloc(newlen);
