@@ -875,7 +875,7 @@ trie_free(trie_node_t **rootp)
 		}
 		if (cur->wild != NULL) {
 			free(cur->wild);
-			cur->exact = NULL;
+			cur->wild = NULL;
 		}
 		parent = cur->parent;
 		if (parent == NULL)
