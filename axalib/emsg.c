@@ -419,6 +419,9 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 		buf_len -= sizeof(FMSG)-1;
 
 	n = vsnprintf(bufp, buf_len, p, args);
+
+	if (n >= buf_len)
+		n = buf_len-1;
 	if (n != 0 && buf[n-1] == '\n')
 		buf[--n] = '\0';
 	if (n == 0) {
