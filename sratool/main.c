@@ -200,7 +200,7 @@ static cmd_t pause_cmd;
 static cmd_t trace_cmd;
 static cmd_t go_cmd;
 static cmd_t sleep_cmd;
-statuc cmt_t radunit_cmd;
+static cmd_t radunit_cmd;
 
 typedef enum {NO, MB, YES} ternary_t;
 
@@ -4005,6 +4005,7 @@ read_srvr(void)
 		case AXA_P_OP_CHANNEL:
 		case AXA_P_OP_CGET:
 		case AXA_P_OP_ACCT:
+		case AXA_P_OP_RADU:
 		default:
 			AXA_FAIL("impossible AXA %s from %s",
 				 axa_op_to_str(buf, sizeof(buf),

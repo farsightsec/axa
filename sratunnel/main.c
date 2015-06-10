@@ -871,6 +871,7 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_CHANNEL:
 		case AXA_P_OP_CGET:
 		case AXA_P_OP_ACCT:
+		case AXA_P_OP_RADU:
 		default:
 			AXA_FAIL("impossible AXA op of %d from %s",
 				 client.io.recv_hdr.op, client.io.label);
@@ -1440,6 +1441,7 @@ forward(void)
 	case AXA_P_OP_CHANNEL:
 	case AXA_P_OP_CGET:
 	case AXA_P_OP_ACCT:
+	case AXA_P_OP_RADU:
 	default:
 		AXA_FAIL("impossible AXA op of %d from %s",
 			 client.io.recv_hdr.op, client.io.label);
