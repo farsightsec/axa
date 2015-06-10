@@ -200,6 +200,7 @@ static cmd_t pause_cmd;
 static cmd_t trace_cmd;
 static cmd_t go_cmd;
 static cmd_t sleep_cmd;
+statuc cmt_t radunit_cmd;
 
 typedef enum {NO, MB, YES} ternary_t;
 
@@ -406,6 +407,9 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"acct",		acct_cmd,		BOTH,NO, YES,
     NULL,
     NULL},
+{"radunits",		radunit_cmd,		BOTH,NO, YES,
+    NULL,
+    "Query RAD server for RAD Unit balances"},
 };
 
 
@@ -2619,6 +2623,13 @@ acct_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	return (srvr_send(tag, AXA_P_OP_ACCT, NULL, 0));
+}
+
+static int
+radunit_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	return (srvr_send(tag, AXA_P_OP_RADU, NULL, 0));
 }
 
 static bool

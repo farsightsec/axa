@@ -223,7 +223,7 @@ typedef enum {
 
 	/** from SRA or RAD server to client */
 	AXA_P_OP_HELLO	    =1,		/**< axa_p_hello_t */
-	AXA_P_OP_OK	        =2,		/**< axa_p_result_t */
+	AXA_P_OP_OK	    =2,		/**< axa_p_result_t */
 	AXA_P_OP_ERROR	    =3,		/**< axa_p_result_t */
 	AXA_P_OP_MISSED	    =4,		/**< axa_p_missed_t */
 	AXA_P_OP_WHIT	    =5,		/**< axa_p_whit_t */
@@ -248,6 +248,7 @@ typedef enum {
 	AXA_P_OP_CGET	    =140,	/**< no data */
 	AXA_P_OP_OPT	    =141,	/**< axa_p_opt_t */
 	AXA_P_OP_ACCT	    =142,	/**< no data */
+	AXA_P_OP_RADU	    =143,	/**< no data */
 } axa_p_op_t;
 
 /**
