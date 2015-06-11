@@ -1799,6 +1799,8 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 			if (client.io.tls_info != NULL)
 				printf("    %s\n", client.io.tls_info);
 			count_print(false);
+			if (mode == RAD)
+				return (srvr_send(tag, AXA_P_OP_RADU, NULL, 0));
 		}
 		return (1);
 	}
