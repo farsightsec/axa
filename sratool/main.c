@@ -407,8 +407,8 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
 {"acct",		acct_cmd,		BOTH,NO, YES,
     NULL,
     NULL},
-{"radunits",		radunit_cmd,		RAD,NO, YES,
-    "radunits",
+{"runits",		radunit_cmd,		RAD,NO, YES,
+    "runits",
     "Ask the server for my RAD Unit balance."},
 };
 
