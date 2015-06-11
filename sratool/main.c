@@ -1480,7 +1480,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	const cmd_tbl_entry_t *help_ce, *usage_ce;
 	int num_help;
 	char buf[160];
-	size_t hlen, llen;
+	size_t hlen;
 	const char *p;
 
 	/* Ignore a tag. */
@@ -1561,26 +1561,15 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	/* talk about all of the commands */
 	printf("  "AXA_PVERS_STR" AXA protocol %d\n", AXA_P_PVERS);
 
-	llen = 0;
 	for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
 		if (ce->mode != mode && ce->mode != BOTH)
 			continue;
 		hlen = help_cmd_snprint(buf, sizeof(buf), ce);
 		if (hlen == 0)
 			continue;
-		if (llen != 0 &&  (llen > 35 || llen + hlen > 79)) {
-			fputc('\n', stdout);
-			llen = 0;
-		}
-		if (llen == 0) {
-			llen = printf("     %-30s", buf);
-		} else {
-			printf("    %s\n", buf);
-			llen = 0;
-		}
+		printf("    %s\n", buf);
 	}
-	if (llen != 0)
-		fputc('\n', stdout);
+	fputc('\n', stdout);
 
 	return (1);
 }
