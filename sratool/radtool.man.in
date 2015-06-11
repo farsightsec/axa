@@ -148,6 +148,7 @@ or
 .Sh SEE ALSO
 .Xr ip_probe 1 ,
 .Xr dns_binding 1 ,
+.Xr spam_watch 1 ,
 .Xr sratool 1 ,
 .Xr sratunnel 1 ,
 .Xr radtunnel 1 ,
