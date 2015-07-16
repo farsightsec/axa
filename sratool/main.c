@@ -3010,11 +3010,13 @@ print_sie_newdomain(const nmsg_message_t msg,
 	axa_domain_to_str(newdomain->rrname.data, newdomain->rrname.len,
 			  rrname_buf, sizeof(rrname_buf));
 	axa_rtype_to_str(rtype_buf, sizeof(rtype_buf), newdomain->rrtype);
-	axa_domain_to_str(newdomain->domain.data, newdomain->domain.len,
-			  domain_buf, sizeof(domain_buf));
+	if (newdomain->domain.data)
+		axa_domain_to_str(newdomain->domain.data, newdomain->domain.len,
+				domain_buf, sizeof(domain_buf));
 
 	printf("%s%s\n %s/%s: %s\n",
-	       eq, val, rrname_buf, rtype_buf, domain_buf);
+	       eq, val, rrname_buf, rtype_buf,
+	       newdomain->domain.data ? domain_buf : rrname_buf);
 }
 
 static void
