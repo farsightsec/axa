@@ -1,3 +1,9 @@
+axa (1.1.2) UNRELEASED; urgency=low
+
+  * Fix NULL pointer derefence in SIE newdomain NMSGs
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Wed, 15 Jul 2015 01:55:17 +0000
+
 axa (1.1.1) UNRELEASED; urgency=low
 
   * Fix case where TLS flushing could cause a crash
