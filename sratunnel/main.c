@@ -114,8 +114,8 @@ static void srvr_connect(void);
 static void forward(void);
 static bool srvr_send(axa_tag_t tag, axa_p_op_t op,
 		      const void *b, size_t b_len);
-static FILE *pidfile_open();
-static void pidfile_write();
+static FILE *pidfile_open(void);
+static void pidfile_write(void);
 
 
 static void AXA_NORETURN AXA_PF(1,2)
@@ -316,10 +316,10 @@ main(int argc, char **argv)
 	AXA_ASSERT(nmsg_input != NULL);
 
     if (pidfile) {
-        fp_pidfile = pidfile_open(pidfile);
+        fp_pidfile = pidfile_open();
         if (fp_pidfile == NULL)
             exit(EX_SOFTWARE);
-        pidfile_write(fp_pidfile);
+        pidfile_write();
     }
 
 	/*
@@ -1473,7 +1473,7 @@ forward(void)
 
 /* from nmsgtool */
 FILE *
-pidfile_open() {
+pidfile_open(void) {
     FILE *fp;
 
     if (pidfile == NULL)
@@ -1491,7 +1491,7 @@ pidfile_open() {
 
 /* from nmsgtool */
 void
-pidfile_write() {
+pidfile_write(void) {
     pid_t pid;
 
     if (fp_pidfile == NULL)
