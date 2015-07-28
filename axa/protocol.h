@@ -436,14 +436,14 @@ typedef struct _PK {
 	uint32_t	ip_len;		/**< packet length on the wire */
 } axa_p_whit_ip_hdr_t;
 
-/** AXA protocol watch hit an NMSG message */
+/** AXA protocol watch hit before an NMSG message */
 typedef	struct _PK {
 	axa_p_whit_nmsg_hdr_t hdr;	/**< watch hit NMSG header */
 #define AXA_P_WHIT_NMSG_MAX (3*(2<<16))	/**< some NMSGs have >1 DNS packet */
 	uint8_t	    b[0];		/**< start of SIE message */
 }  axa_p_whit_nmsg_t;
 
-/** AXA protocol watch hit an IP packet */
+/** AXA protocol watch hit before an IP packet */
 typedef struct _PK {
 	axa_p_whit_ip_hdr_t hdr;	/**< watch hit IP header */
 # define AXA_P_WHIT_IP_MAX  (2<<16)	/**< IPv6 can be bigger */
