@@ -88,7 +88,6 @@ struct axa_rad_parm {
  *	    invalid after the open function returns.
  *	\param[in] cparms an ASCII string of parameters from the RAD client.
  *	    invalid after the open function returns.
- *	\param[out] rad_units current RAD Unit balance of user.
  *
  *	\retval true success
  *	\retval false failure
@@ -96,8 +95,7 @@ struct axa_rad_parm {
 typedef bool (axa_rad_open_t)(void **ctxt, char **errmsg,
 			      const axa_rad_parm_t **out_parms,
 			      const axa_rad_parm_t *in_parms,
-			      const char *uparms, const char *cparms,
-			      uint *rad_units);
+			      const char *uparms, const char *cparms);
 
 /**
  *  RAD module watch hit.
