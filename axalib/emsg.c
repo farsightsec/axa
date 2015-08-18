@@ -419,6 +419,9 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 		buf_len -= sizeof(FMSG)-1;
 
 	n = vsnprintf(bufp, buf_len, p, args);
+
+	if (n >= buf_len)
+		n = buf_len-1;
 	if (n != 0 && buf[n-1] == '\n')
 		buf[--n] = '\0';
 	if (n == 0) {
@@ -722,11 +725,10 @@ axa_get_token(char *buf,		/* put the token here */
 			continue;
 		}
 
-		if (c == '\\' && esc_ok)
-			c = *++string;
 		++string;
-
-		if (strchr(seps, c) != NULL) {
+		if (c == '\\' && esc_ok) {
+			c = *string++;
+		} else if (strchr(seps, c) != NULL) {
 			/* We found a separator.  Eat it and stop.
 			 * If it is whitespace, then eat all trailing
 			 * whitespace. */

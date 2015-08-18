@@ -223,7 +223,7 @@ typedef enum {
 
 	/** from SRA or RAD server to client */
 	AXA_P_OP_HELLO	    =1,		/**< axa_p_hello_t */
-	AXA_P_OP_OK	        =2,		/**< axa_p_result_t */
+	AXA_P_OP_OK	    =2,		/**< axa_p_result_t */
 	AXA_P_OP_ERROR	    =3,		/**< axa_p_result_t */
 	AXA_P_OP_MISSED	    =4,		/**< axa_p_missed_t */
 	AXA_P_OP_WHIT	    =5,		/**< axa_p_whit_t */
@@ -248,6 +248,7 @@ typedef enum {
 	AXA_P_OP_CGET	    =140,	/**< no data */
 	AXA_P_OP_OPT	    =141,	/**< axa_p_opt_t */
 	AXA_P_OP_ACCT	    =142,	/**< no data */
+	AXA_P_OP_RADU	    =143,	/**< no data */
 } axa_p_op_t;
 
 /**
@@ -435,14 +436,14 @@ typedef struct _PK {
 	uint32_t	ip_len;		/**< packet length on the wire */
 } axa_p_whit_ip_hdr_t;
 
-/** AXA protocol watch hit an NMSG message */
+/** AXA protocol watch hit before an NMSG message */
 typedef	struct _PK {
 	axa_p_whit_nmsg_hdr_t hdr;	/**< watch hit NMSG header */
 #define AXA_P_WHIT_NMSG_MAX (3*(2<<16))	/**< some NMSGs have >1 DNS packet */
 	uint8_t	    b[0];		/**< start of SIE message */
 }  axa_p_whit_nmsg_t;
 
-/** AXA protocol watch hit an IP packet */
+/** AXA protocol watch hit before an IP packet */
 typedef struct _PK {
 	axa_p_whit_ip_hdr_t hdr;	/**< watch hit IP header */
 # define AXA_P_WHIT_IP_MAX  (2<<16)	/**< IPv6 can be bigger */

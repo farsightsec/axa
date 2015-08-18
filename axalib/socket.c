@@ -325,7 +325,7 @@ axa_str_to_cidr(axa_emsg_t *emsg, axa_socku_t *su, const char *str)
 	}
 	axa_pemsg(emsg, "%s does not start on a %.*s-bit CIDR boundary",
 		  addr_str, (int)bits_len, bitsp);
-	return (0);
+	return (-1);
 }
 
 /*

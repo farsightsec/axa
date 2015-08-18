@@ -99,6 +99,8 @@ static nmsg_input_t nmsg_input;
 
 typedef enum {SRA, RAD} axa_mode_t;
 static axa_mode_t mode;
+static FILE *fp_pidfile = NULL;
+static const char *pidfile;
 
 
 
@@ -112,13 +114,15 @@ static void srvr_connect(void);
 static void forward(void);
 static bool srvr_send(axa_tag_t tag, axa_p_op_t op,
 		      const void *b, size_t b_len);
+static FILE *pidfile_open(void);
+static void pidfile_write(void);
 
 
 static void AXA_NORETURN AXA_PF(1,2)
 usage(const char *msg, ...)
 {
 	const char *cmn = ("[-VdtOR] [-C count] [-r rate-limit]"
-				 " [-E ciphers] [-S certs]\n");
+				 " [-E ciphers] [-S certs] [-P pidfile]\n");
 	const char *sra =("    -s [user@]SRA-server -w watch -c channel"
 				 " -o out-addr");
 	const char *rad =("    -s [user@]RAD-server -w watch"
@@ -159,7 +163,8 @@ main(int argc, char **argv)
 		mode = RAD;
 
 	version = false;
-	while ((i = getopt(argc, argv, "VdtORC:r:E:S:o:s:c:w:a:")) != -1) {
+    pidfile = NULL;
+	while ((i = getopt(argc, argv, "VdtORC:r:E:P:S:o:s:c:w:a:")) != -1) {
 		switch (i) {
 		case 'V':
 			version = true;
@@ -179,6 +184,10 @@ main(int argc, char **argv)
 
 		case 'o':
 			out_addr = optarg;
+			break;
+
+		case 'P':
+			pidfile = optarg;
 			break;
 
 		case 'R':
@@ -306,6 +315,13 @@ main(int argc, char **argv)
 	nmsg_input = nmsg_input_open_null();
 	AXA_ASSERT(nmsg_input != NULL);
 
+    if (pidfile) {
+        fp_pidfile = pidfile_open();
+        if (fp_pidfile == NULL)
+            exit(EX_SOFTWARE);
+        pidfile_write();
+    }
+
 	/*
 	 * Continually reconnect to the SRA or RAD server and forward SIE data.
 	 */
@@ -404,6 +420,10 @@ stop(int s)
 	}
 
 	axa_io_cleanup();
+
+	if (pidfile)
+		if (unlink(pidfile) != 0)
+			fprintf(stderr, "unlink() failed: %s\n", strerror(errno));
 
 	exit(s);
 }
@@ -871,6 +891,7 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_CHANNEL:
 		case AXA_P_OP_CGET:
 		case AXA_P_OP_ACCT:
+		case AXA_P_OP_RADU:
 		default:
 			AXA_FAIL("impossible AXA op of %d from %s",
 				 client.io.recv_hdr.op, client.io.label);
@@ -1440,10 +1461,42 @@ forward(void)
 	case AXA_P_OP_CHANNEL:
 	case AXA_P_OP_CGET:
 	case AXA_P_OP_ACCT:
+	case AXA_P_OP_RADU:
 	default:
 		AXA_FAIL("impossible AXA op of %d from %s",
 			 client.io.recv_hdr.op, client.io.label);
 	}
 
 	axa_recv_flush(&client.io);
+}
+
+/* from nmsgtool */
+FILE *
+pidfile_open(void) {
+    FILE *fp;
+
+    if (pidfile == NULL)
+        return (NULL);
+
+    fp = fopen(pidfile, "w");
+    if (fp == NULL) {
+        fprintf(stderr, "unable to open pidfile %s: %s\n", pidfile,
+            strerror(errno));
+        return (NULL);
+    }
+
+    return (fp);
+}
+
+/* from nmsgtool */
+void
+pidfile_write(void) {
+    pid_t pid;
+
+    if (fp_pidfile == NULL)
+        return;
+
+    pid = getpid();
+    fprintf(fp_pidfile, "%d\n", pid);
+    fclose(fp_pidfile);
 }

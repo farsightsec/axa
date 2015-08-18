@@ -1,8 +1,20 @@
-axa (1.1.2) UNRELEASED; urgency=low
+axa (1.2.0) UNRELEASED; urgency=low
 
-  * Fix NULL pointer derefence in SIE newdomain NMSGs
+  * Update README
+  * Fix token separators bug
+  * Add support for RAD Units via AXA_P_OP_RADU
+  * Add 'status' command and server connected-time tracking for sratool/radtool
+  * Add 'runits' command for radtool
+  * Fix axa_vlog_msg(): crop msg to fit in buf
+  * Fix dns_to_key(): remove ip_to_key() in favor of inline code
+  * Fix trie_free(): NULL pointer assignment bug
+  * Add NXD entries to etc/fields
+  * Fix typos in comments
+  * Update cmds_tbl, help output now easier to parse
+  * Add pidfile option for sratunnel
+  * Fix incorrect return value for error condition in axa_str_to_cidr()
 
- -- Farsight Security, Inc. <software@farsightsecurity.com>  Wed, 15 Jul 2015 01:55:17 +0000
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 18 Aug 2015 19:06:02 +0000
 
 axa (1.1.1) UNRELEASED; urgency=low
 
