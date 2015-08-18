@@ -48,6 +48,7 @@
 
 #include <histedit.h>
 #include <pwd.h>
+#include <math.h>
 
 
 #define MAX_IN_FILES 10
@@ -78,6 +79,7 @@ static nmsg_output_t nmsg_pres;
 
 /* Connection to the SRA server. */
 static axa_client_t client;
+static struct timeval connect_time;
 
 /* Output or forward packets to this socket. */
 static bool out_on;
@@ -134,6 +136,25 @@ static void read_srvr(void);
 static int srvr_send(axa_tag_t tag, axa_p_op_t op,
 		     const void *b, size_t b_len);
 static void history_get_savefile(void);
+static const char *convert_timeval(struct timeval *t);
+static void convert_seconds(uint32_t seconds, uint32_t *d, uint32_t *h,
+		     uint32_t *m, uint32_t *s);
+/*
+ *  Simple way to subtract timeval based timers, subtracts `uvp` from `tvp`.
+ *
+ *  \param[in] tvp pointer to timeval structure (first value)
+ *  \param[in] uvp pointer to timeval structure (second value)
+ *  \param[out] vvp pointer to timeval (result timeval)
+ */
+#define PTIMERSUB(tvp, uvp, vvp)				\
+do {								\
+	(vvp)->tv_sec  = (tvp)->tv_sec  - (uvp)->tv_sec;	\
+	(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;	\
+	if ((vvp)->tv_usec < 0) {				\
+        (vvp)->tv_sec--;					\
+        (vvp)->tv_usec += 1000000;				\
+	}							\
+} while (0)
 
 static axa_emsg_t emsg;
 
@@ -179,6 +200,7 @@ static cmd_t pause_cmd;
 static cmd_t trace_cmd;
 static cmd_t go_cmd;
 static cmd_t sleep_cmd;
+static cmd_t radunit_cmd;
 
 typedef enum {NO, MB, YES} ternary_t;
 
@@ -194,49 +216,37 @@ struct cmd_tbl_entry {
 };
 
 static const cmd_tbl_entry_t cmds_tbl[] = {
-{"help",		help_cmd,		BOTH,MB, NO,
-    "help [cmd]",
-    NULL},
 {"?",			help_cmd,		BOTH,MB, NO,
     NULL,
-    NULL},
-{"exit",		exit_cmd,		BOTH,NO, NO,
-    "exit",
-    NULL},
-{"quit",		exit_cmd,		BOTH,NO, NO,
+    NULL
+},
+{"accounting",		acct_cmd,		BOTH,NO, YES,
+    "accounting",
+    "Ask the server to report total message counts."
+},
+{"acct",		acct_cmd,		BOTH,NO, YES,
     NULL,
-    NULL},
-{"error mode",		error_mode_cmd,		BOTH,MB, NO,
-    "error mode [disconnect | off]",
-    "\"error mode disconnect\" disconnects from the server and exits"
-    " when the server reports an error or the connection breaks."
-    " In the default mode, \"error mode off\", errors are only reported."},
-{"debug",		debug_cmd,		BOTH,MB, NO,
-    "debug [on | off | quiet | N]",
-    "increases, decreases, or shows the level of debugging and tracing messages"
-    " that is also controlled by -d."
-    "  \"Debug quiet\" turns off reports of successful AXA commands."},
-{"verbose",		verbose_cmd,		BOTH,MB, NO,
-    "verbose [on | off | N]",
-    "controls the length of SIE message and IP packet descriptions."
-    "  The default, \"verbose off\", generally displays one line summaries."},
-{"version",		version_cmd,		BOTH,NO, NO,
-    "version",
-    "shows the software and protocol version."},
-{"mode",		mode_cmd,		BOTH,MB, NO,
-    "mode [SRA | RAD]",
-    "Show the current command mode or"
-    " expect to connect to an SRA or RAD server. Mode cannot be changed"
-    " while connected to server."},
-{"srad",		sra_mode_cmd,		BOTH,MB, NO,
-    NULL,
-    NULL},
-{"radd",		rad_mode_cmd,		BOTH,MB, NO,
-    NULL,
-    NULL},
-{"source",		source_cmd,		BOTH,YES,NO,
-    "source filename",
-    "Read and execute commands commands from a file"},
+    NULL
+},
+{"anomaly",		anom_cmd,		RAD, YES,YES,
+    "tag anomaly name [parameters]",
+    "Start the named anomaly detector module.\n"
+    " \"Tag\" is the number labeling the module."
+},
+{"ciphers",		ciphers_cmd,		BOTH,MB, NO,
+    "ciphers [cipher-list]",
+    "Specify the ciphers to be used with future connections."
+    "  Disconnect the current connection if it uses TLS"
+},
+{"channels",		channel_cmd,		SRA, YES,YES,
+    "channel {list | {on | off} {all | chN}}",
+    "List available SRA channels or enable or disable"
+    " one or all SIE channels."
+},
+{"channels",		channel_cmd,		SRA, YES,YES,
+    "channel list",
+    "List available SRA channels."
+},
 {"connect",		connect_cmd,		BOTH,MB, NO,
     "connect [server]",
     "Show the current connection"
@@ -245,19 +255,105 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " 'ssh:[user@]host' via SSH"
     " or with 'tls:cert,key@host,port"
 },
-{"disconnect",		disconnect_cmd,		BOTH,NO, NO,
-    "disconnect",
-    "Disconnect from the server"},
 {"count",		count_cmd,		BOTH,MB, NO,
     "count [#packets | off]",
     "Set terminal output to stop displaying packets after a"
     " number of packets (including immediately with a number of 0),"
     " show the currently remainint count,"
-    " or turn off the packet count limit."},
-{"ciphers",		ciphers_cmd,		BOTH,MB, NO,
-    "ciphers [cipher-list]",
-    "Specify the ciphers to be used with future connections."
-    "  Disconnect the current connection if it uses TLS"},
+    " or turn off the packet count limit."
+},
+{"debug",		debug_cmd,		BOTH,MB, NO,
+    "debug [on | off | quiet | N]",
+    "increases, decreases, or shows the level of debugging and tracing messages"
+    " that is also controlled by -d."
+    "  \"Debug quiet\" turns off reports of successful AXA commands."
+},
+{"delete",		delete_cmd,		BOTH,MB, YES,
+    NULL,
+    NULL
+},
+{"delete watches",	delete_cmd,		SRA, MB, YES,
+    "[tag] delete watch [all]",
+    "With a tag, stop or delete the specified watch.\n"
+    " With \"all\", delete all watches"
+},
+{"delete anomaly",	delete_cmd,		RAD, MB, YES,
+    "[tag] delete anomaly [all]",
+    "Delete an anomaly detector module specified by tag"
+    " or all anomaly detector modules."
+},
+{"disconnect",		disconnect_cmd,		BOTH,NO, NO,
+    "disconnect",
+    "Disconnect from the server"
+},
+{"error mode",		error_mode_cmd,		BOTH,MB, NO,
+    "error mode [disconnect | off]",
+    "\"error mode disconnect\" disconnects from the server and exits"
+    " when the server reports an error or the connection breaks."
+    " In the default mode, \"error mode off\", errors are only reported."
+},
+{"exit",		exit_cmd,		BOTH,NO, NO,
+    "exit",
+    NULL
+},
+{"forward",		out_cmd,		BOTH,MB, NO,
+    NULL,
+    NULL
+},
+{"fwd",			out_cmd,		BOTH,MB, NO,
+    NULL,
+    NULL
+},
+{"get anomaly",		list_cmd,		RAD, MB, YES,
+    NULL,
+    NULL
+},
+{"get channels",	list_cmd,		SRA, MB, YES,
+    NULL,
+    NULL
+},
+{"get watches",		list_cmd,		SRA, MB, YES,
+    NULL,
+    NULL
+},
+{"go",			go_cmd,			BOTH,NO, YES,
+    "go",
+    "Tell the server to resume sending data"
+},
+{"help",		help_cmd,		BOTH,MB, NO,
+    "help [cmd]",
+    NULL},
+{"limits",		rlimits_cmd,		BOTH,MB, YES,
+    NULL,
+    NULL
+},
+{"list channels",	list_cmd,		SRA, MB, YES,
+    "list channels",
+    "List all SIE channels available to the user on the SRA server."
+},
+{"list anomaly",	list_cmd,		RAD, NO, YES,
+    "[tag] list anomaly",
+    "List a specified or all available anomaly detection modules. "
+},
+{"list anomalies",	list_cmd,		RAD, MB, YES,
+    NULL,
+    NULL
+},
+{"list watches",	list_cmd,		SRA, MB, YES,
+    "[tag] list watch",
+    "With a tag, list the specified watch."
+    "  List all watches without a tag"
+},
+{"mode",		mode_cmd,		BOTH,MB, NO,
+    "mode [SRA | RAD]",
+    "Show the current command mode or"
+    " expect to connect to an SRA or RAD server. Mode cannot be changed"
+    " while connected to server."
+},
+{"nop",			nop_cmd,		BOTH,NO,YES,
+    "nop",
+    "Send a command to the server that does nothing but test the connection"
+},
 {"output",		out_cmd,		BOTH,MB, NO,
     "output [off | nmsg:[tcp:|udp:]host,port [count] | nmsg:file:path [count]\n"
     "               | pcap[-fifo]:file [count] | pcap-if:[dst/]ifname] [count]",
@@ -269,22 +365,60 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " to a file, to a fifo created separately with `mkfio`,"
     " or in Ethernet frames on a named network interface to a 48-bit address"
     " (default 0)."
-    "  Stop forwarding after count messages."},
-{"forward",		out_cmd,		BOTH,MB, NO,
+    "  Stop forwarding after count messages."
+},
+{"pause",		pause_cmd,		BOTH,NO, YES,
+    "pause",
+    "Tell the server to stop sending data."
+},
+{"quit",		exit_cmd,		BOTH,NO, NO,
+    NULL,
+    NULL
+},
+{"radd",		rad_mode_cmd,		BOTH,MB, NO,
+    NULL,
+    NULL
+},
+{"rate limits",		rlimits_cmd,		BOTH,MB, YES,
+    "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
+    "Ask the server to report its rate limits"
+    " or to set rate limits and the interval between rate limit reports."
+},
+{"rlimits",		rlimits_cmd,		BOTH,MB, YES,
     NULL,
     NULL},
-{"fwd",			out_cmd,		BOTH,MB, NO,
+{"runits",		radunit_cmd,		RAD,NO, YES,
+    "runits",
+    "Ask the server for my RAD Unit balance."
+},
+{"sample",		sample_cmd,		BOTH,MB, YES,
+    "sample [percent]",
+    "Ask the server to report its current output sampling rate"
+    " or to set its sampling rate."
+},
+{"sleep",		sleep_cmd,		BOTH,YES,NO,
+    "sleep x.y",
+    "Stop accepting commands or displaying server output for a while."
+},
+{"source",		source_cmd,		BOTH,YES,NO,
+    "source filename",
+    "Read and execute commands commands from a file"
+},
+{"status",		connect_cmd,		BOTH,NO, NO,
+    "status",
+    "get server status"
+},
+{"srad",		sra_mode_cmd,		BOTH,MB, NO,
+    NULL,
+    NULL
+},
+{"stop",		delete_cmd,		BOTH,MB, YES,
     NULL,
     NULL},
-{"nop",			nop_cmd,		BOTH,NO,YES,
-    "nop",
-    "Send a command to the server that does nothing but test the connection"},
-{"user",		user_cmd,		BOTH,YES,YES,
-    "user name",
-    "Send the user name required by the server on a TCP/IP connection or"
-    " a UNIX domain socket.\n"
-    " SSH connections do not use this command but use the"
-    " name negotiated with the ssh protocol."},
+{"watch",		rad_watch_cmd,		RAD, MB, YES,
+    "tag watch {ip=IP[/n] | dns=[*.]dom}",
+    "Tell the RAD server about address and domains of interest."
+},
 {"watch",		sra_watch_cmd,		SRA, MB, YES,
     "tag watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
@@ -292,96 +426,36 @@ static const cmd_tbl_entry_t cmds_tbl[] = {
     " that contain the specified domain name,"
     " that arrived at the server on the specifed SIE channel,"
     " or are SIE messages that could not be decoded."
-    " The \"tag\" is the integer labeling the watch"},
+    " The \"tag\" is the integer labeling the watch"
+},
 {"watches",		sra_watch_cmd,		SRA, MB, YES,
     NULL,
     NULL},
-{"list watches",	list_cmd,		SRA, MB, YES,
-    "[tag] list watch",
-    "With a tag, list the specified watch."
-    "  List all watches without a tag"},
-{"get watches",		list_cmd,		SRA, MB, YES,
-    NULL,
-    NULL},
-{"list channels",	list_cmd,		SRA, MB, YES,
-    "list channels",
-    "List all SIE channels available to the user on the SRA server."},
-{"get channels",	list_cmd,		SRA, MB, YES,
-    NULL,
-    NULL},
-{"watch",		rad_watch_cmd,		RAD, MB, YES,
-    "tag watch {ip=IP[/n] | dns=[*.]dom}",
-    "Tell the RAD server about address and domains of interest."},
-{"list anomaly",	list_cmd,		RAD, NO, YES,
-    "[tag] list anomaly",
-    "List a specified or all available anomaly detection modules. "},
-{"list anomalies",	list_cmd,		RAD, MB, YES,
-    NULL,
-    NULL},
-{"get anomaly",		list_cmd,		RAD, MB, YES,
-    NULL,
-    NULL},
-{"delete watches",	delete_cmd,		SRA, MB, YES,
-    "[tag] delete watch [all]",
-    "With a tag, stop or delete the specified watch.\n"
-    " With \"all\", delete all watches"},
-{"delete anomaly",	delete_cmd,		RAD, MB, YES,
-    "[tag] delete anomaly [all]",
-    "Delete an anomaly detector module specified by tag"
-    " or all anomaly detector modules."},
-{"delete",		delete_cmd,		BOTH,MB, YES,
-    NULL,
-    NULL},
-{"stop",		delete_cmd,		BOTH,MB, YES,
-    NULL,
-    NULL},
-{"channels",		channel_cmd,		SRA, YES,YES,
-    "channel {list | {on | off} {all | chN}}",
-    "List available SRA channels or enable or disable"
-    " one or all SIE channels."},
-{"channels",		channel_cmd,		SRA, YES,YES,
-    "channel list",
-    "List available SRA channels."},
-{"anomaly",		anom_cmd,		RAD, YES,YES,
-    "tag anomaly name [parameters]",
-    "Start the named anomaly detector module.\n"
-    " \"Tag\" is the number labeling the module."},
-{"rate limits",		rlimits_cmd,		BOTH,MB, YES,
-    "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
-    "Ask the server to report its rate limits"
-    " or to set rate limits and the interval between rate limit reports."},
-{"rlimits",		rlimits_cmd,		BOTH,MB, YES,
-    NULL,
-    NULL},
-{"limits",		rlimits_cmd,		BOTH,MB, YES,
-    NULL,
-    NULL},
-{"sample",		sample_cmd,		BOTH,MB, YES,
-    "sample [percent]",
-    "Ask the server to report its current output sampling rate"
-    " or to set its sampling rate."},
+{"trace",		trace_cmd,		BOTH,YES,YES,
+    "trace N",
+    "Set server trace level"
+},
+{"user",		user_cmd,		BOTH,YES,YES,
+    "user name",
+    "Send the user name required by the server on a TCP/IP connection or"
+    " a UNIX domain socket.\n"
+    " SSH connections do not use this command but use the"
+    " name negotiated with the ssh protocol."
+},
+{"verbose",		verbose_cmd,		BOTH,MB, NO,
+    "verbose [on | off | N]",
+    "controls the length of SIE message and IP packet descriptions."
+    "  The default, \"verbose off\", generally displays one line summaries."
+},
+{"version",		version_cmd,		BOTH,NO, NO,
+    "version",
+    "shows the software and protocol version."
+},
 {"window",		sndbuf_cmd,		BOTH,MB, YES,
     "window [bytes]",
     "Ask the server to report its current TCP output buffer size on TLS and"
-    " TCP connections or to set its output buffer size."},
-{"pause",		pause_cmd,		BOTH,NO, YES,
-    "pause",
-    "Tell the server to stop sending data."},
-{"go",			go_cmd,			BOTH,NO, YES,
-    "go",
-    "Tell the server to resume sending data"},
-{"sleep",		sleep_cmd,		BOTH,YES,NO,
-    "sleep x.y",
-    "Stop accepting commands or displaying server output for a while."},
-{"trace",		trace_cmd,		BOTH,YES,YES,
-    "trace N",
-    "Set server trace level"},
-{"accounting",		acct_cmd,		BOTH,NO, YES,
-    "accounting",
-    "Ask the server to report total message counts."},
-{"acct",		acct_cmd,		BOTH,NO, YES,
-    NULL,
-    NULL},
+    " TCP connections or to set its output buffer size."
+},
 };
 
 
@@ -1406,7 +1480,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	const cmd_tbl_entry_t *help_ce, *usage_ce;
 	int num_help;
 	char buf[160];
-	size_t hlen, llen;
+	size_t hlen;
 	const char *p;
 
 	/* Ignore a tag. */
@@ -1487,26 +1561,15 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	/* talk about all of the commands */
 	printf("  "AXA_PVERS_STR" AXA protocol %d\n", AXA_P_PVERS);
 
-	llen = 0;
 	for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
 		if (ce->mode != mode && ce->mode != BOTH)
 			continue;
 		hlen = help_cmd_snprint(buf, sizeof(buf), ce);
 		if (hlen == 0)
 			continue;
-		if (llen != 0 &&  (llen > 35 || llen + hlen > 79)) {
-			fputc('\n', stdout);
-			llen = 0;
-		}
-		if (llen == 0) {
-			llen = printf("     %-30s", buf);
-		} else {
-			printf("    %s\n", buf);
-			llen = 0;
-		}
+		printf("    %s\n", buf);
 	}
-	if (llen != 0)
-		fputc('\n', stdout);
+	fputc('\n', stdout);
 
 	return (1);
 }
@@ -1731,9 +1794,13 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		} else {
 			printf("connected to \"%s\"\n    %s\n",
 			       client.hello, client.io.label);
+			printf("    connected for: %s\n",
+				convert_timeval(&connect_time));
 			if (client.io.tls_info != NULL)
 				printf("    %s\n", client.io.tls_info);
 			count_print(false);
+			if (mode == RAD)
+				return (srvr_send(tag, AXA_P_OP_RADU, NULL, 0));
 		}
 		return (1);
 	}
@@ -1775,6 +1842,7 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	if (packet_counting)
 		packet_count = packet_count_total;
 
+	gettimeofday(&connect_time, NULL);
 	return (1);
 }
 
@@ -2594,6 +2662,13 @@ acct_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 	return (srvr_send(tag, AXA_P_OP_ACCT, NULL, 0));
 }
 
+static int
+radunit_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	return (srvr_send(tag, AXA_P_OP_RADU, NULL, 0));
+}
+
 static bool
 get_nmsg_field(const nmsg_message_t msg, const char *fname,
 	       axa_nmsg_idx_t val_idx, void **data, size_t *data_len,
@@ -3010,13 +3085,12 @@ print_sie_newdomain(const nmsg_message_t msg,
 	axa_domain_to_str(newdomain->rrname.data, newdomain->rrname.len,
 			  rrname_buf, sizeof(rrname_buf));
 	axa_rtype_to_str(rtype_buf, sizeof(rtype_buf), newdomain->rrtype);
-	if (newdomain->domain.data)
-		axa_domain_to_str(newdomain->domain.data, newdomain->domain.len,
-				domain_buf, sizeof(domain_buf));
-
+    if (newdomain->domain.data)
+			  axa_domain_to_str(newdomain->domain.data, newdomain->domain.len,
+                      domain_buf, sizeof(domain_buf));
 	printf("%s%s\n %s/%s: %s\n",
 	       eq, val, rrname_buf, rtype_buf,
-	       newdomain->domain.data ? domain_buf : rrname_buf);
+           newdomain->domain.data ? domain_buf : rrname_buf);
 }
 
 static void
@@ -3969,6 +4043,7 @@ read_srvr(void)
 		case AXA_P_OP_CHANNEL:
 		case AXA_P_OP_CGET:
 		case AXA_P_OP_ACCT:
+		case AXA_P_OP_RADU:
 		default:
 			AXA_FAIL("impossible AXA %s from %s",
 				 axa_op_to_str(buf, sizeof(buf),
@@ -3997,4 +4072,59 @@ srvr_send(axa_tag_t tag, axa_p_op_t op, const void *body, size_t body_len)
 		       axa_p_to_str(pbuf, sizeof(pbuf), true, &hdr, body));
 	}
 	return (1);
+}
+
+const char *
+convert_timeval(struct timeval *t)
+{
+	int n;
+	struct timeval r, e;
+	static char buf[BUFSIZ];
+	uint32_t day, hour, min, sec;
+
+	gettimeofday(&e, NULL);
+	PTIMERSUB(&e, t, &r);
+	convert_seconds((u_int32_t)r.tv_sec, &day, &hour, &min, &sec);
+	n = 0;
+	if (day) {
+		n += snprintf(buf + n, BUFSIZ,
+		(day  == 1 ? "%d day "   : "%d days "), day);
+	}
+	if (hour) {
+		n += snprintf(buf + n, BUFSIZ,
+		(hour == 1 ? "%d hour "  : "%d hours "), hour);
+	}
+	if (min) {
+		n += snprintf(buf + n, BUFSIZ,
+		(min  == 1 ? "%d minute ": "%d minutes "), min);
+	}
+	if (sec) {
+		n += snprintf(buf + n, BUFSIZ,
+		(sec  == 1 ? "%d second ": "%d seconds "), sec);
+	}
+	if (n == 0) {
+		n = snprintf(buf + n, BUFSIZ, "<1 second");
+	}
+	buf[n] = 0;
+
+	return buf;
+}
+
+void
+convert_seconds(uint32_t seconds, uint32_t *d, uint32_t *h, uint32_t *m,
+	uint32_t *s)
+{
+	uint32_t d1, s1;
+
+	d1 = floor(seconds / 86400);
+	s1 = seconds - 86400 * d1;
+
+	*d = d1;
+	*s = s1;
+
+	*h = floor((*s) / 3600);
+	*s -= 3600 * (*h);
+
+	*m = floor((*s) / 60);
+	*s -= 60 * (*m);
 }
