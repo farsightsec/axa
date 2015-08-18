@@ -421,10 +421,9 @@ stop(int s)
 
 	axa_io_cleanup();
 
-    if (pidfile)
-        if (unlink(pidfile) != 0) {
-            fprintf(stderr, "unlink() failed: %s\n", strerror(errno));
-        }
+	if (pidfile)
+		if (unlink(pidfile) != 0)
+			fprintf(stderr, "unlink() failed: %s\n", strerror(errno));
 
 	exit(s);
 }
