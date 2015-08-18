@@ -170,7 +170,9 @@ sratool_sratool_LDADD = \
 	${libnmsg_LIBS} \
 	${libz_LIBS} \
 	${libwdns_LIBS} \
-	${libedit_LIBS}
+	${libedit_LIBS} \
+	${libbsd_LIBS}
+
 sratool_sratool_CFLAGS = \
 	${AM_CFLAGS} \
 	${libssl_CFLAGS} \
@@ -195,7 +197,9 @@ sratunnel_sratunnel_LDADD = \
 	${libnmsg_LIBS} \
 	${libssl_LIBS} \
 	${libcrypto_LIBS} \
-	${libpcap_LIBS}
+	${libpcap_LIBS} \
+	${libbsd_LIBS}
+
 sratunnel_sratunnel_CFLAGS = \
 	${AM_CFLAGS} \
 	${libnmsg_CFLAGS} \

@@ -105,6 +105,8 @@ If a tag is present,
 list the set of watches and anomaly detection modules with that tag.
 Without a tag,
 list all active as well as available anomaly detection modules
+.It Ic runits
+Ask the server to report user's current RAD balance.
 .El
 .Sh FILES
 .Bl -tag -width fields
@@ -146,6 +148,7 @@ or
 .Sh SEE ALSO
 .Xr ip_probe 1 ,
 .Xr dns_binding 1 ,
+.Xr spam_watch 1 ,
 .Xr sratool 1 ,
 .Xr sratunnel 1 ,
 .Xr radtunnel 1 ,
