@@ -3975,6 +3975,22 @@ read_srvr(void)
 			printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
 						    &client.io.recv_hdr,
 						    client.io.recv_body));
+			if (mode == SRA) {
+				if (strstr(client.hello, "srad") == NULL) {
+					printf(
+						"warning: in sra mode but it "
+						"looks like we connected to a "
+						"RAD server\n");
+				}
+			}
+			else {
+				if (strstr(client.hello, "radd") == NULL) {
+					printf(
+						"warning: in rad mode but it "
+						"looks like we connected to an "
+						"SRA server\n");
+				}
+			}
 			break;
 
 		case AXA_P_OP_OK:
