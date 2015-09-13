@@ -101,6 +101,8 @@ typedef enum {SRA, RAD} axa_mode_t;
 static axa_mode_t mode;
 static FILE *fp_pidfile = NULL;
 static const char *pidfile;
+static uint acct_interval;
+static struct timeval acct_timer;
 
 
 
@@ -121,11 +123,11 @@ static void pidfile_write(void);
 static void AXA_NORETURN AXA_PF(1,2)
 usage(const char *msg, ...)
 {
-	const char *cmn = ("[-VdtOR] [-C count] [-r rate-limit]"
-				 " [-E ciphers] [-S certs] [-P pidfile]\n");
-	const char *sra =("    -s [user@]SRA-server -w watch -c channel"
+	const char *cmn = ("[-VdtOR] [-A interval] [-C count] [-r rate-limit]"
+				 " [-E ciphers] [-S certs]\n   [-P pidfile] ");
+	const char *sra =("-s [user@]SRA-server -w watch -c channel"
 				 " -o out-addr");
-	const char *rad =("    -s [user@]RAD-server -w watch"
+	const char *rad =("-s [user@]RAD-server -w watch"
 				  " -a anomaly -o out-addr");
 	va_list args;
 
@@ -163,9 +165,18 @@ main(int argc, char **argv)
 		mode = RAD;
 
 	version = false;
-    pidfile = NULL;
-	while ((i = getopt(argc, argv, "VdtORC:r:E:P:S:o:s:c:w:a:")) != -1) {
+	pidfile = NULL;
+	while ((i = getopt(argc, argv, "A:VdtORC:r:E:P:S:o:s:c:w:a:")) != -1) {
 		switch (i) {
+		case 'A':
+			acct_interval = atoi(optarg);
+			if (acct_interval <= 0) {
+				axa_error_msg("invalid \"-A %s\"", optarg);
+				exit(EX_USAGE);
+			}
+			gettimeofday(&acct_timer, NULL);
+			break;
+
 		case 'V':
 			version = true;
 			break;
@@ -357,7 +368,14 @@ main(int argc, char **argv)
 				continue;
 			}
 		}
-
+		/* check to see if it's time for an accounting update */
+		if (acct_interval) {
+			gettimeofday(&now, NULL);
+			if (now.tv_sec - acct_timer.tv_sec >= acct_interval) {
+				srvr_send(1, AXA_P_OP_ACCT, NULL, 0);
+				acct_timer.tv_sec = now.tv_sec;
+			}
+		}
 		switch (axa_io_wait(&emsg, &client.io, OUT_FLUSH_MS,
 				    true, true)) {
 		case AXA_IO_ERR:
