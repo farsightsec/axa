@@ -1078,14 +1078,21 @@ srvr_connect(void)
 }
 
 /* Create nmsg message from incoming watch hit containing a nmsg message */
-static void
+static axa_w2n_res_t
 whit2nmsg(nmsg_message_t *msgp, axa_p_whit_t *whit, size_t whit_len)
 {
 	axa_emsg_t emsg;
+	axa_w2n_res_t res;
 
-	if (!axa_whit2nmsg(&emsg, nmsg_input, msgp, whit, whit_len)) {
-		axa_error_msg("%s", emsg.c);
-		stop(EX_IOERR);
+	res = axa_whit2nmsg(&emsg, nmsg_input, msgp, whit, whit_len);
+	switch (res) {
+		case AXA_W2N_RES_FAIL:
+			axa_error_msg("%s", emsg.c);
+			stop(EX_IOERR);
+		case AXA_W2N_RES_SUCCESS:
+			return (AXA_W2N_RES_SUCCESS);
+		case AXA_W2N_RES_FRAGMENT:
+			return (AXA_W2N_RES_FRAGMENT);
 	}
 }
 
@@ -1139,8 +1146,14 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 
 	switch ((axa_p_whit_enum_t)whit->hdr.type) {
 	case AXA_P_WHIT_NMSG:
-		/* pass nmsg messages along */
-		whit2nmsg(&msg, whit, whit_len);
+		/* pass nmsg messages along, but ignore fragments */
+		if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
+			if (axa_debug != 0)
+				axa_trace_msg("ignoring NMSG fragment from "
+						AXA_OP_CH_PREFIX"%d",
+						AXA_P2H_CH(whit->hdr.ch));
+			return;
+		}
 		break;
 
 	case AXA_P_WHIT_IP:
@@ -1324,7 +1337,14 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 		break;
 
 	case AXA_P_WHIT_NMSG:
-		whit2nmsg(&msg, whit, whit_len);
+		/* pass nmsg messages along, but ignore fragments */
+		if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
+			if (axa_debug != 0)
+				axa_trace_msg("ignoring NMSG fragment from "
+						AXA_OP_CH_PREFIX"%d",
+						AXA_P2H_CH(whit->hdr.ch));
+			return;
+		}
 		vid = nmsg_message_get_vid(msg);
 		msgtype = nmsg_message_get_msgtype(msg);
 		if (vid != NMSG_VENDOR_BASE_ID
