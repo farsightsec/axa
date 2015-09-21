@@ -1090,10 +1090,10 @@ whit2nmsg(nmsg_message_t *msgp, axa_p_whit_t *whit, size_t whit_len)
 			axa_error_msg("%s", emsg.c);
 			stop(EX_IOERR);
 		case AXA_W2N_RES_SUCCESS:
-			return (AXA_W2N_RES_SUCCESS);
 		case AXA_W2N_RES_FRAGMENT:
-			return (AXA_W2N_RES_FRAGMENT);
+			break;
 	}
+	return (res);
 }
 
 static bool				/* false=skip the complaint */

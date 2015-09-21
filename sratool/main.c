@@ -3367,10 +3367,10 @@ whit2nmsg(nmsg_message_t *msgp, axa_p_whit_t *whit, size_t whit_len)
 			error_msg("%s", emsg.c);
 			disconnect(true);
 		case AXA_W2N_RES_SUCCESS:
-			return (AXA_W2N_RES_SUCCESS);
 		case AXA_W2N_RES_FRAGMENT:
-			return (AXA_W2N_RES_FRAGMENT);
+			break;
 	}
+	return (res);
 }
 
 static bool
