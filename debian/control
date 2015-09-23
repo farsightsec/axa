@@ -13,7 +13,7 @@ Package: libaxa0
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- nmsg-msg8-module-sie (>= 0.16)
+ nmsg-msg9-module-sie (>= 0.16)
 Description: Advanced Exchange Access
 
 Package: libaxa0-dbg

@@ -1,3 +1,11 @@
+axa (1.2.1) UNRELEASED; urgency=low
+
+  * Add warning when sratool/radtool connects to wrong server type
+  * Add sratunnel -A option (accounting updates)
+  * Fix a bug when attempting to process NMSG fragments
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 22 Sep 2015 17:53:02 +0000
+
 axa (1.2.0) UNRELEASED; urgency=low
 
   * Update README
