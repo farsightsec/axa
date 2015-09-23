@@ -1,5 +1,5 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.2.0])
+AC_INIT([axa], [1.2.1])
 PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
 AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
@@ -47,7 +47,7 @@ save_LIBS="$LIBS"
 AC_SEARCH_LIBS([strlcpy],
                [bsd],
                [strlcpy_LIBS="$LIBS"],
-               [AC_MSG_ERROR([could not find library containing strlcpy])]
+               [AC_MSG_ERROR([could not find libbsd, it can be downloaded here: http://libbsd.freedesktop.org/wiki/])]
               )
 LIBS="$save_LIBS"
 AC_SUBST(strlcpy_LIBS)

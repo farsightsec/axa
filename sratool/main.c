@@ -3355,14 +3355,22 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 }
 
 /* Create nmsg message from incoming watch hit containing a nmsg message */
-static void
+static axa_w2n_res_t
 whit2nmsg(nmsg_message_t *msgp, axa_p_whit_t *whit, size_t whit_len)
 {
-	if (!axa_whit2nmsg(&emsg, nmsg_input, msgp, whit, whit_len)) {
-		clear_prompt();
-		error_msg("%s", emsg.c);
-		disconnect(true);
+	axa_w2n_res_t res;
+
+	res = axa_whit2nmsg(&emsg, nmsg_input, msgp, whit, whit_len);
+	switch (res) {
+		case AXA_W2N_RES_FAIL:
+			clear_prompt();
+			error_msg("%s", emsg.c);
+			disconnect(true);
+		case AXA_W2N_RES_SUCCESS:
+		case AXA_W2N_RES_FRAGMENT:
+			break;
 	}
+	return (res);
 }
 
 static bool
@@ -3421,7 +3429,13 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 	switch ((axa_p_whit_enum_t)whit->hdr.type) {
 	case AXA_P_WHIT_NMSG:
 		/* pass nmsg messages along */
-		whit2nmsg(&msg, whit, whit_len);
+		if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
+			if (axa_debug != 0)
+				printf("ignoring NMSG fragment from "
+						AXA_OP_CH_PREFIX"%d",
+						AXA_P2H_CH(whit->hdr.ch));
+			return (false);
+		}
 		if (msg == NULL)
 			return (false);
 		break;
@@ -3628,7 +3642,13 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 		break;
 
 	case AXA_P_WHIT_NMSG:
-		whit2nmsg(&msg, whit, whit_len);
+		if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
+			if (axa_debug != 0)
+				printf("ignoring NMSG fragment from "
+						AXA_OP_CH_PREFIX"%d",
+						AXA_P2H_CH(whit->hdr.ch));
+			return (false);
+		}
 		if (msg == NULL)
 			return (false);
 		vid = nmsg_message_get_vid(msg);
@@ -3696,7 +3716,13 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	nmsg_message_t msg;
 	uint n;
 
-	whit2nmsg(&msg, whit, whit_len);
+	if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
+		if (axa_debug != 0)
+			printf("ignoring NMSG fragment from "
+					AXA_OP_CH_PREFIX"%d",
+					AXA_P2H_CH(whit->hdr.ch));
+		return;
+	}
 	if (msg == NULL)
 		return;
 
@@ -3975,6 +4001,22 @@ read_srvr(void)
 			printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
 						    &client.io.recv_hdr,
 						    client.io.recv_body));
+			if (mode == SRA) {
+				if (strstr(client.hello, "srad") == NULL) {
+					printf(
+						"warning: in sra mode but it "
+						"looks like we connected to a "
+						"RAD server\n");
+				}
+			}
+			else {
+				if (strstr(client.hello, "radd") == NULL) {
+					printf(
+						"warning: in rad mode but it "
+						"looks like we connected to an "
+						"SRA server\n");
+				}
+			}
 			break;
 
 		case AXA_P_OP_OK:

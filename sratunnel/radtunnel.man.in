@@ -24,7 +24,9 @@
 .Op Fl r Ar rate-limit
 .Op Fl E Ar ciphers
 .Op Fl S Ar certs
+.Op Fl A Ar interval
 .br
+.Op Fl P Ar pidfile
 .Fl s Ar RAD-server
 .Fl w Ar watch
 .Fl a Ar anomaly
@@ -86,6 +88,17 @@ specifies a list ciphers for TLS connections.
 overrides the default directory containing SSL certificates and keys.
 Its default is
 .Pa @CONFDIR@/certs .
+.It Fl A Ar interval
+specifies the accounting interval. Every
+.Ar interval
+seconds an accounting request will be made to server and the results will be
+emitted to stdout. When specifying this mode, you also need to specify
+.Fl d
+at the command line.
+.It Fl P Ar pidfile
+will result in the current PID  being written to
+.Ar pidfile .
+The file will be deleted upon program exit.
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:

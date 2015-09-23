@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 
-bool
+axa_w2n_res_t
 axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
 	      nmsg_message_t *msgp, axa_p_whit_t *whit, size_t whit_len)
 {
@@ -36,7 +36,7 @@ axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
 	msg_len = whit_len - sizeof(whit->nmsg.hdr);
 	if (msg_len <= 0) {
 		axa_pemsg(emsg, "truncated nmsg");
-		return (false);
+		return (AXA_W2N_RES_FAIL);
 	}
 	ts.tv_sec = AXA_P2H32(whit->nmsg.hdr.ts.tv_sec);
 	ts.tv_nsec = AXA_P2H32(whit->nmsg.hdr.ts.tv_nsec);
@@ -45,19 +45,17 @@ axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
 	if (res != nmsg_res_success) {
 		axa_pemsg(emsg, "nmsg_input_read_null(): %s",
 			  nmsg_res_lookup(res));
-		return (false);
+		return (AXA_W2N_RES_FAIL);
 	}
+	/* if res == nmsg_res_success && n_msgs == 0, we have an NMSG fragment */
 	if (n_msgs < 1 || n_msgs > 1) {
-		axa_pemsg(emsg, "impossible %zd messages to decode from "
-			 AXA_OP_CH_PREFIX"%d",
-			 n_msgs, AXA_P2H_CH(whit->hdr.ch));
 		while (n_msgs > 0)
 			nmsg_message_destroy(&msgs[--n_msgs]);
 		free(msgs);
-		return (false);
+		return (AXA_W2N_RES_FRAGMENT);
 	}
 
 	*msgp = msgs[0];
 	free(msgs);
-	return (true);
+	return (AXA_W2N_RES_SUCCESS);
 }
