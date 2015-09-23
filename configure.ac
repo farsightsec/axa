@@ -47,7 +47,7 @@ save_LIBS="$LIBS"
 AC_SEARCH_LIBS([strlcpy],
                [bsd],
                [strlcpy_LIBS="$LIBS"],
-               [AC_MSG_ERROR([could not find library containing strlcpy])]
+               [AC_MSG_ERROR([could not find libbsd, it can be downloaded here: http://libbsd.freedesktop.org/wiki/])]
               )
 LIBS="$save_LIBS"
 AC_SUBST(strlcpy_LIBS)

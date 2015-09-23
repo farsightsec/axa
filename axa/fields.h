@@ -49,6 +49,13 @@ typedef enum {
 	AXA_FC_JSON,			/**< JSON encoded */
 } axa_fc_t;
 
+/** axa_whit2nmsg return values */
+typedef enum {
+	AXA_W2N_RES_FAIL = 0,	/**< failure */
+	AXA_W2N_RES_SUCCESS,	/**< success */
+	AXA_W2N_RES_FRAGMENT,	/**< fragment received (should be ignored) */
+} axa_w2n_res_t;
+
 /**
  *  Some fields of some NMSG messages have a type/value structure such
  *  as JSON tags.
@@ -231,15 +238,16 @@ extern const char *axa_rtype_to_str(char *buf, size_t buf_len,
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] nmsg_input nmsg_input_t
- *  \param[in] msgp nmsg_message_t pointer the nmsg will
- *  \param[in] whit axa_p_whit_t pointer
- *  \param[in] whit_len size_t length of whit
+ *  \param[out] msgp nmsg_message_t on success, pointer the nmsg
+ *  \param[in] whit axa_p_whit_t pointer to the AXA watch hit buffer
+ *  \param[in] whit_len size_t length of watch hit
  *
- *  \return true on success, false on failure
+ *  \retval AXA_W2N_RES_FAIL failure, check emsg
+ *  \retval AXA_W2N_RES_SUCCESS success, msgp contains the NMSG
+ *  \retval AXA_W2N_RES_FRAGMENT ignore fragments but don't fail on them
  */
-extern bool axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
-			  nmsg_message_t *msgp,
-			  axa_p_whit_t *whit, size_t whit_len);
+extern axa_w2n_res_t axa_whit2nmsg(axa_emsg_t *emsg, nmsg_input_t nmsg_input,
+			  nmsg_message_t *msgp, axa_p_whit_t *whit, size_t whit_len);
 
 /**@}*/
 

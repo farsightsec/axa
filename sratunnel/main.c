@@ -101,6 +101,8 @@ typedef enum {SRA, RAD} axa_mode_t;
 static axa_mode_t mode;
 static FILE *fp_pidfile = NULL;
 static const char *pidfile;
+static uint acct_interval;
+static struct timeval acct_timer;
 
 
 
@@ -121,11 +123,11 @@ static void pidfile_write(void);
 static void AXA_NORETURN AXA_PF(1,2)
 usage(const char *msg, ...)
 {
-	const char *cmn = ("[-VdtOR] [-C count] [-r rate-limit]"
-				 " [-E ciphers] [-S certs] [-P pidfile]\n");
-	const char *sra =("    -s [user@]SRA-server -w watch -c channel"
+	const char *cmn = ("[-VdtOR] [-A interval] [-C count] [-r rate-limit]"
+				 " [-E ciphers] [-S certs]\n   [-P pidfile] ");
+	const char *sra =("-s [user@]SRA-server -w watch -c channel"
 				 " -o out-addr");
-	const char *rad =("    -s [user@]RAD-server -w watch"
+	const char *rad =("-s [user@]RAD-server -w watch"
 				  " -a anomaly -o out-addr");
 	va_list args;
 
@@ -163,9 +165,18 @@ main(int argc, char **argv)
 		mode = RAD;
 
 	version = false;
-    pidfile = NULL;
-	while ((i = getopt(argc, argv, "VdtORC:r:E:P:S:o:s:c:w:a:")) != -1) {
+	pidfile = NULL;
+	while ((i = getopt(argc, argv, "A:VdtORC:r:E:P:S:o:s:c:w:a:")) != -1) {
 		switch (i) {
+		case 'A':
+			acct_interval = atoi(optarg);
+			if (acct_interval <= 0) {
+				axa_error_msg("invalid \"-A %s\"", optarg);
+				exit(EX_USAGE);
+			}
+			gettimeofday(&acct_timer, NULL);
+			break;
+
 		case 'V':
 			version = true;
 			break;
@@ -357,7 +368,14 @@ main(int argc, char **argv)
 				continue;
 			}
 		}
-
+		/* check to see if it's time for an accounting update */
+		if (acct_interval) {
+			gettimeofday(&now, NULL);
+			if (now.tv_sec - acct_timer.tv_sec >= acct_interval) {
+				srvr_send(1, AXA_P_OP_ACCT, NULL, 0);
+				acct_timer.tv_sec = now.tv_sec;
+			}
+		}
 		switch (axa_io_wait(&emsg, &client.io, OUT_FLUSH_MS,
 				    true, true)) {
 		case AXA_IO_ERR:
@@ -1060,15 +1078,22 @@ srvr_connect(void)
 }
 
 /* Create nmsg message from incoming watch hit containing a nmsg message */
-static void
+static axa_w2n_res_t
 whit2nmsg(nmsg_message_t *msgp, axa_p_whit_t *whit, size_t whit_len)
 {
 	axa_emsg_t emsg;
+	axa_w2n_res_t res;
 
-	if (!axa_whit2nmsg(&emsg, nmsg_input, msgp, whit, whit_len)) {
-		axa_error_msg("%s", emsg.c);
-		stop(EX_IOERR);
+	res = axa_whit2nmsg(&emsg, nmsg_input, msgp, whit, whit_len);
+	switch (res) {
+		case AXA_W2N_RES_FAIL:
+			axa_error_msg("%s", emsg.c);
+			stop(EX_IOERR);
+		case AXA_W2N_RES_SUCCESS:
+		case AXA_W2N_RES_FRAGMENT:
+			break;
 	}
+	return (res);
 }
 
 static bool				/* false=skip the complaint */
@@ -1121,8 +1146,14 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 
 	switch ((axa_p_whit_enum_t)whit->hdr.type) {
 	case AXA_P_WHIT_NMSG:
-		/* pass nmsg messages along */
-		whit2nmsg(&msg, whit, whit_len);
+		/* pass nmsg messages along, but ignore fragments */
+		if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
+			if (axa_debug != 0)
+				axa_trace_msg("ignoring NMSG fragment from "
+						AXA_OP_CH_PREFIX"%d",
+						AXA_P2H_CH(whit->hdr.ch));
+			return;
+		}
 		break;
 
 	case AXA_P_WHIT_IP:
@@ -1306,7 +1337,14 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 		break;
 
 	case AXA_P_WHIT_NMSG:
-		whit2nmsg(&msg, whit, whit_len);
+		/* pass nmsg messages along, but ignore fragments */
+		if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
+			if (axa_debug != 0)
+				axa_trace_msg("ignoring NMSG fragment from "
+						AXA_OP_CH_PREFIX"%d",
+						AXA_P2H_CH(whit->hdr.ch));
+			return;
+		}
 		vid = nmsg_message_get_vid(msg);
 		msgtype = nmsg_message_get_msgtype(msg);
 		if (vid != NMSG_VENDOR_BASE_ID
