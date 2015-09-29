@@ -158,7 +158,14 @@ DISTCLEANFILES += axa/libaxa.pc
 
 bin_PROGRAMS += sratool/sratool
 sratool_sratool_SOURCES = \
+	sratool/cmd.c \
+	sratool/error.c \
+	sratool/infile.c \
+	sratool/io.c \
 	sratool/main.c \
+	sratool/output.c \
+	sratool/server.c \
+	sratool/signal.c \
 	sratool/print.c \
 	sratool/sratool.h
 sratool_sratool_LDADD = \
