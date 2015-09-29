@@ -198,7 +198,13 @@ sratool_radtool_CFLAGS = ${sratool_sratool_CFLAGS}
 
 bin_PROGRAMS += sratunnel/sratunnel
 sratunnel_sratunnel_SOURCES = \
-	sratunnel/main.c
+	sratunnel/forward.c \
+	sratunnel/main.c \
+	sratunnel/output.c \
+	sratunnel/pidfile.c \
+	sratunnel/print.c \
+	sratunnel/server.c \
+	sratunnel/signal.c
 sratunnel_sratunnel_LDADD = \
 	axa/libaxa.la \
 	${libnmsg_LIBS} \
