@@ -51,7 +51,6 @@ their "sra-" counterparts and the program logic is such that it detects its
 filename and invokes itself in RAD mode. 
 
 ## SRA Filtering
-
 Of note, SRA can perform filtering. This feature is highly desirable due to the
 very high volume of data carried by SIE which can burst to hundreds of megabits
 per second in a single channel. On the flip side, when using SRA to access low 
@@ -166,8 +165,8 @@ authentication keys and submit the public half to Farsight Security.
 As of the time of this writing, the SRA and RAD servers answer at the following 
 addresses via the SSH transport:
 
- * **SRA**: `sra-service@sra.sie-remote.net`
- * **RAD**: `rad-service@rad.sie-remote.net`
+ * **SRA**: `sra-service@sra-eft.sie-remote.net`
+ * **RAD**: `rad-service@rad-eft.sie-remote.net`
 
 Incoming SRA or RAD connections are handled on TCP port 22 by the SSH server.
 
@@ -184,7 +183,7 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
  2. You will need to create or edit your `~/.ssh/config` file to specify the
     private half of the SSH key pair for the SRA and RAD servers:
 
-        Host sra.sie-remote.net rad.sie-remote.net
+        Host sra-eft.sie-remote.net rad-eft.sie-remote.net
             IdentityFile ~/.ssh/farsight-axa-id_rsa
 
  3. Email your public key (`~/.ssh/farsight-axa-id_rsa.pub`) to your Farsight
@@ -197,8 +196,8 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
 As of the time of this writing, the SRA and RAD servers answer at the following 
 addresses via the TLS transport:
 
- * **SRA**: sra.sie-remote.net,1021
- * **RAD**: rad.sie-remote.net,1022
+ * **SRA**: sra-eft.sie-remote.net,1021
+ * **RAD**: rad-eft.sie-remote.net,1022
 
 The TCP port numbers 1021 and 1022 are IANA "[RFC3692](https://tools.ietf.org/html/rfc3692)-style Experiment 1" port numbers and were chosen in consideration
 of that document.
@@ -232,7 +231,7 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
     bu connecting to either SRA or RAD since they both share the same TLS
     certificate:
 
-        # axa_server_cert -s sra.sie-remote.net,1021
+        # axa_server_cert -s sra-eft.sie-remote.net,1021
         Obtained certificate for "farsight" with
         SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
         Install it in /usr/local/etc/axa/certs/farsight.pem? yes
@@ -255,7 +254,7 @@ SIE channel 212 (Newly Observed Domains):
 ~~~
 $ sratool 
 sra> connect ssh:sra-service@sra-eft.sie-remote.net
-* HELLO srad version 1.1.1 sb6 AXA protocol 1
+* HELLO srad version 1.2.1 sra-eft AXA protocol 1
 sra> count 5
 sra> channel 212 on
 * OK CHANNEL ON/OFF channel ch212 on
@@ -297,7 +296,7 @@ Next, we introduce in-line connections and show rate limiting of SIE channel
 
 ~~~
 $ sratool 'connect sra-service@sra-eft.sie-remote.net'
-* HELLO srad version 1.1.1 sb6 AXA protocol 1
+* HELLO srad version 1.2.1 sra-eft AXA protocol 1
 sra> count 5
 sra> limit 1 5
 * OPTION Rate LIMIT
@@ -353,7 +352,7 @@ view them with `nmsgtool` and watch packet flow via `tcpdump`.
 First we invoke `sratunnel`:
 
 ~~~
-$ sratunnel -s 'ssh sra-service@sra.sie-remote.net' -c ch212 \
+$ sratunnel -s 'ssh sra-service@sra-eft.sie-remote.net' -c ch212 \
 -w 'ch=212' -o nmsg:127.0.0.1,5000 &
 [2]+ sratunnel ...
 ~~~
@@ -434,7 +433,7 @@ investigation.
 
 ~~~
 rad> connect ssh:rad-service@rad-eft.sie-remote.net
-* HELLO radd version 1.1.1 sb6 AXA protocol 1
+* HELLO radd version 1.2.1 rad-eft AXA protocol 1
 rad> count 5
 rad> 1 watch ip=0.0.0.0/1
 1 OK WATCH saved
