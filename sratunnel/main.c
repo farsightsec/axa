@@ -44,6 +44,7 @@ arg_t *chs = NULL;			/* channels */
 arg_t *watches = NULL;			/* watches */
 arg_t *anomalies = NULL;		/* anomalies */
 const char *out_addr;			/* output address */
+double sample = 0.0;			/* sampling rate */
 
 /* private */
 static bool version;
@@ -55,11 +56,12 @@ static void AXA_NORETURN AXA_PF(1,2)
 usage(const char *msg, ...)
 {
 	const char *cmn = ("[-VdtOR] [-A interval] [-C count] [-r rate-limit]"
-				 " [-E ciphers] [-S certs]\n   [-P pidfile] ");
-	const char *sra =("-s [user@]SRA-server -w watch -c channel"
-				 " -o out-addr");
+				 " [-E ciphers] [-S certs]\n   [-P pidfile] "
+				 " [-m sample] ");
+	const char *sra =("-s [user@]SRA-server -w watch -c channel\n"
+				 "   -o out-addr");
 	const char *rad =("-s [user@]RAD-server -w watch"
-				  " -a anomaly -o out-addr");
+				  " -a anomaly\n   -o out-addr");
 	va_list args;
 
 	if (msg != NULL) {
@@ -97,7 +99,8 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "A:VdtORC:r:E:P:S:o:s:c:w:a:")) != -1) {
+	while ((i = getopt(argc, argv, "a:A:VdtORC:r:E:P:S:o:s:c:w:m:"))
+			!= -1) {
 		switch (i) {
 		case 'A':
 			acct_interval = atoi(optarg);
@@ -118,6 +121,14 @@ main(int argc, char **argv)
 
 		case 't':
 			++trace;
+			break;
+
+		case 'm':
+			sample = atof(optarg);
+			if (sample <= 0.0 || sample > 100.0) {
+				axa_error_msg("invalid \"-a %s\"", optarg);
+				exit(EX_USAGE);
+			}
 			break;
 
 		case 'O':
