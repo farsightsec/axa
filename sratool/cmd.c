@@ -111,6 +111,7 @@ static cmd_t trace_cmd;
 static cmd_t go_cmd;
 static cmd_t sleep_cmd;
 static cmd_t radunit_cmd;
+static cmd_t mgmt_get_cmd;
 
 typedef enum {
 	NO,
@@ -257,6 +258,10 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "[tag] list watch",
     "With a tag, list the specified watch."
     "  List all watches without a tag"
+},
+{"mgmt",		mgmt_get_cmd,		BOTH,NO, YES,
+    "mgmt",
+    "Get server back office details (privileged users only)"
 },
 {"mode",		mode_cmd,		BOTH,MB, NO,
     "mode [SRA | RAD]",
@@ -1764,6 +1769,13 @@ radunit_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	return (srvr_send(tag, AXA_P_OP_RADU, NULL, 0));
+}
+
+static int
+mgmt_get_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	return (srvr_send(tag, AXA_P_OP_MGMT_GET, NULL, 0));
 }
 
 static int

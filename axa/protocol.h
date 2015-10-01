@@ -248,7 +248,9 @@ typedef enum {
 	AXA_P_OP_CGET	    =140,	/**< no data */
 	AXA_P_OP_OPT	    =141,	/**< axa_p_opt_t */
 	AXA_P_OP_ACCT	    =142,	/**< no data */
+
 	AXA_P_OP_RADU	    =143,	/**< no data */
+	AXA_P_OP_MGMT_GET   =144,	/**< no data */
 } axa_p_op_t;
 
 /**
@@ -656,6 +658,25 @@ typedef struct {			/**< not packed because it is local */
 /**< @endcond */
 
 /**@}*/
+
+typedef struct axa_p_mgmt_user {
+	axa_p_user_t 		user;		/** user name */
+	struct timeval 		connected_since;/** logged in since */
+	axa_cnt_t		filtered;	/** total packets filtered */
+	axa_cnt_t		missed;		/** lost before filtering */
+	axa_cnt_t		collected;	/** captured by filters */
+	axa_cnt_t		sent;		/** sent to client */
+	axa_cnt_t		rlimit;		/** lost to rate limiting */
+	axa_cnt_t		congested;	/** lost to server->client */
+
+	struct axa_p_mgmt_user 	*next;		/** next user */
+} axa_p_mgmt_user_t;
+
+typedef struct {
+	float			load[3];	/** srad load avg */
+	uint8_t			cpu_usage;	/** cpu usage */
+	axa_p_mgmt_user_t	*users;		/** users list */
+} axa_p_mgmt_t;
 
 #undef _PK
 #endif /* AXA_PROTOCOL_H */
