@@ -28,6 +28,7 @@ extern axa_cnt_t rlimit;
 extern arg_t *chs;
 extern arg_t *watches;
 extern arg_t *anomalies;
+extern double sample;
 
 /* extern: signal.c */
 extern int terminated;
@@ -271,6 +272,18 @@ srvr_connect(void)
 		if (!srvr_cmd(AXA_TAG_MIN, AXA_P_OP_OPT, &opt,
 			      sizeof(opt) - sizeof(opt.u)
 			      + sizeof(opt.u.rlimit),
+			      AXA_P_OP_OPT))
+			return;
+	}
+
+	/* Set the sampling rate. */
+	if (sample > 0.0) {
+		memset(&opt, 0, sizeof(opt));
+		opt.type = AXA_P_OPT_SAMPLE;
+		opt.u.sample = AXA_H2P32(sample * AXA_P_OPT_SAMPLE_SCALE);
+		if (!srvr_cmd(AXA_TAG_MIN, AXA_P_OP_OPT, &opt,
+			      sizeof(opt) - sizeof(opt.u)
+			      + sizeof(opt.u.sample),
 			      AXA_P_OP_OPT))
 			return;
 	}

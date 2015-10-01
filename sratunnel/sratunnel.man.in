@@ -29,6 +29,7 @@
 .Fl c Ar channel
 .Fl w Ar watch
 .Fl o Ar out-addr
+.Op Fl m Ar sampling-rate
 .Sh DESCRIPTION
 .Nm Sratunnel
 transfers selected Security Information Exchange (SIE) data
@@ -154,6 +155,9 @@ messages to a UDP or TCP port
 or as raw IP packets to a file, FIFO, or network interface.
 .ds CT
 .so fwd.man
+.It Fl m Ar sampling-rate
+specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
+the SRA server will send.
 .El
 .Sh EXAMPLES
 The following sends all new domain reports on channel 212
