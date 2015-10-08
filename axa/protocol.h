@@ -677,8 +677,13 @@ typedef struct {
 	float			cpu_usage;	/** cpu usage */
 	uint32_t		uptime;		/** system uptime */
 	uint32_t		starttime;	/** process start time */
-	pinfo_fd_info_t		fd_info;	/** FD info */
-	pinfo_mem_usage_t	mem_info;	/** memory usage */
+	uint32_t 		fd_sockets;     /** number of socket FDs */
+	uint32_t 		fd_pipes;       /** number of pipe FDs */
+	uint32_t 		fd_anon_inodes; /** number of anon_inode FDs */
+	uint32_t 		fd_other;      	/** number of other FDs */
+	long long unsigned int	vmsize;		/** total program size */
+	long long unsigned int	vmrss;		/** resident set size */
+
 	axa_p_mgmt_user_t	*users;		/** users list */
 } axa_p_mgmt_t;
 
