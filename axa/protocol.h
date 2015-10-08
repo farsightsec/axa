@@ -673,8 +673,12 @@ typedef struct axa_p_mgmt_user {
 } axa_p_mgmt_user_t;
 
 typedef struct {
-	float			load[3];	/** srad load avg */
-	uint8_t			cpu_usage;	/** cpu usage */
+	float			load[3];	/** load avg */
+	float			cpu_usage;	/** cpu usage */
+	uint32_t		uptime;		/** system uptime */
+	uint32_t		starttime;	/** process start time */
+	pinfo_fd_info_t		fd_info;	/** FD info */
+	pinfo_mem_usage_t	mem_info;	/** memory usage */
 	axa_p_mgmt_user_t	*users;		/** users list */
 } axa_p_mgmt_t;
 
