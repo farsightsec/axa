@@ -1775,6 +1775,7 @@ static int
 mgmt_get_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
+	printf("    sending mgmt request to server...\n");
 	return (srvr_send(tag, AXA_P_OP_MGMT_GET, NULL, 0));
 }
 
