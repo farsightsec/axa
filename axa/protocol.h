@@ -660,8 +660,14 @@ typedef struct {			/**< not packed because it is local */
 
 /**@}*/
 
+typedef struct axa_p_mgmt_channels {
+	axa_p_ch_t channel;			/** channel */
+	struct axa_p_mgmt_channels  *next;	/** next channel */
+} axa_p_mgmt_channels_t;
+
 typedef struct axa_p_mgmt_user {
 	axa_p_user_t 		user;		/** user name */
+	axa_p_mgmt_channels_t	*channels;	/** channels user has open */
 	struct timeval 		connected_since;/** logged in since */
 	axa_cnt_t		filtered;	/** total packets filtered */
 	axa_cnt_t		missed;		/** lost before filtering */
@@ -684,7 +690,6 @@ typedef struct {
 	uint32_t 		fd_other;      	/** number of other FDs */
 	long long unsigned int	vmsize;		/** total program size */
 	long long unsigned int	vmrss;		/** resident set size */
-
 	axa_p_mgmt_user_t	*users;		/** users list */
 } axa_p_mgmt_t;
 
