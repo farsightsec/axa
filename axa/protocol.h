@@ -232,6 +232,7 @@ typedef enum {
 	AXA_P_OP_ALIST	    =8,		/**< axa_p_alist_t */
 	AXA_P_OP_CLIST	    =9,		/**< axa_p_clist_t */
 	AXA_P_OP_MISSED_RAD =10,	/**< axa_p_missed_rad_t */
+	AXA_P_OP_MGMT_GETRSP=11,	/**< axa_p_mgmt_t */
 
 	/** from client to SRA or RAD server */
 	AXA_P_OP_USER	    =129,	/**< axa_p_user_t */

@@ -136,6 +136,7 @@ forward(void)
 	case AXA_P_OP_ALIST:
 	case AXA_P_OP_OPT:
 	case AXA_P_OP_CLIST:
+	case AXA_P_OP_MGMT_GETRSP:
 		print_bad_op("unexpected ");
 		break;
 

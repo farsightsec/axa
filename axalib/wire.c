@@ -338,7 +338,8 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	case AXA_P_OP_OPT:	strlcpy(buf, "OPTION",		buflen); break;
 	case AXA_P_OP_ACCT:	strlcpy(buf, "ACCOUNTING",	buflen); break;
 	case AXA_P_OP_RADU:	strlcpy(buf, "RAD UNITS GET",	buflen); break;
-	case AXA_P_OP_MGMT_GET:	strlcpy(buf, "MANAGEMENT GET",	buflen); break;
+	case AXA_P_OP_MGMT_GET:	strlcpy(buf, "MGMT GET",	buflen); break;
+	case AXA_P_OP_MGMT_GETRSP:strlcpy(buf, "MGMT GET RSPNS",buflen); break;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
@@ -973,6 +974,7 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	case AXA_P_OP_ACCT:
 	case AXA_P_OP_RADU:
 	case AXA_P_OP_MGMT_GET:
+	case AXA_P_OP_MGMT_GETRSP:
 	default:
 		break;
 	}
@@ -1156,6 +1158,15 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 		max_len = min_len = 0;
 		tagged = 0;
 		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
+	case AXA_P_OP_MGMT_GETRSP:
+		min_len = sizeof(axa_p_mgmt_t);
+		max_len = sizeof(axa_p_mgmt_t) +
+			/* max number of channels */
+			(255 * sizeof(axa_p_mgmt_channels_t)) +
+			/* max number of output threads (users) */
+			(1024 * sizeof(axa_p_mgmt_user_t));
+		tagged = 0;
+		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
 		break;
 
 #pragma clang diagnostic push
@@ -1555,6 +1566,8 @@ axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_body_t *body,
 	case AXA_P_OP_RADU:
 		break;
 	case AXA_P_OP_MGMT_GET:
+		break;
+	case AXA_P_OP_MGMT_GETRSP:
 		break;
 	}
 

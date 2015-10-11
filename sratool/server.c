@@ -187,6 +187,10 @@ read_srvr(void)
 			print_channel();
 			break;
 
+		case AXA_P_OP_MGMT_GETRSP:
+			fprintf(stderr, "DEBUG: AXA_P_OP_MGMT_GETRSP\n");
+			break;
+
 		case AXA_P_OP_USER:
 		case AXA_P_OP_JOIN:
 		case AXA_P_OP_PAUSE:
