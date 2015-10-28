@@ -1158,11 +1158,12 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 		max_len = min_len = 0;
 		tagged = 0;
 		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
+		break;
 	case AXA_P_OP_MGMT_GETRSP:
 		min_len = sizeof(axa_p_mgmt_t);
 		max_len = sizeof(axa_p_mgmt_t) +
 			/* max number of channels */
-			(255 * sizeof(axa_p_mgmt_channels_t)) +
+			(255 * sizeof(axa_p_ch_t)) +
 			/* max number of output threads (users) */
 			(1024 * sizeof(axa_p_mgmt_user_t));
 		tagged = 0;

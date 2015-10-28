@@ -52,6 +52,7 @@
 #include <netinet/in.h>
 
 #include <axa/socket.h>
+#include <axa/bits.h>
 
 /**
  *  Pack AXA structures in messages to make them the same for all platforms
@@ -624,6 +625,65 @@ typedef struct _PK {
 	} u;                        /**< holds actual option */
 } axa_p_opt_t;
 
+/**< @cond */
+/* AXA back-office management statistics header. Holds system and server stats
+ * and heralds the presence of current user stats.
+ * */
+typedef struct _PK {
+	uint32_t		load[3];        /* load avg */
+	uint32_t		cpu_usage;      /* cpu usage */
+	uint32_t		uptime;         /* system uptime */
+	uint32_t		starttime;      /* process start time */
+	uint32_t		fd_sockets;     /* number of socket FDs */
+	uint32_t		fd_pipes;       /* number of pipe FDs */
+	uint32_t		fd_anon_inodes; /* number of anon_inode FDs */
+	uint32_t		fd_other;       /* number of other FDs */
+	uint64_t		vmsize;         /* total program size */
+	uint64_t		vmrss;          /* resident set size */
+	uint32_t		thread_cnt;	/* number of server threads */
+	uint16_t		users_cnt;      /* number of user objects */
+	uint8_t			pad[2];		/*< to 0 mod 4 */
+	uint8_t			b[0];		/* start of user objects */
+} axa_p_mgmt_t;
+
+/* SRA specific user stats */
+typedef struct _PK {
+	uint32_t		watch_cnt;	/* number of watches */
+	axa_ch_mask_t		ch_mask;	/* channels user has open */
+} axa_p_mgmt_user_sra_t;
+
+/* RAD specific user stats */
+typedef struct _PK {
+	uint32_t		an_cnt;		/* number of anomalies */
+} axa_p_mgmt_user_rad_t;
+
+/* AXA management user object */
+typedef struct _PK {
+	axa_p_user_t		user;		/* user name */
+	uint8_t			io_type;	/* transport type */
+	uint8_t 		addr_type;	/* address type */
+	uint8_t			pad[6];		/*< to 0 mod 8 */
+	union axa_p_mgmt_ip {
+		uint8_t		ipv6[16];	/* ipv6 address */
+		uint32_t 	ipv4;		/* ipv4 address */
+	} ip;
+	uint32_t		sn;		/* server-side serial num */
+	union axa_p_mgmt_srvr {
+		axa_p_mgmt_user_sra_t sra;	/* sra specific stats */
+		axa_p_mgmt_user_rad_t rad;	/* rad specific stats */
+	} srvr;
+	struct timeval		connected_since;/* logged in since */
+	axa_cnt_t		ratelimit;	/* positive if user is rl'd */
+	axa_cnt_t		sample;		/* "" if user is sampling */
+	struct timeval		last_cnt_update;/* last time cnts updated */
+	axa_cnt_t		filtered;	/* total packets filtered */
+	axa_cnt_t		missed;		/* lost before filtering */
+	axa_cnt_t		collected;	/* captured by filters */
+	axa_cnt_t		sent;		/* sent to client */
+	axa_cnt_t		rlimit;		/* lost to rate limiting */
+	axa_cnt_t		congested;	/* lost to server->client */
+} axa_p_mgmt_user_t;
+/**< @endcond */
 
 /** AXA protocol body */
 typedef union {
@@ -643,6 +703,7 @@ typedef union {
 	axa_p_anom_t	anom;		/**< ask anomaly detection */
 	axa_p_channel_t	channel;	/**< enable or disable a channel */
 	axa_p_opt_t	opt;		/**< options */
+	axa_p_mgmt_t	mgmt;		/**< management info */
 
 	uint8_t		b[1];		/**< ... */
 } axa_p_body_t;
@@ -659,39 +720,6 @@ typedef struct {			/**< not packed because it is local */
 /**< @endcond */
 
 /**@}*/
-
-typedef struct axa_p_mgmt_channels {
-	axa_p_ch_t channel;			/** channel */
-	struct axa_p_mgmt_channels  *next;	/** next channel */
-} axa_p_mgmt_channels_t;
-
-typedef struct axa_p_mgmt_user {
-	axa_p_user_t 		user;		/** user name */
-	axa_p_mgmt_channels_t	*channels;	/** channels user has open */
-	struct timeval 		connected_since;/** logged in since */
-	axa_cnt_t		filtered;	/** total packets filtered */
-	axa_cnt_t		missed;		/** lost before filtering */
-	axa_cnt_t		collected;	/** captured by filters */
-	axa_cnt_t		sent;		/** sent to client */
-	axa_cnt_t		rlimit;		/** lost to rate limiting */
-	axa_cnt_t		congested;	/** lost to server->client */
-
-	struct axa_p_mgmt_user 	*next;		/** next user */
-} axa_p_mgmt_user_t;
-
-typedef struct {
-	float			load[3];	/** load avg */
-	float			cpu_usage;	/** cpu usage */
-	uint32_t		uptime;		/** system uptime */
-	uint32_t		starttime;	/** process start time */
-	uint32_t 		fd_sockets;     /** number of socket FDs */
-	uint32_t 		fd_pipes;       /** number of pipe FDs */
-	uint32_t 		fd_anon_inodes; /** number of anon_inode FDs */
-	uint32_t 		fd_other;      	/** number of other FDs */
-	long long unsigned int	vmsize;		/** total program size */
-	long long unsigned int	vmrss;		/** resident set size */
-	axa_p_mgmt_user_t	*users;		/** users list */
-} axa_p_mgmt_t;
 
 #undef _PK
 #endif /* AXA_PROTOCOL_H */
