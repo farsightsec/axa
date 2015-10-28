@@ -167,6 +167,7 @@ sratool_sratool_SOURCES = \
 	sratool/server.c \
 	sratool/signal.c \
 	sratool/print.c \
+	sratool/time.c \
 	sratool/sratool.h
 sratool_sratool_LDADD = \
 	axa/libaxa.la \

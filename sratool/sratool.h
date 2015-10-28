@@ -168,4 +168,9 @@ void disconnect(bool announce);
 void sigint(int sig AXA_UNUSED);
 void sigterm(int sig AXA_UNUSED);
 
+/* timer.c */
+void convert_seconds(uint32_t seconds, uint32_t *d, uint32_t *h, uint32_t *m,
+		uint32_t *s);
+const char *convert_timeval(struct timeval *t);
+
 #endif /* SRATOOL_H */
