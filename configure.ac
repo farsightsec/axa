@@ -39,6 +39,8 @@ if test -n "$PKG_CONFIG"; then
     fi
 fi
 
+LT_LIB_M
+
 MY_CHECK_LIBPCAP
 
 MY_CHECK_LIBPROTOBUF_C

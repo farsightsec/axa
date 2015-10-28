@@ -178,7 +178,8 @@ sratool_sratool_LDADD = \
 	${libz_LIBS} \
 	${libwdns_LIBS} \
 	${libedit_LIBS} \
-	${libbsd_LIBS}
+	${strlcpy_LIBS} \
+	${LIBM}
 
 sratool_sratool_CFLAGS = \
 	${AM_CFLAGS} \
@@ -211,7 +212,8 @@ sratunnel_sratunnel_LDADD = \
 	${libssl_LIBS} \
 	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
-	${libbsd_LIBS}
+	${strlcpy_LIBS} \
+	${LIBM}
 
 sratunnel_sratunnel_CFLAGS = \
 	${AM_CFLAGS} \
