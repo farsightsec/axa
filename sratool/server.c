@@ -188,7 +188,10 @@ read_srvr(void)
 			break;
 
 		case AXA_P_OP_MGMT_GETRSP:
-			fprintf(stderr, "DEBUG: AXA_P_OP_MGMT_GETRSP\n");
+			clear_prompt();
+			print_mgmt(&client.io.recv_body->mgmt,
+				   client.io.recv_body_len
+				   - sizeof(client.io.recv_hdr));
 			break;
 
 		case AXA_P_OP_USER:
