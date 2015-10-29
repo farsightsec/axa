@@ -1196,7 +1196,7 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 	char addr_str[INET6_ADDRSTRLEN];
 
 	if (axa_debug != 0) {
-		printf("    mgmt_len       : %db\n", AXA_P2H32(mgmt_len));
+		printf("    mgmt_len       : %zdb\n", AXA_P2H32(mgmt_len));
 	}
 	gettimeofday(&tv, NULL);
 	tv.tv_sec -= AXA_P2H32(mgmt->uptime);
