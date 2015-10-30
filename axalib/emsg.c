@@ -115,19 +115,19 @@ axa_set_core(void)
 	struct rlimit rl;
 
 	if (0 > getrlimit(RLIMIT_CORE, &rl)) {
-		fprintf(stderr, "getrlimit(RLIMIT_CORE): %s\n",
+		axa_error_msg("getrlimit(RLIMIT_CORE): %s\n",
 			strerror(errno));
 		return;
 	}
 	if (rl.rlim_cur != 0)
 		return;
 	if (rl.rlim_max < 10*1024) {
-		fprintf(stderr, "getrlimit(RLIMIT_CORE) max = %ld\n",
+		axa_error_msg("getrlimit(RLIMIT_CORE) max = %ld\n",
 			(long)rl.rlim_max);
 	}
 	rl.rlim_cur = RLIM_INFINITY;
 	if (0 > setrlimit(RLIMIT_CORE, &rl)) {
-		fprintf(stderr, "setrlimit(RLIMIT_CORE %ld %ld): %s\n",
+		axa_error_msg("setrlimit(RLIMIT_CORE %ld %ld): %s\n",
 			(long)rl.rlim_cur, (long)rl.rlim_max, strerror(errno));
 		return;
 	}
