@@ -68,12 +68,12 @@ usage(const char *msg, ...)
 	printf("[-O]\t\t\tenable spinning bar on output\n");
 	printf("[-R]\t\t\ttoggle SRA or RAD mode\n");
 	printf("[-A interval]\t\tsend acct messages every interval seconds\n");
-	printf("[-C count]\t\tstop sratunnel after count messages\n");
-	printf("[-E ciphers]\t\tTLS ciphers to use\n");
-	printf("[-P pidfile]\t\tpath to pidfile\n");
+	printf("[-C count]\t\tstop after processing count messages\n");
+	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
+	printf("[-P pidfile]\t\twrite PID to pidfile\n");
 	printf("[-m rate]\t\tenable sampling (0.1 - 100)\n");
-	printf("[-r limit]\t\trate limiting to this many packets per second\n");
-	printf("[-S certs]\t\tpath to TLS certificates directory\n");
+	printf("[-r limit]\t\trate limit to this many packets per second\n");
+	printf("[-S certs]\t\tspecify TLS certificates directory\n");
 	if (mode == SRA) {
 		printf("[-s [user@]SRA-server]\tconnect to SRA server\n");
 		printf("[-w watch]\t\tset watch\n");
