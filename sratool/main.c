@@ -134,12 +134,15 @@ main(int argc, char **argv)
 		el_set(el_e, EL_GETCFN, getcfn);
 	}
 
-	while ((i = getopt(argc, argv, "VdNF:E:S:c:")) != -1) {
+	while ((i = getopt(argc, argv, "hVdNF:E:S:c:")) != -1) {
 		switch (i) {
 		case 'V':
 			version = true;
 			break;
 
+		case 'h':
+			usage();
+			break;
 		case 'd':
 			++axa_debug;
 			break;
