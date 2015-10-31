@@ -55,21 +55,43 @@ static struct timeval acct_timer;
 static void AXA_NORETURN AXA_PF(1,2)
 usage(const char *msg, ...)
 {
-	const char *cmn = ("[-VdtOR] [-A interval] [-C count] [-r rate-limit]"
-				 " [-E ciphers] [-S certs]\n   [-P pidfile] "
-				 " [-m sample] ");
-	const char *sra =("-s [user@]SRA-server -w watch -c channel\n"
-				 "   -o out-addr");
-	const char *rad =("-s [user@]RAD-server -w watch"
-				  " -a anomaly\n   -o out-addr");
+	const char *sra = "SIE Remote Access Tunnel (sratunnel)\n";
+	const char *rad = "Real-time Anomaly Detection Tunnel (radtunnel)\n";
 	va_list args;
+
+	printf("%s", mode == SRA ? sra : rad);
+	printf("(c) 2013-2015 Farsight Security, Inc.\n");
+	printf("%s: [options]\n", axa_prog_name);
+	printf("[-V]\t\t\tprint version and quit\n");
+	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
+	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
+	printf("[-O]\t\t\tenable spinning bar on output\n");
+	printf("[-R]\t\t\ttoggle SRA or RAD mode\n");
+	printf("[-A interval]\t\tsend acct messages every interval seconds\n");
+	printf("[-C count]\t\tstop sratunnel after count messages\n");
+	printf("[-E ciphers]\t\tTLS ciphers to use\n");
+	printf("[-P pidfile]\t\tpath to pidfile\n");
+	printf("[-m rate]\t\tenable sampling (0.1 - 100)\n");
+	printf("[-r limit]\t\trate limiting to this many packets per second\n");
+	printf("[-S certs]\t\tpath to TLS certificates directory\n");
+	if (mode == SRA) {
+		printf("[-s [user@]SRA-server]\tconnect to SRA server\n");
+		printf("[-w watch]\t\tset watch\n");
+		printf("[-c channel]\t\tenable channel\n");
+		printf("[-o output]\t\tspecify destination of SIE data\n");
+	}
+	if (mode == RAD) {
+		printf("[-s [user@]RAD-server]\tconnect to RAD server\n");
+		printf("[-w watch]\t\tset watch\n");
+		printf("[-a channel]\t\tenable anomaly detection module\n");
+		printf("[-o output]\t\tspecify destination of SIE data\n");
+	}
 
 	if (msg != NULL) {
 		va_start(args, msg);
 		axa_verror_msg(msg, args);
 		va_end(args);
 	}
-	axa_error_msg("%s%s", cmn, mode == RAD ? rad : sra);
 	exit(EX_USAGE);
 }
 
@@ -99,7 +121,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "a:A:VdtORC:r:E:P:S:o:s:c:w:m:"))
+	while ((i = getopt(argc, argv, "ha:A:VdtORC:r:E:P:S:o:s:c:w:m:"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -117,6 +139,10 @@ main(int argc, char **argv)
 
 		case 'd':
 			++axa_debug;
+			break;
+
+		case 'h':
+			usage(NULL);
 			break;
 
 		case 't':
