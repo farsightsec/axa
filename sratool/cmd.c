@@ -1962,11 +1962,11 @@ usage(void)
 	printf("%s: [options] [commands]\n", axa_prog_name);
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
-	printf("[-N]\t\t\tdisable the command-line prompt\n");
-	printf("[-F fields]\t\tpath to AXA fields file\n");
-	printf("[-E ciphers]\t\tTLS ciphers to use\n");
-	printf("[-S certs]\t\tpath to TLS certificates directory\n");
-	printf("[-c cfile]\t\tcommands file\n");
+	printf("[-N]\t\t\tdisable command-line prompt\n");
+	printf("[-F fields]\t\tspecify AXA fields file\n");
+	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
+	printf("[-S certs]\t\tspecify TLS certificates directory\n");
+	printf("[-c cfile]\t\tspecify commands file\n");
 	printf("[commands]\t\tquoted string of commands to execute\n");
 	exit(EX_USAGE);
 }
