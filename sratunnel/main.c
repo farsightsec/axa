@@ -120,7 +120,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:A:VdtORC:r:E:P:S:o:s:c:w:m:"))
+	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -166,10 +166,6 @@ main(int argc, char **argv)
 
 		case 'P':
 			pidfile = optarg;
-			break;
-
-		case 'R':
-			mode = RAD;
 			break;
 
 		case 'C':
