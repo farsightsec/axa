@@ -61,19 +61,18 @@ usage(const char *msg, ...)
 
 	printf("%s", mode == SRA ? sra : rad);
 	printf("(c) 2013-2015 Farsight Security, Inc.\n");
-	printf("%s: [options]\n", axa_prog_name);
-	printf("[-V]\t\t\tprint version and quit\n");
-	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
-	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
-	printf("[-O]\t\t\tenable spinning bar on output\n");
-	printf("[-R]\t\t\ttoggle SRA or RAD mode\n");
-	printf("[-A interval]\t\tsend acct messages every interval seconds\n");
+	printf("%s [options]\n", axa_prog_name);
+	printf("[-A interval]\t\temit acct messages to stdout every interval seconds\n");
 	printf("[-C count]\t\tstop after processing count messages\n");
+	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
-	printf("[-P pidfile]\t\twrite PID to pidfile\n");
-	printf("[-m rate]\t\tenable sampling (0.1 - 100)\n");
+	printf("[-V]\t\t\tprint version and quit\n");
+	printf("[-m ]\t\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
+	printf("[-O]\t\t\tenable spinning bar on output\n");
+	printf("[-P file]\t\twrite PID to pidfile\n");
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
-	printf("[-S certs]\t\tspecify TLS certificates directory\n");
+	printf("[-S dir]\t\tspecify TLS certificates directory\n");
+	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	if (mode == SRA) {
 		printf("[-s [user@]SRA-server]\tconnect to SRA server\n");
 		printf("[-w watch]\t\tset watch\n");
