@@ -640,6 +640,8 @@ typedef struct _PK {
 	uint32_t		fd_other;       /* number of other FDs */
 	uint64_t		vmsize;         /* total program size */
 	uint64_t		vmrss;          /* resident set size */
+	uint64_t		rchar;		/* bytes read via read() */
+	uint64_t		wchar;		/* bytes written via write() */
 	uint32_t		thread_cnt;	/* number of server threads */
 	uint16_t		users_cnt;      /* number of user objects */
 	uint8_t			pad[2];		/*< to 0 mod 4 */

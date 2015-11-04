@@ -1222,8 +1222,10 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 			mode == SRA ? "srad" : "radd",
 			AXA_P2H64(mgmt->vmrss) / 1024);
 	printf("    thread cnt     : %"PRIu32"\n", AXA_P2H32(mgmt->thread_cnt));
-	/* radd doesn't run as root so it can't read /proc/$PID/fdinfo */
 	if (mode != RAD) {
+		/* radd doesn't run as root so it can't read
+		 * /proc/[pid]/fdinfo or /proc/[pid]/io
+		 */
 		printf("    open file descriptors\n");
 		printf("      socket       : %"PRIu32"\n",
 				AXA_P2H32(mgmt->fd_sockets));
@@ -1233,6 +1235,10 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 				AXA_P2H32(mgmt->fd_anon_inodes));
 		printf("      other        : %"PRIu32"\n",
 				AXA_P2H32(mgmt->fd_other));
+		printf("    rchar          : %"PRIu64"\n",
+				AXA_P2H64(mgmt->rchar));
+		printf("    wchar          : %"PRIu64"\n",
+				AXA_P2H64(mgmt->wchar));
 	}
 	users_cnt = AXA_P2H32(mgmt->users_cnt);
 	printf("    users          : %d\n", users_cnt);
