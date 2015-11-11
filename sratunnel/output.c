@@ -26,6 +26,7 @@ extern const char *out_addr;
 /* global */
 nmsg_output_t out_nmsg_output;		/* NSMG output object */
 pcap_t *out_pcap;			/* pcap output object */
+bool nmsg_zlib = false;			/* NMSG zlib container compression */
 
 /* private */
 static struct timeval out_complaint_last;
@@ -305,6 +306,8 @@ out_open(void)
 		axa_error_msg("%s", emsg.c);
 		return (false);
 	}
+	if (nmsg_zlib)
+		nmsg_output_set_zlibout(out_nmsg_output, true);
 	return (true);
 }
 

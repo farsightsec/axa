@@ -20,6 +20,7 @@
 
 /* extern: output.c */
 extern bool out_bar_on;
+extern bool nmsg_zlib;
 
 /* extern: server.c */
 extern axa_client_t client;
@@ -120,7 +121,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:"))
+	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:z"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -225,6 +226,9 @@ main(int argc, char **argv)
 			anomalies = arg;
 			break;
 
+		case 'z':
+			nmsg_zlib = true;
+			break;
 		default:
 			usage(NULL);
 		}

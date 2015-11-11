@@ -19,7 +19,7 @@
 .Nm radtunnel
 .Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
-.Op Fl VdOR
+.Op Fl VdORz
 .Op Fl C Ar count
 .Op Fl r Ar rate-limit
 .Op Fl E Ar ciphers
@@ -70,6 +70,8 @@ is required
 and
 .Fl c
 is not allowed.
+.It Fl z
+enable nmsg zlib container compression.
 .It Fl C Ar count
 stops
 .Nm
