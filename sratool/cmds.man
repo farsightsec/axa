@@ -121,5 +121,7 @@ Do nothing for x.y seconds.
 Tell the server to report counts of packets seen, missed, sent, and lost.
 .It Ic status
 Show information about the current connection state including time connected.
+.It Ic zlib
+Toggle nmsg zlib container compression.
 .\"
 .\" end of cmds.man
