@@ -141,5 +141,5 @@ AC_MSG_RESULT([
         building html docs:     ${DOC_HTML_MSG}
 
 	TLS ciphers:		$TLS_CIPHERS
-	TLS compression:	$TLS_COMPRESSION
+	TLS compression:	$TLS_COMP
 ])
