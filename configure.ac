@@ -112,6 +112,17 @@ AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),
 [TLS_CIPHERS="$withval"],[TLS_CIPHERS="ALL"])
 AC_DEFINE_UNQUOTED(TLS_CIPHERS,"$TLS_CIPHERS",[TLS cipher list])
 
+AC_ARG_WITH([tls_compression],
+AS_HELP_STRING([--with-tls_compression], [Enable TLS compression]))
+if test "x$with_tls_compression" == "xyes"; then
+	AC_DEFINE(AXA_USE_OPENSSL_COMP, [1],
+		[Define to 1 to enable TLS compression])
+	TLS_COMP="yes"
+else
+	TLS_COMP="no"
+fi
+
+
 AC_OUTPUT
 AC_MSG_RESULT([
     $PACKAGE $VERSION
@@ -130,4 +141,5 @@ AC_MSG_RESULT([
         building html docs:     ${DOC_HTML_MSG}
 
 	TLS ciphers:		$TLS_CIPHERS
+	TLS compression:	$TLS_COMPRESSION
 ])
