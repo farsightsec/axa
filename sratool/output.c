@@ -41,6 +41,8 @@ uint8_t out_buf[AXA_P_WHIT_IP_MAX*4];	/* payloads to be output go here */
 size_t out_buf_base;			/* base output size */
 size_t out_buf_len;			/* sizeof data to be output */
 bool out_on;				/* true == output forwarding is on */
+bool out_on_nmsg;			/* true == output dest is nmsg */
+bool nmsg_zlib = false;			/* true == nmsg zlib compression on */
 char *out_addr;				/* output/forwarding destination */
 
 /* private */
@@ -149,6 +151,8 @@ out_close(bool announce)
 	out_complaint_skipped = false;
 
 	out_on = false;
+	out_on_nmsg = false;
+	nmsg_zlib = false;
 }
 
 bool

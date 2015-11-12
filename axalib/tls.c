@@ -378,9 +378,9 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 
 	ERR_clear_error();
 
-#ifndef OPENSSL_NO_COMP
+#ifdef AXA_USE_OPENSSL_COMP
 	if (0 != SSL_COMP_add_compression_method(1, COMP_zlib())) {
-		q_pemsg(emsg, "SSL_CTX_new()");
+		q_pemsg(emsg, "SSL_COMP_add_compression_method()");
 		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
@@ -448,7 +448,6 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 		SSL_CTX_set_verify_depth(ssl_ctx, 0);
 
 	/*
-	 * No SSL_OP_NO_COMPRESSION because CRIME does not apply.
 	 * Is SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3 needed?
 	 */
 	SSL_CTX_set_options(ssl_ctx,
@@ -458,7 +457,7 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 			    | SSL_OP_SINGLE_ECDH_USE
 			    | SSL_OP_CIPHER_SERVER_PREFERENCE
 			    | SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION
-			    | SSL_OP_NO_TICKET);
+			    | SSL_OP_NO_TICKET | SSL_OP_NO_COMPRESSION);
 
 	if (*cipher_list != '\0'
 	    && 0 >= SSL_CTX_set_cipher_list(ssl_ctx, cipher_list)) {
@@ -700,12 +699,17 @@ axa_tls_start(axa_emsg_t *emsg, axa_io_t *io)
 
 	/* Get information about the connection and the peer. */
 	AXA_ASSERT(io->tls_info == NULL);
+#ifdef AXA_USE_OPENSSL_COMP
 	comp = SSL_COMP_get_name(SSL_get_current_compression(io->ssl));
 	if (comp == NULL)
 		comp = "no compression";
 	expan = SSL_COMP_get_name(SSL_get_current_expansion(io->ssl));
 	if (expan == NULL)
 		expan = "no compression";
+#else
+	comp = "no compression";
+	expan = "no compression";
+#endif
 	cipher = SSL_get_current_cipher(io->ssl);
 	axa_asprintf(&io->tls_info, "%s %s  %s%s%s",
 		     SSL_CIPHER_get_version(cipher),

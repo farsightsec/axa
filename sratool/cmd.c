@@ -26,6 +26,8 @@ extern int in_file_cur;
 extern uint verbose;
 extern bool quiet;
 extern bool out_on;
+extern bool out_on_nmsg;
+extern bool nmsg_zlib;
 extern axa_client_t client;
 extern uint axa_debug;
 extern axa_emsg_t emsg;
@@ -111,6 +113,7 @@ static cmd_t trace_cmd;
 static cmd_t go_cmd;
 static cmd_t sleep_cmd;
 static cmd_t radunit_cmd;
+static cmd_t nmsg_zlib_cmd;
 
 typedef enum {
 	NO,
@@ -369,6 +372,11 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "window [bytes]",
     "Ask the server to report its current TCP output buffer size on TLS and"
     " TCP connections or to set its output buffer size."
+},
+{"zlib",		nmsg_zlib_cmd,		BOTH,NO, NO,
+    "zlib",
+    "Toggle nmsg container compression.\nFor this option to have any"
+    " effect, output mode must be enabled in nmsg file or socket mode."
 },
 };
 
@@ -1276,6 +1284,7 @@ out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 					   strchr(out_addr, ':')+1);
 		if (result <= 0)
 			error_msg("%s", emsg.c);
+		out_on_nmsg = true;
 	} else {
 		result = -1;
 	}
@@ -1764,6 +1773,31 @@ radunit_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	return (srvr_send(tag, AXA_P_OP_RADU, NULL, 0));
+}
+
+static int
+nmsg_zlib_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	if (out_on == false) {
+	printf("    output mode not enabled\n");
+		return (0);
+	}
+	if (out_on_nmsg == false) {
+		printf("    output mode not emitting nmsgs\n");
+		return (0);
+	}
+	if (nmsg_zlib == false) {
+		nmsg_zlib = true;
+		nmsg_output_set_zlibout(out_nmsg_output, true);
+		printf("    enabled\n");
+	}
+	else if (nmsg_zlib == true) {
+		nmsg_zlib = false;
+		nmsg_output_set_zlibout(out_nmsg_output, false);
+		printf("    disabled\n");
+	}
+	return (1);
 }
 
 static int
