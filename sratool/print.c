@@ -1268,9 +1268,6 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 				convert_timeval(&user->connected_since));
 
 		switch (user->io_type) {
-			case AXA_IO_TYPE_UNKN:
-				io_type = "unknown";
-				break;
 			case AXA_IO_TYPE_UNIX:
 				io_type = AXA_IO_TYPE_UNIX_STR;
 				break;
@@ -1282,6 +1279,10 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 				break;
 			case AXA_IO_TYPE_TLS:
 				io_type = AXA_IO_TYPE_TLS_STR;
+				break;
+			default:
+			case AXA_IO_TYPE_UNKN:
+				io_type = "unknown";
 				break;
 		}
 		printf("      transport     : %s\n", io_type);
