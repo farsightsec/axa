@@ -1183,7 +1183,7 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 	int j, ch_cnt;
 	struct timeval tv;
 	struct tm *tm_info;
-	const char *io_type, *cp;
+	const char *io_type, *cp, *server_type;
 	uint32_t i, users_cnt;
 	char time_buf[30];
 	axa_p_mgmt_user_t *user;
@@ -1198,50 +1198,120 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 	if (axa_debug != 0) {
 		printf("    mgmt_len       : %zdb\n", AXA_P2H32(mgmt_len));
 	}
-	gettimeofday(&tv, NULL);
-	tv.tv_sec -= AXA_P2H32(mgmt->uptime);
-	tm_info = gmtime(&t);
-	strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
-	printf("    server uptime  : %s\n", convert_timeval(&tv));
-	printf("    server load    : %.2f %.2f %.2f\n",
-			(float)AXA_P2H32(mgmt->load[0]) * .0001,
-			(float)AXA_P2H32(mgmt->load[1]) * .0001,
-			(float)AXA_P2H32(mgmt->load[2]) * .0001);
-	printf("    %s CPU usage : %.2f%%\n", mode == SRA ? "srad" : "radd",
-			(float)AXA_P2H32(mgmt->cpu_usage) * .0001);
-	gettimeofday(&tv, NULL);
-	tv.tv_sec -= (AXA_P2H32(mgmt->uptime) - AXA_P2H32(mgmt->starttime));
-	tm_info = gmtime(&t);
-	strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
-	printf("    %s uptime    : %s\n", mode == SRA ? "srad" : "radd",
-			convert_timeval(&tv));
-	printf("    %s VM size   : %"PRIu64"m\n",
-			mode == SRA ? "srad" : "radd",
-			AXA_P2H64(mgmt->vmsize) / (1024 * 1024));
-	printf("    %s VM RSS    : %"PRIu64"kb\n",
-			mode == SRA ? "srad" : "radd",
-			AXA_P2H64(mgmt->vmrss) / 1024);
-	printf("    thread cnt     : %"PRIu32"\n", AXA_P2H32(mgmt->thread_cnt));
+
+	/* UINT32_MAX or UINT64_MAX == server error in gathering stat */
+	if (mgmt->uptime == UINT32_MAX) {
+		printf("    server uptime   : unavailable\n");
+	}
+	else {
+		gettimeofday(&tv, NULL);
+		tv.tv_sec -= AXA_P2H32(mgmt->uptime);
+		tm_info = gmtime(&t);
+		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		printf("    server uptime   : %s\n", convert_timeval(&tv));
+	}
+	if (mgmt->load[0] == UINT32_MAX && mgmt->load[1] == UINT32_MAX &&
+			mgmt->load[2] == UINT32_MAX) {
+		printf("    server load     : unavailable\n");
+	}
+	else {
+		printf("    server load     : %.2f %.2f %.2f\n",
+				(float)AXA_P2H32(mgmt->load[0]) * .0001,
+				(float)AXA_P2H32(mgmt->load[1]) * .0001,
+				(float)AXA_P2H32(mgmt->load[2]) * .0001);
+	}
+
+	server_type = (mode == SRA) ? "srad" : "radd";
+	printf("    %s stats\n", server_type);
+	if (mgmt->cpu_usage == UINT32_MAX) {
+		printf("      CPU usage     : unavailable\n");
+	}
+	else {
+		printf("      CPU usage     : %.2f%%\n",
+				(float)AXA_P2H32(mgmt->cpu_usage) * .0001);
+	}
+	if (mgmt->starttime == UINT32_MAX) {
+		printf("      uptime        : unavailable\n");
+	}
+	else {
+		gettimeofday(&tv, NULL);
+		tv.tv_sec -= (AXA_P2H32(mgmt->uptime) -
+				AXA_P2H32(mgmt->starttime));
+		tm_info = gmtime(&t);
+		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		printf("      uptime        : %s\n", convert_timeval(&tv));
+	}
+	if (mgmt->vmsize == UINT64_MAX) {
+		printf("      VM size       : unavailable\n");
+	}
+	else {
+		printf("      VM size       : %"PRIu64"m\n",
+				AXA_P2H64(mgmt->vmsize) / (1024 * 1024));
+	}
+	if (mgmt->vmrss == UINT64_MAX) {
+		printf("      VM RSS        : unavailable\n");
+	}
+	else {
+		printf("      VM RSS        : %"PRIu64"kb\n",
+				AXA_P2H64(mgmt->vmrss) / 1024);
+	}
+	if (mgmt->thread_cnt == UINT32_MAX) {
+		printf("      thread cnt    : unavailable\n");
+	}
+	else {
+		printf("      thread cnt    : %"PRIu32"\n",
+				AXA_P2H32(mgmt->thread_cnt));
+	}
 	if (mode != RAD) {
 		/* radd doesn't run as root so it can't read
 		 * /proc/[pid]/fdinfo or /proc/[pid]/io
 		 */
 		printf("    open file descriptors\n");
-		printf("      socket       : %"PRIu32"\n",
-				AXA_P2H32(mgmt->fd_sockets));
-		printf("      pipe         : %"PRIu32"\n",
-				AXA_P2H32(mgmt->fd_pipes));
-		printf("      anon_inode   : %"PRIu32"\n",
-				AXA_P2H32(mgmt->fd_anon_inodes));
-		printf("      other        : %"PRIu32"\n",
-				AXA_P2H32(mgmt->fd_other));
-		printf("    rchar          : %"PRIu64"\n",
-				AXA_P2H64(mgmt->rchar));
-		printf("    wchar          : %"PRIu64"\n",
-				AXA_P2H64(mgmt->wchar));
+		if (mgmt->fd_sockets == UINT32_MAX) {
+			printf("      socket        : unavailable\n");
+		}
+		else {
+			printf("      socket        : %"PRIu32"\n",
+					AXA_P2H32(mgmt->fd_sockets));
+		}
+		if (mgmt->fd_pipes == UINT32_MAX) {
+			printf("      pipe          : unavailable\n");
+		}
+		else {
+			printf("      pipe          : %"PRIu32"\n",
+					AXA_P2H32(mgmt->fd_pipes));
+		}
+		if (mgmt->fd_anon_inodes == UINT32_MAX) {
+			printf("      anon_inode    : unavailable\n");
+		}
+		else {
+			printf("      anon_inode    : %"PRIu32"\n",
+					AXA_P2H32(mgmt->fd_anon_inodes));
+		}
+		if (mgmt->fd_other == UINT32_MAX) {
+			printf("      other         : unavailable\n");
+		}
+		else {
+			printf("      other         : %"PRIu32"\n",
+					AXA_P2H32(mgmt->fd_other));
+		}
+		if (mgmt->rchar == UINT64_MAX) {
+			printf("    rchar           : unavailable\n");
+		}
+		else {
+			printf("    rchar           : %"PRIu64"\n",
+					AXA_P2H64(mgmt->rchar));
+		}
+		if (mgmt->wchar == UINT64_MAX) {
+			printf("    wchar           : unavailable\n");
+		}
+		else {
+			printf("    wchar           : %"PRIu64"\n",
+					AXA_P2H64(mgmt->wchar));
+		}
 	}
 	users_cnt = AXA_P2H32(mgmt->users_cnt);
-	printf("    users          : %d\n", users_cnt);
+	printf("    users           : %d\n", users_cnt);
 
 	/* variable length user data comes after the mgmt "header" */
 	user = (axa_p_mgmt_user_t *)&client.io.recv_body->mgmt.b;
