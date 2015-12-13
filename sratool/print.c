@@ -1184,7 +1184,7 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 	struct timeval tv;
 	struct tm *tm_info;
 	const char *io_type, *cp, *server_type;
-	uint32_t i, users_cnt;
+	uint32_t i, users_cnt, total_watches;
 	char time_buf[30];
 	axa_p_mgmt_user_t *user;
         axa_cnt_t total_filtered = 0;
@@ -1312,6 +1312,16 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 	}
 	users_cnt = AXA_P2H32(mgmt->users_cnt);
 	printf("    users           : %d\n", users_cnt);
+	if (mode == SRA) {
+		user = (axa_p_mgmt_user_t *)&client.io.recv_body->mgmt.b;
+		for (p = (uint8_t *)user, i = 0, total_watches = 0;
+				i < users_cnt; i++) {
+			p += i == 0 ? 0 : (sizeof (axa_p_mgmt_user_t));
+			user = (axa_p_mgmt_user_t *)p;
+			total_watches += AXA_P2H32(user->srvr.sra.watch_cnt);
+		}
+		printf("    watches         : %d\n", total_watches);
+	}
 
 	/* variable length user data comes after the mgmt "header" */
 	user = (axa_p_mgmt_user_t *)&client.io.recv_body->mgmt.b;
