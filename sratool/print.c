@@ -1321,15 +1321,21 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 
 		printf("\n    user            : %s\n", user->user.name);
 		cp = NULL;
-		if (user->addr_type == AF_INET) {
-			 cp = inet_ntop(AF_INET, &user->ip.ipv4, addr_str,
-					sizeof(addr_str));
+		switch (user->addr_type)
+		{
+			case AXA_AF_INET:
+				cp = inet_ntop(AF_INET, &user->ip.ipv4, addr_str,
+						sizeof(addr_str));
+				break;
+			case AXA_AF_INET6:
+				cp = inet_ntop(AF_INET6, &user->ip.ipv6, addr_str,
+						sizeof(addr_str));
+				break;
+			case AXA_AF_UNKNOWN:
+				strlcpy(addr_str, "unknown", sizeof(addr_str));
+				break;
 		}
-		else if (user->addr_type == AF_INET6) {
-			 cp = inet_ntop(AF_INET6, &user->ip.ipv6, addr_str,
-					sizeof(addr_str));
-		}
-		printf("      from          : %s\n", cp ? addr_str : "unknown");
+		printf("      from          : %s\n", addr_str);
 		printf("      serial number : %d\n", AXA_P2H32(user->sn));
 		t = AXA_P2H32(user->connected_since.tv_sec);
 		tm_info = gmtime(&t);

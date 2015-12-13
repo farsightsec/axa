@@ -663,6 +663,9 @@ typedef struct _PK {
 typedef struct _PK {
 	axa_p_user_t		user;		/* user name */
 	uint8_t			io_type;	/* transport type */
+#define AXA_AF_INET    0			/* IPv4 */
+#define AXA_AF_INET6   1			/* IPv6 */
+#define AXA_AF_UNKNOWN 2			/* unknown */
 	uint8_t 		addr_type;	/* address type */
 	uint8_t			pad[6];		/*< to 0 mod 8 */
 	union axa_p_mgmt_ip {
