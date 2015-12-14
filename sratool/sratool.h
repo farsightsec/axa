@@ -158,6 +158,7 @@ void wlist_alist(void);
 void print_raw(const uint8_t *pkt, size_t pkt_len);
 bool print_dns_pkt(const uint8_t *data, size_t data_len, const char *str);
 void print_raw_ip(const uint8_t *data, size_t data_len, axa_p_ch_t ch);
+void print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len);
 
 /* server.c */
 void read_srvr(void);
@@ -167,5 +168,10 @@ void disconnect(bool announce);
 /* signal.c */
 void sigint(int sig AXA_UNUSED);
 void sigterm(int sig AXA_UNUSED);
+
+/* timer.c */
+void convert_seconds(uint32_t seconds, uint32_t *d, uint32_t *h, uint32_t *m,
+		uint32_t *s);
+const char *convert_timeval(struct timeval *t);
 
 #endif /* SRATOOL_H */

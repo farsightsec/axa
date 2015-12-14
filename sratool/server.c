@@ -187,6 +187,13 @@ read_srvr(void)
 			print_channel();
 			break;
 
+		case AXA_P_OP_MGMT_GETRSP:
+			clear_prompt();
+			print_mgmt(&client.io.recv_body->mgmt,
+				   client.io.recv_body_len
+				   - sizeof(client.io.recv_hdr));
+			break;
+
 		case AXA_P_OP_USER:
 		case AXA_P_OP_JOIN:
 		case AXA_P_OP_PAUSE:
@@ -201,6 +208,7 @@ read_srvr(void)
 		case AXA_P_OP_CGET:
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
+		case AXA_P_OP_MGMT_GET:
 		default:
 			AXA_FAIL("impossible AXA %s from %s",
 				 axa_op_to_str(buf, sizeof(buf),

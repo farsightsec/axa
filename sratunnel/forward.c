@@ -136,6 +136,7 @@ forward(void)
 	case AXA_P_OP_ALIST:
 	case AXA_P_OP_OPT:
 	case AXA_P_OP_CLIST:
+	case AXA_P_OP_MGMT_GETRSP:
 		print_bad_op("unexpected ");
 		break;
 
@@ -153,6 +154,7 @@ forward(void)
 	case AXA_P_OP_CGET:
 	case AXA_P_OP_ACCT:
 	case AXA_P_OP_RADU:
+	case AXA_P_OP_MGMT_GET:
 	default:
 		AXA_FAIL("impossible AXA op of %d from %s",
 			 client.io.recv_hdr.op, client.io.label);

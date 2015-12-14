@@ -1174,3 +1174,268 @@ count_print(bool always)
 				" %d total\n",
 				output_count, output_count_total);
 }
+
+void
+print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
+{
+	time_t t;
+	uint8_t *p;
+	int j, ch_cnt;
+	struct timeval tv;
+	struct tm *tm_info;
+	const char *io_type, *cp, *server_type;
+	uint32_t i, users_cnt, total_watches;
+	char time_buf[30];
+	axa_p_mgmt_user_t *user;
+        axa_cnt_t total_filtered = 0;
+        axa_cnt_t total_missed = 0;
+        axa_cnt_t total_collected = 0;
+        axa_cnt_t total_sent = 0;
+        axa_cnt_t total_rlimit = 0;
+        axa_cnt_t total_congested = 0;
+	char addr_str[INET6_ADDRSTRLEN];
+
+	if (axa_debug != 0) {
+		printf("    mgmt_len       : %zdb\n", AXA_P2H32(mgmt_len));
+	}
+
+	/* UINT32_MAX or UINT64_MAX == server error in gathering stat */
+	if (mgmt->uptime == UINT32_MAX) {
+		printf("    server uptime   : unavailable\n");
+	}
+	else {
+		gettimeofday(&tv, NULL);
+		tv.tv_sec -= AXA_P2H32(mgmt->uptime);
+		tm_info = gmtime(&t);
+		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		printf("    server uptime   : %s\n", convert_timeval(&tv));
+	}
+	if (mgmt->load[0] == UINT32_MAX && mgmt->load[1] == UINT32_MAX &&
+			mgmt->load[2] == UINT32_MAX) {
+		printf("    server load     : unavailable\n");
+	}
+	else {
+		printf("    server load     : %.2f %.2f %.2f\n",
+				(float)AXA_P2H32(mgmt->load[0]) * .0001,
+				(float)AXA_P2H32(mgmt->load[1]) * .0001,
+				(float)AXA_P2H32(mgmt->load[2]) * .0001);
+	}
+
+	server_type = (mode == SRA) ? "srad" : "radd";
+	printf("    %s stats\n", server_type);
+	if (mgmt->cpu_usage == UINT32_MAX) {
+		printf("      CPU usage     : unavailable\n");
+	}
+	else {
+		printf("      CPU usage     : %.2f%%\n",
+				(float)AXA_P2H32(mgmt->cpu_usage) * .0001);
+	}
+	if (mgmt->starttime == UINT32_MAX) {
+		printf("      uptime        : unavailable\n");
+	}
+	else {
+		gettimeofday(&tv, NULL);
+		tv.tv_sec -= (AXA_P2H32(mgmt->uptime) -
+				AXA_P2H32(mgmt->starttime));
+		tm_info = gmtime(&t);
+		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		printf("      uptime        : %s\n", convert_timeval(&tv));
+	}
+	if (mgmt->vmsize == UINT64_MAX) {
+		printf("      VM size       : unavailable\n");
+	}
+	else {
+		printf("      VM size       : %"PRIu64"m\n",
+				AXA_P2H64(mgmt->vmsize) / (1024 * 1024));
+	}
+	if (mgmt->vmrss == UINT64_MAX) {
+		printf("      VM RSS        : unavailable\n");
+	}
+	else {
+		printf("      VM RSS        : %"PRIu64"kb\n",
+				AXA_P2H64(mgmt->vmrss) / 1024);
+	}
+	if (mgmt->thread_cnt == UINT32_MAX) {
+		printf("      thread cnt    : unavailable\n");
+	}
+	else {
+		printf("      thread cnt    : %"PRIu32"\n",
+				AXA_P2H32(mgmt->thread_cnt));
+	}
+	if (mode != RAD) {
+		/* radd doesn't run as root so it can't read
+		 * /proc/[pid]/fdinfo or /proc/[pid]/io
+		 */
+		printf("    open file descriptors\n");
+		if (mgmt->fd_sockets == UINT32_MAX) {
+			printf("      socket        : unavailable\n");
+		}
+		else {
+			printf("      socket        : %"PRIu32"\n",
+					AXA_P2H32(mgmt->fd_sockets));
+		}
+		if (mgmt->fd_pipes == UINT32_MAX) {
+			printf("      pipe          : unavailable\n");
+		}
+		else {
+			printf("      pipe          : %"PRIu32"\n",
+					AXA_P2H32(mgmt->fd_pipes));
+		}
+		if (mgmt->fd_anon_inodes == UINT32_MAX) {
+			printf("      anon_inode    : unavailable\n");
+		}
+		else {
+			printf("      anon_inode    : %"PRIu32"\n",
+					AXA_P2H32(mgmt->fd_anon_inodes));
+		}
+		if (mgmt->fd_other == UINT32_MAX) {
+			printf("      other         : unavailable\n");
+		}
+		else {
+			printf("      other         : %"PRIu32"\n",
+					AXA_P2H32(mgmt->fd_other));
+		}
+		if (mgmt->rchar == UINT64_MAX) {
+			printf("    rchar           : unavailable\n");
+		}
+		else {
+			printf("    rchar           : %"PRIu64"\n",
+					AXA_P2H64(mgmt->rchar));
+		}
+		if (mgmt->wchar == UINT64_MAX) {
+			printf("    wchar           : unavailable\n");
+		}
+		else {
+			printf("    wchar           : %"PRIu64"\n",
+					AXA_P2H64(mgmt->wchar));
+		}
+	}
+	users_cnt = AXA_P2H32(mgmt->users_cnt);
+	printf("    users           : %d\n", users_cnt);
+	if (mode == SRA) {
+		user = (axa_p_mgmt_user_t *)&client.io.recv_body->mgmt.b;
+		for (p = (uint8_t *)user, i = 0, total_watches = 0;
+				i < users_cnt; i++) {
+			p += i == 0 ? 0 : (sizeof (axa_p_mgmt_user_t));
+			user = (axa_p_mgmt_user_t *)p;
+			total_watches += AXA_P2H32(user->srvr.sra.watch_cnt);
+		}
+		printf("    watches         : %d\n", total_watches);
+	}
+
+	/* variable length user data comes after the mgmt "header" */
+	user = (axa_p_mgmt_user_t *)&client.io.recv_body->mgmt.b;
+	for (p = (uint8_t *)user, i = 0; i < users_cnt; i++) {
+		p += i == 0 ? 0 : (sizeof (axa_p_mgmt_user_t));
+		user = (axa_p_mgmt_user_t *)p;
+
+		printf("\n    user            : %s\n", user->user.name);
+		cp = NULL;
+		switch (user->addr_type)
+		{
+			case AXA_AF_INET:
+				cp = inet_ntop(AF_INET, &user->ip.ipv4, addr_str,
+						sizeof(addr_str));
+				break;
+			case AXA_AF_INET6:
+				cp = inet_ntop(AF_INET6, &user->ip.ipv6, addr_str,
+						sizeof(addr_str));
+				break;
+			case AXA_AF_UNKNOWN:
+				strlcpy(addr_str, "unknown", sizeof(addr_str));
+				break;
+		}
+		printf("      from          : %s\n", addr_str);
+		printf("      serial number : %d\n", AXA_P2H32(user->sn));
+		t = AXA_P2H32(user->connected_since.tv_sec);
+		tm_info = gmtime(&t);
+		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		printf("      since         : %s (%s)\n", time_buf,
+				convert_timeval(&user->connected_since));
+
+		switch (user->io_type) {
+			case AXA_IO_TYPE_UNIX:
+				io_type = AXA_IO_TYPE_UNIX_STR;
+				break;
+			case AXA_IO_TYPE_TCP:
+				io_type = AXA_IO_TYPE_TCP_STR;
+				break;
+			case AXA_IO_TYPE_SSH:
+				io_type = AXA_IO_TYPE_SSH_STR;
+				break;
+			case AXA_IO_TYPE_TLS:
+				io_type = AXA_IO_TYPE_TLS_STR;
+				break;
+			default:
+			case AXA_IO_TYPE_UNKN:
+				io_type = "unknown";
+				break;
+		}
+		printf("      transport     : %s\n", io_type);
+		switch (mode) {
+			case SRA:
+				printf("      channels      : ");
+				for (j = ch_cnt = 0; j < 256; j++) {
+					if (axa_get_bitwords(
+						user->srvr.sra.ch_mask.m, j)) {
+							printf("%d ", j);
+							ch_cnt++;
+					}
+				}
+				if (ch_cnt == 0)
+					printf("none");
+				printf("\n");
+				printf("      watches       : %d\n",
+					AXA_P2H32(
+						user->srvr.sra.watch_cnt));
+				break;
+			case RAD:
+				printf("      anomalies     : %d\n",
+					AXA_P2H32(
+						user->srvr.rad.an_cnt));
+				break;
+			case BOTH:
+				break;
+		}
+		printf("      rate-limiting : ");
+		if (AXA_P2H64(user->ratelimit) == AXA_RLIMIT_OFF)
+			printf("off\n");
+		else
+			printf("%"PRIu64"\n", AXA_P2H64(user->ratelimit));
+		printf("      sampling      : %.2f%%\n",
+				(float)AXA_P2H64(user->sample) * .0001);
+
+		printf("      packet counters\n");
+		t = AXA_P2H32(user->last_cnt_update.tv_sec);
+		tm_info = gmtime(&t);
+		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		printf("      last updated  : %s (%s)\n", time_buf,
+				convert_timeval(&user->last_cnt_update));
+		printf("        filtered    : %"PRIu64"\n",
+				AXA_P2H64(user->filtered));
+		total_filtered += AXA_P2H64(user->filtered);
+		printf("        missed      : %"PRIu64"\n",
+				AXA_P2H64(user->missed));
+		total_missed += AXA_P2H64(user->missed);
+		printf("        collected   : %"PRIu64"\n",
+				AXA_P2H64(user->collected));
+		total_collected += AXA_P2H64(user->collected);
+		printf("        sent        : %"PRIu64"\n",
+				AXA_P2H64(user->sent));
+		total_sent += AXA_P2H64(user->sent);
+		printf("        rlimit      : %"PRIu64"\n",
+				AXA_P2H64(user->rlimit));
+		total_rlimit += AXA_P2H64(user->rlimit);
+		printf("        congested   : %"PRIu64"\n",
+				AXA_P2H64(user->congested));
+		total_congested += AXA_P2H64(user->congested);
+	}
+	if (users_cnt > 0) {
+		printf("\n    total filtered  : %"PRIu64"\n", total_filtered);
+		printf("    total missed    : %"PRIu64"\n", total_missed);
+		printf("    total collected : %"PRIu64"\n", total_collected);
+		printf("    total sent      : %"PRIu64"\n", total_sent);
+		printf("    total rlimit    : %"PRIu64"\n", total_rlimit);
+		printf("    total congested : %"PRIu64"\n", total_congested);
+	}
+}
