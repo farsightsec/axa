@@ -4,7 +4,7 @@
  *	and is various places.  It is named axa_endian.h to avoid conflicts
  *	with the Linux "#include <endian.h>".
  *
- *  Copyright (c) 2014-2015 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2016 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
