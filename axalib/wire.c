@@ -316,7 +316,7 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	case AXA_P_OP_OK:	strlcpy(buf, "OK",		buflen); break;
 	case AXA_P_OP_ERROR:	strlcpy(buf, "ERROR",		buflen); break;
 	case AXA_P_OP_WHIT:	strlcpy(buf, "WATCH HIT",	buflen); break;
-	case AXA_P_OP_AHIT:	strlcpy(buf, "ANOMOLY HIT",	buflen); break;
+	case AXA_P_OP_AHIT:	strlcpy(buf, "ANOMALY HIT",	buflen); break;
 	case AXA_P_OP_MISSED:	strlcpy(buf, "MISSED",		buflen); break;
 	case AXA_P_OP_WLIST:	strlcpy(buf, "WATCH LIST",	buflen); break;
 	case AXA_P_OP_ALIST:	strlcpy(buf, "ANOMALY LIST",	buflen); break;
