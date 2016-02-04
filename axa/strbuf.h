@@ -89,4 +89,13 @@ axa_strbuf_res_t axa_strbuf_reset(struct axa_strbuf *sb);
  */
 size_t axa_strbuf_len(struct axa_strbuf *sb);
 
+/**
+ * Clip the string buffer.  If n_elems is greater than len(sb) this
+ * is a noop.
+ *
+ * \param[in] sb string buffer.
+ * \param[in] n_elems the new size of the string
+ */
+void axa_strbuf_clip(struct axa_strbuf *sb, size_t n_elems);
+
 #endif /* AXA_STRBUF_H */

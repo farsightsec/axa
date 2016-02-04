@@ -119,6 +119,15 @@ axa_strbuf_len(struct axa_strbuf *sb) {
 	return (sb->pos - sb->data);
 }
 
+void
+axa_strbuf_clip(struct axa_strbuf *sb, size_t n_elems)
+{
+	if (n_elems < axa_strbuf_len(sb)) {
+		sb->pos = &(sb->data[n_elems]);
+		*(sb->pos) = 0;
+	}
+}
+
 axa_strbuf_res_t
 axa_strbuf_reset(struct axa_strbuf *sb) {
 	void *ptr = sb->data;
