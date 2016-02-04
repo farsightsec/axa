@@ -85,6 +85,7 @@ nobase_include_HEADERS = \
 	axa/protocol.h \
 	axa/rad_mod.h \
 	axa/socket.h \
+	axa/strbuf.h \
 	axa/trie.h \
 	axa/wire.h
 lib_LTLIBRARIES = axa/libaxa.la
@@ -100,6 +101,7 @@ axa_libaxa_la_SOURCES = \
 	axa/protocol.h \
 	axa/rad_mod.h \
 	axa/socket.h \
+	axa/strbuf.h \
 	axa/trie.h \
 	axa/wire.h \
 	axalib/client.c \
@@ -112,6 +114,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/open_nmsg_out.c \
 	axalib/parse_ch.c \
 	axalib/socket.c \
+	axalib/strbuf.c \
 	axalib/time.c \
 	axalib/tls.c \
 	axalib/trie.c \
