@@ -92,6 +92,21 @@ extern bool axa_parse_anom(axa_emsg_t *emsg,
 			   const char *arg);
 
 /**
+ *  Convert a network address to its string equivalent
+ *
+ *  \param[out] buf will hold the watch string
+ *  \param[in] buf_len length of buf
+ *  \param[in] af the address family
+ *  \param[in] addr the address to convert
+ *  \param[in] alen size of the addr parameter
+ *  \param[in] prefix address prefix length
+ *
+ *  \return buf
+ */
+extern char *axa_watch_ip_to_str(char *buf, size_t buf_len,
+		int af, const void *addr, size_t alen, uint prefix);
+
+/**
  *  Convert a watch to its string equivalent
  *
  *  \param[out] buf will hold the watch string
