@@ -7,7 +7,7 @@ Build-Depends:
  pkg-config, libpcap0.8-dev, zlib1g-dev, libedit-dev,
  libprotobuf-c0-dev, protobuf-c-compiler, libwdns-dev (>= 0.6.0),
  libnmsg-dev (>= 0.9.1), nmsg-msg-module-sie-dev (>= 1.0.0), libssl-dev,
- libbsd-dev
+ libbsd-dev, libyajl-dev (>= 2.1.0)
 
 Package: libaxa0
 Section: libs
