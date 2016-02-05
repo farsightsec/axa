@@ -396,6 +396,7 @@ axa_watch_ip_to_str(char *buf, size_t buf_len,
 	} abuf;
 	char ip_str[INET6_ADDRSTRLEN];
 	char prefix_str[1+3+1];
+	size_t cplen;
 
 	if (af == AF_INET) {
 		/* Watch IP address lengths are checked in input */
@@ -425,8 +426,10 @@ axa_watch_ip_to_str(char *buf, size_t buf_len,
 
 	/* allow truncation to the prefix */
 	memset(&abuf, 0, sizeof(abuf));
-	AXA_ASSERT(alen <= sizeof(abuf));
-	memcpy(&abuf, addr, alen);
+	cplen = alen;
+	if (alen > sizeof(abuf))
+		cplen = sizeof(abuf);
+	memcpy(&abuf, addr, cplen);
 
 	if (NULL == inet_ntop(af, &abuf, ip_str, sizeof(ip_str))) {
 		snprintf(buf, buf_len,
