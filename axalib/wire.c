@@ -682,7 +682,7 @@ axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen, axa_p_ch_t ch,
 
 	memset(&dg, 0, sizeof(dg));
 	res = nmsg_ipdg_parse_pcap_raw(&dg, DLT_RAW, pkt_data, caplen);
-	if (res != nmsg_res_success && dg.len_network == 0) {
+	if (res != nmsg_res_success || dg.len_network == 0) {
 		axa_buf_print(&cmt, &cmt_len, " unknown packet");
 		return (false);
 	}
