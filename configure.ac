@@ -76,6 +76,8 @@ else
 	use_yajl="false"
 fi
 
+PKG_CHECK_MODULES([check], [check])
+
 AC_PATH_PROG([DOXYGEN], [doxygen])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 if test -n "$DOXYGEN"; then

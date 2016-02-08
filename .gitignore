@@ -25,3 +25,6 @@ axa/version.h
 Doxyfile
 /html
 /latex
+tests/test-json
+*.log
+*.trs
