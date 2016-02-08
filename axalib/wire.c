@@ -349,7 +349,7 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	return (buf);
 }
 
-static const char *
+const char *
 axa_opt_to_str(char *buf, size_t buflen, axa_p_opt_type_t opt)
 {
 	switch (opt) {

@@ -150,6 +150,19 @@ extern const char *axa_tag_to_str(char *buf, size_t buf_len, axa_tag_t tag);
 extern const char *axa_op_to_str(char *buf, size_t buf_len, axa_p_op_t op);
 
 /**
+ *  Convert AXA option type to its string equivalent. If the opcode is
+ *  unknown to AXA, the buffer will contain the string
+ *  "unknown option type #n".
+ *
+ *  \param[out] buf will hold the option type string
+ *  \param[in] buf_len length of buf (should be #AXA_P_OP_STRLEN)
+ *  \param[in] op the option type to look up
+ *
+ *  \return buf
+ */
+extern const char * axa_opt_to_str(char *buf, size_t buflen, axa_p_opt_type_t opt);
+
+/**
  *   Convert AXA tag and opcode to their string equivalents separated by ' '.
  *
  *  \param[out] buf for the result
