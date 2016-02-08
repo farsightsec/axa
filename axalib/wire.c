@@ -354,7 +354,7 @@ axa_opt_to_str(char *buf, size_t buflen, axa_p_opt_type_t opt)
 {
 	switch (opt) {
 	case AXA_P_OPT_TRACE:	strlcpy(buf, "TRACE",	    buflen); break;
-	case AXA_P_OPT_RLIMIT:	strlcpy(buf, "Rate LIMIT",  buflen); break;
+	case AXA_P_OPT_RLIMIT:	strlcpy(buf, "RATE LIMIT",  buflen); break;
 	case AXA_P_OPT_SAMPLE:	strlcpy(buf, "SAMPLE",	    buflen); break;
 	case AXA_P_OPT_SNDBUF:	strlcpy(buf, "SNDBUF",	    buflen); break;
 #pragma clang diagnostic push
