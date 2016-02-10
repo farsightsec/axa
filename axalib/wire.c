@@ -349,12 +349,12 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	return (buf);
 }
 
-static const char *
+const char *
 axa_opt_to_str(char *buf, size_t buflen, axa_p_opt_type_t opt)
 {
 	switch (opt) {
 	case AXA_P_OPT_TRACE:	strlcpy(buf, "TRACE",	    buflen); break;
-	case AXA_P_OPT_RLIMIT:	strlcpy(buf, "Rate LIMIT",  buflen); break;
+	case AXA_P_OPT_RLIMIT:	strlcpy(buf, "RATE LIMIT",  buflen); break;
 	case AXA_P_OPT_SAMPLE:	strlcpy(buf, "SAMPLE",	    buflen); break;
 	case AXA_P_OPT_SNDBUF:	strlcpy(buf, "SNDBUF",	    buflen); break;
 #pragma clang diagnostic push
@@ -385,8 +385,8 @@ axa_tag_op_to_str(char *buf, size_t buf_len,
 	return (buf);
 }
 
-static char *
-watch_ip_to_str(char *buf, size_t buf_len,
+char *
+axa_watch_ip_to_str(char *buf, size_t buf_len,
 		int af, const void *addr, size_t alen, uint prefix)
 {
 	union {
@@ -396,6 +396,7 @@ watch_ip_to_str(char *buf, size_t buf_len,
 	} abuf;
 	char ip_str[INET6_ADDRSTRLEN];
 	char prefix_str[1+3+1];
+	size_t cplen;
 
 	if (af == AF_INET) {
 		/* Watch IP address lengths are checked in input */
@@ -425,8 +426,10 @@ watch_ip_to_str(char *buf, size_t buf_len,
 
 	/* allow truncation to the prefix */
 	memset(&abuf, 0, sizeof(abuf));
-	AXA_ASSERT(alen <= sizeof(abuf));
-	memcpy(&abuf, addr, alen);
+	cplen = alen;
+	if (alen > sizeof(abuf))
+		cplen = sizeof(abuf);
+	memcpy(&abuf, addr, cplen);
 
 	if (NULL == inet_ntop(af, &abuf, ip_str, sizeof(ip_str))) {
 		snprintf(buf, buf_len,
@@ -450,11 +453,11 @@ axa_watch_to_str(char *buf, size_t buf_len,
 	AXA_ASSERT(pat_len >= 0);
 	switch ((axa_p_watch_type_t)watch->type) {
 	case AXA_P_WATCH_IPV4:
-		watch_ip_to_str(buf, buf_len, AF_INET,
+		axa_watch_ip_to_str(buf, buf_len, AF_INET,
 				&watch->pat.addr, pat_len, watch->prefix);
 		break;
 	case AXA_P_WATCH_IPV6:
-		watch_ip_to_str(buf, buf_len, AF_INET6,
+		axa_watch_ip_to_str(buf, buf_len, AF_INET6,
 				&watch->pat.addr6, pat_len, watch->prefix);
 		break;
 	case AXA_P_WATCH_DNS:
@@ -524,7 +527,7 @@ whit_add_str(char **bufp, size_t *buf_lenp,
 
 	if (whit_len >= sizeof(struct ip)
 	    && (whit->ip.b[0] & 0xf0) == 0x40) {
-		watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET,
+		axa_watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET,
 				AXA_OFFSET(whit->ip.b, struct ip, ip_src),
 				4, 32);
 		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d src %s",
@@ -532,7 +535,7 @@ whit_add_str(char **bufp, size_t *buf_lenp,
 
 	} else if (whit_len >= sizeof(struct ip6_hdr)
 	    && (whit->ip.b[0] & 0xf0) == 0x60) {
-		watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET6,
+		axa_watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET6,
 				AXA_OFFSET(whit->ip.b, struct ip6_hdr, ip6_src),
 				16, 128);
 		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d src %s",
@@ -679,7 +682,7 @@ axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen, axa_p_ch_t ch,
 
 	memset(&dg, 0, sizeof(dg));
 	res = nmsg_ipdg_parse_pcap_raw(&dg, DLT_RAW, pkt_data, caplen);
-	if (res != nmsg_res_success && dg.len_network == 0) {
+	if (res != nmsg_res_success || dg.len_network == 0) {
 		axa_buf_print(&cmt, &cmt_len, " unknown packet");
 		return (false);
 	}

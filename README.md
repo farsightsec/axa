@@ -672,6 +672,49 @@ as described above
 | `AXA_P_OP_ACCT`     | 142 | CLIENT / SERVER | NO    | request accounting information                                                                |
 | `AXA_P_OP_RADU`     | 143 | SERVER (RAD)    | NO    | request RAD Unit balance                                                                |
 
+### JSON Format ###
+
+Full documentation pending.
+
+```json
+{"tag":4,"op":"HELLO","id":1,"pvers_min":2,"pvers_max":3,"str":"hello"}
+{"tag":1,"op":"OK","orig_op":"WATCH HIT","str":"success"}
+{"tag":1,"op":"ERROR","orig_op":"OK","str":"failure"}
+{"tag":1,"op":"MISSED","missed":2,"dropped":3,"rlimit":4,"filtered":5,"last_report":6}
+{"tag":1,"op":"RAD MISSED","sra_missed":2,"sra_dropped":3,"sra_rlimit":4,"sra_filtered":5,"dropped":6,"rlimit":7,"filtered":8,"last_report":9}
+{"tag":1,"op":"WATCH HIT","channel":"ch123","field_idx":1,"val_idx":2,"vname":"base","mname":"pkt","time":"1970-01-01 00:00:01.000000002","nmsg":{"time":"1970-01-01 00:00:01.000000002","vname":"base","mname":"pkt","message":{"len_frame":32,"payload":"RQAAIBI0QAD/EVmFAQIDBAUGBwgAewHIAAxP4t6tvu8="}}}
+{"tag":1,"op":"WATCH HIT","channel":"ch123","time":"1970-01-01 00:00:01.000002","af":"IPv4","src":"1.2.3.4","dst":"5.6.7.8","ttl":255,"proto":"UDP","src_port":123,"dst_port":456,"payload":"3q2+7w=="}
+{"tag":1,"op":"WATCH HIT","channel":"ch123","time":"1970-01-01 00:00:01.000002","af":"IPv4","src":"1.2.3.4","dst":"5.6.7.8","ttl":255,"proto":"TCP","src_port":123,"dst_port":456,"flags":["SYN","ACK"],"payload":"3q2+7w=="}
+{"tag":1,"op":"WATCH HIT","channel":"ch123","time":"1970-01-01 00:00:01.000002","af":"IPv6","src":"1:2:3:4:5:6:7:8","dst":"9:0:a:b:c:d:e:f","ttl":255,"proto":"UDP","src_port":123,"dst_port":456,"payload":"3q2+7w=="}
+{"tag":1,"op":"WATCH","watch_type":"ipv4","watch":"IP=12.34.56.0/24"}
+{"tag":1,"op":"WATCH","watch_type":"ipv4","watch":"IP=0.0.0.0/24"}
+{"tag":1,"op":"WATCH","watch_type":"ipv4","watch":"IP=12.34.56.78/24"}
+{"tag":1,"op":"WATCH","watch_type":"ipv6","watch":"IP=1:2:3:4:5:6::/48"}
+{"tag":1,"op":"WATCH","watch_type":"dns","watch":"dns=fsi.io"}
+{"tag":1,"op":"WATCH","watch_type":"dns","watch":"dns=*.fsi.io"}
+{"tag":1,"op":"WATCH","watch_type":"dns","watch":"dns=*."}
+{"tag":1,"op":"WATCH","watch_type":"dns","watch":"dns=fsi.io(shared)"}
+{"tag":1,"op":"WATCH","watch_type":"channel","watch":"ch=ch123"}
+{"tag":1,"op":"WATCH","watch_type":"errors","watch":"ERRORS"}
+{"tag":1,"op":"ANOMALY","an":"test_anom","parms":"param1 param2"}
+{"tag":1,"op":"CHANNEL ON/OFF","channel":"ch123","on":true}
+{"tag":1,"op":"CHANNEL ON/OFF","channel":"ch123","on":false}
+{"tag":1,"op":"CHANNEL ON/OFF","channel":"all","on":true}
+{"tag":1,"op":"WATCH LIST","cur_tag":1,"watch_type":"ipv4","watch":"IP=12.34.56.0/24"}
+{"tag":1,"op":"ANOMALY HIT","an":"test_anom","channel":"ch123","time":"1970-01-01 00:00:01.000002","af":"IPv4","src":"1.2.3.4","dst":"5.6.7.8","ttl":255,"proto":"UDP","src_port":123,"dst_port":456,"payload":"3q2+7w=="}
+{"tag":1,"op":"ANOMALY LIST","cur_tag":1,"an":"test_anom","parms":"param1 param2"}
+{"tag":1,"op":"CHANNEL LIST","channel":"ch123","on":true,"spec":"test channel"}
+{"tag":1,"op":"USER","name":"test user"}
+{"tag":1,"op":"OPTION","type":"TRACE","trace":3}
+{"tag":1,"op":"OPTION","type":"TRACE","trace":"REQUEST TRACE VALUE"}
+{"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":123,"cur_pkts_per_sec":456,"report_secs":60}
+{"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":1000000000,"cur_pkts_per_sec":123,"report_secs":60}
+{"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":"off","cur_pkts_per_sec":123,"report_secs":60}
+{"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":null,"cur_pkts_per_sec":123,"report_secs":null}
+{"tag":1,"op":"OPTION","type":"SAMPLE","sample":123}
+{"tag":1,"op":"OPTION","type":"SNDBUF","bufsize":123}
+```
+
 ## API Workflow
 
 TODO.

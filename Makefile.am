@@ -81,12 +81,15 @@ nobase_include_HEADERS = \
 	axa/dns_walk.h \
 	axa/axa_endian.h \
 	axa/fields.h \
+	axa/json.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/rad_mod.h \
 	axa/socket.h \
+	axa/strbuf.h \
 	axa/trie.h \
-	axa/wire.h
+	axa/wire.h \
+	libmy/b64_encode.h
 lib_LTLIBRARIES = axa/libaxa.la
 
 axa_libaxa_la_SOURCES = \
@@ -96,10 +99,12 @@ axa_libaxa_la_SOURCES = \
 	axa/dns_walk.h \
 	axa/axa_endian.h \
 	axa/fields.h \
+	axa/json.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/rad_mod.h \
 	axa/socket.h \
+	axa/strbuf.h \
 	axa/trie.h \
 	axa/wire.h \
 	axalib/client.c \
@@ -109,16 +114,19 @@ axa_libaxa_la_SOURCES = \
 	axalib/fields.c \
 	axalib/get_field_name.c \
 	axalib/hash_divisor.c \
+	axalib/json.c \
 	axalib/open_nmsg_out.c \
 	axalib/parse_ch.c \
 	axalib/socket.c \
+	axalib/strbuf.c \
 	axalib/time.c \
 	axalib/tls.c \
 	axalib/trie.c \
 	axalib/wdns_res.c \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \
-	axalib/wire.c
+	axalib/wire.c \
+	libmy/b64_encode.c libmy/b64_encode.h
 
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBAXA_CURRENT):$(LIBAXA_REVISION):$(LIBAXA_AGE) \
@@ -128,7 +136,8 @@ axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	${libpcap_LIBS} \
 	${libwdns_LIBS} \
 	${libnmsg_LIBS} \
-	${strlcpy_LIBS}
+	${strlcpy_LIBS} \
+	${yajl_LIBS}
 axa_libaxa_la_CFLAGS = \
 	${AM_CFLAGS} \
 	${libssl_CFLAGS} \
@@ -136,7 +145,8 @@ axa_libaxa_la_CFLAGS = \
 	${libpcap_CFLAGS} \
 	${libwdns_CFLAGS} \
 	${libnmsg_CFLAGS} \
-	${strlcpy_CFLAGS}
+	${strlcpy_CFLAGS} \
+	${yajl_CFLAGS}
 
 pkgconfig_DATA = axa/libaxa.pc
 EXTRA_DIST += axa/libaxa.pc.in
@@ -278,3 +288,16 @@ spotless: distclean
 	missing install-sh ltmain.sh $(top_builddir)/html						\
 	$(top_builddir)/stamp-html
 
+#
+##
+### tests
+##
+#
+
+EXTRA_DIST += tests
+
+TESTS += tests/test-json
+check_PROGRAMS += tests/test-json
+tests_test_json_SOURCES = tests/test-json.c
+tests_test_json_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
+tests_test_json_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS}

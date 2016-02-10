@@ -92,6 +92,21 @@ extern bool axa_parse_anom(axa_emsg_t *emsg,
 			   const char *arg);
 
 /**
+ *  Convert a network address to its string equivalent
+ *
+ *  \param[out] buf will hold the watch string
+ *  \param[in] buf_len length of buf
+ *  \param[in] af the address family
+ *  \param[in] addr the address to convert
+ *  \param[in] alen size of the addr parameter
+ *  \param[in] prefix address prefix length
+ *
+ *  \return buf
+ */
+extern char *axa_watch_ip_to_str(char *buf, size_t buf_len,
+		int af, const void *addr, size_t alen, uint prefix);
+
+/**
  *  Convert a watch to its string equivalent
  *
  *  \param[out] buf will hold the watch string
@@ -133,6 +148,19 @@ extern const char *axa_tag_to_str(char *buf, size_t buf_len, axa_tag_t tag);
  *  \return buf
  */
 extern const char *axa_op_to_str(char *buf, size_t buf_len, axa_p_op_t op);
+
+/**
+ *  Convert AXA option type to its string equivalent. If the opcode is
+ *  unknown to AXA, the buffer will contain the string
+ *  "unknown option type #n".
+ *
+ *  \param[out] buf will hold the option type string
+ *  \param[in] buf_len length of buf (should be #AXA_P_OP_STRLEN)
+ *  \param[in] op the option type to look up
+ *
+ *  \return buf
+ */
+extern const char * axa_opt_to_str(char *buf, size_t buflen, axa_p_opt_type_t opt);
 
 /**
  *   Convert AXA tag and opcode to their string equivalents separated by ' '.
