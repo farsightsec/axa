@@ -986,8 +986,8 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 }
 
 /* Check the header of an AXA message. */
-static bool				/* false=bad */
-ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
+bool				/* false=bad */
+axa_ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
        const char *label, axa_p_direction_t dir)
 {
 	size_t max_len, min_len;
@@ -1797,7 +1797,7 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 			/* We have at least all of the header.
 			 * Check the header when we first have it. */
 			if (len == 0
-			    && !ck_hdr(emsg, &io->recv_hdr, io->label,
+			    && !axa_ck_hdr(emsg, &io->recv_hdr, io->label,
 				       which_direction(io, false))) {
 				motd_hdr(emsg, io);
 				return (AXA_IO_ERR);
@@ -1999,7 +1999,7 @@ axa_make_hdr(axa_emsg_t *emsg, axa_p_hdr_t *hdr,
 	hdr->pvers = pvers;
 	hdr->op = op;
 
-	if (!ck_hdr(emsg, hdr, "myself", dir))
+	if (!axa_ck_hdr(emsg, hdr, "myself", dir))
 		return (0);
 
 	return (total);

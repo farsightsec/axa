@@ -226,6 +226,21 @@ typedef enum {
 } axa_p_direction_t;
 
 /**
+ * Check the header of an AXA message.  Return false if
+ * the header is invalid.
+ *
+ *  \param[out] emsg the reason if the return value is false
+ *  \param[in] hdr AXA protocol header (will be filled in)
+ *  \param[in] label label for error message
+ *  \param[dir] dir direction of header for error message
+ *
+ *  \return bool header is ok
+ */
+extern bool
+axa_ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
+	   const char *label, axa_p_direction_t dir);
+
+/**
  *  Populate an AXA header including converting to wire byte order.
  *
  *  \param[out] emsg the reason if the return value is 0
