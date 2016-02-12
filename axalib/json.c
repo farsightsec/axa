@@ -198,19 +198,23 @@ add_whit(yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_
 		if (sb == NULL)
 			return (AXA_JSON_RES_MEMFAIL);
 
-		add_yajl_string(g, "field_idx");
-		add_yajl_integer(g, AXA_P2H16(whit->nmsg.hdr.field_idx));
+		if(AXA_P2H_IDX(whit->nmsg.hdr.field_idx) < AXA_NMSG_IDX_RSVD) {
+			add_yajl_string(g, "field_idx");
+			add_yajl_integer(g, AXA_P2H_IDX(whit->nmsg.hdr.field_idx));
+		}
 
-		add_yajl_string(g, "val_idx");
-		add_yajl_integer(g, AXA_P2H16(whit->nmsg.hdr.val_idx));
+		if (AXA_P2H_IDX(whit->nmsg.hdr.val_idx) < AXA_NMSG_IDX_RSVD) {
+			add_yajl_string(g, "val_idx");
+			add_yajl_integer(g, AXA_P2H_IDX(whit->nmsg.hdr.val_idx));
+		}
 
-		vname = nmsg_msgmod_vid_to_vname(AXA_P2H16(whit->nmsg.hdr.vid));
+		vname = nmsg_msgmod_vid_to_vname(AXA_P2H_IDX(whit->nmsg.hdr.vid));
 		if (vname != NULL) {
 			add_yajl_string(g, "vname");
 			add_yajl_string(g, vname);
 		} else {
 			add_yajl_string(g, "vid");
-			add_yajl_integer(g, AXA_P2H16(whit->nmsg.hdr.vid));
+			add_yajl_integer(g, AXA_P2H_IDX(whit->nmsg.hdr.vid));
 		}
 
 		mname = nmsg_msgmod_msgtype_to_mname(
@@ -221,7 +225,7 @@ add_whit(yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_
 			add_yajl_string(g, mname);
 		} else {
 			add_yajl_string(g, "msgtype");
-			add_yajl_integer(g, AXA_P2H16(whit->nmsg.hdr.type));
+			add_yajl_integer(g, AXA_P2H_IDX(whit->nmsg.hdr.type));
 		}
 
 		add_yajl_string(g, "time");
