@@ -122,15 +122,17 @@ add_anom(yajl_gen g, axa_p_anom_t anom, bool print_parms)
 }
 
 static axa_json_res_t
-add_channel(yajl_gen g, axa_p_ch_t ch) {
+add_channel(axa_emsg_t *emsg, yajl_gen g, axa_p_ch_t ch) {
 	if (ch == AXA_P2H_CH(AXA_OP_CH_ALL)) {
 		add_yajl_string(g, "channel");
 		add_yajl_string(g, AXA_OP_CH_ALLSTR);
 	} else {
 		struct axa_strbuf *sb;
 		sb = axa_strbuf_init();
-		if (sb == NULL)
+		if (sb == NULL) {
+			axa_pemsg(emsg, "could not allocate axa_strbuf");
 			return (AXA_JSON_RES_MEMFAIL);
+		}
 
 		add_yajl_string(g, "channel");
 		axa_strbuf_append(sb, "%s%d", AXA_OP_CH_PREFIX, ch);
@@ -142,7 +144,7 @@ add_channel(yajl_gen g, axa_p_ch_t ch) {
 }
 
 static axa_json_res_t
-add_rlimit_count(yajl_gen g, axa_cnt_t count)
+add_rlimit_count(axa_emsg_t *emsg, yajl_gen g, axa_cnt_t count)
 {
 	if (AXA_P2H64(count) == AXA_RLIMIT_OFF)
 		add_yajl_string(g, "off");
@@ -151,8 +153,10 @@ add_rlimit_count(yajl_gen g, axa_cnt_t count)
 	else {
 		struct axa_strbuf *sb;
 		sb = axa_strbuf_init();
-		if (sb == NULL)
+		if (sb == NULL) {
+			axa_pemsg(emsg, "could not allocate axa_strbuf");
 			return (AXA_JSON_RES_MEMFAIL);
+		}
 		add_yajl_number(g, sb, AXA_P2H64(count));
 		axa_strbuf_destroy(&sb);
 	}
@@ -187,14 +191,17 @@ add_watch(yajl_gen g, axa_p_watch_t *watch, size_t watch_len)
 }
 
 static axa_json_res_t
-add_whit(yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_whit_t *whit, size_t whit_len)
+add_whit(axa_emsg_t *emsg, yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_whit_t *whit, size_t whit_len)
 {
-	add_channel(g, whit->hdr.ch);
+	axa_json_res_t json_res;
+
+	json_res = add_channel(emsg, g, whit->hdr.ch);
+	if (json_res != AXA_JSON_RES_SUCCESS)
+		return (json_res);
 
 	switch (whit->hdr.type) {
 	case AXA_P_WHIT_NMSG: {
 		struct axa_strbuf *sb;
-		axa_emsg_t emsg;
 		nmsg_message_t msg;
 		axa_w2n_res_t wres;
 		nmsg_res nres;
@@ -203,12 +210,16 @@ add_whit(yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_
 		time_t t;
 		char when[32];
 
-		if (whit_len < sizeof(axa_p_whit_nmsg_t))
+		if (whit_len < sizeof(axa_p_whit_nmsg_t)) {
+			axa_pemsg(emsg, "whit_len %" PRIu64 " < %" PRIu64, whit_len, sizeof(axa_p_whit_nmsg_t));
 			return (AXA_JSON_RES_FAILURE);
+		}
 
 		sb = axa_strbuf_init();
-		if (sb == NULL)
+		if (sb == NULL) {
+			axa_pemsg(emsg, "could not allocate axa_strbuf");
 			return (AXA_JSON_RES_MEMFAIL);
+		}
 
 		if(AXA_P2H_IDX(whit->nmsg.hdr.field_idx) < AXA_NMSG_IDX_RSVD) {
 			add_yajl_string(g, "field_idx");
@@ -250,7 +261,7 @@ add_whit(yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_
 				AXA_P2H32(whit->nmsg.hdr.ts.tv_nsec));
 		add_yajl_string(g, sb->data);
 
-		wres = axa_whit2nmsg(&emsg, nmsg_input, &msg, whit, whit_len);
+		wres = axa_whit2nmsg(emsg, nmsg_input, &msg, whit, whit_len);
 		if (wres == AXA_W2N_RES_SUCCESS) {
 			char *nmsg_json = NULL;
 			nres = nmsg_message_to_json(msg, &nmsg_json);
@@ -277,8 +288,10 @@ add_whit(yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_
 		time_t t;
 		char when[32];
 
-		if (whit_len < sizeof(axa_p_whit_ip_t))
+		if (whit_len < sizeof(axa_p_whit_ip_t)) {
+			axa_pemsg(emsg, "whit_len %" PRIu64 " < %" PRIu64, whit_len, sizeof(axa_p_whit_ip_t));
 			return (AXA_JSON_RES_FAILURE);
+		}
 
 		add_yajl_string(g, "time");
 		t = AXA_P2H32(whit->ip.hdr.tv.tv_sec);
@@ -286,8 +299,10 @@ add_whit(yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_
 		strftime(when, sizeof(when), "%Y-%m-%d %T", &tm);
 
 		sb = axa_strbuf_init();
-		if (sb == NULL)
+		if (sb == NULL) {
+			axa_pemsg(emsg, "could not allocate axa_strbuf");
 			return (AXA_JSON_RES_MEMFAIL);
+		}
 		axa_strbuf_append(sb, "%s.%06u", when,
 				AXA_P2H32(whit->ip.hdr.tv.tv_usec));
 		add_yajl_string(g, sb->data);
@@ -418,19 +433,19 @@ add_whit(yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t nmsg_input, axa_p_
 		return (AXA_JSON_RES_SUCCESS);
 	}
 	default:
+		axa_pemsg(emsg, "unknown whit hdr type: %d", whit->hdr.type);
 		return (AXA_JSON_RES_FAILURE);
 	}
 }
 
 axa_json_res_t
-axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, size_t body_len, char **out)
+axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, size_t body_len, char **out)
 {
 	struct axa_strbuf *sb = NULL, *sb_tmp = NULL;
 	axa_json_res_t res;
 	yajl_gen g = NULL;
 	int yajl_rc;
 	char op_str[AXA_P_OP_STRLEN];
-	axa_emsg_t emsg;
 	axa_p_direction_t dir;
 
 	switch(AXA_P2H16(hdr->op)) {
@@ -463,21 +478,27 @@ axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, 
 		break;
 	} /* switch */
 
-	if (axa_ck_hdr(&emsg, hdr, "json", dir) == false)
+	if (axa_ck_hdr(emsg, hdr, "json", dir) == false)
 		return (AXA_JSON_RES_FAILURE);
 
-	if (AXA_P2H32(hdr->len) - sizeof(axa_p_hdr_t) != body_len)
+	if (AXA_P2H32(hdr->len) - sizeof(axa_p_hdr_t) != body_len) {
+		axa_pemsg(emsg, "body length mismatch %" PRIu64 " != %" PRIu64,
+				AXA_P2H32(hdr->len) - sizeof(axa_p_hdr_t), body_len);
 		return (AXA_JSON_RES_FAILURE);
+	}
 
-	if (axa_ck_body(&emsg, hdr->op, body, body_len) == false)
+	if (axa_ck_body(emsg, hdr->op, body, body_len) == false)
 		return (AXA_JSON_RES_FAILURE);
 
 	sb = axa_strbuf_init();
-	if (sb == NULL)
+	if (sb == NULL) {
+		axa_pemsg(emsg, "could not allocate axa_strbuf");
 		return (AXA_JSON_RES_MEMFAIL);
+	}
 
 	sb_tmp = axa_strbuf_init();
 	if (sb_tmp == NULL) {
+		axa_pemsg(emsg, "could not allocate axa_strbuf");
 		axa_strbuf_destroy(&sb);
 		res = AXA_JSON_RES_MEMFAIL;
 		goto err;
@@ -577,7 +598,7 @@ axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, 
 		break;
 
 	case AXA_P_OP_WHIT:
-		res = add_whit(g, sb, nmsg_input, &(body->whit), body_len);
+		res = add_whit(emsg, g, sb, nmsg_input, &(body->whit), body_len);
 		if (res != AXA_JSON_RES_SUCCESS)
 			goto err;
 		break;
@@ -594,7 +615,7 @@ axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, 
 	}
 
 	case AXA_P_OP_CHANNEL:
-		res = add_channel(g, body->channel.ch);
+		res = add_channel(emsg, g, body->channel.ch);
 		if (res != AXA_JSON_RES_SUCCESS)
 			goto err;
 
@@ -613,7 +634,7 @@ axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, 
 		add_yajl_string(g, "an");
 		add_yajl_string(g, body->ahit.an.c);
 
-		res = add_whit(g, sb, nmsg_input, &(body->ahit.whit), body_len - offsetof(axa_p_ahit_t, whit));
+		res = add_whit(emsg, g, sb, nmsg_input, &(body->ahit.whit), body_len - offsetof(axa_p_ahit_t, whit));
 		if (res != AXA_JSON_RES_SUCCESS)
 			goto err;
 		break;
@@ -628,7 +649,7 @@ axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, 
 	}
 
 	case AXA_P_OP_CLIST:
-		res = add_channel(g, body->clist.ch);
+		res = add_channel(emsg, g, body->clist.ch);
 		if (res != AXA_JSON_RES_SUCCESS)
 			goto err;
 
@@ -663,7 +684,7 @@ axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, 
 
 			case AXA_P_OPT_RLIMIT:
 				add_yajl_string(g, "max_pkts_per_sec");
-				res = add_rlimit_count(g, body->opt.u.rlimit.max_pkts_per_sec);
+				res = add_rlimit_count(emsg, g, body->opt.u.rlimit.max_pkts_per_sec);
 				if (res != AXA_JSON_RES_SUCCESS)
 					goto err;
 
@@ -671,7 +692,7 @@ axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, 
 				add_yajl_number(g, sb_tmp, AXA_P2H64(body->opt.u.rlimit.cur_pkts_per_sec));
 
 				add_yajl_string(g, "report_secs");
-				res = add_rlimit_count(g, body->opt.u.rlimit.report_secs);
+				res = add_rlimit_count(emsg, g, body->opt.u.rlimit.report_secs);
 				if (res != AXA_JSON_RES_SUCCESS)
 					goto err;
 				break;
@@ -775,6 +796,7 @@ axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, 
 				close_yajl_map(g);
 			}
 		} else {
+			axa_pemsg(emsg, "invalid users length %" PRIu64, body_len - offsetof(axa_p_mgmt_t, b));
 			res = AXA_JSON_RES_FAILURE;
 			goto err;
 		}
@@ -816,7 +838,8 @@ err:
 
 #else /* HAVE_YAJL */
 axa_json_res_t
-axa_body_to_json(__attribute__((__unused__)) nmsg_input_t nmsg_input,
+axa_body_to_json(__attribtue__((__unused__)) axa_emsg_t *emsg,
+		 __attribute__((__unused__)) nmsg_input_t nmsg_input,
 		 __attribute__((__unused__)) axa_p_hdr_t *hdr,
 		 __attribute__((__unused__)) axa_p_body_t *body,
 		 __attribute__((__unused__)) size_t body_len,
