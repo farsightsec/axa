@@ -48,6 +48,7 @@ typedef enum {
 /**
  * Convert a protocol body to JSON.
  *
+ * \param[out] emsg if something goes wrong, this will contain the reason
  * \param[in] nmsg_input a nmsg null_input that is used to deserialize watch hits
  * \param[in] hdr axa protocol header structure
  * \param[in] body axa protocol body structure
@@ -55,6 +56,6 @@ typedef enum {
  * \param[out] out handle to char* that is assigned on success.  must be freed by caller
  */
 axa_json_res_t
-axa_body_to_json(nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, size_t body_len, char **out);
+axa_body_to_json(axa_emsg_t *, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, size_t body_len, char **out);
 
 #endif /* AXA_JSON_H */
