@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <axa/json.h>
+#include <axa/wire.h>
 #include <check.h>
 #include <nmsg/container.h>
 #include <nmsg/input.h>
@@ -13,21 +14,45 @@
 nmsg_input_t nmsg_input;
 
 #define empty_test(op, name) do { \
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t), 1, AXA_P_PVERS, op }; \
+	const char *expected; \
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t)), AXA_H2P_TAG(0), AXA_P_PVERS, op }; \
 	char *out = NULL; \
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, 0, 0, &out); \
+	axa_json_res_t res; \
+	switch((op)) { \
+	case AXA_P_OP_WHIT: \
+	case AXA_P_OP_AHIT: \
+	case AXA_P_OP_WATCH: \
+	case AXA_P_OP_ANOM: \
+	case AXA_P_OP_STOP: \
+		hdr.tag = AXA_H2P_TAG(1); \
+		break; \
+	} \
+	res = axa_body_to_json(nmsg_input, &hdr, 0, 0, &out); \
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS); \
-	ck_assert_str_eq(out, "{\"tag\":1,\"op\":\"" name "\"}"); \
+	if (AXA_P2H_TAG(hdr.tag) == 0) \
+		expected = "{\"tag\":\"*\",\"op\":\"" name "\"}"; \
+	else \
+		expected = "{\"tag\":1,\"op\":\"" name "\"}"; \
+	ck_assert_str_eq(out, expected); \
 	free(out); \
 } while (0)
 
-#define truncated_test(op, axa_p_type_t) do { \
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_type_t)-1, 1, AXA_P_PVERS, op }; \
+#define truncated_test(op, axa_p_type_t, watch_len) do { \
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, op }; \
 	axa_p_type_t type; \
 	char *out = NULL; \
 	axa_json_res_t res; \
+	switch((op)) { \
+	case AXA_P_OP_WHIT: \
+	case AXA_P_OP_AHIT: \
+	case AXA_P_OP_WATCH: \
+	case AXA_P_OP_ANOM: \
+	case AXA_P_OP_STOP: \
+		hdr.tag = AXA_H2P_TAG(1); \
+		break; \
+	} \
 	memset(&type, 0, sizeof(type)); \
-	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&type, sizeof(type)-1, &out); \
+	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&type, (watch_len), &out); \
 	ck_assert_int_eq(res, AXA_JSON_RES_FAILURE); \
 	ck_assert_ptr_eq(out, NULL); \
 } while (0)
@@ -40,11 +65,28 @@ END_TEST
 
 START_TEST(test_hello)
 {
-	const char *expected = "{\"tag\":4,\"op\":\"HELLO\",\"id\":1,\"pvers_min\":2,\"pvers_max\":3,\"str\":\"hello\"}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_hello_t), 4, AXA_P_PVERS, AXA_P_OP_HELLO };
+	const char *expected = "{\"tag\":\"*\",\"op\":\"HELLO\",\"id\":1,\"pvers_min\":2,\"pvers_max\":3,\"str\":\"hello\"}";
 	axa_p_hello_t hello = { 1, 2, 3, "hello" };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&hello, sizeof(hello), &out);
+	size_t watch_len = offsetof(axa_p_hello_t, str) + strlen(hello.str) + 1;
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(AXA_TAG_NONE), AXA_P_PVERS, AXA_P_OP_HELLO };
+	axa_json_res_t res;
+	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&hello, watch_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_hello_empty)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"HELLO\",\"id\":1,\"pvers_min\":2,\"pvers_max\":3,\"str\":\"\"}";
+	axa_p_hello_t hello = { 1, 2, 3, "" };
+	char *out = NULL;
+	size_t watch_len = offsetof(axa_p_hello_t, str) + strlen(hello.str) + 1;
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(AXA_TAG_NONE), AXA_P_PVERS, AXA_P_OP_HELLO };
+	axa_json_res_t res;
+	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&hello, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -53,17 +95,18 @@ END_TEST
 
 START_TEST(test_hello_trunc)
 {
-	truncated_test(AXA_P_OP_HELLO, axa_p_hello_t);
+	truncated_test(AXA_P_OP_HELLO, axa_p_hello_t, offsetof(axa_p_hello_t, str) - 1);
 }
 END_TEST
 
 START_TEST(test_ok)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OK\",\"orig_op\":\"WATCH HIT\",\"str\":\"success\"}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_result_t), 1, AXA_P_PVERS, AXA_P_OP_OK };
 	axa_p_result_t result = { AXA_P_OP_WHIT, "success" };
+	size_t watch_len = offsetof(axa_p_result_t, str) + strlen(result.str) + 1;
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OK };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&result, sizeof(result), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&result, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -72,17 +115,18 @@ END_TEST
 
 START_TEST(test_ok_trunc)
 {
-	truncated_test(AXA_P_OP_OK, axa_p_result_t);
+	truncated_test(AXA_P_OP_OK, axa_p_result_t, offsetof(axa_p_result_t, str) - 1);
 }
 END_TEST
 
 START_TEST(test_error)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"ERROR\",\"orig_op\":\"OK\",\"str\":\"failure\"}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_result_t), 1, AXA_P_PVERS, AXA_P_OP_ERROR };
 	axa_p_result_t result = { AXA_P_OP_OK, "failure" };
+	size_t watch_len = offsetof(axa_p_result_t, str) + strlen(result.str) + 1;
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_ERROR };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&result, sizeof(result), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&result, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -91,17 +135,18 @@ END_TEST
 
 START_TEST(test_error_trunc)
 {
-	truncated_test(AXA_P_OP_ERROR, axa_p_result_t);
+	truncated_test(AXA_P_OP_ERROR, axa_p_result_t, offsetof(axa_p_result_t, str) - 1);
 }
 END_TEST
 
 START_TEST(test_missed)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"MISSED\",\"missed\":2,\"dropped\":3,\"rlimit\":4,\"filtered\":5,\"last_report\":6}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_missed_t), 1, AXA_P_PVERS, AXA_P_OP_MISSED };
+	const char *expected = "{\"tag\":\"*\",\"op\":\"MISSED\",\"missed\":2,\"dropped\":3,\"rlimit\":4,\"filtered\":5,\"last_report\":6}";
 	axa_p_missed_t missed = { 2, 3, 4, 5, 6 };
+	size_t watch_len = sizeof(missed);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(AXA_TAG_NONE), AXA_P_PVERS, AXA_P_OP_MISSED };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&missed, sizeof(missed), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&missed, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -110,14 +155,14 @@ END_TEST
 
 START_TEST(test_missed_trunc)
 {
-	truncated_test(AXA_P_OP_MISSED, axa_p_missed_t);
+	truncated_test(AXA_P_OP_MISSED, axa_p_missed_t, sizeof(axa_p_missed_t) - 1);
 }
 END_TEST
 
 START_TEST(test_missed_rad)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"RAD MISSED\",\"sra_missed\":2,\"sra_dropped\":3,\"sra_rlimit\":4,\"sra_filtered\":5,\"dropped\":6,\"rlimit\":7,\"filtered\":8,\"last_report\":9}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_missed_rad_t), 1, AXA_P_PVERS, AXA_P_OP_MISSED_RAD };
+	const char *expected = "{\"tag\":\"*\",\"op\":\"RAD MISSED\",\"sra_missed\":2,\"sra_dropped\":3,\"sra_rlimit\":4,\"sra_filtered\":5,\"dropped\":6,\"rlimit\":7,\"filtered\":8,\"last_report\":9}";
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + sizeof(axa_p_missed_rad_t)), AXA_H2P_TAG(AXA_TAG_NONE), AXA_P_PVERS, AXA_P_OP_MISSED_RAD };
 	axa_p_missed_rad_t missed_rad = { 2, 3, 4, 5, 6, 7, 8, 9 };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&missed_rad, sizeof(missed_rad), &out);
@@ -129,7 +174,7 @@ END_TEST
 
 START_TEST(test_missed_rad_trunc)
 {
-	truncated_test(AXA_P_OP_MISSED_RAD, axa_p_missed_rad_t);
+	truncated_test(AXA_P_OP_MISSED_RAD, axa_p_missed_rad_t, sizeof(axa_p_missed_rad_t) - 1);
 }
 END_TEST
 
@@ -185,7 +230,7 @@ START_TEST(test_whit_nmsg)
 	memcpy(&(whit->b), pbuf, pbuf_len);
 	free(pbuf);
 
-	hdr.len = sizeof(axa_p_hdr_t) + whit_len;
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + whit_len);
 
 	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)whit, whit_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
@@ -200,7 +245,7 @@ END_TEST
 
 START_TEST(test_whit_nmsg_trunc)
 {
-	truncated_test(AXA_P_OP_WHIT, axa_p_whit_nmsg_hdr_t);
+	truncated_test(AXA_P_OP_WHIT, axa_p_whit_nmsg_t, offsetof(axa_p_whit_nmsg_t, b) - 1);
 }
 END_TEST
 
@@ -215,7 +260,7 @@ START_TEST(test_whit_ip4_udp)
 		.tv = { 1, 2 },
 		.ip_len = sizeof(packet),
 	}};
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + whit_len, 1, AXA_P_PVERS, AXA_P_OP_WHIT };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + whit_len), 1, AXA_P_PVERS, AXA_P_OP_WHIT };
 	char *out = NULL;
 	axa_json_res_t res;
 
@@ -240,7 +285,7 @@ START_TEST(test_whit_ip4_tcp)
 		.tv = { 1, 2 },
 		.ip_len = sizeof(packet),
 	}};
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + whit_len, 1, AXA_P_PVERS, AXA_P_OP_WHIT };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + whit_len), 1, AXA_P_PVERS, AXA_P_OP_WHIT };
 	char *out = NULL;
 	axa_json_res_t res;
 
@@ -256,7 +301,7 @@ END_TEST
 
 START_TEST(test_whit_ip4_trunc)
 {
-	truncated_test(AXA_P_OP_WHIT, axa_p_whit_ip_hdr_t);
+	truncated_test(AXA_P_OP_WHIT, axa_p_whit_ip_t, offsetof(axa_p_whit_ip_t, b));
 }
 END_TEST
 
@@ -271,7 +316,7 @@ START_TEST(test_whit_ip6)
 		.tv = { 1, 2 },
 		.ip_len = sizeof(packet),
 	}};
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + whit_len, 1, AXA_P_PVERS, AXA_P_OP_WHIT };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + whit_len), 1, AXA_P_PVERS, AXA_P_OP_WHIT };
 	char *out = NULL;
 	axa_json_res_t res;
 
@@ -287,13 +332,13 @@ END_TEST
 
 START_TEST(test_whit_ip6_trunc)
 {
-	truncated_test(AXA_P_OP_WHIT, axa_p_whit_ip_hdr_t);
+	truncated_test(AXA_P_OP_WHIT, axa_p_whit_ip_t, offsetof(axa_p_whit_ip_t, b));
 }
 END_TEST
 
 START_TEST(test_whit_trunc)
 {
-	truncated_test(AXA_P_OP_WHIT, axa_p_whit_hdr_t);
+	truncated_test(AXA_P_OP_WHIT, axa_p_whit_hdr_t, sizeof(axa_p_whit_hdr_t) - 1);
 }
 END_TEST
 
@@ -302,7 +347,7 @@ START_TEST(test_watch_ip4)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"ipv4\",\"watch\":\"IP=12.34.56.0/24\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_IPV4, 24, 0, 0, {} };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + sizeof(struct in_addr);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	fail_unless(inet_aton("12.34.56.0", &(watch.pat.addr)));
@@ -315,30 +360,27 @@ END_TEST
 
 START_TEST(test_watch_ip4_trunc)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"ipv4\",\"watch\":\"IP=0.0.0.0/24\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_IPV4, 24, 0, 0, {} };
 	size_t watch_len = offsetof(axa_p_watch_t, pat);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
-	ck_assert_str_eq(out, expected);
-	free(out);
+	ck_assert_int_eq(res, AXA_JSON_RES_FAILURE);
+	ck_assert_ptr_eq(out, NULL);
 }
 END_TEST
 
 START_TEST(test_watch_ip4_overflow)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"ipv4\",\"watch\":\"IP=12.34.56.78/24\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_IPV4, 24, 0, 0, {} };
 	size_t watch_len = sizeof(axa_p_watch_t);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	fail_unless(inet_aton("12.34.56.78", &(watch.pat.addr)));
 	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
-	ck_assert_str_eq(out, expected);
+	ck_assert_int_eq(res, AXA_JSON_RES_FAILURE);
+	ck_assert_ptr_eq(out, NULL);
 	free(out);
 }
 END_TEST
@@ -348,7 +390,7 @@ START_TEST(test_watch_ip6)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"ipv6\",\"watch\":\"IP=1:2:3:4:5:6::/48\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_IPV6, 48, 0, 0, {} };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + sizeof(struct in6_addr);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	fail_unless(inet_pton(AF_INET6, "1:2:3:4:5:6::", &(watch.pat.addr6)));
@@ -364,7 +406,7 @@ START_TEST(test_watch_dns)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, 0, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	ck_assert_int_eq(strlen((const char*)watch.pat.dns), 7);
@@ -380,7 +422,7 @@ START_TEST(test_watch_dns_wildcard)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=*.fsi.io\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, AXA_P_WATCH_FG_WILD, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
@@ -395,7 +437,7 @@ START_TEST(test_watch_dns_wildcard_all)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=*.\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, AXA_P_WATCH_FG_WILD, 0, { .dns="" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
@@ -410,7 +452,7 @@ START_TEST(test_watch_dns_shared)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io(shared)\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, AXA_P_WATCH_FG_SHARED, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
@@ -425,7 +467,7 @@ START_TEST(test_watch_ch)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"channel\",\"watch\":\"ch=ch123\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_CH, 0, 0, 0, { .ch=123 } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + sizeof(axa_p_ch_t);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
@@ -440,7 +482,7 @@ START_TEST(test_watch_errors)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"errors\",\"watch\":\"ERRORS\"}";
 	axa_p_watch_t watch = { AXA_P_WATCH_ERRORS, 0, 0, 0, { } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + watch_len, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
 	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
@@ -452,13 +494,7 @@ END_TEST
 
 START_TEST(test_watch_trunc)
 {
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_watch_t)-1, 1, AXA_P_PVERS, AXA_P_OP_WATCH };
-	axa_p_watch_t watch;
-	size_t watch_len = offsetof(axa_p_watch_t, pat) - 1;
-	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_FAILURE);
-	ck_assert_ptr_eq(out, NULL);
+	truncated_test(AXA_P_OP_OPT, axa_p_opt_t, offsetof(axa_p_watch_t, pat));
 }
 END_TEST
 
@@ -467,7 +503,21 @@ START_TEST(test_anom)
 	const char *expected = "{\"tag\":1,\"op\":\"ANOMALY\",\"an\":\"test_anom\",\"parms\":\"param1 param2\"}";
 	axa_p_anom_t anom = { {"test_anom"}, "param1 param2" };
 	size_t anom_len = offsetof(axa_p_anom_t, parms) + strlen(anom.parms) + 1;
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + anom_len, 1, AXA_P_PVERS, AXA_P_OP_ANOM };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + anom_len), 1, AXA_P_PVERS, AXA_P_OP_ANOM };
+	char *out = NULL;
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&anom, anom_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_anom_empty)
+{
+	const char *expected = "{\"tag\":1,\"op\":\"ANOMALY\",\"an\":\"test_anom\"}";
+	axa_p_anom_t anom = { {"test_anom"}, {} };
+	size_t anom_len = offsetof(axa_p_anom_t, parms) + offsetof(axa_p_anom_t, parms);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + anom_len), 1, AXA_P_PVERS, AXA_P_OP_ANOM };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&anom, anom_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
@@ -478,20 +528,14 @@ END_TEST
 
 START_TEST(test_anom_trunc)
 {
-	axa_p_anom_t anom;
-	size_t anom_len = offsetof(axa_p_anom_t, parms);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + anom_len, 1, AXA_P_PVERS, AXA_P_OP_ANOM };
-	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&anom, anom_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_FAILURE);
-	ck_assert_ptr_eq(out, NULL);
+	truncated_test(AXA_P_OP_ANOM, axa_p_anom_t, offsetof(axa_p_anom_t, parms) - 1);
 }
 END_TEST
 
 START_TEST(test_channel_on)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"CHANNEL ON/OFF\",\"channel\":\"ch123\",\"on\":true}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_channel_t), 1, AXA_P_PVERS, AXA_P_OP_CHANNEL };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + sizeof(axa_p_channel_t)), 1, AXA_P_PVERS, AXA_P_OP_CHANNEL };
 	axa_p_channel_t channel = { 123, true };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&channel, sizeof(channel), &out);
@@ -504,7 +548,7 @@ END_TEST
 START_TEST(test_channel_off)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"CHANNEL ON/OFF\",\"channel\":\"ch123\",\"on\":false}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_channel_t), 1, AXA_P_PVERS, AXA_P_OP_CHANNEL };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + sizeof(axa_p_channel_t)), 1, AXA_P_PVERS, AXA_P_OP_CHANNEL };
 	axa_p_channel_t channel = { 123, false };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&channel, sizeof(channel), &out);
@@ -517,7 +561,7 @@ END_TEST
 START_TEST(test_channel_all)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"CHANNEL ON/OFF\",\"channel\":\"all\",\"on\":true}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_channel_t), 1, AXA_P_PVERS, AXA_P_OP_CHANNEL };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + sizeof(axa_p_channel_t)), 1, AXA_P_PVERS, AXA_P_OP_CHANNEL };
 	axa_p_channel_t channel = { AXA_OP_CH_ALL, true };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&channel, sizeof(channel), &out);
@@ -529,7 +573,7 @@ END_TEST
 
 START_TEST(test_channel_trunc)
 {
-	truncated_test(AXA_P_OP_CHANNEL, axa_p_channel_t);
+	truncated_test(AXA_P_OP_CHANNEL, axa_p_channel_t, sizeof(axa_p_channel_t) - 1);
 }
 END_TEST
 
@@ -538,7 +582,7 @@ START_TEST(test_wlist)
 	const char *expected = "{\"tag\":1,\"op\":\"WATCH LIST\",\"cur_tag\":1,\"watch_type\":\"ipv4\",\"watch\":\"IP=12.34.56.0/24\"}";
 	axa_p_wlist_t wlist = { 1, {0,0}, { AXA_P_WATCH_IPV4, 24, 0, 0, {} }};
 	size_t wlist_len = offsetof(axa_p_wlist_t, w) + offsetof(axa_p_watch_t, pat) + sizeof(struct in_addr);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + wlist_len, 1, AXA_P_PVERS, AXA_P_OP_WLIST };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + wlist_len), 1, AXA_P_PVERS, AXA_P_OP_WLIST };
 	char *out = NULL;
 	axa_json_res_t res;
 	fail_unless(inet_aton("12.34.56.0", &(wlist.w.pat.addr)));
@@ -551,13 +595,7 @@ END_TEST
 
 START_TEST(test_wlist_trunc)
 {
-	axa_p_wlist_t wlist;
-	size_t wlist_len = offsetof(axa_p_wlist_t, w) + offsetof(axa_p_watch_t, pat) - 1;
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + wlist_len, 1, AXA_P_PVERS, AXA_P_OP_WLIST };
-	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&wlist, wlist_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_FAILURE);
-	ck_assert_ptr_eq(out, NULL);
+	truncated_test(AXA_P_OP_OPT, axa_p_opt_t, offsetof(axa_p_wlist_t, w) + offsetof(axa_p_watch_t, pat) - 1);
 }
 END_TEST
 
@@ -573,7 +611,7 @@ START_TEST(test_ahit)
 		.tv = { 1, 2 },
 		.ip_len = sizeof(packet),
 	}};
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + ahit_len, 1, AXA_P_PVERS, AXA_P_OP_AHIT };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + ahit_len), 1, AXA_P_PVERS, AXA_P_OP_AHIT };
 	char *out = NULL;
 	axa_json_res_t res;
 
@@ -590,7 +628,7 @@ END_TEST
 
 START_TEST(test_ahit_trunc)
 {
-	truncated_test(AXA_P_OP_AHIT, axa_p_ahit_t);
+	truncated_test(AXA_P_OP_AHIT, axa_p_ahit_t, offsetof(axa_p_ahit_t, whit) + sizeof(axa_p_whit_hdr_t) - 1);
 }
 END_TEST
 
@@ -599,7 +637,7 @@ START_TEST(test_alist)
 	const char *expected = "{\"tag\":1,\"op\":\"ANOMALY LIST\",\"cur_tag\":1,\"an\":\"test_anom\",\"parms\":\"param1 param2\"}";
 	axa_p_alist_t alist = { .cur_tag=1, .anom={ {"test_anom"}, "param1 param2" } };
 	size_t alist_len = offsetof(axa_p_alist_t, anom) + offsetof(axa_p_anom_t, parms) + strlen(alist.anom.parms) + 1;
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + alist_len, 1, AXA_P_PVERS, AXA_P_OP_ALIST };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + alist_len), 1, AXA_P_PVERS, AXA_P_OP_ALIST };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&alist, alist_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
@@ -610,20 +648,14 @@ END_TEST
 
 START_TEST(test_alist_trunc)
 {
-	axa_p_alist_t alist;
-	size_t alist_len = offsetof(axa_p_alist_t, anom) + offsetof(axa_p_anom_t, parms);
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + alist_len, 1, AXA_P_PVERS, AXA_P_OP_ALIST };
-	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&alist, alist_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_FAILURE);
-	ck_assert_ptr_eq(out, NULL);
+	truncated_test(AXA_P_OP_ALIST, axa_p_alist_t, offsetof(axa_p_alist_t, anom) + offsetof(axa_p_anom_t, parms) - 1);
 }
 END_TEST
 
 START_TEST(test_clist)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"CHANNEL LIST\",\"channel\":\"ch123\",\"on\":true,\"spec\":\"test channel\"}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_clist_t), 1, AXA_P_PVERS, AXA_P_OP_CLIST };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + sizeof(axa_p_clist_t)), 1, AXA_P_PVERS, AXA_P_OP_CLIST };
 	axa_p_clist_t clist = { 123, true, {"test channel"} };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&clist, sizeof(clist), &out);
@@ -635,14 +667,14 @@ END_TEST
 
 START_TEST(test_clist_trunc)
 {
-	truncated_test(AXA_P_OP_CLIST, axa_p_clist_t);
+	truncated_test(AXA_P_OP_CLIST, axa_p_clist_t, sizeof(axa_p_clist_t) - 1);
 }
 END_TEST
 
 START_TEST(test_user)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"USER\",\"name\":\"test user\"}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_user_t), 1, AXA_P_PVERS, AXA_P_OP_USER };
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + sizeof(axa_p_user_t)), 1, AXA_P_PVERS, AXA_P_OP_USER };
 	axa_p_user_t user = { {"test user"} };
 	char *out = NULL;
 	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&user, sizeof(user), &out);
@@ -654,17 +686,18 @@ END_TEST
 
 START_TEST(test_user_trunc)
 {
-	truncated_test(AXA_P_OP_USER, axa_p_user_t);
+	truncated_test(AXA_P_OP_USER, axa_p_user_t, 0);
 }
 END_TEST
 
 START_TEST(test_opt_trace)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"TRACE\",\"trace\":3}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_opt_t), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	axa_p_opt_t opt = { AXA_P_OPT_TRACE, {}, { .trace=AXA_H2P32(AXA_DEBUG_TRACE) } };
+	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.trace);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, sizeof(opt), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -674,10 +707,11 @@ END_TEST
 START_TEST(test_opt_trace_req)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"TRACE\",\"trace\":\"REQUEST TRACE VALUE\"}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_opt_t), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	axa_p_opt_t opt = { AXA_P_OPT_TRACE, {}, { .trace=AXA_H2P32(AXA_P_OPT_TRACE_REQ) } };
+	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.trace);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, sizeof(opt), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -687,14 +721,15 @@ END_TEST
 START_TEST(test_opt_rlimit_num)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"RATE LIMIT\",\"max_pkts_per_sec\":123,\"cur_pkts_per_sec\":456,\"report_secs\":60}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_opt_t), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	axa_p_opt_t opt = { AXA_P_OPT_RLIMIT, {}, { .rlimit={
 		.max_pkts_per_sec=AXA_H2P64(123),
 		.cur_pkts_per_sec=AXA_H2P64(456),
 		.report_secs=AXA_H2P64(60),
 	} } };
+	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.rlimit);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, sizeof(opt), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -704,14 +739,15 @@ END_TEST
 START_TEST(test_opt_rlimit_max)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"RATE LIMIT\",\"max_pkts_per_sec\":1000000000,\"cur_pkts_per_sec\":123,\"report_secs\":60}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_opt_t), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	axa_p_opt_t opt = { AXA_P_OPT_RLIMIT, {}, { .rlimit={
 		.max_pkts_per_sec=AXA_H2P64(AXA_RLIMIT_MAX),
 		.cur_pkts_per_sec=AXA_H2P64(123),
 		.report_secs=AXA_H2P64(60),
 	} } };
+	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.rlimit);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, sizeof(opt), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -721,14 +757,15 @@ END_TEST
 START_TEST(test_opt_rlimit_off)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"RATE LIMIT\",\"max_pkts_per_sec\":\"off\",\"cur_pkts_per_sec\":123,\"report_secs\":60}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_opt_t), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	axa_p_opt_t opt = { AXA_P_OPT_RLIMIT, {}, { .rlimit={
 		.max_pkts_per_sec=AXA_H2P64(AXA_RLIMIT_OFF),
 		.cur_pkts_per_sec=AXA_H2P64(123),
 		.report_secs=AXA_H2P64(60),
 	} } };
+	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.rlimit);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, sizeof(opt), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -738,14 +775,15 @@ END_TEST
 START_TEST(test_opt_rlimit_na)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"RATE LIMIT\",\"max_pkts_per_sec\":null,\"cur_pkts_per_sec\":123,\"report_secs\":null}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_opt_t), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	axa_p_opt_t opt = { AXA_P_OPT_RLIMIT, {}, { .rlimit={
 		.max_pkts_per_sec=AXA_H2P64(AXA_RLIMIT_NA),
 		.cur_pkts_per_sec=AXA_H2P64(123),
 		.report_secs=AXA_H2P64(AXA_RLIMIT_NA),
 	} } };
+	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.rlimit);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, sizeof(opt), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -756,10 +794,11 @@ END_TEST
 START_TEST(test_opt_sample)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"SAMPLE\",\"sample\":123}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_opt_t), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	axa_p_opt_t opt = { AXA_P_OPT_SAMPLE, {}, { .sample=AXA_H2P32(123) } };
+	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.sample);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, sizeof(opt), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -769,10 +808,11 @@ END_TEST
 START_TEST(test_opt_sndbuf)
 {
 	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"SNDBUF\",\"bufsize\":123}";
-	axa_p_hdr_t hdr = { sizeof(axa_p_hdr_t) + sizeof(axa_p_opt_t), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	axa_p_opt_t opt = { AXA_P_OPT_SNDBUF, {}, { .bufsize=AXA_H2P32(123) } };
+	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.bufsize);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_OPT };
 	char *out = NULL;
-	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, sizeof(opt), &out);
+	axa_json_res_t res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&opt, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -781,13 +821,27 @@ END_TEST
 
 START_TEST(test_opt_trunc)
 {
-	truncated_test(AXA_P_OP_OPT, axa_p_opt_t);
+	truncated_test(AXA_P_OP_OPT, axa_p_opt_t, offsetof(axa_p_opt_t, u));
 }
 END_TEST
 
 START_TEST(test_join)
 {
-	empty_test(AXA_P_OP_JOIN, "JOIN");
+	axa_p_join_t join = { 0 };
+	size_t watch_len = sizeof(axa_p_join_t);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_JOIN };
+	char *out = NULL;
+	axa_json_res_t res;
+	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&join, watch_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, "{\"tag\":\"*\",\"op\":\"JOIN\",\"id\":0}");
+	free(out);
+}
+END_TEST
+
+START_TEST(test_join_trunc)
+{
+	truncated_test(AXA_P_OP_JOIN, axa_p_join_t, sizeof(axa_p_join_t) - 1);
 }
 END_TEST
 
@@ -851,9 +905,67 @@ START_TEST(test_mgmt_get)
 }
 END_TEST
 
-START_TEST(test_mgmt_getrsp)
+START_TEST(test_mgmt_getrsp_sra)
 {
-	empty_test(AXA_P_OP_MGMT_GETRSP, "MGMT GET RSPNS");
+	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSPNS\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[{\"watch_cnt\":1,\"channels\":[\"ch16\"]},{\"watch_cnt\":2,\"channels\":[\"ch17\"]}]}";
+	axa_p_mgmt_t mgmt_data = { { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}, {}};
+	axa_p_mgmt_user_sra_t users[2] = { {.watch_cnt=1}, {.watch_cnt=2} };
+	size_t watch_len = offsetof(axa_p_mgmt_t, b) + sizeof(users);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
+	axa_p_mgmt_t *mgmt = alloca(watch_len);
+	char *out = NULL;
+	axa_json_res_t res;
+
+	axa_set_bitwords(users[0].ch_mask.m, 16);
+	axa_set_bitwords(users[1].ch_mask.m, 17);
+
+	*mgmt = mgmt_data;
+	memcpy(((char*)mgmt) + offsetof(axa_p_mgmt_t, b), users, sizeof(users));
+	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)mgmt, watch_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_mgmt_getrsp_rad)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSPNS\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[{\"an_cnt\":1},{\"an_cnt\":2}]}";
+	axa_p_mgmt_t mgmt_data = { { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}, {}};
+	axa_p_mgmt_user_rad_t users[2] = { {1}, {2} };
+	size_t watch_len = offsetof(axa_p_mgmt_t, b) + sizeof(users);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
+	axa_p_mgmt_t *mgmt = alloca(watch_len);
+	char *out = NULL;
+	axa_json_res_t res;
+
+	*mgmt = mgmt_data;
+	memcpy(((char*)mgmt) + offsetof(axa_p_mgmt_t, b), users, sizeof(users));
+	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)mgmt, watch_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_mgmt_getrsp_no_users)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSPNS\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[]}";
+	axa_p_mgmt_t mgmt = { { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, {}, {}};
+	size_t watch_len = offsetof(axa_p_mgmt_t, b);
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
+	char *out = NULL;
+	axa_json_res_t res;
+	res = axa_body_to_json(nmsg_input, &hdr, (axa_p_body_t*)&mgmt, watch_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_mgmt_getrsp_trunc)
+{
+	truncated_test(AXA_P_OP_MGMT_GETRSP, axa_p_mgmt_t, offsetof(axa_p_mgmt_t, b) - 1);
 }
 END_TEST
 
@@ -875,6 +987,7 @@ int main(void) {
 	tc_core = tcase_create("core");
 	tcase_add_test(tc_core, test_nop);
 	tcase_add_test(tc_core, test_hello);
+	tcase_add_test(tc_core, test_hello_empty);
 	tcase_add_test(tc_core, test_hello_trunc);
 	tcase_add_test(tc_core, test_ok);
 	tcase_add_test(tc_core, test_ok_trunc);
@@ -904,6 +1017,7 @@ int main(void) {
 	tcase_add_test(tc_core, test_watch_errors);
 	tcase_add_test(tc_core, test_watch_trunc);
 	tcase_add_test(tc_core, test_anom);
+	tcase_add_test(tc_core, test_anom_empty);
 	tcase_add_test(tc_core, test_anom_trunc);
 	tcase_add_test(tc_core, test_channel_on);
 	tcase_add_test(tc_core, test_channel_off);
@@ -929,6 +1043,7 @@ int main(void) {
 	tcase_add_test(tc_core, test_opt_sndbuf);
 	tcase_add_test(tc_core, test_opt_trunc);
 	tcase_add_test(tc_core, test_join);
+	tcase_add_test(tc_core, test_join_trunc);
 	tcase_add_test(tc_core, test_pause);
 	tcase_add_test(tc_core, test_go);
 	tcase_add_test(tc_core, test_wget);
@@ -939,7 +1054,10 @@ int main(void) {
 	tcase_add_test(tc_core, test_acct);
 	tcase_add_test(tc_core, test_radu);
 	tcase_add_test(tc_core, test_mgmt_get);
-	tcase_add_test(tc_core, test_mgmt_getrsp);
+	tcase_add_test(tc_core, test_mgmt_getrsp_sra);
+	tcase_add_test(tc_core, test_mgmt_getrsp_rad);
+	tcase_add_test(tc_core, test_mgmt_getrsp_no_users);
+	tcase_add_test(tc_core, test_mgmt_getrsp_trunc);
 	suite_add_tcase(s, tc_core);
 
 	sr = srunner_create(s);
