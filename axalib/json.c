@@ -28,6 +28,9 @@
 #include <stdlib.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#ifdef __linux
+#define __FAVOR_BSD
+#endif
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
 
