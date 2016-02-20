@@ -29,6 +29,8 @@ nmsg_input_t nmsg_input;
 	case AXA_P_OP_STOP: \
 		hdr.tag = AXA_H2P_TAG(1); \
 		break; \
+	default: \
+		break; \
 	} \
 	res = axa_body_to_json(&emsg, nmsg_input, &hdr, 0, 0, &out); \
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS); \
@@ -53,6 +55,8 @@ nmsg_input_t nmsg_input;
 	case AXA_P_OP_ANOM: \
 	case AXA_P_OP_STOP: \
 		hdr.tag = AXA_H2P_TAG(1); \
+		break; \
+	default: \
 		break; \
 	} \
 	memset(&type, 0, sizeof(type)); \
