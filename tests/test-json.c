@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include <axa/json.h>
+#include <axa/axa_endian.h>
+#include <axa/protocol.h>
 #include <axa/wire.h>
 #include <check.h>
 #include <nmsg/container.h>
