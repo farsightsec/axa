@@ -35,6 +35,7 @@
 #include <netinet/tcp.h>
 
 #include <axa/axa.h>
+#include <axa/axa_endian.h>
 #include <axa/fields.h>
 #include <axa/strbuf.h>
 #include <axa/wire.h>
