@@ -152,13 +152,6 @@ pkgconfig_DATA = axa/libaxa.pc
 EXTRA_DIST += axa/libaxa.pc.in
 DISTCLEANFILES += axa/libaxa.pc
 
-#
-##
-### tests
-##
-#
-
-# there are no tests
 
 #
 ##
