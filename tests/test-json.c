@@ -837,7 +837,7 @@ END_TEST
 
 START_TEST(test_opt_sample)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"SAMPLE\",\"sample\":123}";
+	const char *expected = "{\"tag\":1,\"op\":\"OPTION\",\"type\":\"SAMPLE\",\"sample\":0.000123}";
 	axa_emsg_t emsg;
 	axa_p_opt_t opt = { AXA_P_OPT_SAMPLE, {}, { .sample=AXA_H2P32(123) } };
 	size_t watch_len = offsetof(axa_p_opt_t, u) + sizeof(opt.u.sample);
