@@ -101,6 +101,7 @@ The AXA suite has the following external dependencies:
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed
     on BSDish systems)
  * [libssl](http://openssl.org/)
+ * [check](http://check.sourceforge.net/doc/check_html/)
 
 Optional dependency:
 
@@ -131,6 +132,7 @@ On Debian systems, the following packages should be installed:
  * `libwdns-dev (>= 0.6.0)`
  * `libnmsg-dev (>= 0.9.1)`
  * `nmsg-msg-module-sie-dev (>= 1.0.0)`
+ * `check`
 
 The binary packages of AXA and its dependencies are available from 
 [a Debian package repository maintained by Farsight Security](https://archive.farsightsecurity.com/SIE_Software_Installation_Debian/). These packages should be

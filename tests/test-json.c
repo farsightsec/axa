@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include <axa/json.h>
+#include <axa/axa_endian.h>
+#include <axa/protocol.h>
 #include <axa/wire.h>
 #include <check.h>
 #include <nmsg/container.h>
@@ -26,6 +28,8 @@ nmsg_input_t nmsg_input;
 	case AXA_P_OP_ANOM: \
 	case AXA_P_OP_STOP: \
 		hdr.tag = AXA_H2P_TAG(1); \
+		break; \
+	default: \
 		break; \
 	} \
 	res = axa_body_to_json(&emsg, nmsg_input, &hdr, 0, 0, &out); \
@@ -51,6 +55,8 @@ nmsg_input_t nmsg_input;
 	case AXA_P_OP_ANOM: \
 	case AXA_P_OP_STOP: \
 		hdr.tag = AXA_H2P_TAG(1); \
+		break; \
+	default: \
 		break; \
 	} \
 	memset(&type, 0, sizeof(type)); \
@@ -318,9 +324,9 @@ END_TEST
 
 START_TEST(test_whit_ip6)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH HIT\",\"channel\":\"ch123\",\"time\":\"1970-01-01 00:00:01.000002\",\"af\":\"IPv6\",\"src\":\"1:2:3:4:5:6:7:8\",\"dst\":\"9:0:a:b:c:d:e:f\",\"ttl\":255,\"proto\":\"UDP\",\"src_port\":123,\"dst_port\":456,\"payload\":\"3q2+7w==\"}";
+	const char *expected = "{\"tag\":1,\"op\":\"WATCH HIT\",\"channel\":\"ch123\",\"time\":\"1970-01-01 00:00:01.000002\",\"af\":\"IPv6\",\"src\":\"1:2:3:4:5:6:7:8\",\"dst\":\"9:b:a:b:c:d:e:f\",\"ttl\":255,\"proto\":\"UDP\",\"src_port\":123,\"dst_port\":456,\"payload\":\"3q2+7w==\"}";
 	axa_emsg_t emsg;
-	uint8_t packet[] = "\x60\x00\x00\x00\x00\x0c\x11\xff\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05\x00\x06\x00\x07\x00\x08\x00\x09\x00\x00\x00\x0a\x00\x0b\x00\x0c\x00\x0d\x00\x0e\x00\x0f\x00\x7b\x01\xc8\x00\x0c\x5f\x7e\xde\xad\xbe\xef";
+	uint8_t packet[] = "\x60\x00\x00\x00\x00\x0c\x11\xff\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05\x00\x06\x00\x07\x00\x08\x00\x09\x00\x0b\x00\x0a\x00\x0b\x00\x0c\x00\x0d\x00\x0e\x00\x0f\x00\x7b\x01\xc8\x00\x0c\x5f\x7e\xde\xad\xbe\xef";
 	size_t whit_len = offsetof(axa_p_whit_ip_t, b) + sizeof(packet) - 1;
 	axa_p_whit_ip_t *whit = alloca(whit_len);
 	axa_p_whit_ip_t whit_data = { .hdr={

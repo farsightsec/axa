@@ -28,10 +28,14 @@
 #include <stdlib.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#ifdef __linux
+#define __FAVOR_BSD
+#endif
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
 
 #include <axa/axa.h>
+#include <axa/axa_endian.h>
 #include <axa/fields.h>
 #include <axa/strbuf.h>
 #include <axa/wire.h>
@@ -211,7 +215,7 @@ add_whit(axa_emsg_t *emsg, yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t 
 		char when[32];
 
 		if (whit_len < sizeof(axa_p_whit_nmsg_t)) {
-			axa_pemsg(emsg, "whit_len %" PRIu64 " < %" PRIu64, whit_len, sizeof(axa_p_whit_nmsg_t));
+			axa_pemsg(emsg, "whit_len %zu < %zu", whit_len, sizeof(axa_p_whit_nmsg_t));
 			return (AXA_JSON_RES_FAILURE);
 		}
 
@@ -289,7 +293,8 @@ add_whit(axa_emsg_t *emsg, yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t 
 		char when[32];
 
 		if (whit_len < sizeof(axa_p_whit_ip_t)) {
-			axa_pemsg(emsg, "whit_len %" PRIu64 " < %" PRIu64, whit_len, sizeof(axa_p_whit_ip_t));
+			axa_pemsg(emsg, "whit_len %zu < %zu",
+					whit_len, sizeof(axa_p_whit_ip_t));
 			return (AXA_JSON_RES_FAILURE);
 		}
 
@@ -482,8 +487,9 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 		return (AXA_JSON_RES_FAILURE);
 
 	if (AXA_P2H32(hdr->len) - sizeof(axa_p_hdr_t) != body_len) {
-		axa_pemsg(emsg, "body length mismatch %" PRIu64 " != %" PRIu64,
-				AXA_P2H32(hdr->len) - sizeof(axa_p_hdr_t), body_len);
+		axa_pemsg(emsg, "body length mismatch %zu != %zu",
+				AXA_P2H32(hdr->len) - sizeof(axa_p_hdr_t),
+				body_len);
 		return (AXA_JSON_RES_FAILURE);
 	}
 
@@ -796,7 +802,8 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 				close_yajl_map(g);
 			}
 		} else {
-			axa_pemsg(emsg, "invalid users length %" PRIu64, body_len - offsetof(axa_p_mgmt_t, b));
+			axa_pemsg(emsg, "invalid users length %zu",
+					body_len - offsetof(axa_p_mgmt_t, b));
 			res = AXA_JSON_RES_FAILURE;
 			goto err;
 		}

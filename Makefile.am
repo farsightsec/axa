@@ -152,13 +152,6 @@ pkgconfig_DATA = axa/libaxa.pc
 EXTRA_DIST += axa/libaxa.pc.in
 DISTCLEANFILES += axa/libaxa.pc
 
-#
-##
-### tests
-##
-#
-
-# there are no tests
 
 #
 ##
@@ -300,4 +293,4 @@ TESTS += tests/test-json
 check_PROGRAMS += tests/test-json
 tests_test_json_SOURCES = tests/test-json.c
 tests_test_json_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
-tests_test_json_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS}
+tests_test_json_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
