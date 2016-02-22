@@ -676,7 +676,7 @@ as described above
 
 ### JSON Format ###
 
-Full documentation pending.
+See the [JSON schema](json-schema.yaml) describing the JSON output format.
 
 ```json
 {"tag":4,"op":"HELLO","id":1,"pvers_min":2,"pvers_max":3,"str":"hello"}
