@@ -266,6 +266,9 @@ definitions:
                                 $ref: "#/definitions/channel_str"
                         nmsg:
                                 $ref: "#/definitions/nmsg"
+                        field:
+                                description: triggering field name
+                                type: string
                         field_idx:
                                 description: triggering field index
                                 type: integer
@@ -287,6 +290,11 @@ definitions:
                         time:
                                 description: timestamp when the NMSG message was reported
                                 type: string
+                oneOf:
+                        - required:
+                                - field
+                        - required:
+                                - field_idx
                 required:
                         - nmsg
                         - channel

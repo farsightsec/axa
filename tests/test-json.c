@@ -194,7 +194,7 @@ END_TEST
 
 START_TEST(test_whit_nmsg)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH HIT\",\"channel\":\"ch123\",\"field_idx\":1,\"val_idx\":2,\"vname\":\"base\",\"mname\":\"pkt\",\"time\":\"1970-01-01 00:00:01.000000002\",\"nmsg\":{\"time\":\"1970-01-01 00:00:01.000000002\",\"vname\":\"base\",\"mname\":\"pkt\",\"message\":{\"len_frame\":32,\"payload\":\"RQAAIBI0QAD/EVmFAQIDBAUGBwgAewHIAAxP4t6tvu8=\"}}}";
+	const char *expected = "{\"tag\":1,\"op\":\"WATCH HIT\",\"channel\":\"ch123\",\"field\":\"payload\",\"val_idx\":2,\"vname\":\"base\",\"mname\":\"pkt\",\"time\":\"1970-01-01 00:00:01.000000002\",\"nmsg\":{\"time\":\"1970-01-01 00:00:01.000000002\",\"vname\":\"base\",\"mname\":\"pkt\",\"message\":{\"len_frame\":32,\"payload\":\"RQAAIBI0QAD/EVmFAQIDBAUGBwgAewHIAAxP4t6tvu8=\"}}}";
 	axa_emsg_t emsg;
 	nmsg_container_t container;
 	nmsg_msgmod_t mod;

@@ -210,12 +210,18 @@ add_whit(axa_emsg_t *emsg, yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t 
 		axa_w2n_res_t wres;
 		nmsg_res nres;
 		const char *vname, *mname;
+		char *nmsg_json = NULL;
 		struct tm tm;
 		time_t t;
 		char when[32];
 
 		if (whit_len < sizeof(axa_p_whit_nmsg_t)) {
 			axa_pemsg(emsg, "whit_len %zu < %zu", whit_len, sizeof(axa_p_whit_nmsg_t));
+			return (AXA_JSON_RES_FAILURE);
+		}
+
+		wres = axa_whit2nmsg(emsg, nmsg_input, &msg, whit, whit_len);
+		if (wres != AXA_W2N_RES_SUCCESS) {
 			return (AXA_JSON_RES_FAILURE);
 		}
 
@@ -226,8 +232,15 @@ add_whit(axa_emsg_t *emsg, yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t 
 		}
 
 		if(AXA_P2H_IDX(whit->nmsg.hdr.field_idx) < AXA_NMSG_IDX_RSVD) {
-			add_yajl_string(g, "field_idx");
-			add_yajl_integer(g, AXA_P2H_IDX(whit->nmsg.hdr.field_idx));
+			const char *field_name;
+			nres = nmsg_message_get_field_name(msg, whit->nmsg.hdr.field_idx, &field_name);
+			if (nres == nmsg_res_success) {
+				add_yajl_string(g, "field");
+				add_yajl_string(g, field_name);
+			} else {
+				add_yajl_string(g, "field_idx");
+				add_yajl_integer(g, AXA_P2H_IDX(whit->nmsg.hdr.field_idx));
+			}
 		}
 
 		if (AXA_P2H_IDX(whit->nmsg.hdr.val_idx) < AXA_NMSG_IDX_RSVD) {
@@ -265,23 +278,20 @@ add_whit(axa_emsg_t *emsg, yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t 
 				AXA_P2H32(whit->nmsg.hdr.ts.tv_nsec));
 		add_yajl_string(g, sb->data);
 
-		wres = axa_whit2nmsg(emsg, nmsg_input, &msg, whit, whit_len);
-		if (wres == AXA_W2N_RES_SUCCESS) {
-			char *nmsg_json = NULL;
-			nres = nmsg_message_to_json(msg, &nmsg_json);
-			if (nres == nmsg_res_success) {
-				add_yajl_string(g, "nmsg");
-				add_yajl_integer(g, 0);
+		nres = nmsg_message_to_json(msg, &nmsg_json);
+		if (nres == nmsg_res_success) {
+			add_yajl_string(g, "nmsg");
+			add_yajl_integer(g, 0);
 
-				yajl_gen_clear(g);
-				axa_strbuf_clip(yajl_sb, axa_strbuf_len(yajl_sb)-1);
-				axa_strbuf_append(yajl_sb, "%s", nmsg_json);
-				free(nmsg_json);
-			}
-			nmsg_message_destroy(&msg);
+			yajl_gen_clear(g);
+			axa_strbuf_clip(yajl_sb, axa_strbuf_len(yajl_sb)-1);
+			axa_strbuf_append(yajl_sb, "%s", nmsg_json);
+			free(nmsg_json);
 		}
 
 		axa_strbuf_destroy(&sb);
+		nmsg_message_destroy(&msg);
+
 		return (AXA_JSON_RES_SUCCESS);
 	}
 	case AXA_P_WHIT_IP: {
