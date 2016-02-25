@@ -190,7 +190,7 @@ definitions:
                                 description: "The number of packets (SIE messages or raw IP packets) lost in the network between the source and the SRA server or dropped by the SRA server because it was too busy."
                                 $ref: "#/definitions/count"
                         dropped:
-                                description: by SRA client-server congestion */
+                                description: by SRA client-server congestion
                                 $ref: "#/definitions/count"
                         rlimit:
                                 description: dropped by rate limiting
@@ -199,7 +199,7 @@ definitions:
                                 description: total considered
                                 $ref: "#/definitions/count"
                         last_report:
-                                description: UNIX epoch of previous report */
+                                description: UNIX epoch of previous report
                                 $ref: "#/definitions/time"
                 required:
                         - missed
@@ -213,28 +213,28 @@ definitions:
                         op:
                                 enum: [ RAD MISSED ]
                         sra_missed:
-                                description: missed by all SRA servers */
+                                description: missed by all SRA servers
                                 $ref: "#/definitions/count"
                         sra_dropped:
-                                description: for SRA client-server congestion */
+                                description: for SRA client-server congestion
                                 $ref: "#/definitions/count"
                         sra_rlimit:
-                                description: discarded to SRA rate limit */
+                                description: discarded to SRA rate limit
                                 $ref: "#/definitions/count"
                         sra_filtered:
-                                description: considered by SRA servers */
+                                description: considered by SRA servers
                                 $ref: "#/definitions/count"
                         dropped:
-                                description: for RAD client-server congestion */
+                                description: for RAD client-server congestion
                                 $ref: "#/definitions/count"
                         rlimit:
-                                description: discarded to RAD rate limit */
+                                description: discarded to RAD rate limit
                                 $ref: "#/definitions/count"
                         filtered:
-                                description: considered by RAD modules */
+                                description: considered by RAD modules
                                 $ref: "#/definitions/count"
                         last_report:
-                                description: UNIX epoch of previous report */
+                                description: UNIX epoch of previous report
                                 $ref: "#/definitions/time"
                 required:
                         - sra_missed
