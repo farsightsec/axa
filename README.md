@@ -167,8 +167,8 @@ authentication keys and submit the public half to Farsight Security.
 As of the time of this writing, the SRA and RAD servers answer at the following 
 addresses via the SSH transport:
 
- * **SRA**: `sra-service@sra-eft.sie-remote.net`
- * **RAD**: `rad-service@rad-eft.sie-remote.net`
+ * **SRA**: `sra-service@sra.sie-remote.net`
+ * **RAD**: `rad-service@rad.sie-remote.net`
 
 Incoming SRA or RAD connections are handled on TCP port 22 by the SSH server.
 
@@ -185,7 +185,7 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
  2. You will need to create or edit your `~/.ssh/config` file to specify the
     private half of the SSH key pair for the SRA and RAD servers:
 
-        Host sra-eft.sie-remote.net rad-eft.sie-remote.net
+        Host sra.sie-remote.net rad.sie-remote.net
             IdentityFile ~/.ssh/farsight-axa-id_rsa
 
  3. Email your public key (`~/.ssh/farsight-axa-id_rsa.pub`) to your Farsight
@@ -198,8 +198,8 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
 As of the time of this writing, the SRA and RAD servers answer at the following 
 addresses via the TLS transport:
 
- * **SRA**: sra-eft.sie-remote.net,1021
- * **RAD**: rad-eft.sie-remote.net,1022
+ * **SRA**: sra.sie-remote.net,1021
+ * **RAD**: rad.sie-remote.net,1022
 
 The TCP port numbers 1021 and 1022 are IANA "[RFC3692](https://tools.ietf.org/html/rfc3692)-style Experiment 1" port numbers and were chosen in consideration
 of that document.
@@ -233,7 +233,7 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
     bu connecting to either SRA or RAD since they both share the same TLS
     certificate:
 
-        # axa_server_cert -s sra-eft.sie-remote.net,1021
+        # axa_server_cert -s sra.sie-remote.net,1021
         Obtained certificate for "farsight" with
         SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
         Install it in /usr/local/etc/axa/certs/farsight.pem? yes
@@ -255,8 +255,8 @@ SIE channel 212 (Newly Observed Domains):
 
 ~~~
 $ sratool 
-sra> connect ssh:sra-service@sra-eft.sie-remote.net
-* HELLO srad version 1.2.1 sra-eft AXA protocol 1
+sra> connect ssh:sra-service@sra.sie-remote.net
+* HELLO srad version 1.2.1 sra AXA protocol 1
 sra> count 5
 sra> channel 212 on
 * OK CHANNEL ON/OFF channel ch212 on
@@ -277,7 +277,7 @@ packet count limit exceeded
 sra> exit
 ~~~
 
- 1. `sra> connect ssh:sra-service@sra-eft.sie-remote.net`: we connected to 
+ 1. `sra> connect ssh:sra-service@sra.sie-remote.net`: we connected to 
     an SRA server using the SSH transport. SSH used its keyring to prove 
     the user's identity, so there was no 'password:' prompt. The `HELLO`
     response from the remote end tells us its version number and the protocol
@@ -297,8 +297,8 @@ Next, we introduce in-line connections and show rate limiting of SIE channel
 204 (filtered passive DNS RRsets):
 
 ~~~
-$ sratool 'connect sra-service@sra-eft.sie-remote.net'
-* HELLO srad version 1.2.1 sra-eft AXA protocol 1
+$ sratool 'connect sra-service@sra.sie-remote.net'
+* HELLO srad version 1.2.1 sra AXA protocol 1
 sra> count 5
 sra> limit 1 5
 * OPTION Rate LIMIT
@@ -331,7 +331,7 @@ packet count limit exceeded
 sra> exit
 ~~~
 
- 1. `sratool 'connect sra-service@sra-eft.sie-remote.net':` we put our
+ 1. `sratool 'connect sra-service@sra.sie-remote.net':` we put our
     first `sratool` subcommand on the command line of `sratool` itself. This is
     a shortcut that allows the first subcommand to come from the command line, 
     while subsequent subdomains wil come from the control terminal.
@@ -354,7 +354,7 @@ view them with `nmsgtool` and watch packet flow via `tcpdump`.
 First we invoke `sratunnel`:
 
 ~~~
-$ sratunnel -s 'ssh sra-service@sra-eft.sie-remote.net' -c ch212 \
+$ sratunnel -s 'ssh sra-service@sra.sie-remote.net' -c ch212 \
 -w 'ch=212' -o nmsg:127.0.0.1,5000 &
 [2]+ sratunnel ...
 ~~~
@@ -413,7 +413,7 @@ $ kill %sratunnel
 [2]- Exit 15 sratunnel ...
 ~~~
 
- 1. `sratunnel -s 'ssh sra-service@sra-eft.sie-remote.net' -c ch212 -w 'ch=212' -o nmsg:127.0.0.1,5000 &`:
+ 1. `sratunnel -s 'ssh sra-service@sra.sie-remote.net' -c ch212 -w 'ch=212' -o nmsg:127.0.0.1,5000 &`:
     here, we started a background process to access remote SIE channel 212, and
     to deposit all received messages in NMSG format using UDP on a local socket
     (host 127.0.0.1, port 5000). As before, no IP address or DNS name filters
@@ -434,8 +434,8 @@ in either of these feeds is often considered anomalous and worthy of deeper
 investigation.
 
 ~~~
-rad> connect ssh:rad-service@rad-eft.sie-remote.net
-* HELLO radd version 1.2.1 rad-eft AXA protocol 1
+rad> connect ssh:rad-service@rad.sie-remote.net
+* HELLO radd version 1.2.1 rad AXA protocol 1
 rad> count 5
 rad> 1 watch ip=0.0.0.0/1
 1 OK WATCH saved
@@ -458,7 +458,7 @@ packet count limit exceeded
 rad> exit
 ~~~
 
- 1. `rad> connect ssh:rad-service@rad-eft.sie-remote.net`: we connected to 
+ 1. `rad> connect ssh:rad-service@rad.sie-remote.net`: we connected to 
     a RAD server using the SSH transport. SSH used its keyring to prove 
     the user's identity, so there was no 'password:' prompt. The `HELLO`
     response from the remote end tells us its version number and the protocol
