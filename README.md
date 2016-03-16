@@ -176,11 +176,14 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
 
  1. Generate a new SSH authentication key pair with `ssh-keygen`:
 
-        $ ssh-keygen -t rsa -b 4096
-        Generating public/private rsa key pair.
-        Enter file in which to save the key (/home/user/.ssh/id_rsa):
-        /home/user/.ssh/farsight-axa-id_rsa
-        ...
+	$ ssh-keygen -t rsa -b 4096 -f ~/.ssh/farsight-axa-id_rsa
+	Generating public/private rsa key pair.
+	Enter passphrase (empty for no passphrase): 
+	Enter same passphrase again: 
+	Your identification has been saved in /home/user/.ssh/farsight-axa-id_rsa.
+	Your public key has been saved in /home/user/.ssh/farsight-axa-id_rsa.pub.
+	The key fingerprint is:
+	SHA256...
 
  2. You will need to create or edit your `~/.ssh/config` file to specify the
     private half of the SSH key pair for the SRA and RAD servers:
