@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014-2015 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2016 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 .Nm radtunnel
 .Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
-.Op Fl VdOR
+.Op Fl VdORz
 .Op Fl C Ar count
 .Op Fl r Ar rate-limit
 .Op Fl E Ar ciphers
@@ -72,6 +72,8 @@ is required
 and
 .Fl c
 is not allowed.
+.It Fl z
+enable nmsg zlib container compression.
 .It Fl C Ar count
 stops
 .Nm

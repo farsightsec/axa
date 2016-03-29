@@ -39,6 +39,8 @@ if test -n "$PKG_CONFIG"; then
     fi
 fi
 
+LT_LIB_M
+
 MY_CHECK_LIBPCAP
 
 MY_CHECK_LIBPROTOBUF_C
@@ -64,6 +66,17 @@ PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
 AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
 AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
+
+AC_ARG_WITH([yajl], AS_HELP_STRING([--without-yajl], [Disable yajl support]))
+if test "x$with_yajl" != "xno"; then
+	PKG_CHECK_MODULES([yajl], [yajl >= 2.1.0])
+	AC_DEFINE([HAVE_YAJL], [1], [Define to 1 if yajl support is enabled.])
+	use_yajl="true"
+else
+	use_yajl="false"
+fi
+
+PKG_CHECK_MODULES([check], [check])
 
 AC_PATH_PROG([DOXYGEN], [doxygen])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
@@ -110,6 +123,7 @@ AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),
 [TLS_CIPHERS="$withval"],[TLS_CIPHERS="ALL"])
 AC_DEFINE_UNQUOTED(TLS_CIPHERS,"$TLS_CIPHERS",[TLS cipher list])
 
+
 AC_OUTPUT
 AC_MSG_RESULT([
     $PACKAGE $VERSION
@@ -128,4 +142,5 @@ AC_MSG_RESULT([
         building html docs:     ${DOC_HTML_MSG}
 
 	TLS ciphers:		$TLS_CIPHERS
+	yajl support:           ${use_yajl}
 ])

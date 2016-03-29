@@ -51,7 +51,6 @@ their "sra-" counterparts and the program logic is such that it detects its
 filename and invokes itself in RAD mode. 
 
 ## SRA Filtering
-
 Of note, SRA can perform filtering. This feature is highly desirable due to the
 very high volume of data carried by SIE which can burst to hundreds of megabits
 per second in a single channel. On the flip side, when using SRA to access low 
@@ -102,6 +101,7 @@ The AXA suite has the following external dependencies:
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed
     on BSDish systems)
  * [libssl](http://openssl.org/)
+ * [check](http://check.sourceforge.net/doc/check_html/)
 
 Optional dependency:
 
@@ -132,6 +132,7 @@ On Debian systems, the following packages should be installed:
  * `libwdns-dev (>= 0.6.0)`
  * `libnmsg-dev (>= 0.9.1)`
  * `nmsg-msg-module-sie-dev (>= 1.0.0)`
+ * `check`
 
 The binary packages of AXA and its dependencies are available from 
 [a Debian package repository maintained by Farsight Security](https://archive.farsightsecurity.com/SIE_Software_Installation_Debian/). These packages should be
@@ -175,11 +176,14 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
 
  1. Generate a new SSH authentication key pair with `ssh-keygen`:
 
-        $ ssh-keygen -t rsa -b 4096
-        Generating public/private rsa key pair.
-        Enter file in which to save the key (/home/user/.ssh/id_rsa):
-        /home/user/.ssh/farsight-axa-id_rsa
-        ...
+	$ ssh-keygen -t rsa -b 4096 -f ~/.ssh/farsight-axa-id_rsa
+	Generating public/private rsa key pair.
+	Enter passphrase (empty for no passphrase): 
+	Enter same passphrase again: 
+	Your identification has been saved in /home/user/.ssh/farsight-axa-id_rsa.
+	Your public key has been saved in /home/user/.ssh/farsight-axa-id_rsa.pub.
+	The key fingerprint is:
+	SHA256...
 
  2. You will need to create or edit your `~/.ssh/config` file to specify the
     private half of the SSH key pair for the SRA and RAD servers:
@@ -254,8 +258,8 @@ SIE channel 212 (Newly Observed Domains):
 
 ~~~
 $ sratool 
-sra> connect ssh:sra-service@sra-eft.sie-remote.net
-* HELLO srad version 1.1.1 sb6 AXA protocol 1
+sra> connect ssh:sra-service@sra.sie-remote.net
+* HELLO srad version 1.2.1 sra AXA protocol 1
 sra> count 5
 sra> channel 212 on
 * OK CHANNEL ON/OFF channel ch212 on
@@ -276,7 +280,7 @@ packet count limit exceeded
 sra> exit
 ~~~
 
- 1. `sra> connect ssh:sra-service@sra-eft.sie-remote.net`: we connected to 
+ 1. `sra> connect ssh:sra-service@sra.sie-remote.net`: we connected to 
     an SRA server using the SSH transport. SSH used its keyring to prove 
     the user's identity, so there was no 'password:' prompt. The `HELLO`
     response from the remote end tells us its version number and the protocol
@@ -296,8 +300,8 @@ Next, we introduce in-line connections and show rate limiting of SIE channel
 204 (filtered passive DNS RRsets):
 
 ~~~
-$ sratool 'connect sra-service@sra-eft.sie-remote.net'
-* HELLO srad version 1.1.1 sb6 AXA protocol 1
+$ sratool 'connect sra-service@sra.sie-remote.net'
+* HELLO srad version 1.2.1 sra AXA protocol 1
 sra> count 5
 sra> limit 1 5
 * OPTION Rate LIMIT
@@ -330,7 +334,7 @@ packet count limit exceeded
 sra> exit
 ~~~
 
- 1. `sratool 'connect sra-service@sra-eft.sie-remote.net':` we put our
+ 1. `sratool 'connect sra-service@sra.sie-remote.net':` we put our
     first `sratool` subcommand on the command line of `sratool` itself. This is
     a shortcut that allows the first subcommand to come from the command line, 
     while subsequent subdomains wil come from the control terminal.
@@ -412,7 +416,7 @@ $ kill %sratunnel
 [2]- Exit 15 sratunnel ...
 ~~~
 
- 1. `sratunnel -s 'ssh sra-service@sra-eft.sie-remote.net' -c ch212 -w 'ch=212' -o nmsg:127.0.0.1,5000 &`:
+ 1. `sratunnel -s 'ssh sra-service@sra.sie-remote.net' -c ch212 -w 'ch=212' -o nmsg:127.0.0.1,5000 &`:
     here, we started a background process to access remote SIE channel 212, and
     to deposit all received messages in NMSG format using UDP on a local socket
     (host 127.0.0.1, port 5000). As before, no IP address or DNS name filters
@@ -433,8 +437,8 @@ in either of these feeds is often considered anomalous and worthy of deeper
 investigation.
 
 ~~~
-rad> connect ssh:rad-service@rad-eft.sie-remote.net
-* HELLO radd version 1.1.1 sb6 AXA protocol 1
+rad> connect ssh:rad-service@rad.sie-remote.net
+* HELLO radd version 1.2.1 rad AXA protocol 1
 rad> count 5
 rad> 1 watch ip=0.0.0.0/1
 1 OK WATCH saved
@@ -457,7 +461,7 @@ packet count limit exceeded
 rad> exit
 ~~~
 
- 1. `rad> connect ssh:rad-service@rad-eft.sie-remote.net`: we connected to 
+ 1. `rad> connect ssh:rad-service@rad.sie-remote.net`: we connected to 
     a RAD server using the SSH transport. SSH used its keyring to prove 
     the user's identity, so there was no 'password:' prompt. The `HELLO`
     response from the remote end tells us its version number and the protocol
@@ -672,6 +676,49 @@ as described above
 | `AXA_P_OP_OPT`      | 141 | CLIENT / SERVER | NO    | set various options (rate limiting) report rate limits, how much has been used                |
 | `AXA_P_OP_ACCT`     | 142 | CLIENT / SERVER | NO    | request accounting information                                                                |
 | `AXA_P_OP_RADU`     | 143 | SERVER (RAD)    | NO    | request RAD Unit balance                                                                |
+
+### JSON Format ###
+
+See the [JSON schema](json-schema.yaml) describing the JSON output format.
+
+```json
+{"tag":4,"op":"HELLO","id":1,"pvers_min":2,"pvers_max":3,"str":"hello"}
+{"tag":1,"op":"OK","orig_op":"WATCH HIT","str":"success"}
+{"tag":1,"op":"ERROR","orig_op":"OK","str":"failure"}
+{"tag":1,"op":"MISSED","missed":2,"dropped":3,"rlimit":4,"filtered":5,"last_report":6}
+{"tag":1,"op":"RAD MISSED","sra_missed":2,"sra_dropped":3,"sra_rlimit":4,"sra_filtered":5,"dropped":6,"rlimit":7,"filtered":8,"last_report":9}
+{"tag":1,"op":"WATCH HIT","channel":"ch123","field_idx":1,"val_idx":2,"vname":"base","mname":"pkt","time":"1970-01-01 00:00:01.000000002","nmsg":{"time":"1970-01-01 00:00:01.000000002","vname":"base","mname":"pkt","message":{"len_frame":32,"payload":"RQAAIBI0QAD/EVmFAQIDBAUGBwgAewHIAAxP4t6tvu8="}}}
+{"tag":1,"op":"WATCH HIT","channel":"ch123","time":"1970-01-01 00:00:01.000002","af":"IPv4","src":"1.2.3.4","dst":"5.6.7.8","ttl":255,"proto":"UDP","src_port":123,"dst_port":456,"payload":"3q2+7w=="}
+{"tag":1,"op":"WATCH HIT","channel":"ch123","time":"1970-01-01 00:00:01.000002","af":"IPv4","src":"1.2.3.4","dst":"5.6.7.8","ttl":255,"proto":"TCP","src_port":123,"dst_port":456,"flags":["SYN","ACK"],"payload":"3q2+7w=="}
+{"tag":1,"op":"WATCH HIT","channel":"ch123","time":"1970-01-01 00:00:01.000002","af":"IPv6","src":"1:2:3:4:5:6:7:8","dst":"9:0:a:b:c:d:e:f","ttl":255,"proto":"UDP","src_port":123,"dst_port":456,"payload":"3q2+7w=="}
+{"tag":1,"op":"WATCH","watch_type":"ipv4","watch":"IP=12.34.56.0/24"}
+{"tag":1,"op":"WATCH","watch_type":"ipv4","watch":"IP=0.0.0.0/24"}
+{"tag":1,"op":"WATCH","watch_type":"ipv4","watch":"IP=12.34.56.78/24"}
+{"tag":1,"op":"WATCH","watch_type":"ipv6","watch":"IP=1:2:3:4:5:6::/48"}
+{"tag":1,"op":"WATCH","watch_type":"dns","watch":"dns=fsi.io"}
+{"tag":1,"op":"WATCH","watch_type":"dns","watch":"dns=*.fsi.io"}
+{"tag":1,"op":"WATCH","watch_type":"dns","watch":"dns=*."}
+{"tag":1,"op":"WATCH","watch_type":"dns","watch":"dns=fsi.io(shared)"}
+{"tag":1,"op":"WATCH","watch_type":"channel","watch":"ch=ch123"}
+{"tag":1,"op":"WATCH","watch_type":"errors","watch":"ERRORS"}
+{"tag":1,"op":"ANOMALY","an":"test_anom","parms":"param1 param2"}
+{"tag":1,"op":"CHANNEL ON/OFF","channel":"ch123","on":true}
+{"tag":1,"op":"CHANNEL ON/OFF","channel":"ch123","on":false}
+{"tag":1,"op":"CHANNEL ON/OFF","channel":"all","on":true}
+{"tag":1,"op":"WATCH LIST","cur_tag":1,"watch_type":"ipv4","watch":"IP=12.34.56.0/24"}
+{"tag":1,"op":"ANOMALY HIT","an":"test_anom","channel":"ch123","time":"1970-01-01 00:00:01.000002","af":"IPv4","src":"1.2.3.4","dst":"5.6.7.8","ttl":255,"proto":"UDP","src_port":123,"dst_port":456,"payload":"3q2+7w=="}
+{"tag":1,"op":"ANOMALY LIST","cur_tag":1,"an":"test_anom","parms":"param1 param2"}
+{"tag":1,"op":"CHANNEL LIST","channel":"ch123","on":true,"spec":"test channel"}
+{"tag":1,"op":"USER","name":"test user"}
+{"tag":1,"op":"OPTION","type":"TRACE","trace":3}
+{"tag":1,"op":"OPTION","type":"TRACE","trace":"REQUEST TRACE VALUE"}
+{"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":123,"cur_pkts_per_sec":456,"report_secs":60}
+{"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":1000000000,"cur_pkts_per_sec":123,"report_secs":60}
+{"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":"off","cur_pkts_per_sec":123,"report_secs":60}
+{"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":null,"cur_pkts_per_sec":123,"report_secs":null}
+{"tag":1,"op":"OPTION","type":"SAMPLE","sample":123}
+{"tag":1,"op":"OPTION","type":"SNDBUF","bufsize":123}
+```
 
 ## API Workflow
 
