@@ -1,0 +1,67 @@
+axa (1.2.0) UNRELEASED; urgency=low
+
+  * Update README
+  * Fix token separators bug
+  * Add support for RAD Units via AXA_P_OP_RADU
+  * Add 'status' command and server connected-time tracking for sratool/radtool
+  * Add 'runits' command for radtool
+  * Fix axa_vlog_msg(): crop msg to fit in buf
+  * Fix dns_to_key(): remove ip_to_key() in favor of inline code
+  * Fix trie_free(): NULL pointer assignment bug
+  * Add NXD entries to etc/fields
+  * Fix typos in comments
+  * Update cmds_tbl, help output now easier to parse
+  * Add pidfile option for sratunnel
+  * Fix incorrect return value for error condition in axa_str_to_cidr()
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 18 Aug 2015 19:06:02 +0000
+
+axa (1.1.1) UNRELEASED; urgency=low
+
+  * Fix case where TLS flushing could cause a crash
+  * Fix client debug level overflow
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 15 Apr 2015 15:46:59 +0000
+
+axa (1.1.0) UNRELEASED; urgency=low
+
+  * Add TLS support
+  * Add radtunnel
+  * Add mode prompt to sratool and radtool
+  * Add command-file history to sratool and radtool
+  * Add new sratool command: "window" to set TCP buffer size over TLS
+  * Add new sratool command: "sample" to set sampling rate
+  * Add new sratunnel option "-C count" to specify packet count
+  * Add new sratunnel option "-t" to request tracing on the SRA or RAD server
+  * Retired API function axa_p_recv()
+  * Retired API function axa_p_send()
+  * Retired API function axa_client_flush()
+  * Add new API function axa_client_send()
+  * Add new API function axa_client_backoff_max()
+  * Add new API function axa_client_backoff_reset()
+  * Add new API function axa_tls_init()
+  * Add new API function axa_tls_certs_dir()
+  * Add new API function axa_tls_cipher_list()
+  * Add new API function axa_send_flush()
+  * Add new API function axa_send()
+  * Add new API function axa_send_save()
+  * Add new API function axa_io_init()
+  * Add new API function axa_io_tunerr()
+  * Add new API function axa_io_wait()
+  * Add new API function axa_input()
+  * Add new API function axa_io_cleanup()
+  * Add new API function axa_io_close()
+  * Add new API function axa_recv_flush()
+  * Add new API macro AXA_IO_OPENED()
+  * Add new API macro AXA_IO_CONNECTED()
+  * Add new API macro AXA_CLIENT_OPENED()
+  * Add new API macro AXA_CLIENT_CONNECTED()
+  * Numerous bugfixes and performance enhancements
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 02 Apr 2015 05:49:57 +0000
+
+axa (1.0.0) UNRELEASED; urgency=low
+
+  * Initial release
+
+ -- Mike Schiffman <mschiffm@fsi.io>  Wed, 22 Oct 2014 17:32:57 +0000
