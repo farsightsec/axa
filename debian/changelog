@@ -1,3 +1,31 @@
+axa (1.3.0) UNRELEASED; urgency=low
+
+  * Update documentation
+  * Add JSON schema describing output of the axa_body_to_json function
+  * Fix test case IPv6 inet_ntop() normalization issue
+  * Add __FAVOR_BSD for linux (for proper TCP/UDP header struct naming)
+  * Add check to dependency documentation
+  * Add libssl CFLAGS to check target
+  * Remove legacy text
+  * Add axa_ck_hdr() to public API
+  * Add axa_body_to_json function
+  * Fix error check of nmsg_ipdg_parse_pcap_raw()
+  * Add libmy
+  * Add libyajl requirement
+  * Add axa_opt_to_str() to public API
+  * Add watch_ip_to_str() to public API
+  * Fix various typos/casing
+  * Update copyright for 2016
+  * Remove TLS compression
+  * Add nmsg compression
+  * Update sra/radtunnel usage() to be more friendly
+  * Update sra/radtool usage() to be more friendly
+  * Fix axa_set_core() to hand error messages off to the axa error stream
+  * Fix platform dependent library inconsistencies
+  * Add back office management support
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 29 Mar 2016 23:13:42 +0000
+
 axa (1.2.0) UNRELEASED; urgency=low
 
   * Update README
