@@ -209,7 +209,8 @@ sratunnel_sratunnel_SOURCES = \
 	sratunnel/pidfile.c \
 	sratunnel/print.c \
 	sratunnel/server.c \
-	sratunnel/signal.c
+	sratunnel/signal.c \
+	sratunnel/sratunnel.h
 sratunnel_sratunnel_LDADD = \
 	axa/libaxa.la \
 	${libnmsg_LIBS} \
