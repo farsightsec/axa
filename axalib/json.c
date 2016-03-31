@@ -656,10 +656,11 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 		break;
 
 	case AXA_P_OP_ALIST: {
+		bool print_parms;
 		add_yajl_string(g, "cur_tag");
 		add_yajl_integer(g, AXA_P2H16(body->alist.cur_tag));
 
-		bool print_parms = body_len > offsetof(axa_p_alist_t, anom) + offsetof(axa_p_anom_t, parms) && body->alist.anom.parms[0] != '\0';
+		print_parms = body_len > offsetof(axa_p_alist_t, anom) + offsetof(axa_p_anom_t, parms) && body->alist.anom.parms[0] != '\0';
 		add_anom(g, body->alist.anom, print_parms);
 		break;
 	}
