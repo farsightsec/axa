@@ -1183,7 +1183,7 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 	int j, ch_cnt;
 	struct timeval tv;
 	struct tm *tm_info;
-	const char *io_type, *cp, *server_type;
+	const char *io_type, *server_type;
 	uint32_t i, users_cnt, total_watches;
 	char time_buf[30];
 	axa_p_mgmt_user_t *user;
@@ -1330,15 +1330,14 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 		user = (axa_p_mgmt_user_t *)p;
 
 		printf("\n    user            : %s\n", user->user.name);
-		cp = NULL;
 		switch (user->addr_type)
 		{
 			case AXA_AF_INET:
-				cp = inet_ntop(AF_INET, &user->ip.ipv4, addr_str,
+				inet_ntop(AF_INET, &user->ip.ipv4, addr_str,
 						sizeof(addr_str));
 				break;
 			case AXA_AF_INET6:
-				cp = inet_ntop(AF_INET6, &user->ip.ipv6, addr_str,
+				inet_ntop(AF_INET6, &user->ip.ipv6, addr_str,
 						sizeof(addr_str));
 				break;
 			case AXA_AF_UNKNOWN:
