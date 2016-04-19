@@ -630,6 +630,10 @@ typedef struct _PK {
  * and heralds the presence of current user stats.
  * */
 typedef struct _PK {
+	uint8_t 		version;	/* version */
+#define AXA_MGMT_FLAG_SRA	0x01		/* implementation should set */
+#define AXA_MGMT_FLAG_RAD	0x02		/* one or the other not both */
+	uint8_t			flags;		/* control flags */
 	uint32_t		load[3];        /* load avg */
 	uint32_t		cpu_usage;      /* cpu usage */
 	uint32_t		uptime;         /* system uptime */
@@ -644,7 +648,6 @@ typedef struct _PK {
 	uint64_t		wchar;		/* bytes written via write() */
 	uint32_t		thread_cnt;	/* number of server threads */
 	uint16_t		users_cnt;      /* number of user objects */
-	uint8_t			pad[2];		/*< to 0 mod 4 */
 	uint8_t			b[0];		/* start of user objects */
 } axa_p_mgmt_t;
 

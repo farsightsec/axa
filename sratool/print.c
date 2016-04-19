@@ -1195,6 +1195,12 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
         axa_cnt_t total_congested = 0;
 	char addr_str[INET6_ADDRSTRLEN];
 
+	if (mgmt->version != 1) {
+		printf("server returned unknown MGMT protocol version: %d\n",
+				mgmt->version);
+		return;
+	}
+
 	if (axa_debug != 0) {
 		printf("    mgmt_len       : %zdb\n", AXA_P2H32(mgmt_len));
 	}
