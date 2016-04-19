@@ -651,15 +651,30 @@ typedef struct _PK {
 	uint8_t			b[0];		/* start of user objects */
 } axa_p_mgmt_t;
 
+/* SRA/RAD user watches stats */
+typedef struct _PK {
+	uint32_t		ipv4_cnt;	/* number of IPv4 watches */
+	uint32_t		ipv6_cnt;	/* number of IPv6 watches */
+	uint32_t		dns_cnt;	/* number of DNS watches */
+	uint32_t		ch_cnt;		/* number of ch watches */
+	uint32_t		err_cnt;	/* number of err watches */
+} axa_p_mgmt_user_watches_t;
+
 /* SRA specific user stats */
 typedef struct _PK {
-	uint32_t		watch_cnt;	/* number of watches */
+	axa_p_mgmt_user_watches_t watches;	/* watch info */
 	axa_ch_mask_t		ch_mask;	/* channels user has open */
 } axa_p_mgmt_user_sra_t;
 
 /* RAD specific user stats */
 typedef struct _PK {
-	uint32_t		an_cnt;		/* number of anomalies */
+	uint16_t		an_cnt;		/* number of anomalies */
+#if NEXT_MGMT_VERSION_WE_WILL_ADD_THIS_STUFF
+	char			anomalies[128];	/* anomaly names */
+	axa_p_mgmt_user_wc_t	watches;	/* watch info */
+	axa_ch_mask_t		ch_mask;	/* channels user has open */
+	char			options[128];	/* options */
+#endif
 } axa_p_mgmt_user_rad_t;
 
 /* AXA management user object */
@@ -676,10 +691,6 @@ typedef struct _PK {
 		uint32_t 	ipv4;		/* ipv4 address */
 	} ip;
 	uint32_t		sn;		/* server-side serial num */
-	union axa_p_mgmt_srvr {
-		axa_p_mgmt_user_sra_t sra;	/* sra specific stats */
-		axa_p_mgmt_user_rad_t rad;	/* rad specific stats */
-	} srvr;
 	struct timeval		connected_since;/* logged in since */
 	axa_cnt_t		ratelimit;	/* positive if user is rl'd */
 	axa_cnt_t		sample;		/* "" if user is sampling */
@@ -690,7 +701,12 @@ typedef struct _PK {
 	axa_cnt_t		sent;		/* sent to client */
 	axa_cnt_t		rlimit;		/* lost to rate limiting */
 	axa_cnt_t		congested;	/* lost to server->client */
+	union axa_p_mgmt_srvr {
+		axa_p_mgmt_user_sra_t sra;	/* sra specific stats */
+		axa_p_mgmt_user_rad_t rad;	/* rad specific stats */
+	} srvr;
 } axa_p_mgmt_user_t;
+
 /**< @endcond */
 
 /** AXA protocol body */

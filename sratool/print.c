@@ -1324,7 +1324,12 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 				i < users_cnt; i++) {
 			p += i == 0 ? 0 : (sizeof (axa_p_mgmt_user_t));
 			user = (axa_p_mgmt_user_t *)p;
-			total_watches += AXA_P2H32(user->srvr.sra.watch_cnt);
+			total_watches +=
+				AXA_P2H32(user->srvr.sra.watches.ipv4_cnt) +
+				AXA_P2H32(user->srvr.sra.watches.ipv6_cnt) +
+				AXA_P2H32(user->srvr.sra.watches.dns_cnt) +
+				AXA_P2H32(user->srvr.sra.watches.ch_cnt) +
+				AXA_P2H32(user->srvr.sra.watches.err_cnt);
 		}
 		printf("    watches         : %d\n", total_watches);
 	}
@@ -1390,9 +1395,21 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 				if (ch_cnt == 0)
 					printf("none");
 				printf("\n");
-				printf("      watches       : %d\n",
+				printf("      ipv4 watches  : %d\n",
 					AXA_P2H32(
-						user->srvr.sra.watch_cnt));
+						user->srvr.sra.watches.ipv4_cnt));
+				printf("      ipv6 watches  : %d\n",
+					AXA_P2H32(
+						user->srvr.sra.watches.ipv6_cnt));
+				printf("      dns watches   : %d\n",
+					AXA_P2H32(
+						user->srvr.sra.watches.dns_cnt));
+				printf("      ch watches    : %d\n",
+					AXA_P2H32(
+						user->srvr.sra.watches.ch_cnt));
+				printf("      err watches   : %d\n",
+					AXA_P2H32(
+						user->srvr.sra.watches.err_cnt));
 				break;
 			case RAD:
 				printf("      anomalies     : %d\n",
