@@ -791,8 +791,16 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 			for (int i = 0; i < AXA_P2H16(body->mgmt.users_cnt); i++) {
 				add_yajl_map(g);
 
-				add_yajl_string(g, "watch_cnt");
-				add_yajl_integer(g, AXA_P2H32(users[i].watch_cnt));
+				add_yajl_string(g, "ipv4_watch_cnt");
+				add_yajl_integer(g, AXA_P2H32(users[i].watches.ipv4_cnt));
+				add_yajl_string(g, "ipv6_watch_cnt");
+				add_yajl_integer(g, AXA_P2H32(users[i].watches.ipv6_cnt));
+				add_yajl_string(g, "dns_watch_cnt");
+				add_yajl_integer(g, AXA_P2H32(users[i].watches.dns_cnt));
+				add_yajl_string(g, "ch_watch_cnt");
+				add_yajl_integer(g, AXA_P2H32(users[i].watches.ch_cnt));
+				add_yajl_string(g, "err_watch_cnt");
+				add_yajl_integer(g, AXA_P2H32(users[i].watches.err_cnt));
 
 				add_yajl_string(g, "channels");
 				add_yajl_array(g);
