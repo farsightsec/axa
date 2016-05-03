@@ -954,10 +954,11 @@ END_TEST
 
 START_TEST(test_mgmt_getrsp_sra)
 {
-	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSPNS\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[{\"watch_cnt\":1,\"channels\":[\"ch16\"]},{\"watch_cnt\":2,\"channels\":[\"ch17\"]}]}";
+	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSPNS\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[{\"ipv4_watch_cnt\":1,\"ipv6_watch_cnt\":0,\"dns_watch_cnt\":0,\"ch_watch_cnt\":0,\"err_watch_cnt\":0,\"channels\":[\"ch16\"]},{\"ipv4_watch_cnt\":2,\"ipv6_watch_cnt\":0,\"dns_watch_cnt\":0,\"ch_watch_cnt\":0,\"err_watch_cnt\":0,\"channels\":[\"ch17\"]}]}";
 	axa_emsg_t emsg;
-	axa_p_mgmt_t mgmt_data = { { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}, {}};
-	axa_p_mgmt_user_sra_t users[2] = { {.watch_cnt=1}, {.watch_cnt=2} };
+	axa_p_mgmt_t mgmt_data = { 1, 1, { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}};
+	axa_p_mgmt_user_sra_t users[2] = { {.watches.ipv4_cnt=1},
+		{.watches.ipv4_cnt=2} };
 	size_t watch_len = offsetof(axa_p_mgmt_t, b) + sizeof(users);
 	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
 	axa_p_mgmt_t *mgmt = alloca(watch_len);
@@ -980,8 +981,8 @@ START_TEST(test_mgmt_getrsp_rad)
 {
 	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSPNS\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[{\"an_cnt\":1},{\"an_cnt\":2}]}";
 	axa_emsg_t emsg;
-	axa_p_mgmt_t mgmt_data = { { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}, {}};
-	axa_p_mgmt_user_rad_t users[2] = { {1}, {2} };
+	axa_p_mgmt_t mgmt_data = { 1, 1, { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}};
+	axa_p_mgmt_user_rad_t users[2] = { {.an_cnt=1},{.an_cnt=2} };
 	size_t watch_len = offsetof(axa_p_mgmt_t, b) + sizeof(users);
 	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
 	axa_p_mgmt_t *mgmt = alloca(watch_len);
@@ -1001,7 +1002,7 @@ START_TEST(test_mgmt_getrsp_no_users)
 {
 	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSPNS\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[]}";
 	axa_emsg_t emsg;
-	axa_p_mgmt_t mgmt = { { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, {}, {}};
+	axa_p_mgmt_t mgmt = { 1, 1, { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, {}};
 	size_t watch_len = offsetof(axa_p_mgmt_t, b);
 	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
 	char *out = NULL;
