@@ -957,14 +957,18 @@ START_TEST(test_mgmt_getrsp_sra)
 	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSPNS\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[{\"ipv4_watch_cnt\":1,\"ipv6_watch_cnt\":0,\"dns_watch_cnt\":0,\"ch_watch_cnt\":0,\"err_watch_cnt\":0,\"channels\":[\"ch16\"]},{\"ipv4_watch_cnt\":2,\"ipv6_watch_cnt\":0,\"dns_watch_cnt\":0,\"ch_watch_cnt\":0,\"err_watch_cnt\":0,\"channels\":[\"ch17\"]}]}";
 	axa_emsg_t emsg;
 	axa_p_mgmt_t mgmt_data = { 1, 1, { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}};
-	axa_p_mgmt_user_sra_t users[2] = { {.watches.ipv4_cnt=1},
-		{.watches.ipv4_cnt=2} };
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+	axa_p_mgmt_user_sra_t users[2] = { { {0},{{0}} } };
+#pragma clang diagnostic pop
 	size_t watch_len = offsetof(axa_p_mgmt_t, b) + sizeof(users);
 	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
 	axa_p_mgmt_t *mgmt = alloca(watch_len);
 	char *out = NULL;
 	axa_json_res_t res;
 
+	users[0].watches.ipv4_cnt = 1;
+	users[1].watches.ipv4_cnt = 2;
 	axa_set_bitwords(users[0].ch_mask.m, 16);
 	axa_set_bitwords(users[1].ch_mask.m, 17);
 
