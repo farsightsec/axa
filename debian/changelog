@@ -1,5 +1,6 @@
 axa (1.3.0) UNRELEASED; urgency=low
 
+  * Require nmsg >= 0.10.0
   * Update documentation
   * Add JSON schema describing output of the axa_body_to_json function
   * Fix test case IPv6 inet_ntop() normalization issue
@@ -24,7 +25,7 @@ axa (1.3.0) UNRELEASED; urgency=low
   * Fix platform dependent library inconsistencies
   * Add back office management support
 
- -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 29 Mar 2016 23:13:42 +0000
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Weds, 08 Jun 2016 10:30:42 +0000
 
 axa (1.2.0) UNRELEASED; urgency=low
 
