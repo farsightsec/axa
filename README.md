@@ -93,7 +93,7 @@ The AXA suite has the following external dependencies:
  * [libpcap](http://www.tcpdump.org/)
  * [zlib](http://www.zlib.net/)
  * [nmsg](https://github.com/farsightsec/nmsg) (probably will want to configure
-    with `--without-libxs`)
+    with `--without-libxs`, be sure to use version >= 0.10.0)
  * [protobuf-c](https://github.com/protobuf-c/protobuf-c) (be sure to use 2.x.x)
  * [sie-nmsg](https://github.com/farsightsec/sie-nmsg)
  * [wdns](https://github.com/farsightsec/wdns)
@@ -101,11 +101,12 @@ The AXA suite has the following external dependencies:
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed
     on BSDish systems)
  * [libssl](http://openssl.org/)
- * [check](http://check.sourceforge.net/doc/check_html/)
+ * [check](http://check.sourceforge.net/doc/check_html/) (be sure to use >= 0.10.0)
+ * [yajl](https://lloyd.github.io/yajl/) (be sure to use >= 2.1.0)
 
 Optional dependency:
 
- * [doxygen](http://www.stack.nl/~dimitri/doxygen/) (version 1.8.3 or newer
+ * [doxygen](http://www.stack.nl/~dimitri/doxygen/) (be sure to use >= 1.8.3
     that supports inlining markdown files)
     
 After satisfying the above, build with something like:
@@ -129,10 +130,11 @@ On Debian systems, the following packages should be installed:
  * `libedit-dev`
  * `libprotobuf-c0-dev (>= 1.0.1)`
  * `protobuf-c-compiler`
- * `libwdns-dev (>= 0.6.0)`
- * `libnmsg-dev (>= 0.9.1)`
+ * `libwdns-dev (>= 0.8.0)`
+ * `libnmsg-dev (>= 0.10.0)`
  * `nmsg-msg-module-sie-dev (>= 1.0.0)`
- * `check`
+ * `check` (>= 0.10.0)
+ * `yajl` (>= 2.1.0)
 
 The binary packages of AXA and its dependencies are available from 
 [a Debian package repository maintained by Farsight Security](https://archive.farsightsecurity.com/SIE_Software_Installation_Debian/). These packages should be
