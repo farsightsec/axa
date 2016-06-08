@@ -1,7 +1,7 @@
 /*
  * AXA protocol utilities
  *
- *  Copyright (c) 2014-2015 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2016 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -316,7 +316,7 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	case AXA_P_OP_OK:	strlcpy(buf, "OK",		buflen); break;
 	case AXA_P_OP_ERROR:	strlcpy(buf, "ERROR",		buflen); break;
 	case AXA_P_OP_WHIT:	strlcpy(buf, "WATCH HIT",	buflen); break;
-	case AXA_P_OP_AHIT:	strlcpy(buf, "ANOMOLY HIT",	buflen); break;
+	case AXA_P_OP_AHIT:	strlcpy(buf, "ANOMALY HIT",	buflen); break;
 	case AXA_P_OP_MISSED:	strlcpy(buf, "MISSED",		buflen); break;
 	case AXA_P_OP_WLIST:	strlcpy(buf, "WATCH LIST",	buflen); break;
 	case AXA_P_OP_ALIST:	strlcpy(buf, "ANOMALY LIST",	buflen); break;
@@ -338,6 +338,8 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	case AXA_P_OP_OPT:	strlcpy(buf, "OPTION",		buflen); break;
 	case AXA_P_OP_ACCT:	strlcpy(buf, "ACCOUNTING",	buflen); break;
 	case AXA_P_OP_RADU:	strlcpy(buf, "RAD UNITS GET",	buflen); break;
+	case AXA_P_OP_MGMT_GET:	strlcpy(buf, "MGMT GET",	buflen); break;
+	case AXA_P_OP_MGMT_GETRSP:strlcpy(buf, "MGMT GET RSPNS",buflen); break;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
@@ -347,12 +349,12 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	return (buf);
 }
 
-static const char *
+const char *
 axa_opt_to_str(char *buf, size_t buflen, axa_p_opt_type_t opt)
 {
 	switch (opt) {
 	case AXA_P_OPT_TRACE:	strlcpy(buf, "TRACE",	    buflen); break;
-	case AXA_P_OPT_RLIMIT:	strlcpy(buf, "Rate LIMIT",  buflen); break;
+	case AXA_P_OPT_RLIMIT:	strlcpy(buf, "RATE LIMIT",  buflen); break;
 	case AXA_P_OPT_SAMPLE:	strlcpy(buf, "SAMPLE",	    buflen); break;
 	case AXA_P_OPT_SNDBUF:	strlcpy(buf, "SNDBUF",	    buflen); break;
 #pragma clang diagnostic push
@@ -383,8 +385,8 @@ axa_tag_op_to_str(char *buf, size_t buf_len,
 	return (buf);
 }
 
-static char *
-watch_ip_to_str(char *buf, size_t buf_len,
+char *
+axa_watch_ip_to_str(char *buf, size_t buf_len,
 		int af, const void *addr, size_t alen, uint prefix)
 {
 	union {
@@ -394,6 +396,7 @@ watch_ip_to_str(char *buf, size_t buf_len,
 	} abuf;
 	char ip_str[INET6_ADDRSTRLEN];
 	char prefix_str[1+3+1];
+	size_t cplen;
 
 	if (af == AF_INET) {
 		/* Watch IP address lengths are checked in input */
@@ -423,8 +426,10 @@ watch_ip_to_str(char *buf, size_t buf_len,
 
 	/* allow truncation to the prefix */
 	memset(&abuf, 0, sizeof(abuf));
-	AXA_ASSERT(alen <= sizeof(abuf));
-	memcpy(&abuf, addr, alen);
+	cplen = alen;
+	if (alen > sizeof(abuf))
+		cplen = sizeof(abuf);
+	memcpy(&abuf, addr, cplen);
 
 	if (NULL == inet_ntop(af, &abuf, ip_str, sizeof(ip_str))) {
 		snprintf(buf, buf_len,
@@ -448,11 +453,11 @@ axa_watch_to_str(char *buf, size_t buf_len,
 	AXA_ASSERT(pat_len >= 0);
 	switch ((axa_p_watch_type_t)watch->type) {
 	case AXA_P_WATCH_IPV4:
-		watch_ip_to_str(buf, buf_len, AF_INET,
+		axa_watch_ip_to_str(buf, buf_len, AF_INET,
 				&watch->pat.addr, pat_len, watch->prefix);
 		break;
 	case AXA_P_WATCH_IPV6:
-		watch_ip_to_str(buf, buf_len, AF_INET6,
+		axa_watch_ip_to_str(buf, buf_len, AF_INET6,
 				&watch->pat.addr6, pat_len, watch->prefix);
 		break;
 	case AXA_P_WATCH_DNS:
@@ -522,7 +527,7 @@ whit_add_str(char **bufp, size_t *buf_lenp,
 
 	if (whit_len >= sizeof(struct ip)
 	    && (whit->ip.b[0] & 0xf0) == 0x40) {
-		watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET,
+		axa_watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET,
 				AXA_OFFSET(whit->ip.b, struct ip, ip_src),
 				4, 32);
 		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d src %s",
@@ -530,7 +535,7 @@ whit_add_str(char **bufp, size_t *buf_lenp,
 
 	} else if (whit_len >= sizeof(struct ip6_hdr)
 	    && (whit->ip.b[0] & 0xf0) == 0x60) {
-		watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET6,
+		axa_watch_ip_to_str(ip_str, sizeof(ip_str), AF_INET6,
 				AXA_OFFSET(whit->ip.b, struct ip6_hdr, ip6_src),
 				16, 128);
 		axa_buf_print(bufp, buf_lenp, "%s"AXA_OP_CH_PREFIX"%d src %s",
@@ -677,7 +682,7 @@ axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen, axa_p_ch_t ch,
 
 	memset(&dg, 0, sizeof(dg));
 	res = nmsg_ipdg_parse_pcap_raw(&dg, DLT_RAW, pkt_data, caplen);
-	if (res != nmsg_res_success && dg.len_network == 0) {
+	if (res != nmsg_res_success || dg.len_network == 0) {
 		axa_buf_print(&cmt, &cmt_len, " unknown packet");
 		return (false);
 	}
@@ -971,6 +976,8 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	case AXA_P_OP_CGET:
 	case AXA_P_OP_ACCT:
 	case AXA_P_OP_RADU:
+	case AXA_P_OP_MGMT_GET:
+	case AXA_P_OP_MGMT_GETRSP:
 	default:
 		break;
 	}
@@ -979,8 +986,8 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 }
 
 /* Check the header of an AXA message. */
-static bool				/* false=bad */
-ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
+bool				/* false=bad */
+axa_ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
        const char *label, axa_p_direction_t dir)
 {
 	size_t max_len, min_len;
@@ -1149,6 +1156,21 @@ ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 		max_len = min_len = 0;
 		tagged = 0;
 		dir_ok = (dir == AXA_P_TO_RAD);
+		break;
+	case AXA_P_OP_MGMT_GET:
+		max_len = min_len = 0;
+		tagged = 0;
+		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
+		break;
+	case AXA_P_OP_MGMT_GETRSP:
+		min_len = sizeof(axa_p_mgmt_t);
+		max_len = sizeof(axa_p_mgmt_t) +
+			/* max number of channels */
+			(255 * sizeof(axa_p_ch_t)) +
+			/* max number of output threads (users) */
+			(1024 * sizeof(axa_p_mgmt_user_t));
+		tagged = 0;
+		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
 		break;
 
 #pragma clang diagnostic push
@@ -1547,6 +1569,10 @@ axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_body_t *body,
 		break;
 	case AXA_P_OP_RADU:
 		break;
+	case AXA_P_OP_MGMT_GET:
+		break;
+	case AXA_P_OP_MGMT_GETRSP:
+		break;
 	}
 
 	return (true);
@@ -1771,7 +1797,7 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 			/* We have at least all of the header.
 			 * Check the header when we first have it. */
 			if (len == 0
-			    && !ck_hdr(emsg, &io->recv_hdr, io->label,
+			    && !axa_ck_hdr(emsg, &io->recv_hdr, io->label,
 				       which_direction(io, false))) {
 				motd_hdr(emsg, io);
 				return (AXA_IO_ERR);
@@ -1973,7 +1999,7 @@ axa_make_hdr(axa_emsg_t *emsg, axa_p_hdr_t *hdr,
 	hdr->pvers = pvers;
 	hdr->op = op;
 
-	if (!ck_hdr(emsg, hdr, "myself", dir))
+	if (!axa_ck_hdr(emsg, hdr, "myself", dir))
 		return (0);
 
 	return (total);

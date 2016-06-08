@@ -1,0 +1,52 @@
+Source: axa
+Section: net
+Maintainer: Farsight Security, Inc. <software@farsightsecurity.com>
+Priority: optional
+Build-Depends:
+ dpkg-dev (>= 0.16.0~), debhelper (>= 9~), dh-autoreconf (>= 5~),
+ pkg-config, libpcap0.8-dev, zlib1g-dev, libedit-dev,
+ libprotobuf-c0-dev, protobuf-c-compiler, libwdns-dev (>= 0.6.0),
+ libnmsg-dev (>= 0.10.0), nmsg-msg-module-sie-dev (>= 1.0.0), libssl-dev,
+ libbsd-dev, libyajl-dev (>= 2.1.0), check
+
+Package: libaxa0
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ nmsg-msg8-module-sie (>= 0.16)
+Description: Advanced Exchange Access
+
+Package: libaxa0-dbg
+Section: debug
+Priority: extra
+Architecture: any
+Depends: libaxa0 (= ${binary:Version}), ${misc:Depends}
+Description: Advanced Exchange Access (debug symbols)
+
+Package: libaxa-dev
+Section: libdevel
+Architecture: any
+Depends: libaxa0 (= ${binary:Version}), ${misc:Depends}
+Description: Advanced Exchange Access (development files)
+
+Package: axa-doc
+Section: doc
+Architecture: all
+Depends: ${misc:Depends}
+Description: Advanced Exchange Access (documentation)
+
+Package: axa-tools
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ libaxa0 (= ${binary:Version})
+Description: AXA tools
+ sratool, sratunnel, radtool, radtunnel as well as SRA protocol utility library
+ and headers
+
+Package: axa-tools-dbg
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ axa-tools (= ${binary:Version})
+Description: AXA tools
+ sratool, sratunnel, radtool, radtunnel as well as SRA protocol utility library
+ and headers

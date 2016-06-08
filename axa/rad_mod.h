@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) Realtime Anomaly Detector (RAD) modules
  *
- *  Copyright (c) 2014-2015 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2016 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -133,6 +133,15 @@ typedef int (axa_rad_whit_t)(void *ctxt, char **errmsg,
  */
 typedef void (axa_rad_close_t)(void *ctxt);
 
+/**
+ *  RAD module info.
+ *
+ *  Cull mod-specific info from module.
+ *
+ *	\param[in] ctxt context for this instance of the module
+ *	\param[in] info an info context
+ */
+typedef void (axa_rad_info_t(void *ctxt0, void *info));
 
 /**
  *  This string when among the parameters for a RAD module in the users file,
@@ -157,6 +166,7 @@ typedef void (axa_rad_close_t)(void *ctxt);
 axa_rad_open_t AXA_RAD_MOD_OPEN;
 axa_rad_whit_t AXA_RAD_MOD_WHIT;
 axa_rad_close_t AXA_RAD_MOD_CLOSE;
+axa_rad_info_t AXA_RAD_MOD_INFO;
 #endif
 /** @endcond */
 

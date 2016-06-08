@@ -1,0 +1,564 @@
+id: http://farsightsecurity.com/axa-json-output-schema#
+$schema: http://json-schema.org/draft-04/schema#
+title: axamd stream output schema
+description: Schema describing the output of the AXAMD stream command in axa+json mode.  This schema is very large and its use should probably be restricted to development and not be used to validate input at wire speeds.
+type: object
+properties:
+        tag:
+                description: "A tag is a 16-bit identifier used to uniquely \"tag\" specific events during the lifetime of an AXA session. To refer to these events, the client or server will use the tag. Some AXA messages do not require tags, in that case the tag field should be 0. Required tags must be unique during the lifetime of the corresponding client request. Some client requests such as a \"watch\" can last indefinitely and will elicit many server responses all with the same tag."
+                $ref: "#/definitions/tag"
+        op:
+                description: op code
+                $ref: "#/definitions/op"
+        pvers:
+                description: Protocol version.
+                $ref: "#/definitions/pvers"
+required:
+        - tag
+        - op
+oneOf:
+        - $ref: "#/definitions/empty"
+        - $ref: "#/definitions/hello"
+        - $ref: "#/definitions/join"
+        - $ref: "#/definitions/result"
+        - $ref: "#/definitions/missed"
+        - $ref: "#/definitions/missed_rad"
+        - $ref: "#/definitions/user"
+        - $ref: "#/definitions/whit"
+        - $ref: "#/definitions/watch"
+        - $ref: "#/definitions/wlist"
+        - $ref: "#/definitions/anomaly"
+        - $ref: "#/definitions/ahit"
+        - $ref: "#/definitions/alist"
+        - $ref: "#/definitions/channel"
+        - $ref: "#/definitions/clist"
+        - $ref: "#/definitions/opt"
+definitions:
+        tag:
+                oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 65535
+                        - $ref: "#/definitions/TAG_NONE"
+        TAG_NONE:
+                type: string
+                pattern: '^\*$'
+        op:
+                type: string
+                enum:
+                        - HELLO
+                        - NOP
+                        - OK
+                        - ERROR
+                        - WATCH HIT
+                        - ANOMALY HIT
+                        - MISSED
+                        - WATCH LIST
+                        - ANOMALY LIST
+                        - CHANNEL LIST
+                        - RAD MISSED
+                        - USER
+                        - JOIN
+                        - PAUSE
+                        - GO
+                        - WATCH
+                        - WATCH GET
+                        - ANOMALY
+                        - ANOMALY GET
+                        - STOP
+                        - ALL STOP
+                        - CHANNEL ON/OFF
+                        - CHANNEL GET
+                        - OPTION
+                        - ACCOUNTING
+                        - RAD UNITS GET
+                        - MGMT GET
+                        - MGMT GET RSPNS
+        pvers:
+                type: integer
+                minimum: 1
+                maximum: 255
+                default: 1
+        uint32:
+                type: integer
+                minimum: 0
+                maximum: 4294967296
+        uint64:
+                type: integer
+                minimum: 0
+                maximum: 18446744073709551616
+        clnt_id:
+                $ref: "#/definitions/uint64"
+        count:
+                $ref: "#/definitions/uint64"
+        time:
+                $ref: "#/definitions/uint32"
+        channel_str:
+                type: string
+                pattern: '^ch[0-9]+$'
+        nmsg:
+                type: object
+                properties:
+                        mname:
+                                type: string
+                        vname:
+                                type: string
+                        time:
+                                type: string
+                        source:
+                                type: string
+                        operator:
+                                type: string
+                        group:
+                                type: string
+                        message:
+                                type: object
+                                additonalProperties: true
+                required:
+                        - mname
+                        - vname
+                        - time
+                        - message
+        empty:
+                properties:
+                        op:
+                                enum:
+                                        - NOP
+                                        - PAUSE
+                                        - GO
+                                        - WATCH GET
+                                        - ANOMALY GET
+                                        - STOP
+                                        - ALL STOP
+                                        - CHANNEL GET
+                                        - ACCOUNTING
+                                        - RAD UNITS GET
+                                        - MGMT GET
+        hello:
+                description:  RAD and SRA servers start the client-server conversation with a AXA_P_OP_HELLO announcing the protocol versions that the server understands, a version string, and an ID unique among connections to a single server.  Clients can include those IDs in AXA_P_OP_JOIN messages to flag connections that are part of a bundle.  Because AXA_P_OP_HELLO is sent before the client has said anything and so declared its protocol version, AXA_P_OP_HELLO must remain the same in all versions of the AXA protocol.
+                properties:
+                        op:
+                                enum: [ HELLO ]
+                        id:
+                                description: client ID for bundled TCP
+                                $ref: "#/definitions/clnt_id"
+                        pvers_min:
+                                description: min protocol version accepted
+                                $ref: "#/definitions/pvers"
+                        pvers_max:
+                                description: max protocol version accepted
+                                $ref: "#/definitions/pvers"
+                        str:
+                                type: string
+                                maxLength: 511
+                required:
+                        - pvers_min
+                        - pvers_max
+                        - str
+        join:
+                description: TODO
+                properties:
+                        tag:
+                                $ref: "#definitions/TAG_NONE"
+                        op:
+                                enum: [ JOIN ]
+                        id:
+                                description: client ID originally from server
+                                $ref: "#/definitions/clnt_id"
+                required:
+                        - id
+        result:
+                description: result, OK or ERROR
+                properties:
+                        op:
+                                oneOf:
+                                        - enum: [ OK, ERROR ]
+                        orig_op:
+                                $ref: "#/definitions/op"
+                        str:
+                                type: string
+                                maxLength: 511
+                required:
+                        - orig_op
+                        - str
+        missed:
+                description: SRA missed data
+                properties:
+                        op:
+                                enum: [ MISSED ]
+                        missed:
+                                description: "The number of packets (SIE messages or raw IP packets) lost in the network between the source and the SRA server or dropped by the SRA server because it was too busy."
+                                $ref: "#/definitions/count"
+                        dropped:
+                                description: by SRA client-server congestion
+                                $ref: "#/definitions/count"
+                        rlimit:
+                                description: dropped by rate limiting
+                                $ref: "#/definitions/count"
+                        filtered:
+                                description: total considered
+                                $ref: "#/definitions/count"
+                        last_report:
+                                description: UNIX epoch of previous report
+                                $ref: "#/definitions/time"
+                required:
+                        - missed
+                        - dropped
+                        - rlimit
+                        - filtered
+                        - last_report
+        missed_rad:
+                description: RAD missed data
+                properties:
+                        op:
+                                enum: [ RAD MISSED ]
+                        sra_missed:
+                                description: missed by all SRA servers
+                                $ref: "#/definitions/count"
+                        sra_dropped:
+                                description: for SRA client-server congestion
+                                $ref: "#/definitions/count"
+                        sra_rlimit:
+                                description: discarded to SRA rate limit
+                                $ref: "#/definitions/count"
+                        sra_filtered:
+                                description: considered by SRA servers
+                                $ref: "#/definitions/count"
+                        dropped:
+                                description: for RAD client-server congestion
+                                $ref: "#/definitions/count"
+                        rlimit:
+                                description: discarded to RAD rate limit
+                                $ref: "#/definitions/count"
+                        filtered:
+                                description: considered by RAD modules
+                                $ref: "#/definitions/count"
+                        last_report:
+                                description: UNIX epoch of previous report
+                                $ref: "#/definitions/time"
+                required:
+                        - sra_missed
+                        - sra_dropped
+                        - sra_rlimit
+                        - sra_filtered
+                        - dropped
+                        - rlimit
+                        - filtered
+                        - last_report
+        user:
+                description: user name
+                properties:
+                        op:
+                                description: ASCII user name
+                                enum: [ USER ]
+        whit:
+                description: watch hit
+                properties:
+                        op:
+                                enum: [ WATCH HIT ]
+                oneOf:
+                        - $ref: "#/definitions/whit_nmsg"
+                        - $ref: "#/definitions/whit_ip"
+        whit_nmsg:
+                description: watch hit for nmsg data
+                properties:
+                        channel:
+                                $ref: "#/definitions/channel_str"
+                        nmsg:
+                                $ref: "#/definitions/nmsg"
+                        field:
+                                description: triggering field name
+                                type: string
+                        field_idx:
+                                description: triggering field index
+                                type: integer
+                        val_idx:
+                                description: triggering value index
+                                type: integer
+                        vname:
+                                description: nmsg vendor name
+                                type: string
+                        vid:
+                                description: nmsg vendor ID
+                                type: integer
+                        mname:
+                                description: nmsg module name
+                                type: string
+                        msgtype:
+                                description: nmsg module ID
+                                type: integer
+                        time:
+                                description: timestamp when the NMSG message was reported
+                                type: string
+                oneOf:
+                        - required:
+                                - field
+                        - required:
+                                - field_idx
+                required:
+                        - nmsg
+                        - channel
+        whit_ip:
+                description: watch hit for pcap data
+                properties:
+                        af:
+                                description: address family of src and dst
+                        src:
+                                description: source address
+                                type: string
+                        dst:
+                                description: destination address
+                                type: string
+                        channel:
+                                $ref: "#/definitions/channel_str"
+                        ttl:
+                                description: IP time to live
+                                type: integer
+                                minimum: 0
+                        payload:
+                                description: base64-encoded packet payload
+                                type: string
+                        proto:
+                                description: network protocol
+                                type: string
+                                enum:
+                                       - ICMP
+                                       - ICMPv6
+                                       - TCP
+                                       - UDP
+                        src_port:
+                                description: network protocol src port
+                                type: integer
+                        dst_port:
+                                description: network protocol dst port
+                                type: integer
+                        flags:
+                                description: TCP flags
+                                type: array 
+                                items:
+                                        type: string
+                                        oneOf:
+                                                - enum: [ FIN, SYN, ACK, RST ]
+                        time:
+                                description: timestamp when the packet was captured
+                                type: string
+                required:
+                        - af
+                        - channel
+                oneOf:
+                        - properties:
+                                af:
+                                        type: string
+                                        enum: [ IPv4, IPv6 ]
+                        - properties:
+                                af:
+                                        type: integer
+                                        minimum: 0
+        watch:
+                description: TODO
+                properties:
+                        op:
+                                enum: [ WATCH ]
+                allOf:
+                        - $ref: "#/definitions/watch_def"
+        watch_def:
+                properties:
+                        watch_type:
+                                description: watch type
+                                type: string
+                        watch:
+                                description: watch string
+                                type: string
+                oneOf:
+                        - $ref: "#/definitions/watch_ip"
+                        - $ref: "#/definitions/watch_dns"
+                        - $ref: "#/definitions/watch_channel"
+                        - $ref: "#/definitions/watch_errors"
+                required:
+                        - watch
+                        - watch_type
+        watch_ip:
+                description: IP address watch
+                properties:
+                        watch_type:
+                                enum: [ ipv4, ipv6 ]
+                        watch:
+                                pattern: "^IP="
+        watch_dns:
+                description: domain name watch
+                properties:
+                        watch_type:
+                                enum: [ dns ]
+                        watch:
+                                pattern: "^dns="
+        watch_channel:
+                description: channel watch
+                properties:
+                        watch_type:
+                                enum: [ channel ]
+                        watch:
+                                pattern: "^ch=[0-9]+$"
+        watch_errors:
+                description: errors watch
+                properties:
+                        watch_type:
+                                enum: [ errors ]
+                        watch:
+                                enum: [ ERRORS ]
+        wlist:
+                description: watch list result
+                properties:
+                        op:
+                                enum: [ WATCH LIST ]
+                        cur_tag:
+                                description: current tag of watch
+                                $ref: "#/definitions/tag"
+                required:
+                        - cur_tag
+                allOf:
+                        - $ref: "#/definitions/watch_def"
+        anomaly:
+                description: anomaly module initialization
+                properties:
+                        op:
+                                enum: [ ANOMALY ]
+                allOf:
+                        - $ref: "#/definitions/anomaly_def"
+        anomaly_def:
+                properties:
+                        an:
+                                description: anomaly module name
+                                type: string
+                        parms:
+                                description: anomaly module parameters
+                                type: string
+                required:
+                        - an
+        ahit:
+                description: anomaly hit
+                oneOf:
+                        - $ref: "#/definitions/whit_ip"
+                        - $ref: "#/definitions/whit_nmsg"
+                properties:
+                        op:
+                                enum: [ ANOMALY HIT ]
+                        an:
+                                description: module that detected the anomaly
+                                type: string
+                required:
+                        - an
+        alist:
+                description: anomaly module list result
+                properties:
+                        op:
+                                enum: [ ANOMALY LIST ]
+                        cur_tag:
+                                description: current tag of anomaly module
+                                $ref: "#/definitions/tag"
+                required:
+                        - cur_tag
+                allOf:
+                        - $ref: "#/definitions/anomaly_def"
+        channel:
+                properties:
+                        op:
+                                enum: [ CHANNEL ON/OFF ]
+                allOf:
+                        - $ref: "#/definitions/channel_def"
+        channel_def:
+                properties:
+                        channel:
+                                description: channel number
+                                oneOf:
+                                        - $ref: "#/definitions/channel_str"
+                                        - enum: [ all ]
+                        "on":
+                                type: boolean
+                required:
+                        - channel
+                        - "on"
+        clist:
+                properties:
+                        op:
+                                enum: [ CHANNEL LIST ]
+                        spec:
+                                description:  Human readable string specifying the channel. It often looks like an IP address or network interface name or SIE channel alias.
+                                type: string
+                                maxLength: 1023
+                allOf:
+                        - $ref: "#/definitions/channel_def"
+        opt:
+                properties:
+                        op:
+                                enum: [ OPTION ]
+                oneOf:
+                        - $ref: "#/definitions/opt_trace"
+                        - $ref: "#/definitions/opt_rlimit"
+                        - $ref: "#/definitions/opt_sample"
+                        - $ref: "#/definitions/opt_bufsize"
+                required:
+                        - type
+        opt_trace:
+                description: server tracing level
+                properties:
+                        type:
+                                enum: [ TRACE ]
+                        trace:
+                                description: tracing level
+                                oneOf:
+                                        - type: integer
+                                        - type: string
+                required:
+                        - trace
+        opt_rlimit:
+                description: server rate limiting
+                properties:
+                        type:
+                                enum: [ RATE LIMIT ]
+                        max_pkts_per_sec:
+                                description: Request the server to send no more than this many WATCH HIT or ANOMALY HIT messages per second.  Use "off" to request no limit.  No change requested if null.
+                                oneOf:
+                                        - type: integer
+                                        - type: string
+                                          enum: [ "off" ]
+                                        - type: "null"
+                        cur_pkts_per_sec:
+                                description: This is the current value of the server's rate limit counter.  The counter is incremented each time a relevant AXA message is considered for sending to the client.  If the new value is greater than the rate limit, the message dropped.  The counter is reset every second.
+                                type: integer
+                                minimum: 0
+                        report_secs:
+                                description: The minimum number of seconds between reports of rate limiting.  It is a rate limit on rate limit reports. No change requested if null.
+                                oneOf:
+                                        - type: integer
+                                        - type: "null"
+                required:
+                        - max_pkts_per_sec
+                        - cur_pkts_per_sec
+                        - report_secs
+        opt_sample:
+                description: sample an output stream
+                properties:
+                        type:
+                                enum: [ SAMPLE ]
+                        sample:
+                                description: sample ratio
+                                oneOf:
+                                        - type: number
+                                          minimum: 0
+                                          exclusiveMinimum: true
+                                          maximum: 1
+                                        - type: string
+                                          enum: [ requested ]
+                required:
+                        - sample
+        opt_bufsize:
+                description: set TCP buffer or window size
+                properties:
+                        type:
+                                enum: [ SNDBUF ]
+                        bufsize:
+                                description: number of bytes
+                                type: integer
+                                minimum: 0
+                required:
+                        - bufsize

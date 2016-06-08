@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) semanatics for DNS packets and fields.
  *
- *  Copyright (c) 2014-2015 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2016 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -436,6 +436,15 @@ axa_walk_dns(void *ctxt, axa_walk_ops_t *ops,
 		return;
 	/* do not try to parse FORMERRs */
 	if ((rcode & 0xf)== ns_r_formerr)
+		return;
+
+	/* also skip if:
+	 *
+	 * QR bit is not set (0x8000)
+	 * Opcode is not 0/query (0x7800)
+	 * TC [truncated] bit is set (0x200)
+	 */
+	if ((rcode & 0xFA00) != 0x8000)
 		return;
 
 	/* get numbers of RRs */
