@@ -174,7 +174,7 @@ fi
 
 
 # remove old hash links (including files) from the target directory
-find . -maxdepth 1 -name '*.[0-9]'  | xargs -r $XARGS_DEBUG rm
+find . -maxdepth 1 -name '*.[0-9]'  | xargs $XARGS_DEBUG rm
 
 # Link certificate files (but not keys) from @CONFDIR@/certs.
 SRCS=.
