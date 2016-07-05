@@ -374,8 +374,6 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 		CRYPTO_set_dynlock_destroy_callback(dyn_destroy_function);
 	}
 
-	SSL_load_error_strings();
-
 	ERR_clear_error();
 
 	ssl_ctx = SSL_CTX_new(SSLv23_method());
