@@ -188,9 +188,7 @@ fi
 
 
 # make hash symlinks
-find $SRCS -maxdepth 1 -type f						\
-    | xargs -r $XARGS_DEBUG file					\
-    | sed -n 's/\(\.\/\)\{0,1\}\(.*\): *PEM certificate/\2/p'		\
+find $SRCS -maxdepth 1 -type f -name '*.pem'				\
     | while read L; do
 	  if ! $OPENSSL x509 -in $L -noout -checkend 3600; then
 	      echo "$L is stale" 2>&1
