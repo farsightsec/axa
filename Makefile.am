@@ -84,7 +84,6 @@ nobase_include_HEADERS = \
 	axa/json.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
-	axa/rad_mod.h \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
@@ -102,7 +101,6 @@ axa_libaxa_la_SOURCES = \
 	axa/json.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
-	axa/rad_mod.h \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
