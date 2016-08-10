@@ -1,10 +1,11 @@
-axa (1.3.1) UNRELEASED; urgency=low
+axa (1.3.2) UNRELEASED; urgency=low
 
   * Move misplaced axa/rad_mod.h to server core
   * Move all tls scripts to cert_tools
   * Fix axa_link_certs to work reliably on OS X and Debian
+  * Add Rad Units data type
 
- -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 04 Aug 2016 18:10:11 +0000
+ -- Mike Schiffman <mschiffm@fsi.io>  Wed, 10 Aug 2016 22:48:20 +0000
 
 axa (1.3.0) UNRELEASED; urgency=low
 
