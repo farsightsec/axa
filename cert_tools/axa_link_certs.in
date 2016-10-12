@@ -174,7 +174,7 @@ fi
 
 
 # remove old hash links (including files) from the target directory
-find . -maxdepth 1 -name '*.[0-9]'  | xargs -r $XARGS_DEBUG rm
+find . -maxdepth 1 -name '*.[0-9]'  | xargs $XARGS_DEBUG rm
 
 # Link certificate files (but not keys) from @CONFDIR@/certs.
 SRCS=.
@@ -188,9 +188,7 @@ fi
 
 
 # make hash symlinks
-find $SRCS -maxdepth 1 -type f						\
-    | xargs -r $XARGS_DEBUG file					\
-    | sed -n 's/\(\.\/\)\{0,1\}\(.*\): *PEM certificate/\2/p'		\
+find $SRCS -maxdepth 1 -type f -name '*.pem'				\
     | while read L; do
 	  if ! $OPENSSL x509 -in $L -noout -checkend 3600; then
 	      echo "$L is stale" 2>&1

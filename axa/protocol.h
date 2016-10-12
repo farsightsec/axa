@@ -667,8 +667,11 @@ typedef struct _PK {
 } axa_p_mgmt_user_sra_t;
 
 /* RAD specific user stats */
+typedef int32_t runits_t;			/* RAD Units */
 typedef struct _PK {
 	uint16_t		an_cnt;		/* number of anomalies */
+	runits_t		ru_original;	/* runits original balance */
+	runits_t		ru_balance;	/* runits current balance */
 #if NEXT_MGMT_VERSION_WE_WILL_ADD_THIS_STUFF
 	char			anomalies[128];	/* anomaly names */
 	axa_p_mgmt_user_wc_t	watches;	/* watch info */

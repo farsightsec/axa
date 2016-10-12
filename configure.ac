@@ -1,5 +1,5 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.3.0])
+AC_INIT([axa], [1.3.3])
 PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
 AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
@@ -111,12 +111,15 @@ AC_CONFIG_FILES([Makefile axa/libaxa.pc])
 
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
 		sratunnel/sratunnel.man sratunnel/radtunnel.man
-                sratool/axa_link_certs.man sratool/axa_make_cert.man
-		sratool/axa_server_cert.man])
+                cert_tools/axa_link_certs.man cert_tools/axa_make_cert.man
+		cert_tools/axa_server_cert.man])
 
-AC_CONFIG_FILES([sratool/axa_link_certs], [chmod +x sratool/axa_link_certs])
-AC_CONFIG_FILES([sratool/axa_make_cert], [chmod +x sratool/axa_make_cert])
-AC_CONFIG_FILES([sratool/axa_server_cert], [chmod +x sratool/axa_server_cert])
+AC_CONFIG_FILES([cert_tools/axa_link_certs],
+		[chmod +x cert_tools/axa_link_certs])
+AC_CONFIG_FILES([cert_tools/axa_make_cert],
+		[chmod +x cert_tools/axa_make_cert])
+AC_CONFIG_FILES([cert_tools/axa_server_cert],
+		[chmod +x cert_tools/axa_server_cert])
 
 AC_ARG_WITH([ciphers],
 AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),

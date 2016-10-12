@@ -47,9 +47,9 @@ EXTRA_DIST += \
 	radwatch.man \
 	sratool/options.man \
 	sratool/cmds.man \
-	sratool/axa_link_certs.man \
-	sratool/axa_make_cert.man \
-	sratool/axa_server_cert.man \
+	cert_tools/axa_link_certs.man \
+	cert_tools/axa_make_cert.man \
+	cert_tools/axa_server_cert.man \
 	README.md \
 	Doxyfile.in \
 	DoxygenLayout.xml
@@ -59,9 +59,9 @@ dist_man_MANS =  \
 	sratool/radtool.1 \
 	sratunnel/sratunnel.1 \
 	sratunnel/radtunnel.1 \
-	sratool/axa_link_certs.8 \
-	sratool/axa_make_cert.8 \
-	sratool/axa_server_cert.8
+	cert_tools/axa_link_certs.8 \
+	cert_tools/axa_make_cert.8 \
+	cert_tools/axa_server_cert.8
 CLEANFILES += $(dist_man_MANS)
 
 #
@@ -84,7 +84,6 @@ nobase_include_HEADERS = \
 	axa/json.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
-	axa/rad_mod.h \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
@@ -102,7 +101,6 @@ axa_libaxa_la_SOURCES = \
 	axa/json.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
-	axa/rad_mod.h \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
@@ -239,9 +237,9 @@ sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
 #
 
 bin_SCRIPTS = \
-	sratool/axa_link_certs \
-	sratool/axa_make_cert \
-	sratool/axa_server_cert
+	cert_tools/axa_link_certs \
+	cert_tools/axa_make_cert \
+	cert_tools/axa_server_cert
 
 #
 ##

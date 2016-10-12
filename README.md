@@ -90,17 +90,20 @@ packages.
 The AXA suite has the following external dependencies:
 
  * C compiler (gcc or llvm)
+ * [autoconf](https://www.gnu.org/software/autoconf/)
+ * [automake](https://www.gnu.org/software/automake/)
+ * [libtool](https://www.gnu.org/software/libtool/)
  * [libpcap](http://www.tcpdump.org/)
  * [zlib](http://www.zlib.net/)
  * [nmsg](https://github.com/farsightsec/nmsg) (probably will want to configure
-    with `--without-libxs`, be sure to use version >= 0.10.0)
+    with `--without-libxs`, be sure to use version >= 0.11.2)
  * [protobuf-c](https://github.com/protobuf-c/protobuf-c) (be sure to use 2.x.x)
  * [sie-nmsg](https://github.com/farsightsec/sie-nmsg)
  * [wdns](https://github.com/farsightsec/wdns)
  * [libedit](http://thrysoee.dk/editline/)
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed
     on BSDish systems)
- * [libssl](http://openssl.org/)
+ * [libssl](http://openssl.org/) (recommended >= 1.0.2i)
  * [check](http://check.sourceforge.net/doc/check_html/) (be sure to use >= 0.10.0)
  * [yajl](https://lloyd.github.io/yajl/) (be sure to use >= 2.1.0)
 
