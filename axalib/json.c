@@ -870,7 +870,7 @@ err:
 
 #else /* HAVE_YAJL */
 axa_json_res_t
-axa_body_to_json(__attribtue__((__unused__)) axa_emsg_t *emsg,
+axa_body_to_json(__attribute__((__unused__)) axa_emsg_t *emsg,
 		 __attribute__((__unused__)) nmsg_input_t nmsg_input,
 		 __attribute__((__unused__)) axa_p_hdr_t *hdr,
 		 __attribute__((__unused__)) axa_p_body_t *body,
