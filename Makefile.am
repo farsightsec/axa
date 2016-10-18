@@ -142,6 +142,7 @@ axa_libaxa_la_CFLAGS = \
 	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
 	${libwdns_CFLAGS} \
+	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${strlcpy_CFLAGS} \
 	${yajl_CFLAGS}
