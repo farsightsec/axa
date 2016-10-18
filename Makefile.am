@@ -221,6 +221,7 @@ sratunnel_sratunnel_LDADD = \
 
 sratunnel_sratunnel_CFLAGS = \
 	${AM_CFLAGS} \
+	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${libssl_CFLAGS} \
 	${libcrypto_CFLAGS} \
