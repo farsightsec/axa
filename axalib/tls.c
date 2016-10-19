@@ -527,7 +527,7 @@ axa_tls_parse(axa_emsg_t *emsg,
 {
 	const char *comma, *at;
 	struct stat sb;
-	char *p;
+	char *p, *pp;
 
 	AXA_ASSERT(*cert_filep == NULL && *key_filep == NULL && *addrp == NULL);
 
@@ -582,14 +582,16 @@ axa_tls_parse(axa_emsg_t *emsg,
 	free(*key_filep);
 	*key_filep = p;
 
+	pp = *key_filep;
 	if (0 > stat(*cert_filep, &sb)) {
+		pp = *cert_filep;
 		axa_pemsg(emsg, "\"%s\" %s: %s",
 			  spec, *cert_filep, strerror(errno));
 	} else if (0 <= stat(*key_filep, &sb)) {
 		return (true);
 	}
 	axa_pemsg(emsg, "\"%s\" %s: %s",
-		  spec, *key_filep, strerror(errno));
+		  spec, pp, strerror(errno));
 
 	free(*addrp);
 	*addrp = NULL;
