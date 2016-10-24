@@ -463,7 +463,7 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 }
 
 /*
- * Generate an erorr message string in a buffer, if we have a buffer.
+ * Generate an error message string in a buffer, if we have a buffer.
  * Log or print the message if there is no buffer
  */
 void
