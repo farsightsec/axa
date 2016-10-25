@@ -43,7 +43,7 @@ as if the first command string on the command line were
 are optional commands strings that are executed before
 .Nm
 starts accepting commands from the use.
-There can be more than one string of commands
+There can be more than one string of commands.
 Multiple commands within a string are separated by semicolons.
 .El
 .\" end of options.man
