@@ -28,7 +28,7 @@ after new AXA certificates have been installed manually or with
 .Xr axa_make_cert 8
 or
 .Xr axa_server_cert 8 .
-It also delete old certificate files.
+It also deletes old certificate files.
 It is similar to
 .Xr c_rehash 1 .
 .Ss OPTIONS
@@ -63,8 +63,8 @@ or
 .Sh SEE ALSO
 .Xr axa_make_cert 8 ,
 .Xr axa_server_cert 8 ,
-.Xr sratool 1 ,
 .Xr radtool 1 ,
-.Xr sratunnel 1 .
+.Xr sratool 1 ,
+.Xr radtunnel 1 ,
 and
-.Xr radtunnel 1 .
+.Xr sratunnel 1 .
