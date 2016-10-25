@@ -27,7 +27,7 @@
 .Nm axa_make_cert
 creates self-signed AXA certificate,
 .Pa name.pem ,
-and private key files,
+and private key file,
 .Pa name.key ,
 where
 .Ar name
@@ -70,8 +70,8 @@ or
 .Sh SEE ALSO
 .Xr axa_link_certs 8 ,
 .Xr axa_server_cert 8 ,
-.Xr sratool 1 ,
 .Xr radtool 1 ,
-.Xr sratunnel 1 .
+.Xr sratool 1 ,
+.Xr radtunnel 1 ,
 and
-.Xr radtunnel 1 .
+.Xr sratunnel 1 .
