@@ -249,7 +249,7 @@ main(int argc, char **argv)
 	if (srvr_addr == NULL)
 		usage("server not specified with -s");
 	if (out_addr == NULL)
-		usage("output not specifed with -o");
+		usage("output not specified with -o");
 	if (watches == NULL)
 		usage("no watches specified with -w");
 	if (mode == RAD) {
