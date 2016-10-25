@@ -960,7 +960,7 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 			if (print_op)
 				axa_buf_print(&buf, &buf_len, " ");
 			axa_buf_print(&buf, &buf_len,
-				      "unrecogized type %d", body->opt.type);
+				      "unrecognized type %d", body->opt.type);
 			break;
 #pragma clang diagnostic pop
 		}
