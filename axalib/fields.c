@@ -1,5 +1,5 @@
 /*
- * Advanced Exchange Access (AXA) semanatics for nmsg fields
+ * Advanced Exchange Access (AXA) semantics for nmsg fields
  *
  *  Copyright (c) 2014-2016 by Farsight Security, Inc.
  *
