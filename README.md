@@ -238,7 +238,7 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
  4. Retrieve and install the AXA server certificate. This is the equivalent of
     when you SSH to a new host for the first time and receive the "Are you
     sure you want to continue connecting (yes/no)?" message. This can be done
-    bu connecting to either SRA or RAD since they both share the same TLS
+    by connecting to either SRA or RAD since they both share the same TLS
     certificate:
 
         # axa_server_cert -s sra.sie-remote.net,1021
