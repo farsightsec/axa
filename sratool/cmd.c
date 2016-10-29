@@ -346,7 +346,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
     " from, or contain the specified IP addresses,"
     " that contain the specified domain name,"
-    " that arrived at the server on the specifed SIE channel,"
+    " that arrived at the server on the specified SIE channel,"
     " or are SIE messages that could not be decoded."
     " The \"tag\" is the integer labeling the watch"
 },
@@ -694,7 +694,7 @@ cmd(axa_tag_t tag, const char *op)
 			return (run_cmd(tag, op, arg+j, ce));
 		}
 	}
-	/* run an unambigious partial command */
+	/* run an unambiguous partial command */
 	if (ce1 != NULL && (ce1->help_str != NULL || num_iss <= 1))
 		return (run_cmd(tag, op, "", ce1));
 

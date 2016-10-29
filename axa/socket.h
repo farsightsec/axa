@@ -262,7 +262,7 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] s socket or fd
- *  \param[in] label descriptive labal for s such as an address
+ *  \param[in] label descriptive label for s such as an address
  *  \param[in] bufsize non-zero to set the SO_RCVBUF and SO_SNDBUF sizes
  *  \param[in] nonblock boolean, if true, set O_NONBLOCK
  *

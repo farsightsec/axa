@@ -291,7 +291,7 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 			   || 60*1000 <= axa_elapsed_ms(&now,
 							&output_errno_time)
 			   || axa_debug >= AXA_DEBUG_TRACE) {
-			/* Report occassional identical UDP errors. */
+			/* Report occasional identical UDP errors. */
 			output_errno = errno;
 			gettimeofday(&output_errno_time, NULL);
 			clear_prompt();

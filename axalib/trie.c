@@ -5,7 +5,7 @@
  * domain names including wildcards.
  *
  * Searches are lock-free.
- * Additions and deletions use a single mutex.  Searchers must occassionally
+ * Additions and deletions use a single mutex.  Searchers must occasionally
  * get that lock to reduce their reference counts on old data.
  *
  * IP addresses are kept in host byte order.
@@ -101,7 +101,7 @@ axa_tval_delete(trie_roots_t *roots, tval_list_t **tval_listp, tval_t tval)
 
 /* Expand one of the two value lists of a trie node.
  *	lock_free=true if we are working on a value list in an existing trie
- *	    node or other list used by the searchers and so must accomodate
+ *	    node or other list used by the searchers and so must accommodate
  *	    the lock-free reading by the searchers.
  */
 static void
@@ -385,7 +385,7 @@ axa_trie_to_watch(axa_p_watch_t *w, const trie_node_t *node,
 /*
  * Add a watch list entry to one of the two watch lists of a node.
  *	lock_free=true if we are working on a watch list in an existing trie
- *	    node or other list used by the searchers and so must accomodate
+ *	    node or other list used by the searchers and so must accommodate
  *	    the lock-free reading by the searchers.
  */
 static trie_node_t *
