@@ -19,77 +19,34 @@
 .Nm radtunnel
 .Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
-.Op Fl VdORz
-.Op Fl C Ar count
-.Op Fl r Ar rate-limit
-.Op Fl E Ar ciphers
-.Op Fl S Ar certs
-.Op Fl A Ar interval
-.br
-.Op Fl P Ar pidfile
-.Fl s Ar RAD-server
-.Fl w Ar watch
 .Fl a Ar anomaly
 .Fl o Ar out-addr
+.Fl s Ar RAD-server
+.Fl w Ar watch
+.br
+.Op Fl dhOVz
+.Op Fl A Ar interval
+.Op Fl C Ar count
+.Op Fl E Ar ciphers
+.Fl m Ar sampling-rate
+.Op Fl P Ar pidfile
+.Op Fl r Ar rate-limit
+.Op Fl S Ar certs
+.br
 .Sh DESCRIPTION
 .Nm Radtunnel
 transfers selected Security Information Exchange (SIE) data
-from Realtime Anomaly Detector (RAD) servers to the local network.
+from Real-time Anomaly Detector (RAD) servers to the local network.
 The connection to the server is created and restored after problems
 with binary exponential delays between retries.
 .Pp
 .Nm Radtunnel
-is a programming example for using the Advanced Exchange Access (AXA)
-applications programming interface, the AXA protocol.
-It also demonstrates the use of the AXA helper library,
+is a tool for tunneling SIE data using the Advanced Exchange Access (AXA)
+protocol. It also demonstrates the use of the AXA helper library,
 .Pa libaxa.a .
 .Ss OPTIONS
 The following arguments are available:
 .Bl -tag -width 3n
-.It Fl V
-displays the version of
-.Nm
-and its preferred version of the AXA protocol.
-.It Fl d
-enable debugging reports or increase them after the first
-.Fl d .
-.It Fl t
-enable tracing reports on the server or increase them after the first
-.Fl t .
-.It Fl O
-enable a spinning bar output indicator on stdout.
-.It Fl R
-switches from RAD to SRA mode.
-In SRA mode,
-.Fl a
-is not allowed
-and
-.Fl c
-is required.
-In RAD mode,
-.Fl a
-is required
-and
-.Fl c
-is not allowed.
-.It Fl z
-enable nmsg zlib container compression.
-.It Fl C Ar count
-stops
-.Nm
-after
-.Ar count
-SIE messages and raw IP packets.
-.It Fl r Ar rate-limit
-tells the server to send at most
-.Ar rate-limit
-SIE messages and raw IP packets per second.
-.It Fl E Ar ciphers
-specifies a list ciphers for TLS connections.
-.It Fl S Ar certs
-overrides the default directory containing SSL certificates and keys.
-Its default is
-.Pa @CONFDIR@/certs .
 .It Fl A Ar interval
 specifies the accounting interval. Every
 .Ar interval
@@ -97,10 +54,46 @@ seconds an accounting request will be made to server and the results will be
 emitted to stdout. When specifying this mode, you also need to specify
 .Fl d
 at the command line.
+.It Fl a Ar anomaly Op parameters
+specifies RAD anomaly detection module and its parameters.
+There must be at least one
+.Fl a
+in RAD mode.
+.It Fl C Ar count
+stops
+.Nm
+after
+.Ar count
+SIE messages and raw IP packets.
+.It Fl d
+enable debugging reports or increase them after the first
+.Fl d .
+.It Fl E Ar ciphers
+specifies a list ciphers for TLS connections.
+.It Fl m Ar sampling-rate
+specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
+the SRA server will send.
+.It Fl O
+enable a spinning bar output indicator on stdout.
+.It Fl o Ar out-addr
+specifies
+the destination of the SIE data.
+It can be forwarded as
+.Em nmsg
+messages to a UDP or TCP port
+or as raw IP packets to a file, FIFO, or network interface.
 .It Fl P Ar pidfile
 will result in the current PID  being written to
 .Ar pidfile .
 The file will be deleted upon program exit.
+.It Fl r Ar rate-limit
+tells the server to send at most
+.Ar rate-limit
+SIE messages and raw IP packets per second.
+.It Fl S Ar certs
+overrides the default directory containing SSL certificates and keys.
+Its default is
+.Pa @CONFDIR@/certs .
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
@@ -130,6 +123,13 @@ If not absolute, the files are in the
 .Fl S Ar certs
 directory.
 .El
+.It Fl t
+enable tracing reports on the server or increase them after the first
+.Fl t .
+.It Fl V
+displays the version of
+.Nm
+and its preferred version of the AXA protocol.
 .It Fl w Ar watch
 There must be at least one
 .Fl w
@@ -138,9 +138,6 @@ dark channel IP packets.
 .so radwatch.man
 .El
 .Pp
-With
-.Fl R
-and so in RAD mode, channel and error watches are not permitted.
 In addition,
 .Ar (shared)
 can be appended to
@@ -149,30 +146,18 @@ and
 .Ar
 dns
 watches to indicate addresses or domains that are not used exclusively.
-.It Fl a Ar anomaly Op parameters
-specifies an RAD anomaly detection module and its parameters with
-.Fl R
-and so in RAD mode.
-There must be at least one
-.Fl a
-in RAD mode.
-.It Fl o Ar out-addr
-specifies
-the destination of the SIE data.
-It can be forwarded as
-.Em nmsg
-messages to a UDP or TCP port
-or as raw IP packets to a file, FIFO, or network interface.
+.It Fl z
+enable nmsg zlib container compression.
 .ds CT
 .so fwd.man
 .El
 .Sh EXAMPLES
-The following sends all IP traffic matching the watches using the
-ip_probe anomaly module as seen by the RAD server at example.com
-to the local UDP port 8000 on 127.0.0.1:
+The following connects to a RAD server at example.com, loads the Brand Sentry
+module looking for the brand "farsight", and sends all anomaly hit nmsgs to
+the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-radtunnel -s ssh:rad-service@example.com -o nmsg:127.1,8000 \\
-	-w ip=0/1 -w ip=128.0/1 -a ip14-80
+radtunnel -s tls:user@example.com,1022 -o nmsg:127.1,8000 \\
+	-w dns=*. -a brand_sentry brand=farsight
 .Ed
 .Sh FILES
 .Bl -tag -width config
