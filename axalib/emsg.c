@@ -432,7 +432,6 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 		strcpy(&buf[buf_len-sizeof("...")], "...");
 	if (fatal)
 		strlcat(buf, FMSG, sizeof(buf));
-	buf_len = strlen(buf);
 
 	/* keep stderr and stdout straight despite syslog output
 	 * to stdout or stderr */
