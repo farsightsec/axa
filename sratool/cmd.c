@@ -142,10 +142,6 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "accounting",
     "Ask the server to report total message counts."
 },
-{"acct",		acct_cmd,		BOTH, NO, YES,
-    "acct",
-    "Ask the server to report total message counts."
-},
 {"anomaly",		anom_cmd,		RAD, YES, YES,
     "tag anomaly name [parameters]",
     "Start the named anomaly detector module.\n"
@@ -223,19 +219,6 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     " (default 0)."
     "  Stop forwarding after count messages."
 },
-{"fwd",			out_cmd,		BOTH, MB, NO,
-    "fwd [off | nmsg:[tcp:|udp:]host,port [count] | nmsg:file:path [count]\n"
-    "      | pcap[-fifo]:file [count] | pcap-if:[dst/]ifname] [count]",
-    "Start, stop or show the state of forwarding packets received from"
-    " the server."
-    "  Received msg messages and IP packets can be"
-    " forwarded as nmsg messages to a TCP or UDP port."
-    "  Received IP packets can be forwarded as a pcap stream"
-    " to a file, to a fifo created separately with `mkfio`,"
-    " or in Ethernet frames on a named network interface to a 48-bit address"
-    " (default 0)."
-    "  Stop forwarding after count messages."
-},
 {"get anomaly",		list_cmd,		RAD, MB, YES,
     "[tag] get anomaly",
     "List a specified or all available anomaly detection modules. "
@@ -256,11 +239,6 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"help",		help_cmd,		BOTH, MB, NO,
     "help [cmd]",
     "List all commands or get more information about a command."
-},
-{"limits",		rlimits_cmd,		BOTH, MB, YES,
-    "limits [-|MAX|per-sec] [-|NEVER|report-secs]",
-    "Ask the server to report its rate limits"
-    " or to set rate limits and the interval between rate limit reports."
 },
 {"list channels",	list_cmd,		SRA, MB, YES,
     "list channels",
@@ -293,19 +271,6 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "nop",
     "Send a command to the server that does nothing but test the connection"
 },
-{"output",		out_cmd,		BOTH, MB, NO,
-    "output [off | nmsg:[tcp:|udp:]host,port [count] | nmsg:file:path [count]\n"
-    "      | pcap[-fifo]:file [count] | pcap-if:[dst/]ifname] [count]",
-    "Start, stop or show the state of forwarding packets received from"
-    " the server."
-    "  Received msg messages and IP packets can be"
-    " forwarded as nmsg messages to a TCP or UDP port."
-    "  Received IP packets can be forwarded as a pcap stream"
-    " to a file, to a fifo created separately with `mkfio`,"
-    " or in Ethernet frames on a named network interface to a 48-bit address"
-    " (default 0)."
-    "  Stop forwarding after count messages."
-},
 {"pause",		pause_cmd,		BOTH, NO, YES,
     "pause",
     "Tell the server to stop sending data."
@@ -320,11 +285,6 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 },
 {"rate limits",		rlimits_cmd,		BOTH, MB, YES,
     "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
-    "Ask the server to report its rate limits"
-    " or to set rate limits and the interval between rate limit reports."
-},
-{"rlimits",		rlimits_cmd,		BOTH, MB, YES,
-    "rlimits [-|MAX|per-sec] [-|NEVER|report-secs]",
     "Ask the server to report its rate limits"
     " or to set rate limits and the interval between rate limit reports."
 },
@@ -363,15 +323,6 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 },
 {"watch",		sra_watch_cmd,		SRA, MB, YES,
     "tag watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
-    "Tell the SRA server to send nmsg messages or IP packets that are to,"
-    " from, or contain the specified IP addresses,"
-    " that contain the specified domain name,"
-    " that arrived at the server on the specified SIE channel,"
-    " or are SIE messages that could not be decoded."
-    " The \"tag\" is the integer labeling the watch."
-},
-{"watches",		sra_watch_cmd,		SRA, MB, YES,
-    "tag watches {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
     " from, or contain the specified IP addresses,"
     " that contain the specified domain name,"

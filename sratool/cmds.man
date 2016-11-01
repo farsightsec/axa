@@ -3,7 +3,6 @@
 .\" expects \*(SR to contain RAD or SRA
 .\" and \(TL to contain sratool or radtool
 .It Ic accounting
-.It Ic acct
 Tell the server to report counts of packets seen, missed, sent, and lost.
 .It Ic ciphers Op cipher-list
 set the list of ciphers for the next TLS connection or show the current
@@ -77,9 +76,7 @@ expect to connect to an SRA or RAD server.
 The default command mode is set by the name of the program.
 .It Ic nop
 sends a command to the server that does nothing but test the connection.
-.It Ic fwd
 .It Ic forward
-.It Ic output
 Start, stop or show the state of forwarding packets received from the server.
 Received msg messages and IP packets can be forwarded as nmsg messages to
 a TCP or UDP port.
@@ -94,14 +91,6 @@ If
 is present, forwarding stops after that many packets.
 .It Ic pause
 Tell the \*(SR server to stop sending data.
-.It Ic limit Oo
-.Op Ar -|MAX|per-sec op
-.Op Ar -|NEVER|report-secs
-.Oc
-.It Ic rlimit Oo
-.Op Ar -|MAX|per-sec op
-.Op Ar -|NEVER|report-secs
-.Oc
 .It Ic rate limit Oo
 .Op Ar -|MAX|per-sec op
 .Op Ar -|NEVER|report-secs
