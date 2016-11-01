@@ -267,7 +267,7 @@ EXTRA_DIST += \
 	sratunnel/README
 
 if HAVE_DOXYGEN
-stamp-html: $(DOXYGEN_INPUT_FILES) $(top_builddir)/Doxyfile $(top_srcdir)/DoxygenLayout.xml $(include_HEADERS) $(nobase_include_HEADERS)
+stamp-html: $(DOXYGEN_INPUT) $(top_builddir)/Doxyfile $(top_srcdir)/DoxygenLayout.xml $(include_HEADERS) $(nobase_include_HEADERS)
 	$(AM_V_GEN) $(DOXYGEN)
 	@touch $@
 html-local: stamp-html
