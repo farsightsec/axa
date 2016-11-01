@@ -470,6 +470,11 @@ out_ip_pcap_file(const uint8_t *pkt, size_t caplen, size_t len,
 		bpf_u_int32 len;	/* length this packet (off wire) */
 	} sf_hdr;
 
+	if (pkt == NULL) {
+		out_error("NULL packet; nothing to do");
+		return;
+	}
+
 	if (caplen > sizeof(out_buf) - sizeof(sf_hdr) - out_buf_len
 	    || out_buf_base != 0) {
 		out_flush();
@@ -502,6 +507,11 @@ out_ip_pcap_inject(const uint8_t *pkt, size_t caplen)
 	uint32_t loopback_hdr;
 
 	AXA_ASSERT(caplen < sizeof(out_buf) - out_buf_base);
+
+	if (pkt == NULL) {
+		axa_error_msg("NULL packet; nothing to do");
+		return;
+	}
 
 	if (out_pcap_datalink == DLT_NULL
 	    || out_pcap_datalink == DLT_LOOP) {

@@ -356,7 +356,7 @@ axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 			return (false);
 		}
 	}
-	if (passive && strcmp(host, "*") == 0)
+	if (passive && host && strcmp(host, "*") == 0)
 		host = NULL;
 	if (port == NULL) {
 		axa_pemsg(emsg, "missing port in \"%s\"", addr_port);

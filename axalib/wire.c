@@ -1469,8 +1469,6 @@ ck_opt(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_opt_t *opt, size_t opt_len)
 
 	AXA_ASSERT(opt_len >= sizeof(axa_p_opt_t) - sizeof(opt->u));
 
-	val_len = opt_len - (sizeof(axa_p_opt_t) - sizeof(opt->u));
-
 	switch ((axa_p_opt_type_t)opt->type) {
 	case AXA_P_OPT_TRACE:
 		val_len = sizeof(opt->u.trace);
@@ -2153,7 +2151,6 @@ axa_send_save(axa_io_t *io, size_t done, const axa_p_hdr_t *hdr,
 		/* Some or all of the second chunk of body was not sent.
 		 * Save the unsent part. */
 		memcpy(p, ((uint8_t *)b2)+(b2_len-chunk), chunk);
-		p += chunk;
 	}
 }
 
