@@ -28,6 +28,8 @@
 retrieves the AXA server certificate fingerprint.
 .Ss OPTIONS
 .Bl -tag -width 3n
+.It Fl f
+forces overwrite of existing certificate.
 .It Fl x
 enables debugging output.
 .It Fl S Ar certsdir
