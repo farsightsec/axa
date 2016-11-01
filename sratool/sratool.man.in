@@ -21,11 +21,11 @@
 .Nm sratool
 .Nd SIE Remote Access (SRA) tool
 .Sh SYNOPSIS
-.Op Fl VdN
-.Op Fl F Ar fields
-.Op Fl E Ar ciphers
-.Op Fl S Ar certs
+.Op Fl dhNV
 .Op Fl c Ar cfile
+.Op Fl E Ar ciphers
+.Op Fl F Ar fields
+.Op Fl S Ar certs
 .Op commands
 .Sh DESCRIPTION
 .Nm Sratool
@@ -87,6 +87,9 @@ Multiple commands can be specified at once by separating them with semicolons.
 The following commands are available:
 .Bl -tag -width 3n
 .so cmds.man
+.It Ic channel Bro Ar list | Bro Ar on|off Brc Bro Ar all|chN Brc Brc
+List available SRA channels or enable or disable
+one or all SIE channels.
 .It Ar tag Ic watch Brq Ar ip=IP[/n] | dns=[*.]dom | ch=chN | errors
 Tell the SRA server to send NMSG messages or IP packets that are to,
 from, or contain the specified IP addresses,
@@ -100,9 +103,9 @@ is a number labeling the watch.
 .It Oo Ar tag Oc Ic list watches
 With a tag (numeric label), list the specified watch.
 Without a tag, list all watches.
-.It Ic channel Bro Ar list | Bro Ar on|off Brc Bro Ar all|chN Brc Brc
-List available SRA channels or enable or disable
-one or all SIE channels.
+.It Oo Ar tag Oc Ic stop
+With a tag, stop (delete) the specified watch.
+Without a tag, delete all watches.
 .El
 .Sh EXAMPLES
 The following captures and displays one SIE
@@ -112,8 +115,8 @@ The "dns=*." watch or pattern was matched by the "ns1.xserver.jp"
 domain in DNS NS rdata.
 .Bd -literal -offset 4n
 $ sratool 
-sra> connect ssh:sra-service@sra.sie-remote.net
-* HELLO srad version 1.2.1 sra AXA protocol 1
+sra> connect tls:user@sra.sie-remote.net,1021
+* HELLO srad version 1.4.1 sra AXA protocol 1
 sra> count 1
 sra> channel 211 on
 * OK CHANNEL ON/OFF channel ch211 on

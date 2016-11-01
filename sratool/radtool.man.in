@@ -21,11 +21,11 @@
 .Nm radtool
 .Nd Realtime Anomaly Detector (RAD) tool
 .Sh SYNOPSIS
-.Op Fl VdN
-.Op Fl F Ar fields
-.Op Fl E Ar ciphers
-.Op Fl S Ar certs
+.Op Fl dhNV
 .Op Fl c Ar cfile
+.Op Fl E Ar ciphers
+.Op Fl F Ar fields
+.Op Fl S Ar certs
 .Op commands
 .Sh DESCRIPTION
 .Nm Radtool

@@ -2,38 +2,12 @@
 .\" common text describing commands common to sratool and radtool
 .\" expects \*(SR to contain RAD or SRA
 .\" and \(TL to contain sratool or radtool
-.It Ic help Op command
-lists all commands or describes a single command.
-.It Ic exit
-ends
-.Nm .
-.It Ic error mode Op disconnect | off
-disconnects from the \*(SR server and exits
-when the server reports an error or the connection breaks.
-In the default mode
-.Em "error mode off" ,
-errors are only reported.
-.It Ic debug Op on | off | quiet | N
-increases, decreases or shows the level of debugging and tracing messages
-that is also controlled by
-.Fl d .
-.Ic Debug\ quiet
-turns off reports of successful AXA commands.
-.It Ic verbose Op on | off | N
-controls the length of SIE message and IP packet descriptions.
-The default,
-.Em "verbose off" ,
-generally displays one line summaries.
-.It Ic version
-displays the version of
-.Nm
-and its version of the AXA protocol.
-.It Ic mode Op SRA | RAD
-Show the current command mode or
-expect to connect to an SRA or RAD server.
-The default command mode is set by the name of the program.
-.It Ic source filename
-reads and executes commands from a file.
+.It Ic accounting
+.It Ic acct
+Tell the server to report counts of packets seen, missed, sent, and lost.
+.It Ic ciphers Op cipher-list
+set the list of ciphers for the next TLS connection or show the current
+contents of the list.
 .It Xo
 .Ic connect
 .Oo
@@ -51,7 +25,7 @@ By itself
 shows the current connection.
 Otherwise connect to the specified \*(SR server.
 .Pp
-.Ic Ssh:
+.Ic ssh:
 connections use
 .Xr ssh 1
 configuration files including
@@ -59,9 +33,10 @@ configuration files including
 to specify the required public keys
 and optionally the fully qualified host names and user names associated
 with the public key.
-Use the "debug 4" command to diagnose ssh connection problems.
+Use the "debug 4" command to diagnose ssh connection problems. Note that SSH
+transport is deprecated and users are encouraged to use TLS.
 .Pp
-.Ic Tls:
+.Ic tls:
 connections use the SSL certificate in the
 .Ar cert
 file and the private key in the
@@ -70,16 +45,40 @@ file.
 If not absolute, the files are in the
 .Fl S Ar certs
 directory.
-.It Ic disconnect
-disconnects from the \*(SR server.
 .It Ic count Op N | off
 sets terminal output to stop displaying packets after a
 number of packets (including immediately with a number of 0),
 show the currently remaining count,
 or turn off the packet count limit.
-.It Ic ciphers Op cipher-list
-set the list of ciphers for the next TLS connection or show the current
-contents of the list.
+.It Ic debug Op on | off | quiet | N
+increases, decreases or shows the level of debugging and tracing messages
+that is also controlled by
+.Fl d .
+.Ic Debug\ quiet
+turns off reports of successful AXA commands.
+.It Ic disconnect
+disconnects from the \*(SR server.
+.It Ic error mode Op disconnect | off
+disconnects from the \*(SR server and exits
+when the server reports an error or the connection breaks.
+In the default mode
+.Em "error mode off" ,
+errors are only reported.
+.It Ic exit
+ends
+.It Ic go
+Tell the \*(SR server to resume sending data.
+.Nm .
+.It Ic help Op command
+lists all commands or describes a single command.
+.It Ic mode Op SRA | RAD
+Show the current command mode or
+expect to connect to an SRA or RAD server.
+The default command mode is set by the name of the program.
+.It Ic nop
+sends a command to the server that does nothing but test the connection.
+.It Ic fwd
+.It Ic forward
 .It Ic output
 Start, stop or show the state of forwarding packets received from the server.
 Received msg messages and IP packets can be forwarded as nmsg messages to
@@ -93,12 +92,16 @@ or in Ethernet frames on a named network interface to a 48-bit address.
 If
 .Ar count
 is present, forwarding stops after that many packets.
-.It Ic nop
-sends a command to the server that does nothing but test the connection.
-.It Ic user Ar name
-sends a
-.Ic AXA_P_OP_USER
-command to the server.
+.It Ic pause
+Tell the \*(SR server to stop sending data.
+.It Ic limit Oo
+.Op Ar -|MAX|per-sec op
+.Op Ar -|NEVER|report-secs
+.Oc
+.It Ic rlimit Oo
+.Op Ar -|MAX|per-sec op
+.Op Ar -|NEVER|report-secs
+.Oc
 .It Ic rate limit Oo
 .Op Ar -|MAX|per-sec op
 .Op Ar -|NEVER|report-secs
@@ -106,21 +109,36 @@ command to the server.
 Tell the \*(SR server to report its rate limits
 or set rate limits and the interval between rate limit reports.
 Hits in excess of the rate limit are discarded by the server.
+.It Ic radd
+Change to RAD mode.
 .It Ic sample Op Ar X%
 Get and optionally set the percentage of hits that the \*(SR servers sends.
+.It Ic sleep x.y
+Do nothing for x.y seconds.
+.It Ic source filename
+reads and executes commands from a file.
+.It Ic srad
+Change to SRA mode.
+.It Ic status
+Show information about the current connection state including time connected.
+.It Ic trace Ar N
+Set the server trace level to N.
+.It Ic user Ar name
+sends a
+.Ic AXA_P_OP_USER
+command to the server.
+.It Ic verbose Op on | off | N
+controls the length of SIE message and IP packet descriptions.
+The default,
+.Em "verbose off" ,
+generally displays one line summaries.
+.It Ic version
+displays the version of
+.Nm
+and its version of the AXA protocol.
 .It Ic window Op Ar bufsize
 Get and optionally set the TCP output buffer size or maximum send window
 used by the server.
-.It Ic pause
-Tell the \*(SR server to stop sending data.
-.It Ic go
-Tell the \*(SR server to resume sending data.
-.It Ic sleep x.y
-Do nothing for x.y seconds.
-.It Ic accounting
-Tell the server to report counts of packets seen, missed, sent, and lost.
-.It Ic status
-Show information about the current connection state including time connected.
 .It Ic zlib
 Toggle nmsg zlib container compression.
 .\"

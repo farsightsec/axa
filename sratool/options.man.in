@@ -2,15 +2,18 @@
 .\" common text describing sratool and radtool options
 The following arguments are available:
 .Bl -tag -width 3n
-.It Fl V
-displays the version of
-.Nm
-and its preferred version of the AXA protocol.
+.It Fl c Ar cfile
+reads commands from
+.Pa cfile
+as if the first command string on the command line were
+.Qq Ar source cfile .
 .It Fl d
 turns on tracing and debugging reports.
 Additional
 .Fl d
 turn on more messages.
+.It Fl E Ar ciphers
+specifies the TLS encryption ciphers to use with TLS connections.
 .It Fl F Ar fields
 overrides the default location of the
 .Pa fields
@@ -21,8 +24,10 @@ The default is
 .Pa ~/.axa/fields ,
 or
 .Pa @CONFDIR@/fields .
-.It Fl E Ar ciphers
-specifies the TLS encryption ciphers to use with TLS connections.
+.It Fl N
+instructs
+.Nm
+to not display a command line prompt.
 .It Fl S Ar certs
 specifies the directory containing SSL certificates and keys.
 If
@@ -34,11 +39,10 @@ uses the first directory among
 .Pa ~/.axa/certs ,
 and
 .Pa @CONFDIR@/certs .
-.It Fl c Ar cfile
-reads commands from
-.Pa cfile
-as if the first command string on the command line were
-.Qq Ar source cfile .
+.It Fl V
+displays the version of
+.Nm
+and its preferred version of the AXA protocol.
 .It Ar commands
 are optional commands strings that are executed before
 .Nm
