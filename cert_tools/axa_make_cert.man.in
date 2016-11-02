@@ -19,6 +19,7 @@
 .Nm axa_make_cert
 .Nd Make AXA an Certificate
 .Sh SYNOPSIS
+.Nm
 .Op Fl x
 .Op Fl S Ar certsdir
 .Op Fl l Ar days

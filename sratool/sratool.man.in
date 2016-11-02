@@ -21,6 +21,7 @@
 .Nm sratool
 .Nd SIE Remote Access (SRA) tool
 .Sh SYNOPSIS
+.Nm
 .Op Fl VdN
 .Op Fl F Ar fields
 .Op Fl E Ar ciphers

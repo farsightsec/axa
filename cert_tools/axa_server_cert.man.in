@@ -19,6 +19,7 @@
 .Nm axa_server_cert
 .Nd Retrieve AXA Server Certificate Fingerprint
 .Sh SYNOPSIS
+.Nm
 .Op Fl x
 .Op Fl S Ar certsdir
 .Op Fl o Ar cert_file

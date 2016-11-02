@@ -19,6 +19,7 @@
 .Nm axa_link_certs
 .Nd Create AXA Certificate Links
 .Sh SYNOPSIS
+.Nm
 .Op Fl xDL
 .Op Fl S Ar certsdir
 .Sh DESCRIPTION
