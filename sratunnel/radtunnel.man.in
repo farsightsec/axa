@@ -19,12 +19,12 @@
 .Nm radtunnel
 .Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
+.Op Fl dhOtVz
 .Fl a Ar anomaly
 .Fl o Ar out-addr
 .Fl s Ar RAD-server
 .Fl w Ar watch
 .br
-.Op Fl dhOtVz
 .Op Fl A Ar interval
 .Op Fl C Ar count
 .Op Fl E Ar ciphers

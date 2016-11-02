@@ -19,12 +19,12 @@
 .Nm sratunnel
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
+.Op Fl dhOtVz
 .Fl c Ar channel
 .Fl o Ar out-addr
 .Fl s Ar SRA-server
 .Fl w Ar watch
 .br
-.Op Fl dhOtVz
 .Op Fl A Ar interval
 .Op Fl E Ar ciphers
 .Op Fl C Ar count
