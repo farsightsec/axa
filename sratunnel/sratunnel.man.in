@@ -20,11 +20,11 @@
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
 .Fl c Ar channel
-.Fl s Ar SRA-server
 .Fl o Ar out-addr
+.Fl s Ar SRA-server
 .Fl w Ar watch
 .br
-.Op Fl dhOVz
+.Op Fl dhOtVz
 .Op Fl A Ar interval
 .Op Fl E Ar ciphers
 .Op Fl C Ar count
@@ -40,7 +40,7 @@ The connection to the server is created and restored after problems
 with binary exponential delays between retries.
 .Pp
 .Nm Sratunnel
-is tool for tunneling SIE data using the Advanced Exchange Access (AXA)
+is a tool for tunneling SIE data using the Advanced Exchange Access (AXA)
 protocol. It also demonstrates the use of the AXA helper library,
 .Pa libaxa.a .
 .Ss OPTIONS

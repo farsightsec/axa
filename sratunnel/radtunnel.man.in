@@ -24,7 +24,7 @@
 .Fl s Ar RAD-server
 .Fl w Ar watch
 .br
-.Op Fl dhOVz
+.Op Fl dhOtVz
 .Op Fl A Ar interval
 .Op Fl C Ar count
 .Op Fl E Ar ciphers
@@ -70,6 +70,8 @@ enable debugging reports or increase them after the first
 .Fl d .
 .It Fl E Ar ciphers
 specifies a list ciphers for TLS connections.
+.It Fl h
+display options summary.
 .It Fl m Ar sampling-rate
 specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
 the SRA server will send.
