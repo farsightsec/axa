@@ -257,20 +257,23 @@ main(int argc, char **argv)
 		if (anomalies == NULL)
 			usage("anomalies specified with -a");
 		if (chs != NULL) {
-			axa_error_msg("\"-c %s\" not allowed with -R", chs->c);
+			axa_error_msg("\"-c %s\" not allowed in RAD mode",
+					chs->c);
 			while ((arg = chs) != NULL) {
 				chs = arg->next;
 				free(arg);
 			}
+			exit(0);
 		}
 	} else {
 		if (anomalies != NULL) {
-			axa_error_msg("\"-a %s\" not allowed without -R",
+			axa_error_msg("\"-a %s\" not allowed in SRA mode",
 				      anomalies->c);
 			while ((arg = anomalies) != NULL) {
 				anomalies = arg->next;
 				free(arg);
 			}
+			exit(0);
 		}
 	}
 
