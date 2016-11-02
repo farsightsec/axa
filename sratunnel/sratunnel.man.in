@@ -67,9 +67,9 @@ argument naming an SIE channel that server will watch for interesting
 messages or IP packets.
 .Pp
 Channels are specified as
-.Ar chXX
+.Cm ch Ns Ar XX
 or
-.Ar all
+.Cm all
 .It Fl d
 enable debugging reports or increase them after the first
 .Fl d .
