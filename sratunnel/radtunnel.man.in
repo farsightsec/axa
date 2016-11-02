@@ -19,6 +19,7 @@
 .Nm radtunnel
 .Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
+.Nm
 .Op Fl dhOtVz
 .Fl a Ar anomaly
 .Fl o Ar out-addr

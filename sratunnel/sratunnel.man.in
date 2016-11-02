@@ -19,6 +19,7 @@
 .Nm sratunnel
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
+.Nm
 .Op Fl dhOtVz
 .Fl c Ar channel
 .Fl o Ar out-addr
