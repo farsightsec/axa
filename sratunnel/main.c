@@ -79,6 +79,7 @@ usage(const char *msg, ...)
 	printf("[-C count]\t\tstop after processing count messages\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
+	printf("[-h]\t\t\tdisplay this help and exit\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
 	printf("[-O]\t\t\tenable spinning bar on output\n");
