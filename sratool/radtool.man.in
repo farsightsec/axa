@@ -84,6 +84,13 @@ Multiple commands can be specified at once by separating them with semicolons.
 The following commands are available:
 .Bl -tag -width 3n
 .so cmds.man
+.It Oo Ar tag Oc Ic delete Op Ar anomaly Op Ar all
+With a tag (numeric label), stop or delete the specified anomaly.
+Without a tag (or with the keyword "all"), delete all anomalies.
+.It Oo Ar tag Oc Ic stop Op Ar anomaly Op Ar all
+Synonmym for the
+.Em delete
+command.
 .It Ar tag Ic watch Brq Ar ip=IP[/N][(shared) | dns=[*.]dom[(shared)]
 Specify IP addresses or domain names relevant to the
 anomaly detection modules specified by subsequent

@@ -90,6 +90,14 @@ The following commands are available:
 .It Ic channel Bro Ar list | Bro Ar on|off Brc Bro Ar all|chN Brc Brc
 List available SRA channels or enable or disable
 one or all SIE channels.
+.It Oo Ar tag Oc Ic delete Op Ar watches Op Ar all
+With a tag (numeric label), stop or delete the specified watch.
+Without a tag (or with the keyword "all"), delete all watches.
+.It Ic get channels
+List all SIE channels available to the user on the SRA server.
+.It Oo Ar tag Oc Ic get watches
+With a tag (numeric label), get (list) the specified watch.
+Without a tag (or with the keyword "all"), list all watches.
 .It Ar tag Ic watch Brq Ar ip=IP[/n] | dns=[*.]dom | ch=chN | errors
 Tell the SRA server to send NMSG messages or IP packets that are to,
 from, or contain the specified IP addresses,
@@ -101,11 +109,13 @@ is a number labeling the watch.
 .so srawatch.man
 .El
 .It Oo Ar tag Oc Ic list watches
-With a tag (numeric label), list the specified watch.
-Without a tag, list all watches.
-.It Oo Ar tag Oc Ic stop
-With a tag, stop (delete) the specified watch.
-Without a tag, delete all watches.
+Synonmym for the
+.Em get watches
+command.
+.It Oo Ar tag Oc Ic stop Op Ar watch Op Ar all
+Synonmym for the
+.Em delete
+command.
 .El
 .Sh EXAMPLES
 The following captures and displays one SIE
