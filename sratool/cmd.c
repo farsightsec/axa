@@ -183,7 +183,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Delete a watch or anomaly."
 },
 {"delete watches",	delete_cmd,		SRA, MB, YES,
-    "[tag] delete watch [all]",
+    "[tag] delete watches [all]",
     "With a tag, stop or delete the specified watch.\n"
     " With \"all\", delete all watches"
 },
@@ -228,7 +228,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "List all SIE channels available to the user on the SRA server."
 },
 {"get watches",		list_cmd,		SRA, MB, YES,
-    "get watches",
+    "[tag] get watches",
     "With a tag, list the specified watch."
     "  List all watches without a tag."
 },
@@ -253,7 +253,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "List a specified or all available anomaly detection modules. "
 },
 {"list watches",	list_cmd,		SRA, MB, YES,
-    "[tag] list watch",
+    "[tag] list watches",
     "With a tag, list the specified watch."
     "  List all watches without a tag."
 },

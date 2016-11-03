@@ -92,7 +92,7 @@ is present, forwarding stops after that many packets.
 .It Ic pause
 Tell the \*(SR server to stop sending data.
 .It Ic rate limit Oo
-.Op Ar -|MAX|per-sec op
+.Op Ar -|MAX|per-sec
 .Op Ar -|NEVER|report-secs
 .Oc
 Tell the \*(SR server to report its rate limits
