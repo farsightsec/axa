@@ -155,8 +155,8 @@ extern const char *axa_op_to_str(char *buf, size_t buf_len, axa_p_op_t op);
  *  "unknown option type #n".
  *
  *  \param[out] buf will hold the option type string
- *  \param[in] buf_len length of buf (should be #AXA_P_OP_STRLEN)
- *  \param[in] op the option type to look up
+ *  \param[in] buflen length of buf (should be #AXA_P_OP_STRLEN)
+ *  \param[in] opt the option type to look up
  *
  *  \return buf
  */
@@ -232,7 +232,7 @@ typedef enum {
  *  \param[out] emsg the reason if the return value is false
  *  \param[in] hdr AXA protocol header (will be filled in)
  *  \param[in] label label for error message
- *  \param[dir] dir direction of header for error message
+ *  \param[in] dir direction of header for error message
  *
  *  \return bool header is ok
  */
