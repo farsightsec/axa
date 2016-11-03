@@ -88,7 +88,7 @@ The following commands are available:
 With a tag (numeric label), stop or delete the specified anomaly.
 Without a tag (or with the keyword "all"), delete all anomalies.
 .It Oo Ar tag Oc Ic stop Op Ar anomaly Op Ar all
-Synonmym for the
+Synonym for the
 .Em delete
 command.
 .It Ar tag Ic watch Brq Ar ip=IP[/N][(shared) | dns=[*.]dom[(shared)]
