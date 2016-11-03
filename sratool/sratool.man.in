@@ -109,11 +109,11 @@ is a number labeling the watch.
 .so srawatch.man
 .El
 .It Oo Ar tag Oc Ic list watches
-Synonmym for the
+Synonym for the
 .Em get watches
 command.
 .It Oo Ar tag Oc Ic stop Op Ar watch Op Ar all
-Synonmym for the
+Synonym for the
 .Em delete
 command.
 .El
