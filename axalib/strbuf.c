@@ -79,7 +79,6 @@ axa_strbuf_append(struct axa_strbuf *sb, const char *fmt, ...) {
 	if (needed > avail) {
 		size_t offset;
 		ssize_t new_bufsz = 2 * sb->bufsz;
-		void *ptr = sb->data;
 
 		offset = sb->pos - sb->data;
 
@@ -130,7 +129,6 @@ axa_strbuf_clip(struct axa_strbuf *sb, size_t n_elems)
 
 axa_strbuf_res_t
 axa_strbuf_reset(struct axa_strbuf *sb) {
-	void *ptr = sb->data;
 	
 	ptr = realloc(sb->data, DEFAULT_STRBUF_ALLOC_SZ);
 	if (ptr == NULL) {
