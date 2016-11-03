@@ -24,6 +24,8 @@ The default is
 .Pa ~/.axa/fields ,
 or
 .Pa @CONFDIR@/fields .
+.It Fl h
+display options summary.
 .It Fl N
 instructs
 .Nm
