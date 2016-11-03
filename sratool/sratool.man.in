@@ -153,6 +153,10 @@ is the
 configuration file used with
 .Ar connect\ ssh:...
 connections.
+The usual
+.Xr ssh 1
+sequence is used, starting with
+.Pa ~/.ssh/config .
 "Host" stanzas in the file can simplify connections to \*(SR servers.
 .It Pa ~/.sratool_history
 contains the command history from previous

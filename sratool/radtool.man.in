@@ -130,12 +130,7 @@ is the
 configuration file used with
 .Ar connect\ ssh:...
 connections.
-If it is not specified explicitly by
-.Sm off Fl z Fl F Sm on
-with the
-.Ar connect
-command,
-the usual
+The usual
 .Xr ssh 1
 sequence is used, starting with
 .Pa ~/.ssh/config .
