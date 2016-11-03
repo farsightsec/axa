@@ -675,6 +675,9 @@ axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen, axa_p_ch_t ch,
 	uint uh_ulen;
 	nmsg_res res;
 
+	/* quell static analyzer complaints when dg.proto_network is AF_INET6 */
+	ip_hdr.ip_len = 0;
+
 	memset(dst_su, 0, sizeof(*dst_su));
 	memset(src_su, 0, sizeof(*src_su));
 	if (cmt_len > 0)
