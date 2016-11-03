@@ -406,8 +406,6 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
 	pkt = NULL;
-	caplen = 0;
-	len = 0;
 	switch ((axa_p_whit_enum_t)whit->hdr.type) {
 	case AXA_P_WHIT_IP:
 		if (whit_len <= sizeof(whit->ip)) {
