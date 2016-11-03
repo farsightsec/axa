@@ -113,9 +113,7 @@ Show information about the current connection state including time connected.
 .It Ic trace Ar N
 Set the server trace level to N.
 .It Ic user Ar name
-sends a
-.Ic AXA_P_OP_USER
-command to the server.
+sends a username to the server (not used for SSH/TLS-based connections).
 .It Ic verbose Op on | off | N
 controls the length of SIE message and IP packet descriptions.
 The default,
