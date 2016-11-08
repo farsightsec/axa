@@ -527,7 +527,7 @@ axa_tls_parse(axa_emsg_t *emsg,
 {
 	const char *comma, *at;
 	struct stat sb;
-	char *p, *pp;
+	char *p;
 
 	AXA_ASSERT(*cert_filep == NULL && *key_filep == NULL && *addrp == NULL);
 
@@ -564,9 +564,10 @@ axa_tls_parse(axa_emsg_t *emsg,
 			  spec, *cert_filep, strerror(errno));
 	} else if (0 <= stat(*key_filep, &sb)) {
 		return (true);
+	} else {
+		axa_pemsg(emsg, "\"%s\" %s: %s",
+			  spec, *key_filep, strerror(errno));
 	}
-	axa_pemsg(emsg, "\"%s\" %s: %s",
-		  spec, *key_filep, strerror(errno));
 
 	/* If that failed,
 	 * look in the certs directory if neither file name is a path. */
@@ -582,16 +583,15 @@ axa_tls_parse(axa_emsg_t *emsg,
 	free(*key_filep);
 	*key_filep = p;
 
-	pp = *key_filep;
 	if (0 > stat(*cert_filep, &sb)) {
-		pp = *cert_filep;
 		axa_pemsg(emsg, "\"%s\" %s: %s",
 			  spec, *cert_filep, strerror(errno));
 	} else if (0 <= stat(*key_filep, &sb)) {
 		return (true);
+	} else {
+		axa_pemsg(emsg, "\"%s\" %s: %s",
+			  spec, *key_filep, strerror(errno));
 	}
-	axa_pemsg(emsg, "\"%s\" %s: %s",
-		  spec, pp, strerror(errno));
 
 	free(*addrp);
 	*addrp = NULL;
