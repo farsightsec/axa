@@ -183,12 +183,7 @@ fi
 
 
 # remove old hash links (including files) from the target directory
-SYMS=`find . -maxdepth 1 -name '*.[0-9]'`
-if [[ ! -z "${SYMS// }" ]]; then
-        for i in $SYMS;  do
-                rm $i
-        done
-fi
+find . -maxdepth 1 -name '*.[0-9]'  | xargs $XARGS_DEBUG rm -f
 
 # Link certificate files (but not keys) from @CONFDIR@/certs.
 SRCS=.
