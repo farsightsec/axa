@@ -1,4 +1,4 @@
-#! /bin/sh -e
+#! /bin/bash -e
 
 # set -e in case we are run using `sh axa_link_certs`
 set -e
@@ -14,12 +14,21 @@ CERTS_DIR=
 ME=`basename $0`
 USAGE="$ME: [-xL] [-S certsdir]"
 
+# Function to get absolute path of a relative directory
+# Sourced from: http://stackoverflow.com/a/17577143/1380985
+function myreadlink() {
+(
+    cd $(dirname $1)
+    echo $PWD/$(basename $1)
+)
+}
+
 while getopts "xDLS:" c; do
     case $c in
 	x) set -x; DEBUG=-x; XARGS_DEBUG=-t;;
 	D) DELETE=yes;;
 	L) NOLINK=yes;;
-	S) CERTS_DIR="$OPTARG";;
+	S) CERTS_DIR=$(myreadlink $OPTARG);;
 	*) echo "$USAGE" 1>&2; exit 1;;
     esac
 done
@@ -174,7 +183,7 @@ fi
 
 
 # remove old hash links (including files) from the target directory
-find . -maxdepth 1 -name '*.[0-9]'  | xargs $XARGS_DEBUG rm
+find . -maxdepth 1 -name '*.[0-9]'  | xargs $XARGS_DEBUG rm -f
 
 # Link certificate files (but not keys) from @CONFDIR@/certs.
 SRCS=.
