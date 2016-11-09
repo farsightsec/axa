@@ -564,9 +564,10 @@ axa_tls_parse(axa_emsg_t *emsg,
 			  spec, *cert_filep, strerror(errno));
 	} else if (0 <= stat(*key_filep, &sb)) {
 		return (true);
+	} else {
+		axa_pemsg(emsg, "\"%s\" %s: %s",
+			  spec, *key_filep, strerror(errno));
 	}
-	axa_pemsg(emsg, "\"%s\" %s: %s",
-		  spec, *key_filep, strerror(errno));
 
 	/* If that failed,
 	 * look in the certs directory if neither file name is a path. */
@@ -587,9 +588,10 @@ axa_tls_parse(axa_emsg_t *emsg,
 			  spec, *cert_filep, strerror(errno));
 	} else if (0 <= stat(*key_filep, &sb)) {
 		return (true);
+	} else {
+		axa_pemsg(emsg, "\"%s\" %s: %s",
+			  spec, *key_filep, strerror(errno));
 	}
-	axa_pemsg(emsg, "\"%s\" %s: %s",
-		  spec, *key_filep, strerror(errno));
 
 	free(*addrp);
 	*addrp = NULL;
