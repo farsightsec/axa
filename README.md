@@ -134,7 +134,7 @@ On Debian systems, the following packages should be installed:
  * `libprotobuf-c0-dev (>= 1.0.1)`
  * `protobuf-c-compiler`
  * `libwdns-dev (>= 0.8.0)`
- * `libnmsg-dev (>= 0.10.0)`
+ * `libnmsg-dev (>= 0.11.2)`
  * `nmsg-msg-module-sie-dev (>= 1.0.0)`
  * `check` (>= 0.10.0)
  * `yajl` (>= 2.1.0)
