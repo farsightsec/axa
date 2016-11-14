@@ -150,7 +150,7 @@ that is needed and then install all of the AXA tools and `libaxa`:
 # apt-get install build-essential autoconf libpcap-dev      \
                   zlib1g-dev libedit-dev libbsd-dev libtool \
                   libssl-dev pkg-config curl unzip
-# apt-get install axa-tools libaxa-dev
+# apt-get install axa libaxa-dev
 ~~~
 
 ## SRA and RAD Server Encrypted Transport
@@ -214,7 +214,7 @@ of that document.
 
 To setup TLS access for SRA and/or RAD, you need to do the following:
 
- 1. Install axa-tools (as per above). Installed alongside the AXA tools are
+ 1. Install axa (as per above). Installed alongside the AXA tools are
     three TLS helper scripts:
    * axa_make_cert: Generate AXA certificate and private key files
    * axa_server_cert: Retrieve the AXA server certificate fingerprint

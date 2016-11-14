@@ -35,18 +35,18 @@ Architecture: all
 Depends: ${misc:Depends}
 Description: Advanced Exchange Access (documentation)
 
-Package: axa-tools
+Package: axa
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  libaxa0 (= ${binary:Version})
-Description: AXA tools
+Description: AXA command line tools and C library
  sratool, sratunnel, radtool, radtunnel as well as SRA protocol utility library
  and headers
 
-Package: axa-tools-dbg
+Package: axa-dbg
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- axa-tools (= ${binary:Version})
-Description: AXA tools
+ axa (= ${binary:Version})
+Description: AXA command line tools and C library (with debug symbols)
  sratool, sratunnel, radtool, radtunnel as well as SRA protocol utility library
  and headers
