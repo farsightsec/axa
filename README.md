@@ -136,8 +136,8 @@ On Debian systems, the following packages should be installed:
  * `libwdns-dev (>= 0.8.0)`
  * `libnmsg-dev (>= 0.11.2)`
  * `nmsg-msg-module-sie-dev (>= 1.0.0)`
- * `check` (>= 0.10.0)
- * `yajl` (>= 2.1.0)
+ * `check (>= 0.10.0)`
+ * `yajl (>= 2.1.0)`
 
 The binary packages of AXA and its dependencies are available from 
 [a Debian package repository maintained by Farsight Security](https://archive.farsightsecurity.com/SIE_Software_Installation_Debian/). These packages should be
