@@ -1,3 +1,19 @@
+axa (1.3.4) UNRELEASED; urgency=low
+
+  * Update copyright for 2016 where missing
+  * Fix static analyzer warnings
+  * Add missing libprotobuf_c_CFLAGS to Makefile.am
+  * Fix typos in documentation
+  * Fix typos in comments
+  * Fix typo in json-schema.yaml
+  * Update sratool/radtool in-tool contextual help
+  * Update sratunnel/radtunnel usage()
+  * Update man pages for missing commands/options
+  * Fix bug in axa_link_certs where it would bail if no symlinks existed
+  * Fix bug in axa_link_certs where it wouldn't process relative pathnames
+
+ -- Mike Schiffman <mschiffm@fsi.io>  Mon, 14 Nov 2016 19:55:10 +0000
+
 axa (1.3.3) UNRELEASED; urgency=low
 
   * Documentation fixes
