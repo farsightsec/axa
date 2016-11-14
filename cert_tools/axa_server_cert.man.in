@@ -19,6 +19,7 @@
 .Nm axa_server_cert
 .Nd Retrieve AXA Server Certificate Fingerprint
 .Sh SYNOPSIS
+.Nm
 .Op Fl x
 .Op Fl S Ar certsdir
 .Op Fl o Ar cert_file
@@ -28,6 +29,8 @@
 retrieves the AXA server certificate fingerprint.
 .Ss OPTIONS
 .Bl -tag -width 3n
+.It Fl f
+forces overwrite of existing certificate.
 .It Fl x
 enables debugging output.
 .It Fl S Ar certsdir
@@ -59,10 +62,10 @@ If set, AXACONF specifies the AXA configuration directory instead of,
 or
 .Pa @CONFDIR@ .
 .Sh SEE ALSO
-.Xr axa_make_cert 8 ,
 .Xr axa_link_certs 8 ,
-.Xr sratool 1 ,
+.Xr axa_make_cert 8 ,
 .Xr radtool 1 ,
-.Xr radtunnel 1 .
+.Xr sratool 1 ,
+.Xr radtunnel 1 ,
 and
 .Xr sratunnel 1 .

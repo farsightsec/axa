@@ -14,7 +14,7 @@ CN=
 ME=`basename $0`
 USAGE="$ME: [-x] [-l days] [-S certsdir] -u name"
 
-while getopts "xl:L:S:u:" c; do
+while getopts "xl:S:u:" c; do
     case $c in
 	x) set -x; DEBUG=-x; XARGS_DEBUG=-t;;
 	l) LIFE="$OPTARG";;

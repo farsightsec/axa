@@ -1,7 +1,7 @@
 /*
  * TLS transport
  *
- *  Copyright (c) 2015 by Farsight Security, Inc.
+ *  Copyright (c) 2015-2016 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -564,9 +564,10 @@ axa_tls_parse(axa_emsg_t *emsg,
 			  spec, *cert_filep, strerror(errno));
 	} else if (0 <= stat(*key_filep, &sb)) {
 		return (true);
+	} else {
+		axa_pemsg(emsg, "\"%s\" %s: %s",
+			  spec, *key_filep, strerror(errno));
 	}
-	axa_pemsg(emsg, "\"%s\" %s: %s",
-		  spec, *key_filep, strerror(errno));
 
 	/* If that failed,
 	 * look in the certs directory if neither file name is a path. */
@@ -587,9 +588,10 @@ axa_tls_parse(axa_emsg_t *emsg,
 			  spec, *cert_filep, strerror(errno));
 	} else if (0 <= stat(*key_filep, &sb)) {
 		return (true);
+	} else {
+		axa_pemsg(emsg, "\"%s\" %s: %s",
+			  spec, *key_filep, strerror(errno));
 	}
-	axa_pemsg(emsg, "\"%s\" %s: %s",
-		  spec, *key_filep, strerror(errno));
 
 	free(*addrp);
 	*addrp = NULL;

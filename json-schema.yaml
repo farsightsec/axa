@@ -113,7 +113,7 @@ definitions:
                                 type: string
                         message:
                                 type: object
-                                additonalProperties: true
+                                additionalProperties: true
                 required:
                         - mname
                         - vname

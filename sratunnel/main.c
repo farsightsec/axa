@@ -61,31 +61,33 @@ usage(const char *msg, ...)
 	va_list args;
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2015 Farsight Security, Inc.\n");
+	printf("(c) 2013-2016 Farsight Security, Inc.\n");
 	printf("%s [options]\n", axa_prog_name);
-	printf("[-A interval]\t\temit acct messages to stdout every interval seconds\n");
+	if (mode == SRA) {
+		printf("-c channel\t\tenable channel\n");
+		printf("-o output\t\tspecify destination of SIE data\n");
+		printf("-s [user@]SRA-server\tconnect to SRA server\n");
+		printf("-w watch\t\tset watch\n");
+	}
+	if (mode == RAD) {
+		printf("-a anomaly\t\tenable anomaly detection module\n");
+		printf("-o output\t\tspecify destination of SIE data\n");
+		printf("-s [user@]RAD-server\tconnect to RAD server\n");
+		printf("-w watch\t\tset watch\n");
+	}
+	printf("\n[-A interval]\t\temit acct messages to stdout every interval seconds\n");
 	printf("[-C count]\t\tstop after processing count messages\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
+	printf("[-h]\t\t\tdisplay this help and exit\n");
 	printf("[-V]\t\t\tprint version and quit\n");
-	printf("[-m ]\t\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
+	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
 	printf("[-O]\t\t\tenable spinning bar on output\n");
 	printf("[-P file]\t\twrite PID to pidfile\n");
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
 	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
-	if (mode == SRA) {
-		printf("[-s [user@]SRA-server]\tconnect to SRA server\n");
-		printf("[-w watch]\t\tset watch\n");
-		printf("[-c channel]\t\tenable channel\n");
-		printf("[-o output]\t\tspecify destination of SIE data\n");
-	}
-	if (mode == RAD) {
-		printf("[-s [user@]RAD-server]\tconnect to RAD server\n");
-		printf("[-w watch]\t\tset watch\n");
-		printf("[-a channel]\t\tenable anomaly detection module\n");
-		printf("[-o output]\t\tspecify destination of SIE data\n");
-	}
+	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
 	if (msg != NULL) {
 		va_start(args, msg);
@@ -249,27 +251,30 @@ main(int argc, char **argv)
 	if (srvr_addr == NULL)
 		usage("server not specified with -s");
 	if (out_addr == NULL)
-		usage("output not specifed with -o");
+		usage("output not specified with -o");
 	if (watches == NULL)
 		usage("no watches specified with -w");
 	if (mode == RAD) {
 		if (anomalies == NULL)
 			usage("anomalies specified with -a");
 		if (chs != NULL) {
-			axa_error_msg("\"-c %s\" not allowed with -R", chs->c);
+			axa_error_msg("\"-c %s\" not allowed in RAD mode",
+					chs->c);
 			while ((arg = chs) != NULL) {
 				chs = arg->next;
 				free(arg);
 			}
+			exit(0);
 		}
 	} else {
 		if (anomalies != NULL) {
-			axa_error_msg("\"-a %s\" not allowed without -R",
+			axa_error_msg("\"-a %s\" not allowed in SRA mode",
 				      anomalies->c);
 			while ((arg = anomalies) != NULL) {
 				anomalies = arg->next;
 				free(arg);
 			}
+			exit(0);
 		}
 	}
 

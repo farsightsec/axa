@@ -261,7 +261,7 @@ extern char *axa_strndup(const char *s, size_t len);
  *  A vasprintf() wrapper that crashes immediately (via #AXA_ASSERT()) on
  *  vasprintf failures. When you're done with it, bufp should be freed.
  *
- *  \param[out] bufp a pointer to the newly minted and formated string
+ *  \param[out] bufp a pointer to the newly minted and formatted string
  *  \param[in] p the format string
  *  \param[in] args a var args list
  */
@@ -271,7 +271,7 @@ extern void axa_vasprintf(char **bufp, const char *p, va_list args);
  *  An asprintf() wrapper that crashes immediately (via #AXA_ASSERT()) on
  *  asprintf failures. When you're done with it, bufp should be	freed.
  *
- *  \param[out] bufp a pointer to the newly minted and formated string
+ *  \param[out] bufp a pointer to the newly minted and formatted string
  *  \param[in] p the format string
  *  \param[in] ... a var args list
  */

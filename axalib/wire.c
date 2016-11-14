@@ -675,6 +675,9 @@ axa_ipdg_parse(const uint8_t *pkt_data, size_t caplen, axa_p_ch_t ch,
 	uint uh_ulen;
 	nmsg_res res;
 
+	/* quell static analyzer complaints when dg.proto_network is AF_INET6 */
+	ip_hdr.ip_len = 0;
+
 	memset(dst_su, 0, sizeof(*dst_su));
 	memset(src_su, 0, sizeof(*src_su));
 	if (cmt_len > 0)
@@ -960,7 +963,7 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 			if (print_op)
 				axa_buf_print(&buf, &buf_len, " ");
 			axa_buf_print(&buf, &buf_len,
-				      "unrecogized type %d", body->opt.type);
+				      "unrecognized type %d", body->opt.type);
 			break;
 #pragma clang diagnostic pop
 		}
@@ -1468,8 +1471,6 @@ ck_opt(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_opt_t *opt, size_t opt_len)
 	char opt_buf[AXA_P_OP_STRLEN];
 
 	AXA_ASSERT(opt_len >= sizeof(axa_p_opt_t) - sizeof(opt->u));
-
-	val_len = opt_len - (sizeof(axa_p_opt_t) - sizeof(opt->u));
 
 	switch ((axa_p_opt_type_t)opt->type) {
 	case AXA_P_OPT_TRACE:
@@ -2153,7 +2154,6 @@ axa_send_save(axa_io_t *io, size_t done, const axa_p_hdr_t *hdr,
 		/* Some or all of the second chunk of body was not sent.
 		 * Save the unsent part. */
 		memcpy(p, ((uint8_t *)b2)+(b2_len-chunk), chunk);
-		p += chunk;
 	}
 }
 

@@ -21,11 +21,11 @@
 .Nm radtool
 .Nd Realtime Anomaly Detector (RAD) tool
 .Sh SYNOPSIS
-.Op Fl VdN
-.Op Fl F Ar fields
-.Op Fl E Ar ciphers
-.Op Fl S Ar certs
+.Op Fl dhNV
 .Op Fl c Ar cfile
+.Op Fl E Ar ciphers
+.Op Fl F Ar fields
+.Op Fl S Ar certs
 .Op commands
 .Sh DESCRIPTION
 .Nm Radtool
@@ -84,6 +84,13 @@ Multiple commands can be specified at once by separating them with semicolons.
 The following commands are available:
 .Bl -tag -width 3n
 .so cmds.man
+.It Oo Ar tag Oc Ic delete Op Ar anomaly Op Ar all
+With a tag (numeric label), stop or delete the specified anomaly.
+Without a tag (or with the keyword "all"), delete all anomalies.
+.It Oo Ar tag Oc Ic stop Op Ar anomaly Op Ar all
+Synonym for the
+.Em delete
+command.
 .It Ar tag Ic watch Brq Ar ip=IP[/N][(shared) | dns=[*.]dom[(shared)]
 Specify IP addresses or domain names relevant to the
 anomaly detection modules specified by subsequent
@@ -123,12 +130,7 @@ is the
 configuration file used with
 .Ar connect\ ssh:...
 connections.
-If it is not specified explicitly by
-.Sm off Fl z Fl F Sm on
-with the
-.Ar connect
-command,
-the usual
+The usual
 .Xr ssh 1
 sequence is used, starting with
 .Pa ~/.ssh/config .

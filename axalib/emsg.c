@@ -432,7 +432,6 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 		strcpy(&buf[buf_len-sizeof("...")], "...");
 	if (fatal)
 		strlcat(buf, FMSG, sizeof(buf));
-	buf_len = strlen(buf);
 
 	/* keep stderr and stdout straight despite syslog output
 	 * to stdout or stderr */
@@ -463,7 +462,7 @@ axa_vlog_msg(axa_syslog_type_t type, bool fatal, const char *p, va_list args)
 }
 
 /*
- * Generate an erorr message string in a buffer, if we have a buffer.
+ * Generate an error message string in a buffer, if we have a buffer.
  * Log or print the message if there is no buffer
  */
 void

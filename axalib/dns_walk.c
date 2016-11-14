@@ -1,5 +1,5 @@
 /*
- * Advanced Exchange Access (AXA) semanatics for DNS packets and fields.
+ * Advanced Exchange Access (AXA) semantics for DNS packets and fields.
  *
  *  Copyright (c) 2014-2016 by Farsight Security, Inc.
  *

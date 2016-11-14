@@ -58,7 +58,8 @@ messages are sent.
 .Sm on \*(CT
 .Xc
 transmits IP packets on the network interface named
-.Ar ifname for examination with
+.Ar ifname
+for examination with
 .Xr tcpdump 1
 or another packet tracing tool.
 .Ar dst

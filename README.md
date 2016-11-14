@@ -28,7 +28,7 @@ or more SIE channels:
     network.
  * `radtunnel`: RAD Tunnel. A tool that copies RAD data to the local network.
  * `libaxa`: C API middleware for the AXA protocol including connection and 
-    encapsulation/decapsulation
+    encapsulation/decapsulation.
 
 The `sratool` program is the reference implementation of the AXA protocol. It is
 intended primarily as a protocol demonstration and debugging interface, although
@@ -117,9 +117,9 @@ After satisfying the above, build with something like:
 `./autogen.sh` followed by `./configure` and `make`
 
 To generate the API documentation (including an HTMLized version of this
-document): `./make doc`. The html documentation will be in `html` and can be
-rendered in any modern browser. Something like `$ open html/index.html`
-should get you started.
+document): `make doc`. The HTML documentation will be in the `html` directory
+and can be rendered in any modern browser. Something like `open
+html/index.html` should get you started.
 
 Finally, to give the AXA suite a home, `sudo make install`.
 
@@ -144,7 +144,7 @@ The binary packages of AXA and its dependencies are available from
 used instead of building from source on Debian-based systems.
 
 On a clean Debian install, the following brings in everything "external"
-that is needed and then install all of thw AXA tools and `libaxa`:
+that is needed and then install all of the AXA tools and `libaxa`:
 
 ~~~
 # apt-get install build-essential autoconf libpcap-dev      \
@@ -238,7 +238,7 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
  4. Retrieve and install the AXA server certificate. This is the equivalent of
     when you SSH to a new host for the first time and receive the "Are you
     sure you want to continue connecting (yes/no)?" message. This can be done
-    bu connecting to either SRA or RAD since they both share the same TLS
+    by connecting to either SRA or RAD since they both share the same TLS
     certificate:
 
         # axa_server_cert -s sra.sie-remote.net,1021
@@ -577,7 +577,7 @@ provisions to detect or recover from duplicate, out-of-order, lost, or
 partially lost data. AXA data can be lost before encapsulation in AXA protocol 
 messages or packets.
 
-For most uses, a protocol such as ssh is used below the AXA layer and above TCP
+For most uses, a protocol such as SSH is used below the AXA layer and above TCP
 to provide authentication, confidentiality, and integrity.
 
 The AXA protocol consists of a pair of streams of messages between a "client" 
@@ -600,14 +600,14 @@ unadorned TCP through the loop-back interface or use a UNIX domain socket.
 The AXA protocol assumes this is safe.
 
 Between separate computers, the AXA protocol can use UNIX pipes to the `stdin` 
-and `stdout` streams provided by the ssh command or the functions of an ssh 
-library such as `libssh2` (ssh must identify and authenticate the client and 
+and `stdout` streams provided by the ssh command or the functions of an SSH 
+library such as `libssh2` (SSH must identify and authenticate the client and 
 server to each other) or the TLS library.
 
 The AXA client starts by waiting for an `AXA_P_OP_HELLO` message from the 
 server. Over a local stream, the client then sends an `AXA_P_OP_USER` message 
 to tell the server which parameters to use. When `ssh` is used, the user name 
-is provided by the ssh protocol.
+is provided by the SSH protocol.
 
 ### AXA message header
 
@@ -639,7 +639,7 @@ response from the server, or data from the server. The universe of opcodes is
 discussed below.
 
 For a detailed discussions of the AXA protocol message types, see the doxygen
-generated page for `protocol.h`
+generated page for `protocol.h`.
 
 ### AXA protocol specification quick reference
 
@@ -647,19 +647,19 @@ The following is an AXA protocol quick reference chart intended for application
 developers building `axalib` programs.
 
  * OPCODE: The canonical name of the operation code as defined by 
-`axalib/protocol.h`
+`axalib/protocol.h`.
  * VAL: The numerical value of the opcode.
- * SENT BY: Who can send the message
+ * SENT BY: Who can send the message.
  * TAG: Boolean value indicating if header tag must be valid or non-zero,
-as described above
- * DESCRIPTION: Short blurb describing opcode
+as described above.
+ * DESCRIPTION: Short blurb describing opcode.
 
 | OPCODE              | VAL | SENT BY         | TAG   | DESCRIPTION            |
 | ------------------- |----:|----------------:| -----:|----------------------------------------------------------------------------------------------:|
 | `AXA_P_OP_NOP`      | 0   | CLIENT / SERVER | NO    | carries no data, is intended only to ensure that the TCP connection is still up               |
 | `AXA_P_OP_HELLO`    | 1   | SERVER          | NO    | helps the client choose a compatible AXA protocol version                                     |
 | `AXA_P_OP_OK`       | 2   | SERVER          | YES   | indicates the success of the preceding client request with the same tag                      |
-| `AXA_P_OP_ERROR`    | 3   | SERVER          | YES   | indicates the failure of a preceeing client request with the same tag                        |
+| `AXA_P_OP_ERROR`    | 3   | SERVER          | YES   | indicates the failure of a preceding client request with the same tag                        |
 | `AXA_P_OP_MISSED`   | 4   | SERVER          | NO    | carries details about data or packet loss due to rate limiting or network congestion          |
 | `AXA_P_OP_WHIT`     | 5   | SERVER (SRA)    | YES   | reports a "watch hit" or packet or NMSG message that matched an SRA watch with the same tag   |
 | `AXA_P_OP_WLIST`    | 6   | SERVER (SRA)    | YES   | reports a current watch in response to `AXA_P_OP_WGET` from the client referenced by tag      |

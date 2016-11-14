@@ -1,5 +1,5 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.3.3])
+AC_INIT([axa], [1.3.4])
 PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
 AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
@@ -96,7 +96,7 @@ else
 fi
 
 save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$libnmsg_CFLAGS"
+CPPFLAGS="$libnmsg_CFLAGS $libprotobuf_c_CFLAGS"
 AC_CHECK_HEADERS([nmsg/base/dnsqr.pb-c.h nmsg/base/encode.pb-c.h nmsg/base/packet.pb-c.h nmsg/sie/newdomain.pb-c.h],
                  [],
                  [AC_MSG_ERROR([required header file not found])])

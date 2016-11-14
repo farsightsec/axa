@@ -124,74 +124,66 @@ typedef enum {
 
 /* -1 = display help message, 0 = command failed, 1 = success */
 struct cmd_tbl_entry {
-	const char	*cmd;
-	cmd_t		(*fnc);
-	axa_mode_t	mode;
-	ternary_t	need_args;
-	bool		need_sock;
-	const char	*help_str;
-	const char	*usage_str;
+	const char	*cmd;		/* common name of cmd */
+	cmd_t		(*fnc);		/* function that runs cmd */
+	axa_mode_t	mode;		/* SRA|RAD|BOTH */
+	ternary_t	need_args;	/* YES|NO|MB (maybe) */
+	bool		need_sock;	/* server connection req'd? YES|NO */
+	const char	*help_str;	/* one-liner synopsis */
+	const char	*usage_str;	/* detailed usage */
 };
 
 const cmd_tbl_entry_t cmds_tbl[] = {
-{"?",			help_cmd,		BOTH,MB, NO,
-    NULL,
-    NULL
+{"?",			help_cmd,		BOTH, MB, NO,
+    "? [cmd]",
+    "List all commands or get more information about a command."
 },
-{"accounting",		acct_cmd,		BOTH,NO, YES,
+{"accounting",		acct_cmd,		BOTH, NO, YES,
     "accounting",
     "Ask the server to report total message counts."
 },
-{"acct",		acct_cmd,		BOTH,NO, YES,
-    NULL,
-    NULL
-},
-{"anomaly",		anom_cmd,		RAD, YES,YES,
+{"anomaly",		anom_cmd,		RAD, YES, YES,
     "tag anomaly name [parameters]",
     "Start the named anomaly detector module.\n"
     " \"Tag\" is the number labeling the module."
 },
-{"ciphers",		ciphers_cmd,		BOTH,MB, NO,
+{"ciphers",		ciphers_cmd,		BOTH, MB, NO,
     "ciphers [cipher-list]",
     "Specify the ciphers to be used with future connections."
-    "  Disconnect the current connection if it uses TLS"
+    "  Disconnect the current connection if it uses TLS."
 },
-{"channels",		channel_cmd,		SRA, YES,YES,
+{"channels",		channel_cmd,		SRA, YES, YES,
     "channel {list | {on | off} {all | chN}}",
     "List available SRA channels or enable or disable"
     " one or all SIE channels."
 },
-{"channels",		channel_cmd,		SRA, YES,YES,
-    "channel list",
-    "List available SRA channels."
-},
-{"connect",		connect_cmd,		BOTH,MB, NO,
+{"connect",		connect_cmd,		BOTH, MB, NO,
     "connect [server]",
     "Show the current connection"
     " or connect with 'tcp:user@host,port',"
     " 'unix:[user@]/socket'] through a UNIX domain socket,"
     " 'ssh:[user@]host' via SSH"
-    " or with 'tls:cert,key@host,port"
+    " or with 'tls:user@host,port."
 },
-{"count",		count_cmd,		BOTH,MB, NO,
+{"count",		count_cmd,		BOTH, MB, NO,
     "count [#packets | off]",
     "Set terminal output to stop displaying packets after a"
     " number of packets (including immediately with a number of 0),"
     " show the currently remainint count,"
     " or turn off the packet count limit."
 },
-{"debug",		debug_cmd,		BOTH,MB, NO,
+{"debug",		debug_cmd,		BOTH, MB, NO,
     "debug [on | off | quiet | N]",
     "increases, decreases, or shows the level of debugging and tracing messages"
     " that is also controlled by -d."
     "  \"Debug quiet\" turns off reports of successful AXA commands."
 },
 {"delete",		delete_cmd,		BOTH,MB, YES,
-    NULL,
-    NULL
+    "delete",
+    "Delete a watch or anomaly."
 },
 {"delete watches",	delete_cmd,		SRA, MB, YES,
-    "[tag] delete watch [all]",
+    "[tag] delete watches [all]",
     "With a tag, stop or delete the specified watch.\n"
     " With \"all\", delete all watches"
 },
@@ -200,85 +192,23 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Delete an anomaly detector module specified by tag"
     " or all anomaly detector modules."
 },
-{"disconnect",		disconnect_cmd,		BOTH,NO, NO,
+{"disconnect",		disconnect_cmd,		BOTH, NO, NO,
     "disconnect",
-    "Disconnect from the server"
+    "Disconnect from the server."
 },
-{"error mode",		error_mode_cmd,		BOTH,MB, NO,
+{"error mode",		error_mode_cmd,		BOTH, MB, NO,
     "error mode [disconnect | off]",
     "\"error mode disconnect\" disconnects from the server and exits"
     " when the server reports an error or the connection breaks."
     " In the default mode, \"error mode off\", errors are only reported."
 },
-{"exit",		exit_cmd,		BOTH,NO, NO,
+{"exit",		exit_cmd,		BOTH, NO, NO,
     "exit",
-    NULL
+    "Quit the program."
 },
-{"forward",		out_cmd,		BOTH,MB, NO,
-    NULL,
-    NULL
-},
-{"fwd",			out_cmd,		BOTH,MB, NO,
-    NULL,
-    NULL
-},
-{"get anomaly",		list_cmd,		RAD, MB, YES,
-    NULL,
-    NULL
-},
-{"get channels",	list_cmd,		SRA, MB, YES,
-    NULL,
-    NULL
-},
-{"get watches",		list_cmd,		SRA, MB, YES,
-    NULL,
-    NULL
-},
-{"go",			go_cmd,			BOTH,NO, YES,
-    "go",
-    "Tell the server to resume sending data"
-},
-{"help",		help_cmd,		BOTH,MB, NO,
-    "help [cmd]",
-    NULL},
-{"limits",		rlimits_cmd,		BOTH,MB, YES,
-    NULL,
-    NULL
-},
-{"list channels",	list_cmd,		SRA, MB, YES,
-    "list channels",
-    "List all SIE channels available to the user on the SRA server."
-},
-{"list anomaly",	list_cmd,		RAD, NO, YES,
-    "[tag] list anomaly",
-    "List a specified or all available anomaly detection modules. "
-},
-{"list anomalies",	list_cmd,		RAD, MB, YES,
-    NULL,
-    NULL
-},
-{"list watches",	list_cmd,		SRA, MB, YES,
-    "[tag] list watch",
-    "With a tag, list the specified watch."
-    "  List all watches without a tag"
-},
-{"mgmt",		mgmt_get_cmd,		BOTH,NO, YES,
-    "mgmt",
-    "Get server back office details (privileged users only)"
-},
-{"mode",		mode_cmd,		BOTH,MB, NO,
-    "mode [SRA | RAD]",
-    "Show the current command mode or"
-    " expect to connect to an SRA or RAD server. Mode cannot be changed"
-    " while connected to server."
-},
-{"nop",			nop_cmd,		BOTH,NO,YES,
-    "nop",
-    "Send a command to the server that does nothing but test the connection"
-},
-{"output",		out_cmd,		BOTH,MB, NO,
-    "output [off | nmsg:[tcp:|udp:]host,port [count] | nmsg:file:path [count]\n"
-    "               | pcap[-fifo]:file [count] | pcap-if:[dst/]ifname] [count]",
+{"forward",		out_cmd,		BOTH, MB, NO,
+    "forward [off | nmsg:[tcp:|udp:]host,port [count] | nmsg:file:path [count]\n"
+    "      | pcap[-fifo]:file [count] | pcap-if:[dst/]ifname] [count]",
     "Start, stop or show the state of forwarding packets received from"
     " the server."
     "  Received msg messages and IP packets can be"
@@ -289,54 +219,104 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     " (default 0)."
     "  Stop forwarding after count messages."
 },
-{"pause",		pause_cmd,		BOTH,NO, YES,
+{"get anomaly",		list_cmd,		RAD, MB, YES,
+    "[tag] get anomaly",
+    "List a specified or all available anomaly detection modules. "
+},
+{"get channels",	list_cmd,		SRA, MB, YES,
+    "get channels",
+    "List all SIE channels available to the user on the SRA server."
+},
+{"get watches",		list_cmd,		SRA, MB, YES,
+    "[tag] get watches",
+    "With a tag, list the specified watch."
+    "  List all watches without a tag."
+},
+{"go",			go_cmd,			BOTH, NO, YES,
+    "go",
+    "Tell the server to resume sending data."
+},
+{"help",		help_cmd,		BOTH, MB, NO,
+    "help [cmd]",
+    "List all commands or get more information about a command."
+},
+{"list channels",	list_cmd,		SRA, MB, YES,
+    "list channels",
+    "List all SIE channels available to the user on the SRA server."
+},
+{"list anomaly",	list_cmd,		RAD, NO, YES,
+    "[tag] list anomaly",
+    "List a specified or all available anomaly detection modules. "
+},
+{"list anomalies",	list_cmd,		RAD, MB, YES,
+    "list anomalies",
+    "List a specified or all available anomaly detection modules. "
+},
+{"list watches",	list_cmd,		SRA, MB, YES,
+    "[tag] list watches",
+    "With a tag, list the specified watch."
+    "  List all watches without a tag."
+},
+{"mgmt",		mgmt_get_cmd,		BOTH, NO, YES,
+    "mgmt",
+    "Get server back office details (admin users only)."
+},
+{"mode",		mode_cmd,		BOTH, MB, NO,
+    "mode [SRA | RAD]",
+    "Show the current command mode or"
+    " expect to connect to an SRA or RAD server. Mode cannot be changed"
+    " while connected to server."
+},
+{"nop",			nop_cmd,		BOTH, NO,YES,
+    "nop",
+    "Send a command to the server that does nothing but test the connection"
+},
+{"pause",		pause_cmd,		BOTH, NO, YES,
     "pause",
     "Tell the server to stop sending data."
 },
-{"quit",		exit_cmd,		BOTH,NO, NO,
-    NULL,
-    NULL
+{"quit",		exit_cmd,		BOTH, NO, NO,
+    "quit",
+    "Quit the program."
 },
-{"radd",		rad_mode_cmd,		BOTH,MB, NO,
-    NULL,
-    NULL
+{"radd",		rad_mode_cmd,		BOTH, MB, NO,
+    "radd",
+    "Change to RAD mode (must not be connected to a server)."
 },
-{"rate limits",		rlimits_cmd,		BOTH,MB, YES,
+{"rate limits",		rlimits_cmd,		BOTH, MB, YES,
     "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
     "Ask the server to report its rate limits"
     " or to set rate limits and the interval between rate limit reports."
 },
-{"rlimits",		rlimits_cmd,		BOTH,MB, YES,
-    NULL,
-    NULL},
-{"runits",		radunit_cmd,		RAD,NO, YES,
+{"runits",		radunit_cmd,		RAD, NO, YES,
     "runits",
     "Ask the server for my RAD Unit balance."
 },
-{"sample",		sample_cmd,		BOTH,MB, YES,
+{"sample",		sample_cmd,		BOTH, MB, YES,
     "sample [percent]",
     "Ask the server to report its current output sampling rate"
     " or to set its sampling rate."
 },
-{"sleep",		sleep_cmd,		BOTH,YES,NO,
+{"sleep",		sleep_cmd,		BOTH, YES, NO,
     "sleep x.y",
     "Stop accepting commands or displaying server output for a while."
 },
-{"source",		source_cmd,		BOTH,YES,NO,
+{"source",		source_cmd,		BOTH, YES, NO,
     "source filename",
-    "Read and execute commands commands from a file"
+    "Read and execute commands commands from a file."
 },
-{"status",		connect_cmd,		BOTH,NO, NO,
+{"status",		connect_cmd,		BOTH, NO, NO,
     "status",
     "get server status"
 },
-{"srad",		sra_mode_cmd,		BOTH,MB, NO,
-    NULL,
-    NULL
+{"srad",		sra_mode_cmd,		BOTH, MB, NO,
+    "srad",
+    "Change to RAD mode (must not be connected to a server)."
 },
-{"stop",		delete_cmd,		BOTH,MB, YES,
-    NULL,
-    NULL},
+{"stop",		delete_cmd,		BOTH, MB, YES,
+    "stop",
+    "Stop watches or anomalies."
+},
 {"watch",		rad_watch_cmd,		RAD, MB, YES,
     "tag watch {ip=IP[/n] | dns=[*.]dom}",
     "Tell the RAD server about address and domains of interest."
@@ -346,39 +326,36 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
     " from, or contain the specified IP addresses,"
     " that contain the specified domain name,"
-    " that arrived at the server on the specifed SIE channel,"
+    " that arrived at the server on the specified SIE channel,"
     " or are SIE messages that could not be decoded."
-    " The \"tag\" is the integer labeling the watch"
+    " The \"tag\" is the integer labeling the watch."
 },
-{"watches",		sra_watch_cmd,		SRA, MB, YES,
-    NULL,
-    NULL},
-{"trace",		trace_cmd,		BOTH,YES,YES,
+{"trace",		trace_cmd,		BOTH, YES, YES,
     "trace N",
-    "Set server trace level"
+    "Set server trace level."
 },
-{"user",		user_cmd,		BOTH,YES,YES,
+{"user",		user_cmd,		BOTH, YES, YES,
     "user name",
     "Send the user name required by the server on a TCP/IP connection or"
     " a UNIX domain socket.\n"
-    " SSH connections do not use this command but use the"
-    " name negotiated with the ssh protocol."
+    " TLS/SSH connections do not use this command but use the"
+    " name negotiated with the tls or ssh protocol."
 },
-{"verbose",		verbose_cmd,		BOTH,MB, NO,
+{"verbose",		verbose_cmd,		BOTH, MB, NO,
     "verbose [on | off | N]",
     "controls the length of SIE message and IP packet descriptions."
     "  The default, \"verbose off\", generally displays one line summaries."
 },
-{"version",		version_cmd,		BOTH,NO, NO,
+{"version",		version_cmd,		BOTH, NO, NO,
     "version",
     "shows the software and protocol version."
 },
-{"window",		sndbuf_cmd,		BOTH,MB, YES,
+{"window",		sndbuf_cmd,		BOTH, MB, YES,
     "window [bytes]",
     "Ask the server to report its current TCP output buffer size on TLS and"
     " TCP connections or to set its output buffer size."
 },
-{"zlib",		nmsg_zlib_cmd,		BOTH,NO, NO,
+{"zlib",		nmsg_zlib_cmd,		BOTH, NO, NO,
     "zlib",
     "Toggle nmsg container compression.\nFor this option to have any"
     " effect, output mode must be enabled in nmsg file or socket mode."
@@ -694,7 +671,7 @@ cmd(axa_tag_t tag, const char *op)
 			return (run_cmd(tag, op, arg+j, ce));
 		}
 	}
-	/* run an unambigious partial command */
+	/* run an unambiguous partial command */
 	if (ce1 != NULL && (ce1->help_str != NULL || num_iss <= 1))
 		return (run_cmd(tag, op, "", ce1));
 
@@ -1949,7 +1926,7 @@ usage(void)
 	const char *rad = "Real-time Anomaly Detection Tool (radtool)\n";
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2015 Farsight Security, Inc.\n");
+	printf("(c) 2013-2016 Farsight Security, Inc.\n");
 	printf("%s [options] [commands]\n", axa_prog_name);
 	printf("[-c file]\t\tspecify commands file\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
