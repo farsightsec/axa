@@ -37,24 +37,15 @@ sratunnel/sratunnel.1: sratunnel/sratunnel.man fwd.man srawatch.man watch.man
 sratunnel/radtunnel.1: sratunnel/radtunnel.man fwd.man srawatch.man watch.man
 
 EXTRA_DIST += \
-	sratool/sratool.man \
-	sratool/radtool.man \
-	sratunnel/sratunnel.man \
-	sratunnel/radtunnel.man \
 	fwd.man \
 	watch.man \
 	srawatch.man \
 	radwatch.man \
-	sratool/options.man \
 	sratool/cmds.man \
-	cert_tools/axa_link_certs.man \
-	cert_tools/axa_make_cert.man \
-	cert_tools/axa_server_cert.man \
 	README.md \
-	Doxyfile.in \
 	DoxygenLayout.xml
 
-dist_man_MANS =  \
+man_MANS =  \
 	sratool/sratool.1 \
 	sratool/radtool.1 \
 	sratunnel/sratunnel.1 \
@@ -62,7 +53,7 @@ dist_man_MANS =  \
 	cert_tools/axa_link_certs.8 \
 	cert_tools/axa_make_cert.8 \
 	cert_tools/axa_server_cert.8
-CLEANFILES += $(dist_man_MANS)
+DISTCLEANFILES += $(man_MANS)
 
 #
 ##
@@ -148,8 +139,6 @@ axa_libaxa_la_CFLAGS = \
 	${yajl_CFLAGS}
 
 pkgconfig_DATA = axa/libaxa.pc
-EXTRA_DIST += axa/libaxa.pc.in
-DISTCLEANFILES += axa/libaxa.pc
 
 
 #
@@ -288,7 +277,7 @@ spotless: distclean
 ##
 #
 
-EXTRA_DIST += tests
+EXTRA_DIST += tests/test-json.c
 
 TESTS += tests/test-json
 check_PROGRAMS += tests/test-json
