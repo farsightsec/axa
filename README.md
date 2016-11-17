@@ -97,7 +97,7 @@ The AXA suite has the following external dependencies:
  * [zlib](http://www.zlib.net/)
  * [nmsg](https://github.com/farsightsec/nmsg) (probably will want to configure
     with `--without-libxs`, be sure to use version >= 0.11.2)
- * [protobuf-c](https://github.com/protobuf-c/protobuf-c) (be sure to use 2.x.x)
+ * [protobuf-c](https://github.com/protobuf-c/protobuf-c) (be sure to use >= 1.2.1)
  * [sie-nmsg](https://github.com/farsightsec/sie-nmsg)
  * [wdns](https://github.com/farsightsec/wdns)
  * [libedit](http://thrysoee.dk/editline/)
