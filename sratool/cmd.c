@@ -211,10 +211,10 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "      | pcap[-fifo]:file [count] | pcap-if:[dst/]ifname] [count]",
     "Start, stop or show the state of forwarding packets received from"
     " the server."
-    "  Received msg messages and IP packets can be"
-    " forwarded as nmsg messages to a TCP or UDP port."
+    "  Received NMSG messages and IP packets can be"
+    " forwarded as NMSG messages to a TCP or UDP port."
     "  Received IP packets can be forwarded as a pcap stream"
-    " to a file, to a fifo created separately with `mkfio`,"
+    " to a file, to a FIFO created separately with `mkfifo`,"
     " or in Ethernet frames on a named network interface to a 48-bit address"
     " (default 0)."
     "  Stop forwarding after count messages."
