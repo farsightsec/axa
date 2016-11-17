@@ -64,8 +64,7 @@ SIE messages and raw IP packets.
 There must be at least one
 .Fl c
 argument naming an SIE channel that server will watch for interesting
-.Em nmsg
-messages or IP packets.
+NMSG messages or IP packets.
 .Pp
 Channels are specified as
 .Cm ch Ns Ar XX
@@ -84,12 +83,11 @@ the SRA server will send.
 .It Fl O
 enable a spinning bar output indicator on stdout.
 .It Fl o Ar out-addr
-specifies
-the destination of the SIE data.
-It can be forwarded as
-.Em nmsg
-messages to a UDP or TCP port
+specifies the destination of the SIE data.
+It can be forwarded as NMSG messages to a UDP or TCP port
 or as raw IP packets to a file, FIFO, or network interface.
+.ds CT
+.so fwd.man
 .It Fl P Ar pidfile
 will result in the current PID  being written to
 .Ar pidfile .
@@ -154,9 +152,7 @@ and
 dns
 watches to indicate addresses or domains that are not used exclusively.
 .It Fl z
-enable nmsg zlib container compression.
-.ds CT
-.so fwd.man
+enable NMSG zlib container compression.
 .El
 .Sh EXAMPLES
 The following sends all new domain reports on channel 212
