@@ -88,7 +88,7 @@ if test -n "$DOXYGEN"; then
         AC_CONFIG_FILES([Doxyfile])
         DOXYGEN_INPUT="${srcdir}/axa ${srcdir}/README.md"
         AC_SUBST(DOXYGEN_INPUT)
-        if test $DOXYGEN_version == "oldish"; then
+        if test $DOXYGEN_version = "oldish"; then
             AC_MSG_WARN(old Doxygen version found API documentation may not render as intended consider upgrading to version 1.8.3 or newer)
         fi
 else
