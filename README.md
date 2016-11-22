@@ -104,13 +104,13 @@ The AXA suite has the following external dependencies:
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed
     on BSDish systems)
  * [libssl](http://openssl.org/) (recommended >= 1.0.2i)
- * [check](http://check.sourceforge.net/doc/check_html/) (be sure to use >= 0.10.0)
  * [yajl](https://lloyd.github.io/yajl/) (be sure to use >= 2.1.0)
 
 Optional dependency:
 
  * [doxygen](http://www.stack.nl/~dimitri/doxygen/) (be sure to use >= 1.8.3
     that supports inlining markdown files)
+ * [check](http://check.sourceforge.net/doc/check_html/) (be sure to use >= 0.10.0)
     
 After satisfying the above, build with something like:
 
