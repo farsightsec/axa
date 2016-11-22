@@ -45,8 +45,8 @@ program which will make the remote data available locally, and then use
 as they would on an analysis server directly connected to SIE itself. An
 example of how to do this is included later in this document.
 
-The `radtool` and `radtunnel` programs are used to stream RAD watch hits from a
-remote RAD server to the local network. They actually share code bases with
+The `radtool` and `radtunnel` programs are used to stream RAD anomaly hits from
+a remote RAD server to the local network. They actually share code bases with
 their "sra-" counterparts and the program logic is such that it detects its
 filename and invokes itself in RAD mode. 
 
@@ -124,33 +124,20 @@ html/index.html` should get you started.
 Finally, to give the AXA suite a home, `sudo make install`.
 
 ### Debian package install
-On Debian systems, the following packages should be installed:
-
- * `pkg-config`
- * `libpcap0.8-dev`
- * `zlib1g-dev`
- * `libbsd-dev`
- * `libedit-dev`
- * `libprotobuf-c0-dev (>= 1.0.1)`
- * `protobuf-c-compiler`
- * `libwdns-dev (>= 0.8.0)`
- * `libnmsg-dev (>= 0.10.0)`
- * `nmsg-msg-module-sie-dev (>= 1.0.0)`
- * `check (>= 0.10.0)`
- * `yajl (>= 2.1.0)`
-
 The binary packages of AXA and its dependencies are available from 
 [a Debian package repository maintained by Farsight Security](https://archive.farsightsecurity.com/SIE_Software_Installation_Debian/). These packages should be
 used instead of building from source on Debian-based systems.
 
-On a clean Debian install, the following brings in everything "external"
-that is needed and then install all of the AXA tools and `libaxa`:
+To install the AXA Tools `sratool`, `radtool`, `sratunnel`, `radtunnel`:
 
 ~~~
-# apt-get install build-essential autoconf libpcap-dev      \
-                  zlib1g-dev libedit-dev libbsd-dev libtool \
-                  libssl-dev pkg-config curl unzip
-# apt-get install axa-tools libaxa-dev
+# apt-get install axa-tools
+~~~
+
+To install AXA development files (if you wish to use the libaxa C API):
+
+~~~
+# apt-get install libaxa-dev
 ~~~
 
 ## SRA and RAD Server Encrypted Transport
