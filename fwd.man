@@ -5,54 +5,42 @@
 .Bl -tag -width 4n
 .It Xo
 .Sm off
-.No nmsg:
-.Op tcp:|udp:
+.Cm nmsg:
+.Op Cm tcp: Ns | Ns Cm udp:
 .Ar host,port
 .Sm on \*(CT
 .Xc
-sends
-.Em nmsg
-messages to the
-.Em tcp
-or
-.Em udp
+sends NMSG messages to the UDP or optional TCP
 host name and port number
 .Ar host,port .
 UDP is the default.
-IP packets are converted to
-.Em nmsg
-messages.
+IP packets are converted to NMSG messages.
 .It Xo
 .Sm off
-.No nmsg:file:
+.Cm nmsg:file:
 .Ar path
 .Sm on \*(CT
 .Xc
-sends
-.Em nmsg
-messages to the
-.Ar file .
-IP packets are converted to
-.Em nmsg
-messages.
+sends NMSG messages to the file named 
+.Ar path .
+IP packets are converted to NMSG messages.
 .It Xo
 .Sm off
-.No pcap
-.Op -fifo :
-.Ar file
+.Cm pcap
+.Op Cm -fifo :
+.Ar path
 .Sm on \*(CT
 .Xc
-sends IP packets to a file or FIFO
+sends IP packets to a file or FIFO named 
+.Ar path
 for examination with
 .Xr tcpdump 1
 or another packet tracing tool.
 An ordinary file is the default.
-Only IP packets but not
-.Em nmsg
-messages are sent.
+Only IP packets but not NMSG messages are sent.
 .It Xo
 .Sm off
-.No pcap-if:
+.Cm pcap-if:
 .Op Ar dst /
 .Ar ifname
 .Sm on \*(CT
@@ -68,8 +56,6 @@ than all 0:0:0:0:0:0 default.
 This output usually requires that
 .Nm
 be run by root.
-Only IP packets but not
-.Em nmsg
-messages are sent.
+Only IP packets but not NMSG messages are sent.
 .El
 .\" end of fwd.man
