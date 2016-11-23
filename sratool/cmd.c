@@ -1420,7 +1420,8 @@ list_cmd(axa_tag_t tag, const char *arg, const cmd_tbl_entry_t *ce)
 		return (srvr_send(tag, AXA_P_OP_WGET, NULL, 0));
 	if (word_cmp(&arg, "channels")
 	    || (arg[0] == '\0'
-		&& ce != NULL && strcmp(ce->cmd, "list channels") == 0))
+		&& ce != NULL && (strcmp(ce->cmd, "list channels") == 0
+		|| strcmp(ce->cmd, "get channels") == 0)))
 		return (srvr_send(tag, AXA_P_OP_CGET, NULL, 0));
 
 	return (-1);
