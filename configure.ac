@@ -76,7 +76,8 @@ else
 	use_yajl="false"
 fi
 
-PKG_CHECK_MODULES([check], [check])
+PKG_CHECK_MODULES([check], [check >= 0.10.0],
+		[CHECK_MOD_MSG="yes"], [CHECK_MOD_MSG="no"])
 
 AC_PATH_PROG([DOXYGEN], [doxygen])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
@@ -146,4 +147,5 @@ AC_MSG_RESULT([
 
 	TLS ciphers:		$TLS_CIPHERS
 	yajl support:           ${use_yajl}
+	make check available:   ${CHECK_MOD_MSG}
 ])
