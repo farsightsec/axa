@@ -343,15 +343,16 @@ out_error_ok(void)
 		return (true);
 	}
 
-	/* allow a new complaint every 5 seconds */
+	/* from here on out, only allow a new complaint every 5 seconds */
 	gettimeofday(&now, NULL);
+
 	if (5000 > axa_elapsed_ms(&now, &out_complaint_last)) {
+		/* count skipped complaints */
 		out_complaint_skipped = true;
 		return (false);
 	}
 
-	 /* count skipped complaints */
-	 return (true);
+	return (true);
 }
 
 static void AXA_PF(1,2)
