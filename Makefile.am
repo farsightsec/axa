@@ -43,7 +43,16 @@ EXTRA_DIST += \
 	radwatch.man \
 	sratool/cmds.man \
 	README.md \
-	DoxygenLayout.xml
+	DoxygenLayout.xml \
+	debian/axa-doc.install \
+	debian/axa-tools.install \
+	debian/changelog \
+	debian/compat \
+	debian/control \
+	debian/gbp.conf \
+	debian/libaxa0.install \
+	debian/libaxa-dev.install \
+	debian/rules
 
 man_MANS =  \
 	sratool/sratool.1 \
