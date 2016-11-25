@@ -34,7 +34,7 @@
 #include <nmsg.h>
 
 #include <openssl/ssl.h>
-
+#include <uuid/uuid.h>
 
 /**
  *  Parse an AXA watch definition.
@@ -297,6 +297,11 @@ extern bool axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op,
  *  tls:certfile,keyfile[,certdir]\@host[,port]
  */
 #define AXA_IO_TYPE_TLS_STR "tls"
+/**
+ *  AXA I/O type prefix: apikey/tls
+ *  apikey:hostname,port
+ */
+#define AXA_IO_TYPE_APIKEY_STR "apikey"
 
 /** AXA I/O context types */
 typedef enum {
@@ -304,7 +309,8 @@ typedef enum {
 	AXA_IO_TYPE_UNIX,		/**< UNIX domain socket */
 	AXA_IO_TYPE_TCP,		/**< TCP/IP socket */
 	AXA_IO_TYPE_SSH,		/**< ssh pipe */
-	AXA_IO_TYPE_TLS			/**< TLS connection */
+	AXA_IO_TYPE_TLS,		/**< TLS connection */
+	AXA_IO_TYPE_APIKEY		/**< apikey/TLS */
 } axa_io_type_t;
 
 /** AXA I/O context */
@@ -331,6 +337,8 @@ typedef struct axa_io {
 	char		*key_file;	/**< TLS key file name */
 	SSL		*ssl;		/**< TLS OpenSSL ssl */
 	char		*tls_info;	/**< TLS cipher, compression, etc. */
+
+	uuid_t		uu;		/**< apikey */
 
 	axa_p_user_t	user;		/**< for TCP or UNIX domain socket */
 	bool		connected_tcp;	/**< false if connect() in progress */
@@ -547,6 +555,9 @@ extern axa_io_result_t axa_tls_write(axa_emsg_t *emsg, axa_io_t *io,
 				     const void *b, size_t b_len);
 extern axa_io_result_t axa_tls_flush(axa_emsg_t *emsg, axa_io_t *io);
 extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
+
+/* Parse apikey specification. */
+extern bool axa_apikey_parse(axa_emsg_t *emsg, const char *spec, uuid_t *uu);
 
 /** @endcond */
 

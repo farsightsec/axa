@@ -105,6 +105,7 @@ axa_libaxa_la_SOURCES = \
 	axa/strbuf.h \
 	axa/trie.h \
 	axa/wire.h \
+	axalib/apikey.c \
 	axalib/client.c \
 	axalib/dns_walk.c \
 	axalib/domain_to_str.c \

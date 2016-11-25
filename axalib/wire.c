@@ -1612,6 +1612,10 @@ axa_io_type_parse(const char **addrp)
 		addr += sizeof(AXA_IO_TYPE_SSH_STR)-1 + i;
 		result = AXA_IO_TYPE_SSH;
 
+	} else if (AXA_CLITCMP(addr, AXA_IO_TYPE_APIKEY_STR":")) {
+		addr += sizeof(AXA_IO_TYPE_APIKEY_STR":")-1;
+		result = AXA_IO_TYPE_APIKEY;
+
 	} else {
 		return (AXA_IO_TYPE_UNKN);
 	}
@@ -1636,6 +1640,8 @@ axa_io_type_to_str(axa_io_type_t type)
 		return (AXA_IO_TYPE_SSH_STR);
 	case AXA_IO_TYPE_TLS:
 		return (AXA_IO_TYPE_TLS_STR);
+	case AXA_IO_TYPE_APIKEY:
+		return (AXA_IO_TYPE_APIKEY_STR);
 	}
 }
 

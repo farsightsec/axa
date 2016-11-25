@@ -30,6 +30,8 @@
 #include <sysexits.h>
 #include <unistd.h>
 
+#include <uuid/uuid.h>
+
 
 #define	MIN_BACKOFF_MS	(1*1000)
 #define	MAX_BACKOFF_MS	(60*1000)
@@ -341,6 +343,10 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 		}
 		break;
 
+	case AXA_IO_TYPE_APIKEY:
+		/* TODO */
+		break;
+
 	case AXA_IO_TYPE_UNKN:
 	default:
 		axa_pemsg(emsg, "impossible client type");
@@ -366,6 +372,8 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 	struct addrinfo *ai;
 	const char *p;
 	int i;
+
+	uuid_t uu;
 
 	axa_client_close(client);
 
@@ -463,6 +471,12 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 		}
 		memcpy(&client->io.su.sa, ai->ai_addr, ai->ai_addrlen);
 		freeaddrinfo(ai);
+		break;
+
+	case AXA_IO_TYPE_APIKEY:
+		if (!axa_apikey_parse(emsg, addr, &uu))
+			return (AXA_CONNECT_ERR);
+		uuid_copy(client->io.uu, uu);
 		break;
 
 	case AXA_IO_TYPE_UNKN:
