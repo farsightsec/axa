@@ -52,7 +52,8 @@ EXTRA_DIST += \
 	cert_tools/axa_server_cert.man \
 	README.md \
 	Doxyfile.in \
-	DoxygenLayout.xml
+	DoxygenLayout.xml \
+	json-schema.yaml
 
 dist_man_MANS =  \
 	sratool/sratool.1 \
@@ -105,6 +106,7 @@ axa_libaxa_la_SOURCES = \
 	axa/strbuf.h \
 	axa/trie.h \
 	axa/wire.h \
+	axalib/bit_funcs.c \
 	axalib/client.c \
 	axalib/dns_walk.c \
 	axalib/domain_to_str.c \
