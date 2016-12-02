@@ -76,19 +76,24 @@ else
 	use_yajl="false"
 fi
 
-PKG_CHECK_MODULES([check], [check])
+PKG_CHECK_MODULES([check], [check >= 0.10.0],
+		[CHECK_MOD_MSG="yes"], [CHECK_MOD_MSG="no"])
 
 AC_PATH_PROG([DOXYGEN], [doxygen])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 if test -n "$DOXYGEN"; then
         DOC_HTML_MSG="yes, doxygen available: $DOXYGEN"
         AC_MSG_CHECKING(doxygen version)
-        MY_CHECK_DOXYGEN
+	installed_version=`$DOXYGEN --version 2>/dev/null`
+	AS_VERSION_COMPARE($installed_version, "1.8.3",
+			   DOXYGEN_version="oldish",
+			   DOXYGEN_version="newish",
+			   DOXYGEN_version="newish")
         AC_MSG_RESULT($DOXYGEN_version)
         AC_CONFIG_FILES([Doxyfile])
         DOXYGEN_INPUT="${srcdir}/axa ${srcdir}/README.md"
         AC_SUBST(DOXYGEN_INPUT)
-        if test $DOXYGEN_version == "oldish"; then
+        if test $DOXYGEN_version = "oldish"; then
             AC_MSG_WARN(old Doxygen version found API documentation may not render as intended consider upgrading to version 1.8.3 or newer)
         fi
 else
@@ -146,4 +151,5 @@ AC_MSG_RESULT([
 
 	TLS ciphers:		$TLS_CIPHERS
 	yajl support:           ${use_yajl}
+	make check available:   ${CHECK_MOD_MSG}
 ])

@@ -78,10 +78,11 @@ The default command mode is set by the name of the program.
 sends a command to the server that does nothing but test the connection.
 .It Ic forward
 Start, stop or show the state of forwarding packets received from the server.
-Received msg messages and IP packets can be forwarded as nmsg messages to
+Received NMSG messages and IP packets can be forwarded as NMSG messages to
 a TCP or UDP port.
-Received IP  packets can be forwarded as a pcap stream to a file,
-to a fifo created with separately `mkfio`,
+Received IP packets can be forwarded as a pcap stream to a file,
+to a FIFO created with separately with
+.Xr mkfifo 1 ,
 or in Ethernet frames on a named network interface to a 48-bit address.
 .ds CT Op Ar count
 .so fwd.man
@@ -127,6 +128,6 @@ and its version of the AXA protocol.
 Get and optionally set the TCP output buffer size or maximum send window
 used by the server.
 .It Ic zlib
-Toggle nmsg zlib container compression.
+Toggle NMSG zlib container compression.
 .\"
 .\" end of cmds.man

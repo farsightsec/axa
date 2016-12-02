@@ -30,6 +30,7 @@ bool nmsg_zlib = false;			/* NMSG zlib container compression */
 
 /* private */
 static struct timeval out_complaint_last;
+static bool out_error_first_time = true;
 static bool out_complaint_skipped;
 static int out_sock_type;
 static struct timeval time_out_flush;
@@ -335,14 +336,23 @@ out_error_ok(void)
 {
 	struct timeval now;
 
-	/* allow a new complaint every 5 seconds */
-	gettimeofday(&now, NULL);
-	 if (5000 > axa_elapsed_ms(&now, &out_complaint_last))
-		 return (true);
+	/* allow first error message */
+	if (out_error_first_time) {
+		out_error_first_time = false;
+		gettimeofday(&out_complaint_last, NULL);
+		return (true);
+	}
 
-	 /* count skipped complaints */
-	 out_complaint_skipped = true;
-	 return (false);
+	/* from here on out, only allow a new complaint every 5 seconds */
+	gettimeofday(&now, NULL);
+
+	if (5000 > axa_elapsed_ms(&now, &out_complaint_last)) {
+		/* count skipped complaints */
+		out_complaint_skipped = true;
+		return (false);
+	}
+
+	return (true);
 }
 
 static void AXA_PF(1,2)
@@ -475,7 +485,7 @@ out_ip_pcap_file(const uint8_t *pkt, size_t caplen, size_t len,
 		return;
 	}
 
-	if (caplen > sizeof(out_buf) - sizeof(sf_hdr) - out_buf_len
+	if (caplen + sizeof(sf_hdr) > sizeof(out_buf) - out_buf_len
 	    || out_buf_base != 0) {
 		out_flush();
 		if (caplen > sizeof(out_buf) - sizeof(sf_hdr) - out_buf_len) {
@@ -593,15 +603,13 @@ out_whit_pcap(axa_p_whit_t *whit, size_t whit_len)
 		msgtype = nmsg_message_get_msgtype(msg);
 		if (vid != NMSG_VENDOR_BASE_ID
 		    || msgtype != NMSG_VENDOR_BASE_PACKET_ID) {
-			if (!out_error_ok()) {
-				vid_str = nmsg_msgmod_vid_to_vname(vid);
-				msgtype_str = nmsg_msgmod_msgtype_to_mname(vid,
-							msgtype);
-				out_error("cannot forward nmsg %s %s"
-					  " messages via pcap",
-					  vid_str, msgtype_str);
-				return;
-			}
+			vid_str = nmsg_msgmod_vid_to_vname(vid);
+			msgtype_str = nmsg_msgmod_msgtype_to_mname(vid,
+						msgtype);
+			out_error("cannot forward nmsg %s %s"
+				  " messages via pcap",
+				  vid_str, msgtype_str);
+			return;
 		}
 
 		/* forward the IP packets in BASE_PACKET */
