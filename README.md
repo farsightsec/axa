@@ -95,6 +95,7 @@ The AXA suite has the following external dependencies:
  * [libtool](https://www.gnu.org/software/libtool/)
  * [libpcap](http://www.tcpdump.org/)
  * [zlib](http://www.zlib.net/)
+ * [pkg-config](https://wiki.freedesktop.org/www/Software/pkg-config/)
  * [nmsg](https://github.com/farsightsec/nmsg) (probably will want to configure
     with `--without-libxs`, be sure to use version >= 0.11.2)
  * [protobuf-c](https://github.com/protobuf-c/protobuf-c) (be sure to use >= 1.2.1)
