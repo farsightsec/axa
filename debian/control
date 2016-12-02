@@ -14,39 +14,37 @@ Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  nmsg-msg8-module-sie (>= 0.16)
-Description: Advanced Exchange Access
+Description: AXA C library
 
 Package: libaxa0-dbg
 Section: debug
 Priority: extra
 Architecture: any
 Depends: libaxa0 (= ${binary:Version}), ${misc:Depends}
-Description: Advanced Exchange Access (debug symbols)
+Description: AXA C library (debug symbols)
 
 Package: libaxa-dev
 Section: libdevel
 Architecture: any
 Depends: libaxa0 (= ${binary:Version}), ${misc:Depends}
-Description: Advanced Exchange Access (development files)
+Description: AXA development files
 
 Package: axa-doc
 Section: doc
 Architecture: all
 Depends: ${misc:Depends}
-Description: Advanced Exchange Access (documentation)
+Description: AXA documentation
 
-Package: axa
+Package: axa-tools
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  libaxa0 (= ${binary:Version})
-Description: AXA command line tools and C library
- sratool, sratunnel, radtool, radtunnel as well as SRA protocol utility library
- and headers
+Description: AXA command line tools
+ sratool, sratunnel, radtool, and radtunnel
 
-Package: axa-dbg
+Package: axa-tools-dbg
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- axa (= ${binary:Version})
-Description: AXA command line tools and C library (with debug symbols)
- sratool, sratunnel, radtool, radtunnel as well as SRA protocol utility library
- and headers
+ axa-tools (= ${binary:Version})
+Description: AXA command line tools (debug symbols)
+ sratool, sratunnel, radtool, and radtunnel

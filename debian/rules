@@ -5,7 +5,7 @@
 
 override_dh_strip:
 	dh_strip -p libaxa0 --dbg-package=libaxa0-dbg
-	dh_strip -p axa --dbg-package=axa-dbg
+	dh_strip -p axa-tools --dbg-package=axa-tools-dbg
 	dh_strip -a --remaining-packages
 
 override_dh_shlibdeps:

@@ -79,12 +79,11 @@ the SRA server will send.
 .It Fl O
 enable a spinning bar output indicator on stdout.
 .It Fl o Ar out-addr
-specifies
-the destination of the SIE data.
-It can be forwarded as
-.Em nmsg
-messages to a UDP or TCP port
+specifies the destination of the SIE data.
+It can be forwarded as NMSG messages to a UDP or TCP port
 or as raw IP packets to a file, FIFO, or network interface.
+.ds CT
+.so fwd.man
 .It Fl P Ar pidfile
 will result in the current PID  being written to
 .Ar pidfile .
@@ -150,13 +149,11 @@ and
 dns
 watches to indicate addresses or domains that are not used exclusively.
 .It Fl z
-enable nmsg zlib container compression.
-.ds CT
-.so fwd.man
+enable NMSG zlib container compression.
 .El
 .Sh EXAMPLES
 The following connects to a RAD server at example.com, loads the Brand Sentry
-module looking for the brand "farsight", and sends all anomaly hit nmsgs to
+module looking for the brand "farsight", and sends all anomaly hit NMSGs to
 the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
 radtunnel -s tls:user@example.com,1022 -o nmsg:127.1,8000 \\
