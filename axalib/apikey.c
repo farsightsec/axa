@@ -25,7 +25,7 @@
  * Parse apikey specification.
  */
 bool
-axa_apikey_parse(axa_emsg_t *emsg, const char *spec, uuid_t *uu)
+axa_apikey_parse(axa_emsg_t *emsg, char **addrp, uuid_t *uu, const char *spec)
 {
 	char *p, *spec_copy, *uuid_p;
 	const char *at;
@@ -51,6 +51,7 @@ axa_apikey_parse(axa_emsg_t *emsg, const char *spec, uuid_t *uu)
 		return (false);
 	}
 
+	*addrp = axa_strdup(at + 1);
 	free(spec_copy);
 	return (true);
 }

@@ -1376,6 +1376,9 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 			case AXA_IO_TYPE_TLS:
 				io_type = AXA_IO_TYPE_TLS_STR;
 				break;
+			case AXA_IO_TYPE_APIKEY:
+				io_type = AXA_IO_TYPE_APIKEY_STR;
+				break;
 			default:
 			case AXA_IO_TYPE_UNKN:
 				io_type = "unknown";

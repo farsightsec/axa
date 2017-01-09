@@ -540,8 +540,9 @@ extern const char *axa_io_tunerr(axa_io_t *io);
 extern axa_io_type_t axa_io_type_parse(const char **addr);
 extern const char *axa_io_type_to_str(axa_io_type_t type);
 
-/* Internal function to clean up TLS when shutting down a connection. */
+/* Internal functions to clean up TLS when shutting down a connection. */
 extern void axa_tls_cleanup(void);
+extern void axa_apikey_cleanup(void);
 
 /* Internal function to parse "certfile,keyfile@host,port" */
 extern bool axa_tls_parse(axa_emsg_t *emsg,
@@ -550,14 +551,20 @@ extern bool axa_tls_parse(axa_emsg_t *emsg,
 
 /* Internal functions */
 extern axa_io_result_t axa_tls_start(axa_emsg_t *emsg, axa_io_t *io);
+extern axa_io_result_t axa_apikey_start(axa_emsg_t *emsg, axa_io_t *io);
 extern void axa_tls_stop(axa_io_t *io);
+extern void axa_apikey_stop(axa_io_t *io);
 extern axa_io_result_t axa_tls_write(axa_emsg_t *emsg, axa_io_t *io,
 				     const void *b, size_t b_len);
 extern axa_io_result_t axa_tls_flush(axa_emsg_t *emsg, axa_io_t *io);
 extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
 
 /* Parse apikey specification. */
-extern bool axa_apikey_parse(axa_emsg_t *emsg, const char *spec, uuid_t *uu);
+extern bool axa_apikey_parse(axa_emsg_t *emsg, char **addr, uuid_t *uu,
+		const char *spec);
+extern bool axa_apikey_parse_srvr(axa_emsg_t *emsg,
+			  char **cert_filep, char **key_filep, char **addr,
+			  const char *spec);
 
 /** @endcond */
 
@@ -573,7 +580,7 @@ extern bool axa_apikey_parse(axa_emsg_t *emsg, const char *spec, uuid_t *uu);
 extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
 
 /**
- *  Get or set TLS certificate list.
+ *  Get or set TLS certificate list for TLS transport.
  *
  *  \param[out] emsg the reason if something went wrong
  *  \param[in] list OpenSSL format cipher list or NULL
@@ -584,7 +591,19 @@ extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
 extern const char *axa_tls_cipher_list(axa_emsg_t *emsg, const char *list);
 
 /**
- * Initialize the AXA TLS code including creating a SSL_CTX.
+ *  Get or set TLS certificate list for apikey transport.
+ *
+ *  \param[out] emsg the reason if something went wrong
+ *  \param[in] list OpenSSL format cipher list or NULL
+ *
+ *  \retval NULL implies an error; check emsg
+ *  \retval new value if not NULL
+ */
+extern const char *axa_apikey_cipher_list(axa_emsg_t *emsg,
+		const char *list);
+
+/**
+ * Initialize the AXA TLS code including creating an SSL_CTX.
  *
  *  \param[out] emsg the reason if something went wrong
  *  \param[in] srvr true if running as a server.
@@ -594,6 +613,19 @@ extern const char *axa_tls_cipher_list(axa_emsg_t *emsg, const char *list);
  *  \retval false error; check emsg
  */
 extern bool axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded);
+
+/**
+ * Initialize the AXA TLS code including creating an SSL_CTX for the
+ * apikey transport.
+ *
+ *  \param[out] emsg the reason if something went wrong
+ *  \param[in] srvr true if running as a server.
+ *  \param[in] threaded true if using pthreads.
+ *
+ *  \retval true success
+ *  \retval false error; check emsg
+ */
+extern bool axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded);
 
 /**
  *  Clean up AXA I/O functions including freeing TLS data

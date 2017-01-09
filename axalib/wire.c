@@ -2284,4 +2284,5 @@ void
 axa_io_cleanup(void)
 {
 	axa_tls_cleanup();
+	axa_apikey_cleanup();
 }
