@@ -21,6 +21,7 @@
 
 #include <config.h>
 #include <axa/client.h>
+#include <axa/client_config.h>
 #include <axa/axa_endian.h>
 #include <axa/fields.h>
 #include <axa/open_nmsg_out.h>

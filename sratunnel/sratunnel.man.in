@@ -30,6 +30,7 @@
 .Op Fl E Ar ciphers
 .Op Fl C Ar count
 .Op Fl m Ar sampling-rate
+.Op Fl n Ar config-file
 .Op Fl P Ar pidfile
 .Op Fl r Ar rate-limit
 .Op Fl S Ar certs
@@ -80,6 +81,8 @@ display options summary.
 .It Fl m Ar sampling-rate
 specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
 the SRA server will send.
+.It Fl n Ar config-file
+specify location for AXA client configuration file.
 .It Fl O
 enable a spinning bar output indicator on stdout.
 .It Fl o Ar out-addr

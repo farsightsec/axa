@@ -78,6 +78,7 @@ nobase_include_HEADERS = \
 	axa/axa.h \
 	axa/bits.h \
 	axa/client.h \
+	axa/client_config.h \
 	axa/dns_walk.h \
 	axa/axa_endian.h \
 	axa/fields.h \
@@ -95,6 +96,7 @@ axa_libaxa_la_SOURCES = \
 	axa/axa.h \
 	axa/bits.h \
 	axa/client.h \
+	axa/client_config.h \
 	axa/dns_walk.h \
 	axa/axa_endian.h \
 	axa/fields.h \
@@ -107,6 +109,7 @@ axa_libaxa_la_SOURCES = \
 	axa/wire.h \
 	axalib/apikey.c \
 	axalib/client.c \
+	axalib/client_config.c \
 	axalib/dns_walk.c \
 	axalib/domain_to_str.c \
 	axalib/emsg.c \

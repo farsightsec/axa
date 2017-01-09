@@ -100,6 +100,7 @@ usage(const char *msg, ...)
 int
 main(int argc, char **argv)
 {
+	const char *config_file = "";
 	arg_t *arg;
 	struct timeval now;
 	time_t ms;
@@ -123,7 +124,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:z"))
+	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:z"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -157,6 +158,9 @@ main(int argc, char **argv)
 				axa_error_msg("invalid \"-a %s\"", optarg);
 				exit(EX_USAGE);
 			}
+			break;
+		case 'n':
+			config_file = optarg;
 			break;
 
 		case 'O':
@@ -277,6 +281,8 @@ main(int argc, char **argv)
 			exit(0);
 		}
 	}
+
+	axa_load_client_config(config_file);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, sigterm);

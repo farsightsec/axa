@@ -140,13 +140,12 @@ sra> exit
 .Ed
 .Sh FILES
 .Bl -tag -width config
-.It Pa fields
-defines relationships among and meanings of SIE message fields.
-Its contents should rarely if ever need to be changed.
 .It Pa certs
 is the directory set with
 .Fl S
 that contains TLS certificate and key files.
+.It Pa ~/.axa/client-config
+contains AXA client configuration data.
 .It Pa config
 is the
 .Xr ssh_config 5
@@ -158,6 +157,9 @@ The usual
 sequence is used, starting with
 .Pa ~/.ssh/config .
 "Host" stanzas in the file can simplify connections to \*(SR servers.
+.It Pa fields
+defines relationships among and meanings of SIE message fields.
+Its contents should rarely if ever need to be changed.
 .It Pa ~/.sratool_history
 contains the command history from previous
 .Nm sratool
