@@ -33,14 +33,14 @@
 struct axa_alias {
 	char a[64];			/* alias "shortcut" string */
 	char c[64];			/* server connection string */
-struct axa_alias *next;
+	struct axa_alias *next;		/* next alias */
 };
 typedef struct axa_alias axa_alias_t;
 
 /* Holds client-side configuration data */
 typedef struct {
-	axa_alias_t *aliases;
-	axa_alias_t *aliases_tail;
+	axa_alias_t *aliases;		/* connection alias chain */
+	axa_alias_t *aliases_tail;	/* end of list */
 } axa_client_config_t;
 
 /**
