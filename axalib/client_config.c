@@ -51,9 +51,11 @@ axa_unload_client_config(void)
 {
 	axa_alias_t *p, *q;
 
-	for (p = axa_client_config.aliases; p; p = q->next) {
+	p = axa_client_config.aliases;
+	while (p != NULL) {
 		q = p;
-		free(p);
+		p = p->next;
+		free(q);
 	}
 
 	axa_client_config.aliases = NULL;
