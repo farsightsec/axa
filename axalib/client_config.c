@@ -40,13 +40,10 @@ bool _alias_check(const char *line0);
 axa_client_config_t axa_client_config;
 
 /* config entry regex */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunknown-escape-sequence"
 /* The format of an entry is 'type:foo=bar' where type, foo, and bar are
  * 1-63 alphanumeric characters. */
-const char *alias_re_s = "^[a-zA-Z0-9\-]{1,63}:[a-zA-Z0-9\-]{1,63}=[a-zA-Z0-9\-]{1,63}";
+const char *alias_re_s = "^[a-zA-Z0-9-]{1,63}:[a-zA-Z0-9-]{1,63}=[a-zA-Z0-9-]{1,63}";
 regex_t alias_re;
-#pragma clang diagnostic pop
 
 
 void
