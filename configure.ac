@@ -64,11 +64,11 @@ PKG_CHECK_MODULES([libssl], [libssl])
 
 PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
+PKG_CHECK_MODULES([uuid], [uuid])
+
 AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
 AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
 
-#AC_CHECK_LIB([uuid], [uuid_copy], [],
-#	     [ AC_MSG_ERROR([uuid library is required])])
 
 AC_ARG_WITH([yajl], AS_HELP_STRING([--without-yajl], [Disable yajl support]))
 if test "x$with_yajl" != "xno"; then

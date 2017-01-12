@@ -139,6 +139,7 @@ axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	${libwdns_LIBS} \
 	${libnmsg_LIBS} \
 	${strlcpy_LIBS} \
+	${uuid_LIBS} \
 	${yajl_LIBS}
 axa_libaxa_la_CFLAGS = \
 	${AM_CFLAGS} \
@@ -149,6 +150,7 @@ axa_libaxa_la_CFLAGS = \
 	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${strlcpy_CFLAGS} \
+	${uuid_CFLAGS} \
 	${yajl_CFLAGS}
 
 pkgconfig_DATA = axa/libaxa.pc

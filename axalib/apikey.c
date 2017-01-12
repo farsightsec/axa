@@ -19,7 +19,7 @@
 #include <config.h>
 #include <axa/wire.h>
 
-#include <uuid/uuid.h>
+#include <uuid.h>
 
 /*
  * Parse apikey specification.

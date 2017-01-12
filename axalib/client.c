@@ -30,7 +30,7 @@
 #include <sysexits.h>
 #include <unistd.h>
 
-#include <uuid/uuid.h>
+#include <uuid.h>
 
 
 #define	MIN_BACKOFF_MS	(1*1000)
