@@ -34,7 +34,6 @@
 #include <nmsg.h>
 
 #include <openssl/ssl.h>
-#include <uuid/uuid.h>
 
 /**
  *  Parse an AXA watch definition.
@@ -338,8 +337,6 @@ typedef struct axa_io {
 	SSL		*ssl;		/**< TLS OpenSSL ssl */
 	char		*tls_info;	/**< TLS cipher, compression, etc. */
 
-	uuid_t		uu;		/**< apikey */
-
 	axa_p_user_t	user;		/**< for TCP or UNIX domain socket */
 	bool		connected_tcp;	/**< false if connect() in progress */
 	bool		connected;	/**< TLS or other connection made */
@@ -560,7 +557,7 @@ extern axa_io_result_t axa_tls_flush(axa_emsg_t *emsg, axa_io_t *io);
 extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
 
 /* Parse apikey specification. */
-extern bool axa_apikey_parse(axa_emsg_t *emsg, char **addr, uuid_t *uu,
+extern bool axa_apikey_parse(axa_emsg_t *emsg, char **addr, char *apikey,
 		const char *spec);
 extern bool axa_apikey_parse_srvr(axa_emsg_t *emsg,
 			  char **cert_filep, char **key_filep, char **addr,

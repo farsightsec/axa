@@ -30,8 +30,6 @@
 #include <sysexits.h>
 #include <unistd.h>
 
-#include <uuid.h>
-
 
 #define	MIN_BACKOFF_MS	(1*1000)
 #define	MAX_BACKOFF_MS	(60*1000)
@@ -349,9 +347,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 			return (connect_result);
 		switch (axa_apikey_start(emsg, &client->io)) {
 		case AXA_IO_OK:
-			/* overload username field to hold unparsed UUID */
-			uuid_unparse_lower(client->io.uu,
-					client->io.user.name);
+			/* username field holds apikey */
 			if (!axa_client_send(emsg, client,
 					     AXA_TAG_NONE, AXA_P_OP_USER, &hdr,
 					     &client->io.user,
@@ -401,8 +397,6 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 	struct addrinfo *ai;
 	const char *p;
 	int i;
-
-	uuid_t uu;
 
 	axa_client_close(client);
 
@@ -503,9 +497,9 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 		break;
 
 	case AXA_IO_TYPE_APIKEY:
-		if (!axa_apikey_parse(emsg, &client->io.addr, &uu, addr))
+		if (!axa_apikey_parse(emsg, &client->io.addr,
+					client->io.user.name, addr))
 			return (AXA_CONNECT_ERR);
-		uuid_copy(client->io.uu, uu);
 		client->io.label = axa_strdup(client->io.addr);
 		if (!axa_get_srvr(emsg, client->io.addr, false, &ai)) {
 			axa_client_backoff(client);

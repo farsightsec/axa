@@ -19,15 +19,13 @@
 #include <config.h>
 #include <axa/wire.h>
 
-#include <uuid.h>
-
 /*
  * Parse apikey specification.
  */
 bool
-axa_apikey_parse(axa_emsg_t *emsg, char **addrp, uuid_t *uu, const char *spec)
+axa_apikey_parse(axa_emsg_t *emsg, char **addrp, char *apikey, const char *spec)
 {
-	char *p, *spec_copy, *uuid_p;
+	char *p, *spec_copy, *apikey_p;
 	const char *at;
 
 	at = strchr(spec, '@');
@@ -43,13 +41,9 @@ axa_apikey_parse(axa_emsg_t *emsg, char **addrp, uuid_t *uu, const char *spec)
 	}
 	spec_copy = axa_strdup(spec);
 	p = spec_copy;
-	uuid_p = strsep(&p, "@");
+	apikey_p = strsep(&p, "@");
 
-	if (uuid_parse(uuid_p, *uu) != 0) {
-		axa_pemsg(emsg, "invalid apikey \"%s\"", spec);
-		free(spec_copy);
-		return (false);
-	}
+	strlcpy(apikey, apikey_p, 64);
 
 	*addrp = axa_strdup(at + 1);
 	free(spec_copy);
