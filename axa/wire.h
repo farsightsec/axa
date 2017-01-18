@@ -557,7 +557,7 @@ extern axa_io_result_t axa_tls_flush(axa_emsg_t *emsg, axa_io_t *io);
 extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
 
 /* Parse apikey specification. */
-extern bool axa_apikey_parse(axa_emsg_t *emsg, char **addr, char *apikey,
+extern bool axa_apikey_parse(axa_emsg_t *emsg, char **addr, axa_p_user_t *u,
 		const char *spec);
 extern bool axa_apikey_parse_srvr(axa_emsg_t *emsg,
 			  char **cert_filep, char **key_filep, char **addr,

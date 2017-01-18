@@ -498,7 +498,7 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 
 	case AXA_IO_TYPE_APIKEY:
 		if (!axa_apikey_parse(emsg, &client->io.addr,
-					client->io.user.name, addr))
+					&client->io.user, addr))
 			return (AXA_CONNECT_ERR);
 		client->io.label = axa_strdup(client->io.addr);
 		if (!axa_get_srvr(emsg, client->io.addr, false, &ai)) {

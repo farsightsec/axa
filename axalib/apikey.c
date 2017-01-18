@@ -23,7 +23,7 @@
  * Parse apikey specification.
  */
 bool
-axa_apikey_parse(axa_emsg_t *emsg, char **addrp, char *apikey, const char *spec)
+axa_apikey_parse(axa_emsg_t *emsg, char **addrp, axa_p_user_t *u, const char *spec)
 {
 	char *p, *spec_copy, *apikey_p;
 	const char *at;
@@ -43,7 +43,7 @@ axa_apikey_parse(axa_emsg_t *emsg, char **addrp, char *apikey, const char *spec)
 	p = spec_copy;
 	apikey_p = strsep(&p, "@");
 
-	strlcpy(apikey, apikey_p, 64);
+	strlcpy(u->name, apikey_p, 64);
 
 	*addrp = axa_strdup(at + 1);
 	free(spec_copy);
