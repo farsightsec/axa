@@ -18,6 +18,9 @@
 
 #include <config.h>
 #include <axa/wire.h>
+#ifdef __linux
+#include <bsd/string.h>                 /* for strlcpy() */
+#endif
 
 /*
  * Parse apikey specification.
