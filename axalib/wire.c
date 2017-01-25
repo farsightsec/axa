@@ -1835,7 +1835,8 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 		/* Read more data into the hidden buffer when we run out. */
 		if (io->recv_bytes == 0) {
 			io->recv_start = io->recv_buf;
-			if (io->type == AXA_IO_TYPE_TLS) {
+			if (io->type == AXA_IO_TYPE_TLS ||
+					io->type == AXA_IO_TYPE_APIKEY) {
 				io_result = axa_tls_read(emsg, io);
 				if (io_result != AXA_IO_OK)
 					return (io_result);
@@ -2041,7 +2042,7 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	if (total == 0)
 		return (AXA_IO_ERR);
 
-	if (io->type == AXA_IO_TYPE_TLS) {
+	if (io->type == AXA_IO_TYPE_TLS || io->type == AXA_IO_TYPE_APIKEY) {
 		/*
 		 * For TLS, save all 3 parts in the overflow output buffer
 		 * so that the AXA message can be sent as a single TLS
@@ -2169,7 +2170,7 @@ axa_send_flush(axa_emsg_t *emsg, axa_io_t *io)
 {
 	ssize_t done;
 
-	if (io->type == AXA_IO_TYPE_TLS)
+	if (io->type == AXA_IO_TYPE_TLS || io->type == AXA_IO_TYPE_APIKEY)
 		return (axa_tls_flush(emsg, io));
 
 	/* Repeat other transports until nothing flows. */
