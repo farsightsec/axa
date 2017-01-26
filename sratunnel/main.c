@@ -60,9 +60,17 @@ usage(const char *msg, ...)
 	const char *rad = "Real-time Anomaly Detection Tunnel (radtunnel)\n";
 	va_list args;
 
+	if (msg != NULL) {
+		printf("%s: ", axa_prog_name);
+		va_start(args, msg);
+		axa_verror_msg(msg, args);
+		va_end(args);
+		printf("\n");
+	}
+
 	printf("%s", mode == SRA ? sra : rad);
 	printf("(c) 2013-2016 Farsight Security, Inc.\n");
-	printf("%s [options]\n", axa_prog_name);
+	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
 		printf("-o output\t\tspecify destination of SIE data\n");
@@ -89,11 +97,6 @@ usage(const char *msg, ...)
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
-	if (msg != NULL) {
-		va_start(args, msg);
-		axa_verror_msg(msg, args);
-		va_end(args);
-	}
 	exit(EX_USAGE);
 }
 
