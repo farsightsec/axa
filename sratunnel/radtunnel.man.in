@@ -76,7 +76,7 @@ specifies a list ciphers for TLS connections.
 display options summary.
 .It Fl m Ar sampling-rate
 specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
-the SRA server will send.
+the RAD server will send.
 .It Fl n Ar config-file
 specify location for AXA client configuration file.
 .It Fl O
@@ -103,6 +103,13 @@ Its default is
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
 .Bl -tag -width unix
+.It Sm off Ar alias
+Connect to a server using an alias shortcut mnemonic (see FILES section for
+more information).
+.It Sm off Ar apikey: Ar <users_apikey>@ Ar host,port Sm on
+Identify and authenticate the user via a Farsight Security provided apikey.
+The connection will be encrypted using the same TLS semantics as the tls
+transport below.
 .It Sm off Ar ssh: Oo Ar user@ Oc Ar host Sm on
 The server will be contacted using the ssh protocol.
 These connections usually use default ssh
@@ -168,6 +175,26 @@ radtunnel -s tls:user@example.com,1022 -o nmsg:127.1,8000 \\
 is the directory set with
 .Fl S
 that contains TLS certificate and key files.
+.It Ar ~/.axa/config
+contains AXA client configuration data. Currently supported are connection
+aliases that provide the user with a facility to create shortcut mnemonics to
+specify the RAD server connection string. For example:
+.Bd -literal -offset 4n
+$ cat ~/.axa/config
+# RAD
+alias:rad-apikey=apikey:<elided>@example.com,1024
+
+.Ed
+
+If the user wanted to connect to RAD, she would only have to remember
+"rad-apikey" and could do:
+.Bd -literal -offset 4n
+$ radtunnel -s rad-apikey ...
+.Ed
+.Pp
+This config file is shared for
+.Nm ,
+sratunnel, sratool, and sratunnel.
 .It Ar config
 is the
 .Xr ssh_config 5
