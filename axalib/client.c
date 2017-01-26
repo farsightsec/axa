@@ -409,15 +409,18 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 
 	p = strpbrk(addr, AXA_WHITESPACE":");
 	if (p == NULL) {
-		axa_pemsg(emsg, "invalid AXA transport protocol \"%s\"", addr);
+		axa_pemsg(emsg,
+			"invalid AXA transport protocol or alias \"%s\"",
+			addr);
 		axa_client_backoff_max(client);
 		return (AXA_CONNECT_ERR);
 	}
 
 	client->io.type = axa_io_type_parse(&addr);
 	if (client->io.type == AXA_IO_TYPE_UNKN) {
-		axa_pemsg(emsg, "invalid AXA transport protocol in \"%s\"",
-			  addr);
+		axa_pemsg(emsg,
+			"invalid AXA transport protocol or alias in \"%s\"",
+			addr);
 		axa_client_backoff_max(client);
 		return (AXA_CONNECT_ERR);
 	}
