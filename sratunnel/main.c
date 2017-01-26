@@ -74,13 +74,13 @@ usage(const char *msg, ...)
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
 		printf("-o output\t\tspecify destination of SIE data\n");
-		printf("-s [user@]SRA-server\tconnect to SRA server\n");
+		printf("-s [user@]server|alias\tconnect to SRA server\n");
 		printf("-w watch\t\tset watch\n");
 	}
 	if (mode == RAD) {
 		printf("-a anomaly\t\tenable anomaly detection module\n");
 		printf("-o output\t\tspecify destination of SIE data\n");
-		printf("-s [user@]RAD-server\tconnect to RAD server\n");
+		printf("-s [user@]server|alias\tconnect to RAD server\n");
 		printf("-w watch\t\tset watch\n");
 	}
 	printf("\n[-A interval]\t\temit acct messages to stdout every interval seconds\n");
