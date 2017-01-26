@@ -337,7 +337,8 @@ typedef struct axa_io {
 	SSL		*ssl;		/**< TLS OpenSSL ssl */
 	char		*tls_info;	/**< TLS cipher, compression, etc. */
 
-	axa_p_user_t	user;		/**< for TCP or UNIX domain socket */
+	axa_p_user_t    user;           /**< TLS, TCP or UNIX domain socket */
+	axa_p_user_t    apikey;         /**< apikey */
 	bool		connected_tcp;	/**< false if connect() in progress */
 	bool		connected;	/**< TLS or other connection made */
 
