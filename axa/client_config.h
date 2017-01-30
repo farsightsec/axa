@@ -29,10 +29,12 @@
 #include <axa/protocol.h>
 #include <axa/axa.h>
 
+#define AXA_ALIAS_STRLEN	64
+#define AXA_CONNECT_STRLEN	1024
 /* connection alias */
 struct axa_alias {
-	char a[64];			/* alias "shortcut" string */
-	char c[64];			/* server connection string */
+	char a[AXA_ALIAS_STRLEN];	/* alias "shortcut" string */
+	char c[AXA_CONNECT_STRLEN];	/* server connection string */
 	struct axa_alias *next;		/* next alias */
 };
 typedef struct axa_alias axa_alias_t;

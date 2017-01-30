@@ -46,7 +46,7 @@ axa_apikey_parse(axa_emsg_t *emsg, char **addrp, axa_p_user_t *u, const char *sp
 	p = spec_copy;
 	apikey_p = strsep(&p, "@");
 
-	strlcpy(u->name, apikey_p, 64);
+	strlcpy(u->name, apikey_p, sizeof(u->name));
 
 	*addrp = axa_strdup(at + 1);
 	free(spec_copy);
