@@ -282,7 +282,7 @@ extern void axa_set_core(void);
 
 /** AXA error message datatype */
 typedef struct {
-	char	c[120];			/**< error strings go here */
+	char	c[1024];			/**< error strings go here */
 } axa_emsg_t;
 
 /**
