@@ -118,7 +118,7 @@ void
 axa_load_client_config(const char *config_file0)
 {
 	FILE *f;
-	char *line_buf, *p, *config_file;
+	char line_buf[1024], *p, *config_file;
 	uint line_num;
 	size_t line_buf_size;
 	const char *line0;
@@ -154,13 +154,13 @@ axa_load_client_config(const char *config_file0)
 		goto done;
 	}
 
-	line_buf = NULL;
-	line_buf_size = 0;
+	p = line_buf;
+	line_buf_size = sizeof(line_buf);
 	line_num = 0;
 	/* Parse config file, line by line. A parsing error will throw an
 	 * error message and control will continue to the next line. */
 	for (;;) {
-		line0 = axa_fgetln(f, config_file, &line_num, &line_buf,
+		line0 = axa_fgetln(f, config_file, &line_num, &p,
 				&line_buf_size);
 		if (line0 == NULL) {
 			/* no more entries, all done */
