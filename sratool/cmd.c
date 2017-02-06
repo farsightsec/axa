@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1949,7 +1949,7 @@ usage(void)
 	const char *rad = "Real-time Anomaly Detection Tool (radtool)\n";
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2016 Farsight Security, Inc.\n");
+	printf("(c) 2013-2017 Farsight Security, Inc.\n");
 	printf("%s [options] [commands]\n", axa_prog_name);
 	printf("[-c file]\t\tspecify commands file\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");

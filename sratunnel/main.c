@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ usage(const char *msg, ...)
 	}
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2016 Farsight Security, Inc.\n");
+	printf("(c) 2014-2017 Farsight Security, Inc.\n");
 	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
