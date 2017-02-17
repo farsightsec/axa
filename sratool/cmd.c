@@ -169,7 +169,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "count [#packets | off]",
     "Set terminal output to stop displaying packets after a"
     " number of packets (including immediately with a number of 0),"
-    " show the currently remainint count,"
+    " show the currently remaining count,"
     " or turn off the packet count limit."
 },
 {"debug",		debug_cmd,		BOTH, MB, NO,
