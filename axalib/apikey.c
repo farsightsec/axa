@@ -34,7 +34,7 @@ axa_apikey_parse(axa_emsg_t *emsg, char **addrp, axa_p_user_t *u, const char *sp
 	at = strchr(spec, '@');
 
 	if (at == NULL) {
-		axa_pemsg(emsg, "\"apikey:%s\" has no server specification.",
+		axa_pemsg(emsg, "\"apikey:%s\" has no server specification",
 				spec);
 		return (false);
 	}
