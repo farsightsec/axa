@@ -578,7 +578,7 @@ extern bool axa_apikey_parse_srvr(axa_emsg_t *emsg,
 extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
 
 /**
- *  Get or set TLS certificate list for TLS transport.
+ *  Get or set cipher list for TLS transport.
  *
  *  \param[out] emsg the reason if something went wrong
  *  \param[in] list OpenSSL format cipher list or NULL
@@ -589,7 +589,7 @@ extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
 extern const char *axa_tls_cipher_list(axa_emsg_t *emsg, const char *list);
 
 /**
- *  Get or set TLS certificate list for apikey transport.
+ *  Get or set TLS cipher list for apikey transport.
  *
  *  \param[out] emsg the reason if something went wrong
  *  \param[in] list OpenSSL format cipher list or NULL
