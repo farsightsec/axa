@@ -137,7 +137,7 @@ axa_load_client_config(const char *config_file0)
 		if (p == NULL) {
 			config_file = NULL;
 		} else {
-			axa_asprintf(&config_file, "%s/.axa/%s", p, "config");
+			axa_asprintf(&config_file, "%s/.axa/config", p);
 			f = fopen(config_file, "r");
 		}
 	}
