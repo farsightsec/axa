@@ -37,7 +37,7 @@ bool _config_entry_parse(const char *line0);
 bool _alias_check(const char *line0);
 
 /* global client config data */
-axa_client_config_t axa_client_config;
+static axa_client_config_t axa_client_config;
 
 /* config entry regex */
 /* The format of an entry is 'type:foo=bar' where type, foo, and bar are

@@ -303,3 +303,9 @@ check_PROGRAMS += tests/test-apikey
 tests_test_apikey_SOURCES = tests/test-apikey.c
 tests_test_apikey_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
 tests_test_apikey_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
+
+TESTS += tests/test-client_config
+check_PROGRAMS += tests/test-client_config
+tests_test_client_config_SOURCES = tests/test-client_config.c
+tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
+tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
