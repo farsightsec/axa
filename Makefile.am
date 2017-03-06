@@ -5,6 +5,9 @@ EXTRA_DIST =
 CLEANFILES =
 DISTCLEANFILES =
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
+AM_TESTS_ENVIRONMENT = top_builddir='$(top_builddir)'; \
+		       top_srcdir='$(top_srcdir)'; \
+		       export top_builddir top_srcdir;
 
 AM_CPPFLAGS = \
         -include $(top_builddir)/config.h \
@@ -292,7 +295,6 @@ spotless: distclean
 
 
 TESTS += tests/test-json
-EXTRA_DIST += tests/test-json.c
 check_PROGRAMS += tests/test-json
 tests_test_json_SOURCES = tests/test-json.c
 tests_test_json_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
@@ -305,7 +307,8 @@ tests_test_apikey_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
 tests_test_apikey_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
 
 TESTS += tests/test-client_config
+EXTRA_DIST += $(top_builddir)/tests/test-config
 check_PROGRAMS += tests/test-client_config
-tests_test_client_config_SOURCES = tests/test-client_config.c
+tests_test_client_config_SOURCES = tests/test-client_config.c $(top_builddir)/tests/test-config
 tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
 tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include <axa.h>
 #include <axa/client_config.h>
@@ -11,9 +12,18 @@
 
 START_TEST(test_load_client_config)
 {
+	char *p;
+	size_t n;
 	const char *res;
+	char buf[MAXPATHLEN * 2];
 
-	axa_load_client_config("./tests/test-config");
+	p = getenv("top_srcdir");
+	ck_assert_ptr_ne(p, NULL);
+
+	n = strlcpy(buf, p, sizeof (buf));
+	n = strlen(buf);
+	strlcpy(buf + n, "/tests/test-config", sizeof (buf));
+	axa_load_client_config(buf);
 
 	res = axa_client_config_alias_chk("sra-dev-apikey");
 	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1023");
