@@ -115,6 +115,7 @@ static cmd_t sleep_cmd;
 static cmd_t radunit_cmd;
 static cmd_t nmsg_zlib_cmd;
 static cmd_t mgmt_get_cmd;
+static cmd_t mgmt_kill_cmd;
 static cmd_t alias_cmd;
 
 typedef enum {
@@ -244,6 +245,12 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"help",		help_cmd,		BOTH, MB, NO,
     "help [cmd]",
     "List all commands or get more information about a command."
+},
+{"kill",		mgmt_kill_cmd,		BOTH, YES, YES,
+    "kill user_name | serial_number",
+    "Kill off user session (admin users only). If serial number is specified"
+    " kill a single session; if user name is specified, kill all sessions"
+    " belonging to that user."
 },
 {"list channels",	list_cmd,		SRA, MB, YES,
     "list channels",
@@ -1755,6 +1762,40 @@ mgmt_get_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 {
 	printf("    sending mgmt request to server...\n");
 	return (srvr_send(tag, AXA_P_OP_MGMT_GET, NULL, 0));
+}
+
+static int
+mgmt_kill_cmd(axa_tag_t tag, const char *arg,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	char *p;
+	uint32_t sn;
+	axa_p_mgmt_kill_t mgmt_kill;
+
+	if (*arg == '\0') {
+		error_msg("kill command requires a valid user name or"
+				" serial number");
+		return (0);
+	}
+
+	memset(&mgmt_kill, 0, sizeof (mgmt_kill));
+	sn = strtoul(arg, &p, 0);
+	if (*p != '\0') {
+		printf("    sending mgmt kill request to server"
+				" (kill all sessions belonging to %s)...\n",
+				arg);
+		strlcpy(mgmt_kill.user.name, arg, sizeof(mgmt_kill.user.name));
+		mgmt_kill.mode = AXA_P_MGMT_K_M_U;
+	}
+	else {
+		printf("    sending mgmt kill request to server"
+				" (kill session serial number %d)...\n", sn);
+		mgmt_kill.sn = AXA_H2P32(sn);
+		mgmt_kill.mode = AXA_P_MGMT_K_M_SN;
+	}
+
+	return (srvr_send(tag, AXA_P_OP_MGMT_KILL, &mgmt_kill,
+				sizeof (mgmt_kill)));
 }
 
 static int
