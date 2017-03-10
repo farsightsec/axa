@@ -8,6 +8,7 @@ ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_TESTS_ENVIRONMENT = top_builddir='$(top_builddir)'; \
 		       top_srcdir='$(top_srcdir)'; \
 		       export top_builddir top_srcdir;
+TESTS_ENVIRONMENT = $(AM_TESTS_ENVIRONMENT)
 
 AM_CPPFLAGS = \
         -include $(top_builddir)/config.h \
