@@ -1024,6 +1024,58 @@ START_TEST(test_mgmt_getrsp_trunc)
 }
 END_TEST
 
+START_TEST(test_mgmt_kill)
+{
+	axa_emsg_t emsg;
+	axa_p_mgmt_kill_t kill_data = {1, {"wink"}, 0, 1};
+	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT KILL\",\"mode\":1,\"user\":\"wink\",\"sn\":0,\"result\":1}";
+	size_t kill_data_len = sizeof(axa_p_mgmt_kill_t);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic pop
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + kill_data_len),
+		AXA_H2P_TAG(0),
+		AXA_P_PVERS, AXA_P_OP_MGMT_KILL};
+	axa_p_mgmt_kill_t *mgmt_kill = alloca(sizeof(axa_p_mgmt_kill_t));
+	char *out = NULL;
+	axa_json_res_t res;
+
+	*mgmt_kill = kill_data;
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
+			(axa_p_body_t *)mgmt_kill,
+			kill_data_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_mgmt_killrsp)
+{
+	axa_emsg_t emsg;
+	axa_p_mgmt_kill_t kill_data = {2, {"wink"}, 10, 2};
+	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT KILL RSP\",\"mode\":2,\"user\":\"wink\",\"sn\":10,\"result\":2}";
+	size_t kill_data_len = sizeof(axa_p_mgmt_kill_t);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic pop
+	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + kill_data_len),
+		AXA_H2P_TAG(0),
+		AXA_P_PVERS, AXA_P_OP_MGMT_KILLRSP};
+	axa_p_mgmt_kill_t *mgmt_kill = alloca(sizeof(axa_p_mgmt_kill_t));
+	char *out = NULL;
+	axa_json_res_t res;
+
+	*mgmt_kill = kill_data;
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
+			(axa_p_body_t *)mgmt_kill,
+			kill_data_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
 int main(void) {
 	int number_failed;
 	Suite *s;
@@ -1113,6 +1165,8 @@ int main(void) {
 	tcase_add_test(tc_core, test_mgmt_getrsp_rad);
 	tcase_add_test(tc_core, test_mgmt_getrsp_no_users);
 	tcase_add_test(tc_core, test_mgmt_getrsp_trunc);
+	tcase_add_test(tc_core, test_mgmt_kill);
+	tcase_add_test(tc_core, test_mgmt_killrsp);
 	suite_add_tcase(s, tc_core);
 
 	sr = srunner_create(s);
