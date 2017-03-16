@@ -1,5 +1,5 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.3.5])
+AC_INIT([axa], [1.4.0])
 PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
 AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
@@ -84,7 +84,11 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 if test -n "$DOXYGEN"; then
         DOC_HTML_MSG="yes, doxygen available: $DOXYGEN"
         AC_MSG_CHECKING(doxygen version)
-        MY_CHECK_DOXYGEN
+	installed_version=`$DOXYGEN --version 2>/dev/null`
+	AS_VERSION_COMPARE($installed_version, "1.8.3",
+			   DOXYGEN_version="oldish",
+			   DOXYGEN_version="newish",
+			   DOXYGEN_version="newish")
         AC_MSG_RESULT($DOXYGEN_version)
         AC_CONFIG_FILES([Doxyfile])
         DOXYGEN_INPUT="${srcdir}/axa ${srcdir}/README.md"

@@ -48,6 +48,7 @@ EXTRA_DIST += \
 	sratool/cmds.man \
 	README.md \
 	DoxygenLayout.xml \
+	json-schema.yaml \
 	debian/axa-doc.install \
 	debian/axa-tools.install \
 	debian/changelog \
@@ -112,6 +113,7 @@ axa_libaxa_la_SOURCES = \
 	axa/trie.h \
 	axa/wire.h \
 	axalib/apikey.c \
+	axalib/bit_funcs.c \
 	axalib/client.c \
 	axalib/client_config.c \
 	axalib/dns_walk.c \
