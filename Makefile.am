@@ -313,11 +313,11 @@ TESTS += tests/test-client_config
 EXTRA_DIST += $(top_builddir)/tests/test-config
 check_PROGRAMS += tests/test-client_config
 tests_test_client_config_SOURCES = tests/test-client_config.c $(top_builddir)/tests/test-config
-tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
-tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
+tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
 
 TESTS += tests/test-mgmt
 check_PROGRAMS += tests/test-mgmt
 tests_test_mgmt_SOURCES = tests/test-mgmt.c
-tests_test_mgmt_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
-tests_test_mgmt_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
+tests_test_mgmt_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_mgmt_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
