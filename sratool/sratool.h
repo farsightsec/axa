@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool definitions
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include <axa/fields.h>
 #include <axa/dns_walk.h>
 #include <axa/client.h>
+#include <axa/client_config.h>
 #include <axa/open_nmsg_out.h>
 
 #include <nmsg/vendors.h>

@@ -1,7 +1,7 @@
 /*
  * AXA protocol utilities
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1612,6 +1612,10 @@ axa_io_type_parse(const char **addrp)
 		addr += sizeof(AXA_IO_TYPE_SSH_STR)-1 + i;
 		result = AXA_IO_TYPE_SSH;
 
+	} else if (AXA_CLITCMP(addr, AXA_IO_TYPE_APIKEY_STR":")) {
+		addr += sizeof(AXA_IO_TYPE_APIKEY_STR":")-1;
+		result = AXA_IO_TYPE_APIKEY;
+
 	} else {
 		return (AXA_IO_TYPE_UNKN);
 	}
@@ -1636,6 +1640,8 @@ axa_io_type_to_str(axa_io_type_t type)
 		return (AXA_IO_TYPE_SSH_STR);
 	case AXA_IO_TYPE_TLS:
 		return (AXA_IO_TYPE_TLS_STR);
+	case AXA_IO_TYPE_APIKEY:
+		return (AXA_IO_TYPE_APIKEY_STR);
 	}
 }
 
@@ -1829,7 +1835,8 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 		/* Read more data into the hidden buffer when we run out. */
 		if (io->recv_bytes == 0) {
 			io->recv_start = io->recv_buf;
-			if (io->type == AXA_IO_TYPE_TLS) {
+			if (io->type == AXA_IO_TYPE_TLS ||
+					io->type == AXA_IO_TYPE_APIKEY) {
 				io_result = axa_tls_read(emsg, io);
 				if (io_result != AXA_IO_OK)
 					return (io_result);
@@ -2035,7 +2042,7 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	if (total == 0)
 		return (AXA_IO_ERR);
 
-	if (io->type == AXA_IO_TYPE_TLS) {
+	if (io->type == AXA_IO_TYPE_TLS || io->type == AXA_IO_TYPE_APIKEY) {
 		/*
 		 * For TLS, save all 3 parts in the overflow output buffer
 		 * so that the AXA message can be sent as a single TLS
@@ -2163,7 +2170,7 @@ axa_send_flush(axa_emsg_t *emsg, axa_io_t *io)
 {
 	ssize_t done;
 
-	if (io->type == AXA_IO_TYPE_TLS)
+	if (io->type == AXA_IO_TYPE_TLS || io->type == AXA_IO_TYPE_APIKEY)
 		return (axa_tls_flush(emsg, io));
 
 	/* Repeat other transports until nothing flows. */
@@ -2278,4 +2285,5 @@ void
 axa_io_cleanup(void)
 {
 	axa_tls_cleanup();
+	axa_apikey_cleanup();
 }

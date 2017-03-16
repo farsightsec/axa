@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -225,6 +225,11 @@ srvr_connect(void)
 	size_t anom_len;
 	axa_emsg_t emsg;
 	bool res;
+	const char *srvr_addr0;
+
+	/* Check for config-file-specified alias first. */
+	srvr_addr0 = axa_client_config_alias_chk(srvr_addr);
+	srvr_addr = srvr_addr0 ? srvr_addr0 : srvr_addr;
 
 	if (axa_debug != 0)
 		axa_trace_msg("connecting to %s", srvr_addr);

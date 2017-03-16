@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -115,6 +115,7 @@ static cmd_t sleep_cmd;
 static cmd_t radunit_cmd;
 static cmd_t nmsg_zlib_cmd;
 static cmd_t mgmt_get_cmd;
+static cmd_t alias_cmd;
 
 typedef enum {
 	NO,
@@ -141,6 +142,10 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"accounting",		acct_cmd,		BOTH, NO, YES,
     "accounting",
     "Ask the server to report total message counts."
+},
+{"alias",		alias_cmd,		BOTH, NO, NO,
+    "alias",
+    "List available connection aliases."
 },
 {"anomaly",		anom_cmd,		RAD, YES, YES,
     "tag anomaly name [parameters]",
@@ -1018,10 +1023,23 @@ disconnect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 }
 
 static int
-connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+alias_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0 AXA_UNUSED,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	if (arg[0] == '\0') {
+	/* Check for config-file-specified alias first. */
+	axa_client_config_alias_print();
+
+	return (1);
+}
+
+
+static int
+connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
+	    const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	const char *arg;
+
+	if (arg0[0] == '\0') {
 		if (!AXA_CLIENT_OPENED(&client)) {
 			fputs("not connected to a server\n", stdout);
 		} else if (client.hello == NULL) {
@@ -1039,6 +1057,10 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		}
 		return (1);
 	}
+
+	/* Check for config-file-specified alias first. */
+	arg = axa_client_config_alias_chk(arg0);
+	arg = arg ? arg : arg0;
 
 	if (AXA_CLIENT_OPENED(&client))
 		disconnect(false);
@@ -1927,7 +1949,7 @@ usage(void)
 	const char *rad = "Real-time Anomaly Detection Tool (radtool)\n";
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2016 Farsight Security, Inc.\n");
+	printf("(c) 2013-2017 Farsight Security, Inc.\n");
 	printf("%s [options] [commands]\n", axa_prog_name);
 	printf("[-c file]\t\tspecify commands file\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");

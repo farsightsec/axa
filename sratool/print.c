@@ -1,7 +1,7 @@
 /*
  * Print a dark channel packet
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1375,6 +1375,9 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 				break;
 			case AXA_IO_TYPE_TLS:
 				io_type = AXA_IO_TYPE_TLS_STR;
+				break;
+			case AXA_IO_TYPE_APIKEY:
+				io_type = AXA_IO_TYPE_APIKEY_STR;
 				break;
 			default:
 			case AXA_IO_TYPE_UNKN:
