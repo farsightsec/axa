@@ -22,7 +22,7 @@ START_TEST(test_load_client_config)
 
 	n = strlcpy(buf, p, sizeof (buf));
 	n = strlen(buf);
-	strlcpy(buf + n, "/tests/test-config", sizeof (buf));
+	strlcpy(buf + n, "/tests/test-config", sizeof (buf) - n);
 	axa_load_client_config(buf);
 
 	res = axa_client_config_alias_chk("sra-dev-apikey");
