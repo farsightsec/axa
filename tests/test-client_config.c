@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#ifdef __linux
+#include <bsd/string.h>                 /* for strlcpy() */
+#endif
 
 #include <axa.h>
 #include <axa/client_config.h>

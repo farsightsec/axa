@@ -8,6 +8,7 @@ ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_TESTS_ENVIRONMENT = top_builddir='$(top_builddir)'; \
 		       top_srcdir='$(top_srcdir)'; \
 		       export top_builddir top_srcdir;
+TESTS_ENVIRONMENT = $(AM_TESTS_ENVIRONMENT)
 
 AM_CPPFLAGS = \
         -include $(top_builddir)/config.h \
@@ -47,6 +48,7 @@ EXTRA_DIST += \
 	sratool/cmds.man \
 	README.md \
 	DoxygenLayout.xml \
+	json-schema.yaml \
 	debian/axa-doc.install \
 	debian/axa-tools.install \
 	debian/changelog \
@@ -111,6 +113,7 @@ axa_libaxa_la_SOURCES = \
 	axa/trie.h \
 	axa/wire.h \
 	axalib/apikey.c \
+	axalib/bit_funcs.c \
 	axalib/client.c \
 	axalib/client_config.c \
 	axalib/dns_walk.c \
@@ -310,5 +313,11 @@ TESTS += tests/test-client_config
 EXTRA_DIST += $(top_builddir)/tests/test-config
 check_PROGRAMS += tests/test-client_config
 tests_test_client_config_SOURCES = tests/test-client_config.c $(top_builddir)/tests/test-config
-tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
-tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
+tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+
+TESTS += tests/test-mgmt
+check_PROGRAMS += tests/test-mgmt
+tests_test_mgmt_SOURCES = tests/test-mgmt.c
+tests_test_mgmt_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_mgmt_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}

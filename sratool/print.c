@@ -1464,3 +1464,24 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 		printf("    total congested : %"PRIu64"\n", total_congested);
 	}
 }
+
+void
+print_mgmt_kill(axa_p_mgmt_kill_t *mgmt_kill, size_t mgmt_len AXA_UNUSED)
+{
+	switch (mgmt_kill->result) {
+		case AXA_P_MGMT_K_R_SUCCESS:
+			printf("    success\n");
+			break;
+		case AXA_P_MGMT_K_R_FAIL_NF:
+			printf("    failed, %s not found\n",
+					mgmt_kill->mode == AXA_P_MGMT_K_M_SN ?
+					"serial number" : "user");
+			break;
+		case AXA_P_MGMT_K_R_FAIL_UNK:
+			printf("    failed, unknown reason\n");
+			break;
+		default:
+			printf("    unknown result code\n");
+			break;
+	}
+}
