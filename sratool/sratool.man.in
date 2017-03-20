@@ -125,7 +125,7 @@ The "dns=*." watch or pattern was matched by the "ns1.xserver.jp"
 domain in DNS NS rdata.
 .Bd -literal -offset 4n
 $ sratool 
-sra> connect tls:user@sra.sie-remote.net,1021
+sra> connect tls:user@axa.sie-remote.net,1021
 * HELLO srad version 1.4.1 sra AXA protocol 1
 sra> count 1
 sra> channel 211 on
@@ -151,7 +151,7 @@ specify the SRA server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # SRA
-alias:sra-apikey=apikey:<elided>@example.com,1023
+alias:sra-apikey=apikey:<elided>@axa.sie-remote.net,1023
 
 .Ed
 
