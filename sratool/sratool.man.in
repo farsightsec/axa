@@ -165,7 +165,7 @@ sra> connect sra-apikey
 This config file is shared for
 .Nm ,
 radtool, sratunnel, and radtunnel.
-.It Ar config
+.It Ar ~/.ssh/config
 is the
 .Xr ssh_config 5
 configuration file used with
