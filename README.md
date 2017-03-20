@@ -49,7 +49,7 @@ Filtering can take one of the following forms:
  * Via the rate limit option to reduce the flow of ingress data to a certain 
    number of packets per second.
  * Via one or more IP-based or DNS-based "watches" to limit the flow of data to
-   specifc assets the subscriber wishes to observe.
+   specific assets the subscriber wishes to observe.
 
 Finally, AXA is a deliberately lossy protocol. If a subscriber requests 
 more data than the network can carry, data overruns will occur. When 
@@ -218,20 +218,20 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
     as root because the install script copies the files to the AXA certs
     directory:
 
-~~~
-# axa_make_cert -u username
-Create /usr/local/etc/axa/certs? y
-Generating a 2048 bit RSA private key
-............+++
-.............+++
-writing new private key to 'username.key'
-~~~
+	~~~
+	# axa_make_cert -u username
+	Create /usr/local/etc/axa/certs? y
+	Generating a 2048 bit RSA private key
+	............+++
+	.............+++
+	writing new private key to 'username.key'
+	~~~
 
  3. Chown the private key to the user who will be running the AXA tools:
 
-~~~
-# chown user. /usr/local/etc/axa/certs/username.key
-~~~
+	~~~
+	# chown user. /usr/local/etc/axa/certs/username.key
+	~~~
 
  4. Retrieve and install the AXA server certificate. This is the equivalent of
     when you SSH to a new host for the first time and receive the "Are you
@@ -239,12 +239,12 @@ writing new private key to 'username.key'
     by connecting to either SRA or RAD since they both share the same TLS
     certificate:
 
-~~~
-# axa_server_cert -s axa.sie-remote.net,1021
-Obtained certificate for "farsight" with
-SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
-Install it in /usr/local/etc/axa/certs/farsight.pem? yes
-~~~
+	~~~
+	# axa_server_cert -s axa.sie-remote.net,1021
+	Obtained certificate for "farsight" with
+	SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
+	Install it in /usr/local/etc/axa/certs/farsight.pem? yes
+	~~~
 
  5. Email your public certificate (`username.pem`) to your Farsight Security
     account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`username.key`).
@@ -276,10 +276,10 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
  2. You will need to create or edit your `~/.ssh/config` file to specify the
     private half of the SSH key pair for the SRA and RAD servers:
 
-~~~
-Host sra.sie-remote.net rad.sie-remote.net
-    IdentityFile ~/.ssh/farsight-axa-id_rsa
-~~~
+	~~~
+	Host sra.sie-remote.net rad.sie-remote.net
+	    IdentityFile ~/.ssh/farsight-axa-id_rsa
+	~~~
 
  3. Email your public key (`~/.ssh/farsight-axa-id_rsa.pub`) to your Farsight
     Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY
@@ -288,11 +288,11 @@ Host sra.sie-remote.net rad.sie-remote.net
     you will receive notification from Farsight Security.
 
 #### AXA Config File Connection Aliases
-AXA supports the a subscriber-side configuration file used as a convenience to
+AXA supports a subscriber-side configuration file used as a convenience to
 specify session defaults. By default AXA will look for it `~/.axa/config`. 
 Currently it is used to store "connection aliases" that provide a facility to
 create shortcut mnemonics to specify the AXA server connection string. This is
-especially useful for long connection strings associated with the apikey transport.
+especially useful for long connection strings associated with the apikey transport. It can also be used for the other transports.
 
 For example:
 
@@ -304,6 +304,10 @@ $ cat >> ~/.axa/config < EOF
 alias:sra-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1023
 # RAD apikey
 alias:rad-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1024
+# SRA TLS
+alias:sra-tls=tls:<your_username>@axa.sie-remote.net,1021
+# RAD TLS
+alias:rad-tls=tls:<your_username>@axa.sie-remote.net,1022
 EOF
 ~~~
 
@@ -530,7 +534,7 @@ The AXA protocol consists of a pair of streams of messages between a subscriber'
 
 AXA must sit on top of a reliable stream protocol such as TCP and so has no 
 provisions to detect or recover from duplicate, out-of-order, lost, or 
-partially lost data. Note that data SIE data *can* be lost *before*
+partially lost data. Note that SIE data *can* be lost *before*
 encapsulation into AXA protocol messages due to issues such as network
 congestion, CPU overload, etc.
 
