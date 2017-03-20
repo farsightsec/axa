@@ -1,86 +1,65 @@
 # Farsight Advanced Exchange Access Toolkit
+This is the Advanced Exchange Access (AXA) toolkit. It contains tools and a
+C library to bring Farsight's real-time data and services directly from the [Farsight Security Information Exchange (SIE)](https://www.farsightsecurity.com/solutions/security-information-exchange/) to the subscriber's network edge.
 
-The purpose of Farsight's Advanced Exchange Access (AXA) toolkit is to bring
-the capabilities of the Farsight Security Information Exchange (SIE) right to
-the subscriber's network edge rather than requiring a direct connection to the
-SIE. 
+AXA-based solutions are often preferable over procuring a direct, physical
+connection to the SIE, usually via a co-located blade.
 
-The Farsight AXA toolkit contains tools and C-based library code used to connect
-to Farsight's SRA (SIE Remote Access) and RAD (Realtime Anomaly Detector)
-servers.
+## SRA and RAD
+AXA enables subscribers to connect to Farsight's subscription-based SRA
+(SIE Remote Access) and RAD (Real-time Anomaly Detector) servers. These servers provide access to data and services built from Farsight's SIE.
 
-SRA and RAD services are delivered via Farsight's AXA protocol which allows
-session initiators to control a number of parameters including:
+SRA streams real-time SIE data while RAD streams real-time anomaly detection
+data (from services such as
+[Brand Sentry](https://www.farsightsecurity.com/solutions/incident-response-team/brand-sentry/) and [Domain Sentry](https://www.farsightsecurity.com/solutions/incident-response-team/domain-sentry/)).
 
- * select and deselect SIE channels (SRA)
- * specify DNS and IP address watch patterns (SRA and RAD)
- * control packet rate limits, packet counts, sampling rate, and window sizes
- * set anomaly watches and specify anomaly modules (RAD)
+## Contents
+The axa-tools distribution contains the following:
 
-The following tools are provided to Farsight customers that subscribe to one
-or more SIE channels:
+ * `sratool`: A test/debug/instructional command-line tool used to connect to
+    an SRA server, set watches, enable SIE channels, and stream data.
+ * `radtool`: A test/debug/instructional command-line tool used to connect to
+    a RAD server, set watches, enable anomaly detection modules, and stream
+    data.
+ * `sratunnel`: A production command-line tool that streams SIE data to the
+    local network.
+ * `radtunnel`: A production command-line tool that streams anomaly data to the
+    local network.
+ * `libaxa`: A C library providing an API for the AXA protocol including:
+  * connection instantiation/teardown,
+  * message encapsulation/decapsulation,
+  * watch parsing/loading,
+  * trie storage and lookup,
+  * control packet rate limits, sampling rates, window sizes, and many other
+    AXA-specific functions.
 
- * `sratool`: A command line tool used to connect to an SRA server, send AXA
-    protocol messages and stream responses.
- * `radtool`: A command line tool used to connect to a RAD server, set anomaly
-    watches, and stream responses.
- * `sratunnel`: SRA Tunnel. A tool that copies remote SIE data to the local
-    network.
- * `radtunnel`: RAD Tunnel. A tool that copies RAD data to the local network.
- * `libaxa`: C API middleware for the AXA protocol including connection and 
-    encapsulation/decapsulation.
+For usage details on `sratool`, `radtool`, `sratunnel`, and `radtunnel`,
+please see their respective man pages (included in the distribution).
 
-The `sratool` program is the reference implementation of the AXA protocol. It is
-intended primarily as a protocol demonstration and debugging interface, although
-it can also perform some of the same functions as `sratunnel`.
+Note that "AXA" is a bit of an overloaded term. Depending on the context, it
+can refer to actual AXA wire protocol, the C API, the suite of tools presented
+here, or even a clustered set of SRA and RAD servers. In this document, when
+apropos, context is provided in order to disambiguate these situations.
 
-The `sratunnel` source code is intended as a working example of calling 
-`libaxa` to set up an SRA session, turn on an SIE channel, set a single and 
-simple filter, receive remote data over AXA, and decapsulate that data. SRA 
-application developers can use the `sratunnel` source code as a template for 
-other SRA applications, or get a quicker start by running the `sratunnel` 
-program which will make the remote data available locally, and then use 
-[`pcap`](http://www.tcpdump.org/) (for SIE channel 14) or 
-[`nmsg`](https://github.com/farsightsec/nmsg) (for all other SIE channels) 
-as they would on an analysis server directly connected to SIE itself. An
-example of how to do this is included later in this document.
+## AXA and High Bitrates
+Some of the channels offered by the SIE network burst to an extremely high bitrate (some over 500Mbps). AXA has two ways to deal with such network-hungry situations: optional filtering and loss-tolerance built into the protocol.
 
-The `radtool` and `radtunnel` programs are used to stream RAD anomaly hits from
-a remote RAD server to the local network. They actually share code bases with
-their "sra-" counterparts and the program logic is such that it detects its
-filename and invokes itself in RAD mode. 
+Filtering can take one of the following forms:
 
-## SRA Filtering
-Of note, SRA can perform filtering. This feature is highly desirable due to the
-very high volume of data carried by SIE which can burst to hundreds of megabits
-per second in a single channel. On the flip side, when using SRA to access low 
-volume channels, entire channels can be selected for remote distribution.
-However, when remotely accessing high volume SIE channels, the subscriber
-usually specifies a list of IP addresses and DNS names of interest, so that the
-SRA server can filter out everything else, and send to the subscriber only a
-subset of that channel's SIE data.
+ * Via the rate limit option to reduce the flow of ingress data to a certain 
+   number of packets per second.
+ * Via one or more IP-based or DNS-based "watches" to limit the flow of data to
+   specific assets the subscriber wishes to observe.
 
-Also of note, AXA is a deliberately lossy protocol. If a subscriber requests 
+Finally, AXA is a deliberately lossy protocol. If a subscriber requests 
 more data than the network can carry, data overruns will occur. When 
-this happens, "loss markers" are transmitted reliably within the AXA stream 
-to inform the subscriber. At this point, the subscriber's possible mitigation 
-strategies include:
+this happens, loss markers are transmitted reliably within the AXA stream 
+to inform the subscriber via [the AXA accounting subsystem](https://www.farsightsecurity.com/2015/09/24/mschiffm-axa-accounting/). At this point, the subscriber's possible mitigation strategies include:
 
- * ask for less data,
+ * ask for less data via rate limiting,
  * increase their network capacity, or 
  * treat the SRA stream as a chunky and non-representative sample of the 
-    total SIE data. 
-
-The distributed AXA package constitutes the authoritative documentation of the
-AXA protocol. Farsight advises SRA subscribers needing custom functionality not
-provided in `sratool`, `sratunnel`, `radtool`, or `radtunnel` to utilize the
-`libaxa` library for session management and data decapsulation rather than
-crafting hand drawn logic to perform these functions.
-
-A later version of the AXA software will include Python language bindings.
-
-For specific details on `sratool`, `radtool`, `sratunnel`, and `radtunnel`,
-please see the respective man pages included in the distribution.
+   total SIE data. 
 
 ## Building and Installing AXA
 AXA can built manually or, on Debian systems, installed by using pre-built 
@@ -107,7 +86,7 @@ The AXA suite has the following external dependencies:
  * [libssl](http://openssl.org/) (recommended >= 1.0.2i)
  * [yajl](https://lloyd.github.io/yajl/) (be sure to use >= 2.1.0)
 
-Optional dependency:
+Optional dependencies:
 
  * [doxygen](http://www.stack.nl/~dimitri/doxygen/) (be sure to use >= 1.8.3
     that supports inlining markdown files)
@@ -141,29 +120,145 @@ To install AXA development files (if you wish to use the libaxa C API):
 # apt-get install libaxa-dev
 ~~~
 
-## SRA and RAD Server Encrypted Transport
-After SRA and/or RAD session parameters have been established, SIE data is
-encrypted and streamed to the SRA subscriber using either an SSH transport
-(similar to applications like [rsync](http://troy.jdmz.net/rsync/) or
-[git](http://git-scm.com/book/en/Git-on-the-Server-Setting-Up-the-Server) or
-using TLS).
+Once axa-tools is installed, you'll need to work with your account manager to
+decide which transport (described below) is best for your use case and then
+have your account provisioned.
 
-While both transports offer comparable encryption and compression, Farsight
-recommends using TLS in preference to SSH. On most systems, TLS performance
-should be faster as it doesn't have to deal with piping data to or from the
-SSH server process.
+## The AXA Transport Layer
+AXA offers three encrypted transports for setting up sessions and tunneling
+data:
 
-Before either method can be used, you first need to generate new
-authentication keys and submit the public half to Farsight Security. 
+ 1. **Apikey**: Subscriber identifies and authenticates via an a priori
+    (Farsight) provided alphanumeric "apikey". Session is encrypted via TLS
+    using the `ECDHE-RSA-AES256-GCM-SHA384` suite offering "currently
+    infeasible to break" encryption and
+    [perfect forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
+ 2. **TLS**: Subscriber identifies and authenticates via an a priori
+    subscriber-generated TLS keypair. Session is encrypted via TLS using the
+    `ECDHE-RSA-AES256-GCM-SHA384` suite offering "currently infeasible to
+    break" encryption and
+    [perfect forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
+ 3. **SSH**: Subscriber identifies and authenticates via an a priori
+    subscriber-generated SSH keypair.
+
+In order to use AXA, one of these is required. While all three offer
+commensurate security, Farsight strongly recommends using the apikey transport due to its ease of setup and use.
+
+AXA compresses all [NMSGs](https://www.github.com/farsightsec/nmsg) before
+transmission across the network using NMSG's built-in compression capability
+(currently [zlib](http://www.zlib.net/)). IP packets are not compressed.
+
+### Setting up and using AXA Apikey
+Your Farsight Security account manager will provide you with an alphanumeric
+apikey string. This apikey is used to both identify you and authenticate your
+session to the AXA servers.
+
+The AXA apikey transport listens at the following URIs:
+
+ * **SRA**: `apikey:<your_apikey_here>@axa.sie-remote.net,1023`
+ * **RAD**: `apikey:<your_apikey_here>@axa.sie-remote.net,1024`
+
+SRA listens on `TCP/1023` and RAD listens on `TCP/1024` and both transit
+standard TLS data.
+
+You can connect as per the following:
+
+**Connecting via sratool**
+
+~~~
+$ sratool
+sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1023
+* HELLO srad version 1.4.1 axa AXA protocol 1
+* OK USER johndoe authorized
+...
+~~~
+
+**Connecting via radtool**
+
+~~~
+$ radtool
+rad> connect apikey:<your_apikey_here>@axa.sie-remote.net,1024
+* HELLO radd version 1.4.1 axa AXA protocol 1
+* OK USER johndoe authorized
+...
+~~~
+
+**Connecting via sratunnel**
+
+~~~
+$ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1023 ...
+...
+~~~
+
+**Connecting via radtunnel**
+
+~~~
+$ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1024 ...
+...
+~~~
+
+
+### Setting up AXA TLS
+The AXA TLS transport listens at the following URIs:
+
+ * **SRA**: `tls:user_name@sra.sie-remote.net,1021`
+ * **RAD**: `tls:user_name@rad.sie-remote.net,1022`
+
+SRA listens on TCP/1021 and RAD listens on TCP/1022 and both transit standard
+TLS data.
+
+To setup TLS access for SRA and/or RAD, you need to do the following:
+
+ 1. Install axa-tools (as per above). Installed alongside the AXA tools are
+    three TLS helper scripts:
+   * `axa_make_cert`: Generate AXA certificate and private key files
+   * `axa_server_cert`: Retrieve the AXA server certificate fingerprint
+   * `axa_link_certs`: Create AXA certificate links
+ 2. Generate and install the AXA TLS certificates. This needs to be done
+    as root because the install script copies the files to the AXA certs
+    directory:
+
+	~~~
+	# axa_make_cert -u username
+	Create /usr/local/etc/axa/certs? y
+	Generating a 2048 bit RSA private key
+	............+++
+	.............+++
+	writing new private key to 'username.key'
+	~~~
+
+ 3. Chown the private key to the user who will be running the AXA tools:
+
+	~~~
+	# chown user. /usr/local/etc/axa/certs/username.key
+	~~~
+
+ 4. Retrieve and install the AXA server certificate. This is the equivalent of
+    when you SSH to a new host for the first time and receive the "Are you
+    sure you want to continue connecting (yes/no)?" message. This can be done
+    by connecting to either SRA or RAD since they both share the same TLS
+    certificate:
+
+	~~~
+	# axa_server_cert -s axa.sie-remote.net,1021
+	Obtained certificate for "farsight" with
+	SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
+	Install it in /usr/local/etc/axa/certs/farsight.pem? yes
+	~~~
+
+ 5. Email your public certificate (`username.pem`) to your Farsight Security
+    account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`username.key`).
+    This is the private half of your generate key pair that you should
+    keep safe. As soon as your account is provisioned you will receive
+    notification from Farsight Security.
 
 ### Setting up AXA SSH
-As of the time of this writing, the SRA and RAD servers answer at the following 
-addresses via the SSH transport:
+The AXA SSH transport listens at the following URIs:
 
  * **SRA**: `sra-service@sra.sie-remote.net`
  * **RAD**: `rad-service@rad.sie-remote.net`
 
-Incoming SRA or RAD connections are handled on TCP port 22 by the SSH server.
+Both services listen on TCP/22 for standard SSH traffic.
 
 To setup SSH access for SRA and/or RAD, you need to do the following:
 
@@ -181,8 +276,10 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
  2. You will need to create or edit your `~/.ssh/config` file to specify the
     private half of the SSH key pair for the SRA and RAD servers:
 
-        Host sra.sie-remote.net rad.sie-remote.net
-            IdentityFile ~/.ssh/farsight-axa-id_rsa
+	~~~
+	Host sra.sie-remote.net rad.sie-remote.net
+	    IdentityFile ~/.ssh/farsight-axa-id_rsa
+	~~~
 
  3. Email your public key (`~/.ssh/farsight-axa-id_rsa.pub`) to your Farsight
     Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY
@@ -190,391 +287,269 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
     key pair that you should keep safe. As soon as your account is provisioned
     you will receive notification from Farsight Security.
 
-### Setting up AXA TLS
-As of the time of this writing, the SRA and RAD servers answer at the following 
-addresses via the TLS transport:
+#### AXA Config File Connection Aliases
+AXA supports a subscriber-side configuration file used as a convenience to
+specify session defaults. By default AXA will look for it `~/.axa/config`. 
+Currently it is used to store "connection aliases" that provide a facility to
+create shortcut mnemonics to specify the AXA server connection string. This is
+especially useful for long connection strings associated with the apikey transport. It can also be used for the other transports.
 
- * **SRA**: sra.sie-remote.net,1021
- * **RAD**: rad.sie-remote.net,1022
+For example:
 
-The TCP port numbers 1021 and 1022 are IANA "[RFC3692](https://tools.ietf.org/html/rfc3692)-style Experiment 1" port numbers and were chosen in consideration
-of that document.
+~~~
+$ cat >> ~/.axa/config < EOF
+# Aliases are of the form alias:<name>=<connection URI>
 
-To setup TLS access for SRA and/or RAD, you need to do the following:
+# SRA apikey
+alias:sra-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1023
+# RAD apikey
+alias:rad-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1024
+# SRA TLS
+alias:sra-tls=tls:<your_username>@axa.sie-remote.net,1021
+# RAD TLS
+alias:rad-tls=tls:<your_username>@axa.sie-remote.net,1022
+EOF
+~~~
 
- 1. Install axa-tools (as per above). Installed alongside the AXA tools are
-    three TLS helper scripts:
-   * axa_make_cert: Generate AXA certificate and private key files
-   * axa_server_cert: Retrieve the AXA server certificate fingerprint
-   * axa_link_certs: Create AXA certificate links
- 2. Generate and install the AXA user TLS certificates. This needs to be done
-    as root because the install script copies the files to the AXA certs
-    directory:
+After creating the above aliases, you can replace the server connection URI
+with your shortcut name as per the following:
 
-        # axa_make_cert -u username
-        Create /usr/local/etc/axa/certs? y
-        Generating a 2048 bit RSA private key
-        ............+++
-        .............+++
-        writing new private key to 'username.key'
-        -----
+~~~
+$ sratool
+sra> connect sra-apikey
+* HELLO srad version 1.4.1 axa AXA protocol 1
+* OK USER johndoe authorized
+...
+sra> disconnect
+sra> mode rad
+rad> connect rad-apikey
+* HELLO radd version 1.4.1 axa AXA protocol 1
+* OK USER johndoe authorized
+...
+~~~
 
- 3. Chown the private key to the user who will be running the AXA tools:
-
-        # chown user. /usr/local/etc/axa/certs/username.key
-
- 4. Retrieve and install the AXA server certificate. This is the equivalent of
-    when you SSH to a new host for the first time and receive the "Are you
-    sure you want to continue connecting (yes/no)?" message. This can be done
-    by connecting to either SRA or RAD since they both share the same TLS
-    certificate:
-
-        # axa_server_cert -s sra.sie-remote.net,1021
-        Obtained certificate for "farsight" with
-        SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
-        Install it in /usr/local/etc/axa/certs/farsight.pem? yes
-
- 5. Email your public certificate (`username.pem`) to your Farsight Security
-    account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`username.key`).
-    This is the private half of your generate key pair that you should
-    keep safe. As soon as your account is provisioned you will receive
-    notification from Farsight Security.
+The AXA config file is shared for `sratool`, `radtool`, `sratunnel`,
+`radtunnel`, and is available via the API. As such, all of the tools (including
+the ones you may build) have access to these alias shortcuts.
 
 ## AXA examples
 The following are a few examples of how to use `sratool`, `sratunnel` and
-`radtool`. For the interactive tools `sratool` and `radtool`, all user
-commands are prefaced with `sra> ` or `rad> ` prompts.
+`radtool`.
 
-### 1. Stream SIE traffic with sratool
-Here's a simple example using `sratool` to grab the first five packets seen on 
-SIE channel 212 (Newly Observed Domains):
+### 1. Stream SIE Traffic with sratool
+Here's a simple example using `sratool` to stream five NMSGs seen on the
+[Newly Observed Hostnames (NOH)](https://www.farsightsecurity.com/solutions/threat-intelligence-team/newly-observed-hostnames/) channel (channel 213):
 
 ~~~
-$ sratool 
-sra> connect ssh:sra-service@sra.sie-remote.net
-* HELLO srad version 1.2.1 sra AXA protocol 1
+$ sratool
+sra> connect sra-apikey
+* HELLO srad version 1.4.1 sra-server AXA protocol 1
+* OK USER johndoe authorized
 sra> count 5
-sra> channel 212 on
-* OK CHANNEL ON/OFF channel ch212 on
-sra> 1 watch ch=212
+sra> channel 213 on
+* OK CHANNEL ON/OFF channel ch213 on
+sra> 1 watch ch=213
 1 OK WATCH started
-1 ch212  SIE newdomain 
- shared-living.co/CNAME: shared-living.co
-1 ch212  SIE newdomain 
- sb9b8.tk/A: sb9b8.tk
-1 ch212  SIE newdomain 
- lipator.gq/NS: lipator.gq
-1 ch212  SIE newdomain 
- feliksspibefolam.tk/A: feliksspibefolam.tk
-1 ch212  SIE newdomain 
- cod4fightclub.tk/A: cod4fightclub.tk
+1 ch213  SIE newdomain
+ ino-usb.u922172.m10feedc30342.sos.atlas.ripe.net/A: ripe.net
+1 ch213  SIE newdomain
+ imap.ber-cert.ie/A: ber-cert.ie
+1 ch213  SIE newdomain
+ d-35932728312275649984.ampproject.net/A: ampproject.net
+1 ch213  SIE newdomain
+ d-35642662481942204736.ampproject.net/A: ampproject.net
+1 ch213  SIE newdomain
+ d-180710127737887937.ampproject.net/AAAA: ampproject.net
 
 packet count limit exceeded
-sra> exit
+sra> disconnect
+disconnected
 ~~~
 
- 1. `sra> connect ssh:sra-service@sra.sie-remote.net`: we connected to 
-    an SRA server using the SSH transport. SSH used its keyring to prove 
-    the user's identity, so there was no 'password:' prompt. The `HELLO`
-    response from the remote end tells us its version number and the protocol
-    level. 
- 2. `sra> count 5`: we asked our `sratool` client to stop after five messages
-    are output. 
- 3. `sra> channel 212 on`: we then asked the remote end to listen to SIE
-    channel 212 which was `OK`'d by the server indicating that we are
-    provisioned for this channel according to our authentication and
-    authorization level. 
- 4. `sra> 1 watch ch=212`: we then asked to watch all content on channel 212
-    (with no rate limiting or filtering), which is a common choice for 212
-    since its volume is low.
+ 1. `sra> connect sra-apikey`: we connected to an SRA server using the apikey
+    transport. Under the hood, `sratool` consulted the AXA config file to
+    search for the "sra-apikey" alias and extract the server connection URI.
+    The `HELLO` response from the remote end provides its version number and
+    the protocol level. 
+ 2. `sra> count 5`: we asked our `sratool` client to stop after emitting five
+    messages.
+ 3. `sra> channel 213 on`: we then asked the remote end to listen to SIE
+    channel 213.
+ 4. `sra> 1 watch ch=213`: we then asked to watch all content on channel 213
+    (with no rate limiting or filtering), which is a common choice for 213
+    since its volume is low (~200kbps).
 
-### 2. In-line sub-commanding and rate-limiting with sratool
-Next, we introduce in-line connections and show rate limiting of SIE channel
-204 (filtered passive DNS RRsets):
+### 2. Stream SIE Traffic with sratunnel
+The following example shows how to use `sratunnel` to stream NMSGs from NOH to
+a file and then read the resultant NMSG file with [nmsgtool](https://www.github.com/farsightsec/nmsg) display a single NMSG record as [new line delimited JSON](http://ndjson.org/) using the [jq](https://stedolan.github.io/jq/) program.
 
 ~~~
-$ sratool 'connect sra-service@sra.sie-remote.net'
-* HELLO srad version 1.2.1 sra AXA protocol 1
-sra> count 5
-sra> limit 1 5
-* OPTION Rate LIMIT
-    1 per second; current value=0
-    5 seconds between reports
-sra> channel 204 on
-* OK CHANNEL ON/OFF channel ch204 on
-sra> 1 watch ch=204
-1 OK WATCH started
-1 ch204  SIE dnsdedupe   INSERTION
-  response_ip=84.53.139.129  rdata=A 65.55.223.29  rrname=dsn14.skype-dsn.akadns.net
-* MISSED
-    missed 0 input packets, dropped 0 for congestion,
-    dropped 2299 for rate limit, filtered 69817
-    since 2015/04/05 15:49:31
-1 ch204  SIE dnsdedupe   EXPIRATION
-  rdata=A 173.248.142.165  rrname=www.madivorceonline.com
-1 ch204  SIE dnsdedupe   EXPIRATION
-  rdata=A 127.0.0.1  rrname=rrihvmppyth.www.money238.com
-1 ch204  SIE dnsdedupe   EXPIRATION
-  rdata=RRSIG  rrname=o3bssvid9kejcvcd83oc7n2g546ol44t.pt
-1 ch204  SIE dnsdedupe   EXPIRATION
-  rdata=A 127.0.0.1  rrname=bfskbyb.www.money238.com
-* MISSED
-    missed 0 input packets, dropped 0 for congestion,
-    dropped 32002 for rate limit, filtered 32006
-    since 2015/04/05 15:49:35
-
-packet count limit exceeded
-sra> exit
+$ sratunnel -s sra-apikey -c 213 -w ch=213 -o nmsg:file:213.nmsg
+...
+^c
+$ nmsgtool -c 1 -r 213.nmsg -J - -- | jq .
+{
+  "time": "2017-02-24 01:26:08.512456893",
+  "vname": "SIE",
+  "mname": "newdomain",
+  "source": "a1ba02cf",
+  "message": {
+    "domain": "122jjc.com.",
+    "time_seen": "2017-02-24 01:21:24",
+    "bailiwick": "122jjc.com.",
+    "rrname": "153366.122jjc.com.",
+    "rrclass": "IN",
+    "rrtype": "A",
+    "rdata": [
+      "174.139.176.10"
+    ],
+    "keys": [],
+    "new_rr": []
+  }
+}
 ~~~
 
- 1. `sratool 'connect sra-service@sra.sie-remote.net':` we put our
-    first `sratool` subcommand on the command line of `sratool` itself. This is
-    a shortcut that allows the first subcommand to come from the command line, 
-    while subsequent subdomains wil come from the control terminal.
- 2. `sra> count 5`: we again asked for a limit of five total records
- 3. `sra> limit 1 5`: this time we asked the remote end to limit our output to
-    one message per second and report every 5 seconds.
- 4. `sra> channel 204 on`: as before, switch on channel 204
- 5. `sra> 1 watch ch=204`: as before, watch channel 204
- 6. `MISSED`: We then saw one message from channel 204, followed immediately
-    by a loss marker showing that 2299 messages could not be sent to us because
-    of our rate limit. Note that loses due to rate limits are counted
-    independently from losses due to congestion. After four more messages
-    containing channel 204 data, our packet count limit was reached. We received
-    one more rate limit report before terminating `sratool`.
+ 1. `sratunnel -s sra-apikey -c 213 -w ch=213 -o nmsg:file:213.nmsg`: we invoked
+    sratunnel and connected to SRA using the apikey transport. Channel 213
+    is enabled, and a 213 "all watch" is set. Finally, NMSGs are written to a
+    file. The program runs for some time then we kill it via ctrl-c.
+ 2. `$ nmsgtool -c 1 -r 213.nmsg -J - -- | jq .`: The `nmsgtool` program is run
+    to read a single NMSG from the output file and pipeline to the jq program
+    to pretty print it.
 
-### 3. Tunnel SIE traffic with sratunnel and nmsgtool
-Here we introduce `sratunnel` and send some packets to a local endpoint and
-view them with `nmsgtool` and watch packet flow via `tcpdump`.
-
-First we invoke `sratunnel`:
+### 3. Watch for Anomalies with radtool
+Next, `radtool` is used to load the Brand Watch anomaly module watch for
+suspected brand infringement.
 
 ~~~
-$ sratunnel -s 'ssh sra-service@sra.sie-remote.net' -c ch212 \
--w 'ch=212' -o nmsg:127.0.0.1,5000 &
-[2]+ sratunnel ...
-~~~
-
-Next let's have a look what this looks like using `tcpdump`:
-
-~~~
-# tcpdump -n -c 3 -i lo udp port 5000
-tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
-listening on lo, link-type EN10MB (Ethernet), capture size 65535 bytes
-15:28:25.835048 IP 127.0.0.1.52459 > 127.0.0.1.5000: UDP, length 143
-15:28:26.100146 IP 127.0.0.1.52459 > 127.0.0.1.5000: UDP, length 259
-15:28:26.257624 IP 127.0.0.1.52459 > 127.0.0.1.5000: UDP, length 161
-3 packets captured
-6 packets received by filter
-0 packets dropped by kernel
-~~~
-
-Indeed, traffic is flowing and we can use `nmsgtool` to receive and
-decapsulate the data. Here we invoke it to capture and display three payloads:
-
-~~~
-$ nmsgtool -V SIE -T newdomain -l 127.0.0.1/5000 -c 3
-[198] [2014-08-22 22:26:44.589695930] [2:5 SIE newdomain] [a1ba02cf] [] [] 
-domain: scottbedard.net.
-time_seen: 2014-08-22 22:24:11
-rrname: scottbedard.net.
-rrclass: IN (1)
-rrtype: NS (2)
-rdata: dns1.registrar-servers.com.
-rdata: dns2.registrar-servers.com.
-rdata: dns3.registrar-servers.com.
-rdata: dns4.registrar-servers.com.
-rdata: dns5.registrar-servers.com.
-
-[89] [2014-08-22 22:26:47.515605926] [2:5 SIE newdomain] [a1ba02cf] [] [] 
-domain: pastapizza.ch.
-time_seen: 2014-08-22 22:23:59
-rrname: pastapizza.ch.
-rrclass: IN (1)
-rrtype: NS (2)
-rdata: dns1.mhs.ch.
-rdata: dns2.mhs.ch.
-rdata: dns3.mhs.ch.
-
-[46] [2014-08-22 22:26:49.197557926] [2:5 SIE newdomain] [a1ba02cf] [] [] 
-domain: alpa9.tk.
-time_seen: 2014-08-22 22:24:53
-rrname: alpa9.tk.
-rrclass: IN (1)
-rrtype: A (1)
-rdata: 195.20.34.1
-rdata: 195.20.34.2
-
-$ kill %sratunnel
-[2]- Exit 15 sratunnel ...
-~~~
-
- 1. `sratunnel -s 'ssh sra-service@sra.sie-remote.net' -c ch212 -w 'ch=212' -o nmsg:127.0.0.1,5000 &`:
-    here, we started a background process to access remote SIE channel 212, and
-    to deposit all received messages in NMSG format using UDP on a local socket
-    (host 127.0.0.1, port 5000). As before, no IP address or DNS name filters
-    were used, since channel 212 is known to be very low volume. 
- 2. `tcpdump -n -c 3 -i lo udp port 5000`: we then used the tcpdump command to
-    show that packets were being received on the local socket.
- 3. `nmsgtool -V SIE -T newdomain -l 127.0.0.1/5000 -c 3`: We ran `nmsgtool`,
-    specifying our input with the `-V`, `-T`, and `-l` options since the
-    `nmsgtool` shortcut for channel notation (`-C`) only works for directly
-    connected SIE clients. `nmsgtool` displayed three messages and exited. We
-    then killed the background `sratunnel` process, concluding the demo.
-
-### 4. Watch for IP anomalies with radtool
-Next, `radtool` is used to watch for specified IP addresses in SIE channels. In
-the example below, the `ip14-80` anomaly module, which looks for IP packets in
-SIE channels 14 (Darknet) and 80 (Conficker Sinkhole) is used. Traffic appearing
-in either of these feeds is often considered anomalous and worthy of deeper
-investigation.
-
-~~~
-rad> connect ssh:rad-service@rad.sie-remote.net
-* HELLO radd version 1.2.1 rad AXA protocol 1
-rad> count 5
-rad> 1 watch ip=0.0.0.0/1
+rad> connect rad-apikey
+* HELLO radd version 1.4.1 rad-server AXA protocol 1
+rad> 1 watch dns=*.
 1 OK WATCH saved
-rad> 1 watch ip=128.0.0.0/1
-1 OK WATCH saved
-rad> 1 anomaly ip14-80
+rad> 1 anomaly brand_sentry brand=farsightsecurity whitelist=*.farsightsecurity.com,*.fsi.io
 1 OK ANOMALY anomaly detector started
-1 ip14-80 ch80  base http ConfickerAB dstip=216.66.15.109
-  srcip=197.199.210.41
-1 ip14-80 ch80  base http ConfickerAB dstip=216.66.15.109
-  srcip=195.210.191.101
-1 ip14-80 ch80  base http ConfickerAB dstip=216.66.15.109
-  srcip=195.210.191.101
-1 ip14-80 ch80  base http ConfickerAB dstip=216.66.15.109
-  srcip=122.176.119.59
-1 ip14-80 ch80  base http ConfickerAB dstip=216.66.15.109
-  srcip=116.106.33.94
-
-packet count limit exceeded
+1 brand_sentry ch213  SIE newdomain rdata=CNAME www.webagent.fa.rsite.ru
+ aronovichmilamailru.webagent.fa.rsite.ru/CNAME: rsite.ru
+...
 rad> exit
 ~~~
 
- 1. `rad> connect ssh:rad-service@rad.sie-remote.net`: we connected to 
-    a RAD server using the SSH transport. SSH used its keyring to prove 
-    the user's identity, so there was no 'password:' prompt. The `HELLO`
-    response from the remote end tells us its version number and the protocol
-    level. 
- 2. `rad> count 5`: we asked our `radtool` client to stop after five messages
-    are output.
- 3. `rad> 1 watch ip=0.0.0.0/1`: set a watch for all IP packets matching the
-    specified CIDR mask.
- 4. `rad> 1 watch ip=128.0.0.0/1`: set a watch for all IP packets matching the
-    specified CIDR mask. In combination with the previous watch, all IP packets
-    should be matched. In practice, a user would specify IP watches specific to
-    addresses in his or her organization. Also of note here is the use of the
-    same tag for two watches. This is because RAD clients use a common tag to
-    group together one or more watches with a single anomaly module instance.
- 5. `rad> 1 anomaly ip14-80`: switch on the anomaly detector. This mnemonic
-    refers to the `ip_probe(1)` module tuned to watch SIE channels 14 and 80.
-    Five watch hits are returned and then we exit.
+ 1. `rad> connect rad-apikey`: We connected to RAD over the apikey transport
+    using the "rad-apikey" alias. The `HELLO` response from the remote
+    end tells us its version number and the protocol level. 
+ 2. `rad> 1 watch dns=*.`: We set a DNS wildcard "all-watch". This will
+    match all dns hostnames which is what we want for Brand Sentry -- we want to
+    look at the entire DNS namespace (except for two second level domains, as
+    per below).
+ 4. `rad> 1 anomaly brand_sentry brand=farsightsecurity whitelist=*.farsightsecurity.com,*.fsi.io`: We switched on the anomaly
+    detector. This command enables the brand_sentry anomaly module looking for 
+    hostnames "suspiciously close" to "farsightsecurity". Hostnames in the
+    `*.farsightsecurity.com` and `*.fsi.io` are considered safe and are ignored.
 
-### 5. Tunnel IP anomalies with radtunnel and nmsgtool
-Using `radtunnel` is much the same process as using `sratunnel`. First
-invoke `radtunnel` with the same anomaly watches as `radtool`:
+### 5. Create Your Own Local SIE Node
+With `sratunnel` and `nmsgtool`, you can create your own local "SIE node". This
+can be useful if you want cobble together your own local SIE cloud with the
+channels you're subscribed to. First, invoke `sratunnel` as per the following:
 
 ~~~
-$ radtunnel -s tls:user@rad.sie-remote.net,1022 -w ip=0.0.0.0/1 \
--w ip=128.0.0.0/1 -a ip14-80 -o nmsg:127.0.0.1,8000 &
-[2]+ radtunnel ...
+$ sratunnel -s sra-apikey -c 204 -w ch=204 -o nmsg:127.0.0.1,8000 &
+[2]+ sratunnel ...
 ~~~
 
-Next let's have a look what this looks like on the network using `tcpdump`:
+Before continuing, we confirm traffic flowing by checking with `tcpdump` (on
+OS X this looks like):
 
 ~~~
-# tcpdump -n -c 3 -i lo udp port 8000
+$ tcpdump -i lo0 -c 5 -nn udp port 8000
 tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
-listening on lo, link-type EN10MB (Ethernet), capture size 65535 bytes
-18:02:44.327721 IP 127.0.0.1.58777 > 127.0.0.1.8000: UDP, length 894
-18:02:44.327970 IP 127.0.0.1.58777 > 127.0.0.1.8000: UDP, length 1075
-18:02:44.328331 IP 127.0.0.1.58777 > 127.0.0.1.8000: UDP, length 1046
-3 packets captured
-6 packets received by filter
+listening on lo0, link-type NULL (BSD loopback), capture size 262144 bytes
+14:00:13.521512 IP localhost.53996 > localhost.8000: UDP, length 1091
+14:00:13.521659 IP localhost.53996 > localhost.8000: UDP, length 1094
+14:00:13.521969 IP localhost.53996 > localhost.8000: UDP, length 1079
+14:00:13.522116 IP localhost.53996 > localhost.8000: UDP, length 1111
+14:00:13.522239 IP localhost.53996 > localhost.8000: UDP, length 1069
+
+5 packets captured
+12 packets received by filter
 0 packets dropped by kernel
 ~~~
 
-We use `nmsgtool` to receive and decapsulate the data. Here we invoke it to
-capture and display three payloads:
+Finally, we use `nmsgtool` to receive and decapsulate the data. Here we invoke
+it to capture and display three payloads:
 
 ~~~
-$ nmsgtool  -l 127.0.0.1/8000 -c 1
-[220] [2015-04-09 18:02:46.472500700] [1:4 base http] [a1ba02cf] [FSI] [ConfickerAB] 
-type: sinkhole
-srcip: 36.40.81.20
-srcport: 2819
-dstip: 216.66.15.109
-dstport: 80
-request:
-GET /search?q=24 HTTP/1.1
-Via: 1.0 FW-XIY
-User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; SV1; .NET CLR 1.1.4322)
-Host: 216.66.15.109
-Pragma: no-cache
-Connection: Keep-Alive
+$ nmsgtool  -l 127.0.0.1/8000 -c 3
+[104] [2017-03-19 21:02:49.635906558] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
+type: INSERTION
+count: 1
+time_first: 2017-03-19 21:01:16
+time_last: 2017-03-19 21:01:16
+response_ip: 192.50.43.53
+bailiwick: jp.
+rrname: hokunichi.co.jp.
+rrclass: IN (1)
+rrtype: NS (2)
+rrttl: 86400
+rdata: ns.technowave.ne.jp.
+rdata: name.technowave.ad.jp.
 
-.
+[127] [2017-03-19 21:02:49.635908718] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
+type: EXPIRATION
+count: 3
+time_first: 2017-03-19 02:59:00
+time_last: 2017-03-19 02:59:00
+bailiwick: g01.yahoodns.net.
+rrname: g01.yahoodns.net.
+rrclass: IN (1)
+rrtype: SOA (6)
+rrttl: 300
+rdata: yf1.yahoo.com. hostmaster.yahoo-inc.com. 1489892340 30 30 86400 300
 
-[301] [2015-04-09 18:02:46.473020506] [1:4 base http] [a1ba02cf] [FSI] [ConfickerAB] 
-type: sinkhole
-srcip: 95.139.254.67
-srcport: 2771
-dstip: 216.66.15.109
-dstport: 80
-request:
-GET /search?q=0 HTTP/1.0
-User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; MRSPUTNIK 2, 4, 1, 328; .NET CLR 1.1.4322; .NET CLR 2.0.50727; InfoPath.1; .NET CLR 3.0.04506.30; .NET CLR 3.0.04506.648; .NET CLR 3.5.21022)
-Host: 216.66.15.109
-Pragma: no-cache
-
-.
-
-[158] [2015-04-09 18:02:46.473855844] [1:4 base http] [a1ba02cf] [FSI] [ConfickerAB] 
-type: sinkhole
-srcip: 178.95.12.160
-srcport: 1765
-dstip: 216.66.15.109
-dstport: 80
-request:
-GET /search?q=6591 HTTP/1.0
-User-Agent: Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)
-Host: 216.66.15.109
-Pragma: no-cache
-
-.
-$ kill %radtunnel
-[2]- Exit 15 radtunnel ...
+[143] [2017-03-19 21:02:49.635910856] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
+type: INSERTION
+count: 1
+time_first: 2017-03-19 21:01:30
+time_last: 2017-03-19 21:01:30
+response_ip: 87.98.147.49
+bailiwick: torrentmaniacs.info.
+rrname: torrentmaniacs.info.
+rrclass: IN (1)
+rrtype: SOA (6)
+rrttl: 86400
+rdata: ns1.gennetworks.in. contact.gennetworks.in. 2017022300 3600 7200 1209600 86400
 ~~~
 
- 1. `radtunnel -s tls:user@rad.sie-remote.net,1022 -w ip=0.0.0.0/1 -w ip=128.0.0.0/1 -a ip14-80 -o nmsg:127.0.0.1,8000 &`: here, we started a background process
-    to watch for the same IP-based amomalies as the `radtool` example, but this
-    time the results will be sent in NMSG format using UDP on a local socket
-    (host 127.0.0.1, port 8000).
- 2. `tcpdump -n -c 3 -i lo udp port 8000`: we then used the tcpdump command to
-    show that packets were being received on the local socket.
- 3. `nmsgtool -l 127.0.0.1/8000 -c 3`: We ran `nmsgtool` which output three
-    NMSGs, and then killed the background `radtunnel` process.
+ 1. `sratunnel -s sra-apikey -c 204 -w ch=204 -o nmsg:127.0.0.1,8000 &`: invoke
+    `sratunnel` and stream all of channel 204 ([Passive DNS traffic that has been de-duplicated, filtered, and verified](https://www.farsightsecurity.com/assets/media/download/fsi-sie-channel-guide.pdf)). The output is set to be NMSGs
+    to the loopback interface on port UDP/8000 (UDP is the default NMSG 
+    transport protocol).
+ 2. `tcpdump -n -c 3 -i lo udp port 8000`: tcpdump is used to verify packets are
+    being received.
+ 3. `nmsgtool -l 127.0.0.1/8000 -c 3`: `nmsgtool` is invoked to listen on the 
+    loopback interface on `UDP/8000` and three NMSGs are emitted to stdout.
 
 ## AXA Protocol
 
-The AXA protocol is above a reliable stream protocol such as TCP and so has no 
+The AXA protocol consists of a pair of streams of messages between a subscriber's client (such as `sratool`) and an AXA server (such as SRA), one stream in each direction, currently over a single TCP connection.
+
+AXA must sit on top of a reliable stream protocol such as TCP and so has no 
 provisions to detect or recover from duplicate, out-of-order, lost, or 
-partially lost data. AXA data can be lost before encapsulation in AXA protocol 
-messages or packets.
+partially lost data. Note that SIE data *can* be lost *before*
+encapsulation into AXA protocol messages due to issues such as network
+congestion, CPU overload, etc.
 
-For most uses, a protocol such as SSH is used below the AXA layer and above TCP
-to provide authentication, confidentiality, and integrity.
+As mentioned above, protocols such as TLS or SSH are used below the AXA layer
+and above TCP to provide authentication, confidentiality, and integrity as
+shown below.
 
-The AXA protocol consists of a pair of streams of messages between a "client" 
-such as `sratool` and an AXA server, one stream in each direction, often 
-ultimately over a single TCP connection.
+~~~
+[AXA] - SIE message encapsulation
+[TLS] - Authentication and encryption
+[TCP] - Reliable transport
+~~~
 
-The authoritative definition of the protocol starts with the 
-`axalib/protocol.h` file. This document is merely an informal supplement to 
-`protocol.h`.
+The authoritative definition of the AXA protocol is contained in the 
+[axa/protocol.h](axa/protocol.h) file.
 
 Values that originate in SRA or RAD servers such as message lengths use little 
 endian byte order in the AXA protocol. Other values such as IP addresses and 
@@ -595,11 +570,11 @@ server to each other) or the TLS library.
 The AXA client starts by waiting for an `AXA_P_OP_HELLO` message from the 
 server. Over a local stream, the client then sends an `AXA_P_OP_USER` message 
 to tell the server which parameters to use. When `ssh` is used, the user name 
-is provided by the SSH protocol.
+is provided through the SSH protocol.
 
 ### AXA message header
 
-Every AXA message starts with a fixed size header:
+Every AXA message starts with the following 8 octet header:
 
 ~~~c
     typedef struct
@@ -611,18 +586,19 @@ Every AXA message starts with a fixed size header:
     } axa_p_hdr_t;
 ~~~
 
- * `len`: The entire length of the AXA message including the header. Many AXA 
-messages are variable length.
- * `tag`: A tag is a 16-bit identifier used to uniquely "tag" specific events 
+ * `len`: A 32-bit value covering the entire length of the AXA message
+   *including the header*. Many AXA  messages are variable length.
+ * `tag`: A 16-bit identifier used to uniquely "tag" specific events 
 during the lifetime of an AXA session. To refer to these events, the client or
-server will use the tag. Some AXA messages do not require tags, in that case
-the tag field should be `0`. Required tags must be unique during the lifetime 
-of the corresponding client request. Some client requests such as a "watch" can
-last indefinitely and will elicit many server responses all with the same tag.
- * `pvers`: A one-byte protocol version number that allows AXA clients and 
+server will use this tag. Some AXA messages do not require tags, in that case
+the tag field should be `AXA_TAG_NONE`. Required tags must be unique during
+the lifetime  of the corresponding client request. Some client requests such
+as a "watch" can last indefinitely and will elicit many server responses all
+with the same tag.
+ * `pvers`: An 8-bit protocol version number that allows AXA clients and 
 servers of different ages to find a mutually compatible version of the AXA 
 protocol.
- * `op`: The op (opcode) specifies an operation requested by the client, a 
+ * `op`: The 8-bit op (opcode) specifies an operation requested by the client, a 
 response from the server, or data from the server. The universe of opcodes is
 discussed below.
 
@@ -632,15 +608,14 @@ generated page for `protocol.h`.
 ### AXA protocol specification quick reference
 
 The following is an AXA protocol quick reference chart intended for application
-developers building `axalib` programs.
+developers building libaxa programs.
 
- * OPCODE: The canonical name of the operation code as defined by 
-`axalib/protocol.h`.
+ * OPCODE: The canonical name of the operation code as defined by [axa/protocol.h](axa/protocol.h).
  * VAL: The numerical value of the opcode.
  * SENT BY: Who can send the message.
- * TAG: Boolean value indicating if header tag must be valid or non-zero,
+ * TAG: Boolean value indicating if header tag must be valid or `AXA_TAG_NONE`,
 as described above.
- * DESCRIPTION: Short blurb describing opcode.
+ * DESCRIPTION: Short description of opcode.
 
 | OPCODE              | VAL | SENT BY         | TAG   | DESCRIPTION            |
 | ------------------- |----:|----------------:| -----:|----------------------------------------------------------------------------------------------:|
@@ -670,11 +645,11 @@ as described above.
 | `AXA_P_OP_ACCT`     | 142 | CLIENT / SERVER | NO    | request accounting information                                                                |
 | `AXA_P_OP_RADU`     | 143 | SERVER (RAD)    | NO    | request RAD Unit balance                                                                |
 
-### JSON Format ###
+### JSON Format
 
 See the [JSON schema](json-schema.yaml) describing the JSON output format.
 
-```json
+~~~json
 {"tag":4,"op":"HELLO","id":1,"pvers_min":2,"pvers_max":3,"str":"hello"}
 {"tag":1,"op":"OK","orig_op":"WATCH HIT","str":"success"}
 {"tag":1,"op":"ERROR","orig_op":"OK","str":"failure"}
@@ -711,8 +686,13 @@ See the [JSON schema](json-schema.yaml) describing the JSON output format.
 {"tag":1,"op":"OPTION","type":"RATE LIMIT","max_pkts_per_sec":null,"cur_pkts_per_sec":123,"report_secs":null}
 {"tag":1,"op":"OPTION","type":"SAMPLE","sample":123}
 {"tag":1,"op":"OPTION","type":"SNDBUF","bufsize":123}
-```
+~~~
 
 ## API Workflow
 
-TODO.
+For a detailed walkthrough of a "Hello World", AXA-style, please see the
+following Farsight Security Blog articles:
+
+ * [Farsight's Advanced Exchange Access: The C Programming API, Part One](https://www.farsightsecurity.com/2015/07/30/mschiffm-axa-api-c-1/)
+ * [Farsight's Advanced Exchange Access: The C Programming API, Part Two](https://www.farsightsecurity.com/2015/08/07/mschiffm-axa-api-c-2/)
+ * [Farsight's Advanced Exchange Access: The C Programming API, Part Three](https://www.farsightsecurity.com/2015/08/11/mschiffm-axa-api-c-3/)
