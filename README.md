@@ -168,7 +168,7 @@ You can connect as per the following:
 ~~~
 $ sratool
 sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1023
-* HELLO srad version 1.4.1 axa AXA protocol 1
+* HELLO srad version 1.5.0 axa AXA protocol 1
 * OK USER johndoe authorized
 ...
 ~~~
@@ -178,7 +178,7 @@ sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1023
 ~~~
 $ radtool
 rad> connect apikey:<your_apikey_here>@axa.sie-remote.net,1024
-* HELLO radd version 1.4.1 axa AXA protocol 1
+* HELLO radd version 1.5.0 axa AXA protocol 1
 * OK USER johndoe authorized
 ...
 ~~~
@@ -317,13 +317,13 @@ with your shortcut name as per the following:
 ~~~
 $ sratool
 sra> connect sra-apikey
-* HELLO srad version 1.4.1 axa AXA protocol 1
+* HELLO srad version 1.5.0 axa AXA protocol 1
 * OK USER johndoe authorized
 ...
 sra> disconnect
 sra> mode rad
 rad> connect rad-apikey
-* HELLO radd version 1.4.1 axa AXA protocol 1
+* HELLO radd version 1.5.0 axa AXA protocol 1
 * OK USER johndoe authorized
 ...
 ~~~
@@ -343,7 +343,7 @@ Here's a simple example using `sratool` to stream five NMSGs seen on the
 ~~~
 $ sratool
 sra> connect sra-apikey
-* HELLO srad version 1.4.1 sra-server AXA protocol 1
+* HELLO srad version 1.5.0 sra-server AXA protocol 1
 * OK USER johndoe authorized
 sra> count 5
 sra> channel 213 on
@@ -423,7 +423,7 @@ suspected brand infringement.
 
 ~~~
 rad> connect rad-apikey
-* HELLO radd version 1.4.1 rad-server AXA protocol 1
+* HELLO radd version 1.5.0 rad-server AXA protocol 1
 rad> 1 watch dns=*.
 1 OK WATCH saved
 rad> 1 anomaly brand_sentry brand=farsightsecurity whitelist=*.farsightsecurity.com,*.fsi.io
