@@ -1,7 +1,7 @@
 /*
  * Print a dark channel packet
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1376,6 +1376,9 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 			case AXA_IO_TYPE_TLS:
 				io_type = AXA_IO_TYPE_TLS_STR;
 				break;
+			case AXA_IO_TYPE_APIKEY:
+				io_type = AXA_IO_TYPE_APIKEY_STR;
+				break;
 			default:
 			case AXA_IO_TYPE_UNKN:
 				io_type = "unknown";
@@ -1459,5 +1462,26 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 		printf("    total sent      : %"PRIu64"\n", total_sent);
 		printf("    total rlimit    : %"PRIu64"\n", total_rlimit);
 		printf("    total congested : %"PRIu64"\n", total_congested);
+	}
+}
+
+void
+print_mgmt_kill(axa_p_mgmt_kill_t *mgmt_kill, size_t mgmt_len AXA_UNUSED)
+{
+	switch (mgmt_kill->result) {
+		case AXA_P_MGMT_K_R_SUCCESS:
+			printf("    success\n");
+			break;
+		case AXA_P_MGMT_K_R_FAIL_NF:
+			printf("    failed, %s not found\n",
+					mgmt_kill->mode == AXA_P_MGMT_K_M_SN ?
+					"serial number" : "user");
+			break;
+		case AXA_P_MGMT_K_R_FAIL_UNK:
+			printf("    failed, unknown reason\n");
+			break;
+		default:
+			printf("    unknown result code\n");
+			break;
 	}
 }

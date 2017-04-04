@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -115,6 +115,8 @@ static cmd_t sleep_cmd;
 static cmd_t radunit_cmd;
 static cmd_t nmsg_zlib_cmd;
 static cmd_t mgmt_get_cmd;
+static cmd_t mgmt_kill_cmd;
+static cmd_t alias_cmd;
 
 typedef enum {
 	NO,
@@ -141,6 +143,10 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"accounting",		acct_cmd,		BOTH, NO, YES,
     "accounting",
     "Ask the server to report total message counts."
+},
+{"alias",		alias_cmd,		BOTH, NO, NO,
+    "alias",
+    "List available connection aliases."
 },
 {"anomaly",		anom_cmd,		RAD, YES, YES,
     "tag anomaly name [parameters]",
@@ -169,7 +175,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "count [#packets | off]",
     "Set terminal output to stop displaying packets after a"
     " number of packets (including immediately with a number of 0),"
-    " show the currently remainint count,"
+    " show the currently remaining count,"
     " or turn off the packet count limit."
 },
 {"debug",		debug_cmd,		BOTH, MB, NO,
@@ -239,6 +245,12 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"help",		help_cmd,		BOTH, MB, NO,
     "help [cmd]",
     "List all commands or get more information about a command."
+},
+{"kill",		mgmt_kill_cmd,		BOTH, YES, YES,
+    "kill user_name | serial_number",
+    "Kill off user session (admin users only). If serial number is specified"
+    " kill a single session; if user name is specified, kill all sessions"
+    " belonging to that user."
 },
 {"list channels",	list_cmd,		SRA, MB, YES,
     "list channels",
@@ -1018,10 +1030,23 @@ disconnect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 }
 
 static int
-connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
+alias_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0 AXA_UNUSED,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	if (arg[0] == '\0') {
+	/* Check for config-file-specified alias first. */
+	axa_client_config_alias_print();
+
+	return (1);
+}
+
+
+static int
+connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
+	    const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	const char *arg;
+
+	if (arg0[0] == '\0') {
 		if (!AXA_CLIENT_OPENED(&client)) {
 			fputs("not connected to a server\n", stdout);
 		} else if (client.hello == NULL) {
@@ -1039,6 +1064,10 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		}
 		return (1);
 	}
+
+	/* Check for config-file-specified alias first. */
+	arg = axa_client_config_alias_chk(arg0);
+	arg = arg ? arg : arg0;
 
 	if (AXA_CLIENT_OPENED(&client))
 		disconnect(false);
@@ -1736,6 +1765,40 @@ mgmt_get_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 }
 
 static int
+mgmt_kill_cmd(axa_tag_t tag, const char *arg,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	char *p;
+	uint32_t sn;
+	axa_p_mgmt_kill_t mgmt_kill;
+
+	if (*arg == '\0') {
+		error_msg("kill command requires a valid user name or"
+				" serial number");
+		return (0);
+	}
+
+	memset(&mgmt_kill, 0, sizeof (mgmt_kill));
+	sn = strtoul(arg, &p, 0);
+	if (*p != '\0') {
+		printf("    sending mgmt kill request to server"
+				" (kill all sessions belonging to %s)...\n",
+				arg);
+		strlcpy(mgmt_kill.user.name, arg, sizeof(mgmt_kill.user.name));
+		mgmt_kill.mode = AXA_P_MGMT_K_M_U;
+	}
+	else {
+		printf("    sending mgmt kill request to server"
+				" (kill session serial number %d)...\n", sn);
+		mgmt_kill.sn = AXA_H2P32(sn);
+		mgmt_kill.mode = AXA_P_MGMT_K_M_SN;
+	}
+
+	return (srvr_send(tag, AXA_P_OP_MGMT_KILL, &mgmt_kill,
+				sizeof (mgmt_kill)));
+}
+
+static int
 out_cmd_pcap_file(const char *addr, bool want_fifo)
 {
 	FILE *f;
@@ -1927,7 +1990,7 @@ usage(void)
 	const char *rad = "Real-time Anomaly Detection Tool (radtool)\n";
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2016 Farsight Security, Inc.\n");
+	printf("(c) 2013-2017 Farsight Security, Inc.\n");
 	printf("%s [options] [commands]\n", axa_prog_name);
 	printf("[-c file]\t\tspecify commands file\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");

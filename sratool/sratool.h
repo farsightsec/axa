@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool definitions
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include <axa/fields.h>
 #include <axa/dns_walk.h>
 #include <axa/client.h>
+#include <axa/client_config.h>
 #include <axa/open_nmsg_out.h>
 
 #include <nmsg/vendors.h>
@@ -159,6 +160,7 @@ void print_raw(const uint8_t *pkt, size_t pkt_len);
 bool print_dns_pkt(const uint8_t *data, size_t data_len, const char *str);
 void print_raw_ip(const uint8_t *data, size_t data_len, axa_p_ch_t ch);
 void print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len);
+void print_mgmt_kill(axa_p_mgmt_kill_t *mgmt_kill, size_t mgmt_len);
 
 /* server.c */
 void read_srvr(void);

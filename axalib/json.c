@@ -1,11 +1,11 @@
 /*
  * Advanced Exchange Access (AXA) protocol definitions
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  * This file is used outside the AXA programs.
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -481,6 +481,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	case AXA_P_OP_CGET:
 	case AXA_P_OP_ACCT:
 	case AXA_P_OP_MGMT_GET:
+	case AXA_P_OP_MGMT_KILL:
 		dir = AXA_P_TO_SRA;
 		break;
 	case AXA_P_OP_ANOM:
@@ -836,6 +837,17 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 		break;
 	}
+	case AXA_P_OP_MGMT_KILL:
+	case AXA_P_OP_MGMT_KILLRSP:
+		add_yajl_string(g, "mode");
+		add_yajl_integer(g, body->mgmt_kill.mode);
+		add_yajl_string(g, "user");
+		add_yajl_string(g, body->mgmt_kill.user.name);
+		add_yajl_string(g, "sn");
+		add_yajl_integer(g, AXA_P2H32(body->mgmt_kill.sn));
+		add_yajl_string(g, "result");
+		add_yajl_integer(g, body->mgmt_kill.result);
+		break;
 	case AXA_P_OP_PAUSE:
 	case AXA_P_OP_GO:
 	case AXA_P_OP_WGET:

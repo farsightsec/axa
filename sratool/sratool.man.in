@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014-2016 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2017 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -125,7 +125,7 @@ The "dns=*." watch or pattern was matched by the "ns1.xserver.jp"
 domain in DNS NS rdata.
 .Bd -literal -offset 4n
 $ sratool 
-sra> connect tls:user@sra.sie-remote.net,1021
+sra> connect tls:user@axa.sie-remote.net,1021
 * HELLO srad version 1.4.1 sra AXA protocol 1
 sra> count 1
 sra> channel 211 on
@@ -140,14 +140,32 @@ sra> exit
 .Ed
 .Sh FILES
 .Bl -tag -width config
-.It Pa fields
-defines relationships among and meanings of SIE message fields.
-Its contents should rarely if ever need to be changed.
-.It Pa certs
+.It Ar certs
 is the directory set with
 .Fl S
 that contains TLS certificate and key files.
-.It Pa config
+.It Ar ~/.axa/config
+contains AXA client configuration data. Currently supported are connection
+aliases that provide the user with a facility to create shortcut mnemonics to
+specify the SRA server connection string. For example:
+.Bd -literal -offset 4n
+$ cat ~/.axa/config
+# SRA
+alias:sra-apikey=apikey:<elided>@axa.sie-remote.net,1023
+
+.Ed
+
+If the user wanted to connect to SRA, she would only have to remember
+"sra-apikey" and could do:
+.Bd -literal -offset 4n
+$ sratool
+sra> connect sra-apikey
+.Ed
+.Pp
+This config file is shared for
+.Nm ,
+radtool, sratunnel, and radtunnel.
+.It Ar ~/.ssh/config
 is the
 .Xr ssh_config 5
 configuration file used with
@@ -158,7 +176,10 @@ The usual
 sequence is used, starting with
 .Pa ~/.ssh/config .
 "Host" stanzas in the file can simplify connections to \*(SR servers.
-.It Pa ~/.sratool_history
+.It Ar fields
+defines relationships among and meanings of SIE message fields.
+Its contents should rarely if ever need to be changed.
+.It Ar ~/.sratool_history
 contains the command history from previous
 .Nm sratool
 and/or

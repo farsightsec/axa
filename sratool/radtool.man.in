@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014-2016 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2017 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -117,14 +117,35 @@ Ask the server to report user's current RAD balance.
 .El
 .Sh FILES
 .Bl -tag -width fields
-.It Pa fields
+.It Ar fields
 defines relationships among and meanings of SIE message fields.
 Its contents should rarely if ever need to be changed.
-.It Pa certs
+.It Ar certs
 is the directory set with
 .Fl S
 that contains TLS certificate and key files.
-.It Pa config
+.It Ar ~/.axa/config
+contains AXA client configuration data. Currently supported are connection
+aliases that provide the user with a facility to create shortcut mnemonics to
+specify the RAD server connection string. For example:
+.Bd -literal -offset 4n
+$ cat ~/.axa/config
+# RAD
+alias:rad-apikey=apikey:<elided>@example.com,1024
+
+.Ed
+
+If the user wanted to connect to RAD, she would only have to remember
+"rad-apikey" and could do:
+.Bd -literal -offset 4n
+$ radtool
+sra> connect rad-apikey
+.Ed
+.Pp
+This config file is shared for
+.Nm ,
+sratool, sratunnel, and radtunnel.
+.It Ar config
 is the
 .Xr ssh_config 5
 configuration file used with
@@ -135,7 +156,7 @@ The usual
 sequence is used, starting with
 .Pa ~/.ssh/config .
 "Host" stanzas in the file can simplify connections to \*(SR servers.
-.It Pa ~/.sratool_history
+.It Ar ~/.sratool_history
 contains the command history from previous
 .Nm radtool
 and/or

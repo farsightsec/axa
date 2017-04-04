@@ -1,7 +1,7 @@
 /*
  * radd, radtool, and sratool common client code
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -341,6 +341,37 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 		}
 		break;
 
+	case AXA_IO_TYPE_APIKEY:
+		connect_result = socket_connect(emsg, client);
+		if (connect_result != AXA_CONNECT_DONE)
+			return (connect_result);
+		switch (axa_apikey_start(emsg, &client->io)) {
+		case AXA_IO_OK:
+			/* username field holds apikey */
+			if (!axa_client_send(emsg, client,
+					     AXA_TAG_NONE, AXA_P_OP_USER, &hdr,
+					     &client->io.user,
+					     sizeof(client->io.user))) {
+				axa_client_backoff(client);
+				return (AXA_CONNECT_ERR);
+			}
+			axa_p_to_str(emsg->c, sizeof(emsg->c),
+				     true, &hdr,
+				     (axa_p_body_t *)&client->io.user);
+			return (AXA_CONNECT_USER);
+			break;
+		case AXA_IO_ERR:
+			axa_client_backoff_max(client);
+			return (AXA_CONNECT_ERR);
+		case AXA_IO_BUSY:
+			AXA_ASSERT(client->io.nonblock);
+			return (connect_result);
+		case AXA_IO_TUNERR:
+		case AXA_IO_KEEPALIVE:
+			AXA_FAIL("impossible axa_apikey_start() result");
+		}
+		break;
+
 	case AXA_IO_TYPE_UNKN:
 	default:
 		axa_pemsg(emsg, "impossible client type");
@@ -378,15 +409,18 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 
 	p = strpbrk(addr, AXA_WHITESPACE":");
 	if (p == NULL) {
-		axa_pemsg(emsg, "invalid AXA transport protocol \"%s\"", addr);
+		axa_pemsg(emsg,
+			"invalid AXA transport protocol or alias \"%s\"",
+			addr);
 		axa_client_backoff_max(client);
 		return (AXA_CONNECT_ERR);
 	}
 
 	client->io.type = axa_io_type_parse(&addr);
 	if (client->io.type == AXA_IO_TYPE_UNKN) {
-		axa_pemsg(emsg, "invalid AXA transport protocol in \"%s\"",
-			  addr);
+		axa_pemsg(emsg,
+			"invalid AXA transport protocol or alias in \"%s\"",
+			addr);
 		axa_client_backoff_max(client);
 		return (AXA_CONNECT_ERR);
 	}
@@ -455,6 +489,19 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 				   &client->io.key_file,
 				   &client->io.addr,
 				   addr))
+			return (AXA_CONNECT_ERR);
+		client->io.label = axa_strdup(client->io.addr);
+		if (!axa_get_srvr(emsg, client->io.addr, false, &ai)) {
+			axa_client_backoff(client);
+			return (AXA_CONNECT_ERR);
+		}
+		memcpy(&client->io.su.sa, ai->ai_addr, ai->ai_addrlen);
+		freeaddrinfo(ai);
+		break;
+
+	case AXA_IO_TYPE_APIKEY:
+		if (!axa_apikey_parse(emsg, &client->io.addr,
+					&client->io.user, addr))
 			return (AXA_CONNECT_ERR);
 		client->io.label = axa_strdup(client->io.addr);
 		if (!axa_get_srvr(emsg, client->io.addr, false, &ai)) {

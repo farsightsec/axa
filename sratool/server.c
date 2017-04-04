@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -194,6 +194,13 @@ read_srvr(void)
 				   - sizeof(client.io.recv_hdr));
 			break;
 
+		case AXA_P_OP_MGMT_KILLRSP:
+			clear_prompt();
+			print_mgmt_kill(&client.io.recv_body->mgmt_kill,
+				   client.io.recv_body_len
+				   - sizeof(client.io.recv_hdr));
+			break;
+
 		case AXA_P_OP_USER:
 		case AXA_P_OP_JOIN:
 		case AXA_P_OP_PAUSE:
@@ -209,6 +216,7 @@ read_srvr(void)
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
 		case AXA_P_OP_MGMT_GET:
+		case AXA_P_OP_MGMT_KILL:
 		default:
 			AXA_FAIL("impossible AXA %s from %s",
 				 axa_op_to_str(buf, sizeof(buf),
