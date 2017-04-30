@@ -361,7 +361,9 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	SSL_library_init();
 	SSL_load_error_strings();
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_config(NULL);
+#endif
 
 	/*
 	 * Turn on OpenSSL threading if needed.
@@ -516,7 +518,9 @@ axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	SSL_library_init();
 	SSL_load_error_strings();
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_config(NULL);
+#endif
 
 	/*
 	 * Turn on OpenSSL threading if needed.
@@ -669,7 +673,9 @@ axa_tls_cleanup(void)
 	}
 
 	ERR_free_strings();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_no_config();
+#endif
 }
 
 void
@@ -710,7 +716,9 @@ axa_apikey_cleanup(void)
 	}
 
 	ERR_free_strings();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_no_config();
+#endif
 }
 
 /*
