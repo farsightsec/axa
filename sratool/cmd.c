@@ -1482,12 +1482,15 @@ static int
 channel_on_off(axa_tag_t tag, const char *arg, bool on)
 {
 	axa_p_channel_t channel;
+	axa_p_ch_t ch;
 
+	ch = 0;
 	memset(&channel, 0, sizeof(channel));
-	if (!axa_parse_ch(&emsg, &channel.ch, arg, strlen(arg), true, true)) {
+	if (!axa_parse_ch(&emsg, &ch, arg, strlen(arg), true, true)) {
 		error_msg("%s", emsg.c);
 		return (0);
 	}
+	channel.ch = ch;
 	channel.ch = AXA_H2P_CH(channel.ch);
 	channel.on = on ? 1 : 0;
 	return (srvr_send(tag, AXA_P_OP_CHANNEL, &channel, sizeof(channel)));
@@ -1577,7 +1580,9 @@ rlimits_cmd(axa_tag_t tag, const char *arg,
 	char sec_buf[32];
 	char report_secs_buf[32];
 	axa_p_opt_t opt;
+	axa_cnt_t rlimit;
 
+	rlimit = 0;
 	memset(&opt, 0, sizeof(opt));
 	opt.type = AXA_P_OPT_RLIMIT;
 
@@ -1591,10 +1596,14 @@ rlimits_cmd(axa_tag_t tag, const char *arg,
 	    || *arg != '\0')
 		return (-1);
 
-	if (!get_rlimit(&opt.u.rlimit.max_pkts_per_sec, sec_buf))
+	if (!get_rlimit(&rlimit, sec_buf))
 		return (-1);
-	if (!get_rlimit(&opt.u.rlimit.report_secs, report_secs_buf))
+	else
+		opt.u.rlimit.max_pkts_per_sec = rlimit;
+	if (!get_rlimit(&rlimit, report_secs_buf))
 		return (-1);
+	else
+		opt.u.rlimit.report_secs = rlimit;
 
 	opt.u.rlimit.cur_pkts_per_sec = AXA_RLIMIT_NA;
 	return (srvr_send(tag, AXA_P_OP_OPT, &opt,
