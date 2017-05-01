@@ -17,6 +17,7 @@
  */
 
 #include <config.h>
+#include <string.h>
 #include <axa/wire.h>
 #ifdef __linux
 #include <bsd/string.h>                 /* for strlcpy() */

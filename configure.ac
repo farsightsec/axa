@@ -23,7 +23,8 @@ my_CFLAGS=" \
 -Wmissing-declarations -Wmissing-prototypes \
 -Wsign-compare -Wchar-subscripts \
 -Wstrict-prototypes -Wshadow \
--Wformat-security"
+-Wformat-security \
+-Wno-unused-command-line-argument"
 AC_SUBST([my_CFLAGS])
 
 AC_CHECK_FUNCS([floor gettimeofday])

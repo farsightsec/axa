@@ -27,6 +27,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
 
 
 static char *certs_dir = NULL;
@@ -162,7 +163,7 @@ get_ssl_pemsg(axa_emsg_t *emsg, SSL *ssl, int ret, const char *p, ...)
 
 /* Thread ID callback for OpenSSL */
 static unsigned long
-id_function(void)
+__attribute__((used)) id_function(void)
 {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wbad-function-cast"
@@ -173,7 +174,7 @@ id_function(void)
 
 /* Lock or unlock a static (created at initialization) lock for OpenSSL */
 static void
-locking_function(int mode, int n,
+__attribute__((used)) locking_function(int mode, int n,
 		 const char *file AXA_UNUSED, int line AXA_UNUSED)
 {
 	if (mode & CRYPTO_LOCK) {
@@ -185,7 +186,8 @@ locking_function(int mode, int n,
 
 /* Create a "dynamic" lock for OpenSSL */
 static struct CRYPTO_dynlock_value *
-dyn_create_function(const char *file AXA_UNUSED, int line AXA_UNUSED)
+__attribute__((used)) dyn_create_function(const char *file AXA_UNUSED,
+		int line AXA_UNUSED)
 {
 	struct CRYPTO_dynlock_value *value;
 
@@ -197,7 +199,7 @@ dyn_create_function(const char *file AXA_UNUSED, int line AXA_UNUSED)
 
 /* Destroy a "dynamic" lock for OpenSSL */
 static void
-dyn_destroy_function(struct CRYPTO_dynlock_value *l,
+__attribute__((used)) dyn_destroy_function(struct CRYPTO_dynlock_value *l,
 		     const char *file AXA_UNUSED, int line AXA_UNUSED)
 {
 	AXA_ASSERT(0 == pthread_mutex_destroy(&l->mutex));
@@ -206,8 +208,9 @@ dyn_destroy_function(struct CRYPTO_dynlock_value *l,
 
 /* Lock or unlock a "dynamic" lock */
 static void
-dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
-		  const char *file AXA_UNUSED, int line AXA_UNUSED)
+__attribute__((used)) dyn_lock_function(int mode,
+		struct CRYPTO_dynlock_value *l, const char *file AXA_UNUSED,
+		int line AXA_UNUSED)
 {
 	if (mode & CRYPTO_LOCK) {
 		AXA_ASSERT(0 == pthread_mutex_lock(&l->mutex));
@@ -358,7 +361,9 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	SSL_library_init();
 	SSL_load_error_strings();
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_config(NULL);
+#endif
 
 	/*
 	 * Turn on OpenSSL threading if needed.
@@ -513,7 +518,9 @@ axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	SSL_library_init();
 	SSL_load_error_strings();
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_config(NULL);
+#endif
 
 	/*
 	 * Turn on OpenSSL threading if needed.
@@ -666,7 +673,9 @@ axa_tls_cleanup(void)
 	}
 
 	ERR_free_strings();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_no_config();
+#endif
 }
 
 void
@@ -707,7 +716,9 @@ axa_apikey_cleanup(void)
 	}
 
 	ERR_free_strings();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_no_config();
+#endif
 }
 
 /*

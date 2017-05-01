@@ -39,6 +39,7 @@
 #include <axa/fields.h>
 #include <axa/strbuf.h>
 #include <axa/wire.h>
+#include <string.h>
 #include <libmy/b64_encode.h>
 #include <yajl/yajl_gen.h>
 
