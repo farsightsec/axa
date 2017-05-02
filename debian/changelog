@@ -1,3 +1,10 @@
+axa (1.5.1-1) unstable; urgency=low
+
+  * Fix Clang compiler warnings
+  * Conditionally (don't) use deprecated openssl function
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 02 May 2017 16:43:44 +0000
+
 axa (1.5.0) UNRELEASED; urgency=low
 
   * Add apikey support
