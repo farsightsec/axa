@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) definitions
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -282,7 +282,7 @@ extern void axa_set_core(void);
 
 /** AXA error message datatype */
 typedef struct {
-	char	c[120];			/**< error strings go here */
+	char	c[1024];			/**< error strings go here */
 } axa_emsg_t;
 
 /**

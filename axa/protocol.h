@@ -1,11 +1,11 @@
 /*
  * Advanced Exchange Access (AXA) protocol definitions
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  * This file is used outside the AXA programs.
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -234,6 +234,7 @@ typedef enum {
 	AXA_P_OP_CLIST	    =9,		/**< axa_p_clist_t */
 	AXA_P_OP_MISSED_RAD =10,	/**< axa_p_missed_rad_t */
 	AXA_P_OP_MGMT_GETRSP=11,	/**< axa_p_mgmt_t */
+	AXA_P_OP_MGMT_KILLRSP=12,	/**< axa_p_mgmt_kill_t */
 
 	/** from client to SRA or RAD server */
 	AXA_P_OP_USER	    =129,	/**< axa_p_user_t */
@@ -253,6 +254,7 @@ typedef enum {
 
 	AXA_P_OP_RADU	    =143,	/**< no data */
 	AXA_P_OP_MGMT_GET   =144,	/**< no data */
+	AXA_P_OP_MGMT_KILL  =145,	/**< axa_p_mgmt_kill_t */
 } axa_p_op_t;
 
 /**
@@ -710,6 +712,26 @@ typedef struct _PK {
 	} srvr;
 } axa_p_mgmt_user_t;
 
+/** AXA MGMT kill response codes  */
+typedef enum {
+	AXA_P_MGMT_K_R_SUCCESS  =1,		/* successful operation */
+	AXA_P_MGMT_K_R_FAIL_NF  =2,		/* failed: sn/user not found */
+	AXA_P_MGMT_K_R_FAIL_UNK =3,		/* failed: unknown reason */
+} axa_p_mgmt_kill_rsp_t;
+
+/** AXA MGMT kill modes  */
+typedef enum {
+	AXA_P_MGMT_K_M_SN  =1,			/* kill by serial number */
+	AXA_P_MGMT_K_M_U   =2,			/* kill by user name */
+} axa_p_mgmt_kill_mode_t;
+
+/* AXA management kill response */
+typedef struct _PK {
+	axa_p_mgmt_kill_mode_t	mode;		/* mode of kill request */
+	axa_p_user_t		user;		/* user name */
+	uint32_t		sn;		/* server-side serial num */
+	axa_p_mgmt_kill_rsp_t	result;		/* result code */
+} axa_p_mgmt_kill_t;
 /**< @endcond */
 
 /** AXA protocol body */
@@ -731,6 +753,7 @@ typedef union {
 	axa_p_channel_t	channel;	/**< enable or disable a channel */
 	axa_p_opt_t	opt;		/**< options */
 	axa_p_mgmt_t	mgmt;		/**< management info */
+	axa_p_mgmt_kill_t mgmt_kill;	/**< kill info */
 
 	uint8_t		b[1];		/**< ... */
 } axa_p_body_t;

@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -182,6 +182,8 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
 		case AXA_P_OP_MGMT_GET:
+		case AXA_P_OP_MGMT_KILL:
+		case AXA_P_OP_MGMT_KILLRSP:
 		default:
 			AXA_FAIL("impossible AXA op of %d from %s",
 				 client.io.recv_hdr.op, client.io.label);
@@ -225,6 +227,12 @@ srvr_connect(void)
 	size_t anom_len;
 	axa_emsg_t emsg;
 	bool res;
+	const char *srvr_addr0;
+	axa_p_ch_t ch;
+
+	/* Check for config-file-specified alias first. */
+	srvr_addr0 = axa_client_config_alias_chk(srvr_addr);
+	srvr_addr = srvr_addr0 ? srvr_addr0 : srvr_addr;
 
 	if (axa_debug != 0)
 		axa_trace_msg("connecting to %s", srvr_addr);
@@ -324,12 +332,14 @@ srvr_connect(void)
 
 	/* Turn on the channels after after the watches. */
 	for (arg = chs; arg != NULL; arg = arg->next) {
+		ch = 0;
 		memset(&channel, 0, sizeof(channel));
-		if (!axa_parse_ch(&emsg, &channel.ch, arg->c, strlen(arg->c),
+		if (!axa_parse_ch(&emsg, &ch, arg->c, strlen(arg->c),
 				  true, true)) {
 			axa_error_msg("\"-c %s\": %s", arg->c, emsg.c);
 			exit(EX_USAGE);
 		}
+		channel.ch = ch;
 
 		channel.on = 1;
 		if (!srvr_cmd(AXA_TAG_MIN, AXA_P_OP_CHANNEL,

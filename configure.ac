@@ -1,5 +1,5 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.4.0])
+AC_INIT([axa], [1.5.1])
 PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
 AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
@@ -23,7 +23,8 @@ my_CFLAGS=" \
 -Wmissing-declarations -Wmissing-prototypes \
 -Wsign-compare -Wchar-subscripts \
 -Wstrict-prototypes -Wshadow \
--Wformat-security"
+-Wformat-security \
+-Wno-unused-command-line-argument"
 AC_SUBST([my_CFLAGS])
 
 AC_CHECK_FUNCS([floor gettimeofday])

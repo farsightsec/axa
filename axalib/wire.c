@@ -1,7 +1,7 @@
 /*
  * AXA protocol utilities
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -339,7 +339,9 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	case AXA_P_OP_ACCT:	strlcpy(buf, "ACCOUNTING",	buflen); break;
 	case AXA_P_OP_RADU:	strlcpy(buf, "RAD UNITS GET",	buflen); break;
 	case AXA_P_OP_MGMT_GET:	strlcpy(buf, "MGMT GET",	buflen); break;
-	case AXA_P_OP_MGMT_GETRSP:strlcpy(buf, "MGMT GET RSPNS",buflen); break;
+	case AXA_P_OP_MGMT_GETRSP:strlcpy(buf, "MGMT GET RSP",buflen); break;
+	case AXA_P_OP_MGMT_KILL:strlcpy(buf, "MGMT KILL",	buflen); break;
+	case AXA_P_OP_MGMT_KILLRSP:strlcpy(buf, "MGMT KILL RSP",buflen); break;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
@@ -981,6 +983,8 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	case AXA_P_OP_RADU:
 	case AXA_P_OP_MGMT_GET:
 	case AXA_P_OP_MGMT_GETRSP:
+	case AXA_P_OP_MGMT_KILL:
+	case AXA_P_OP_MGMT_KILLRSP:
 	default:
 		break;
 	}
@@ -1172,6 +1176,16 @@ axa_ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 			(255 * sizeof(axa_p_ch_t)) +
 			/* max number of output threads (users) */
 			(1024 * sizeof(axa_p_mgmt_user_t));
+		tagged = 0;
+		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
+		break;
+	case AXA_P_OP_MGMT_KILL:
+		max_len = min_len = sizeof(axa_p_mgmt_kill_t);
+		tagged = 0;
+		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
+		break;
+	case AXA_P_OP_MGMT_KILLRSP:
+		min_len = max_len = sizeof(axa_p_mgmt_kill_t);
 		tagged = 0;
 		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
 		break;
@@ -1574,6 +1588,10 @@ axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_body_t *body,
 		break;
 	case AXA_P_OP_MGMT_GETRSP:
 		break;
+	case AXA_P_OP_MGMT_KILL:
+		break;
+	case AXA_P_OP_MGMT_KILLRSP:
+		break;
 	}
 
 	return (true);
@@ -1612,6 +1630,10 @@ axa_io_type_parse(const char **addrp)
 		addr += sizeof(AXA_IO_TYPE_SSH_STR)-1 + i;
 		result = AXA_IO_TYPE_SSH;
 
+	} else if (AXA_CLITCMP(addr, AXA_IO_TYPE_APIKEY_STR":")) {
+		addr += sizeof(AXA_IO_TYPE_APIKEY_STR":")-1;
+		result = AXA_IO_TYPE_APIKEY;
+
 	} else {
 		return (AXA_IO_TYPE_UNKN);
 	}
@@ -1636,6 +1658,8 @@ axa_io_type_to_str(axa_io_type_t type)
 		return (AXA_IO_TYPE_SSH_STR);
 	case AXA_IO_TYPE_TLS:
 		return (AXA_IO_TYPE_TLS_STR);
+	case AXA_IO_TYPE_APIKEY:
+		return (AXA_IO_TYPE_APIKEY_STR);
 	}
 }
 
@@ -1829,7 +1853,8 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 		/* Read more data into the hidden buffer when we run out. */
 		if (io->recv_bytes == 0) {
 			io->recv_start = io->recv_buf;
-			if (io->type == AXA_IO_TYPE_TLS) {
+			if (io->type == AXA_IO_TYPE_TLS ||
+					io->type == AXA_IO_TYPE_APIKEY) {
 				io_result = axa_tls_read(emsg, io);
 				if (io_result != AXA_IO_OK)
 					return (io_result);
@@ -2035,7 +2060,7 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	if (total == 0)
 		return (AXA_IO_ERR);
 
-	if (io->type == AXA_IO_TYPE_TLS) {
+	if (io->type == AXA_IO_TYPE_TLS || io->type == AXA_IO_TYPE_APIKEY) {
 		/*
 		 * For TLS, save all 3 parts in the overflow output buffer
 		 * so that the AXA message can be sent as a single TLS
@@ -2163,7 +2188,7 @@ axa_send_flush(axa_emsg_t *emsg, axa_io_t *io)
 {
 	ssize_t done;
 
-	if (io->type == AXA_IO_TYPE_TLS)
+	if (io->type == AXA_IO_TYPE_TLS || io->type == AXA_IO_TYPE_APIKEY)
 		return (axa_tls_flush(emsg, io));
 
 	/* Repeat other transports until nothing flows. */
@@ -2278,4 +2303,5 @@ void
 axa_io_cleanup(void)
 {
 	axa_tls_cleanup();
+	axa_apikey_cleanup();
 }

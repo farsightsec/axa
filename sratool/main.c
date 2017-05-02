@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -78,6 +78,7 @@ stop(int status)
 	out_close(false);
 
 	axa_unload_fields();
+	axa_unload_client_config();
 
 	axa_io_cleanup();
 
@@ -88,6 +89,7 @@ int
 main(int argc, char **argv)
 {
 	const char *fields_file = "";
+	const char *config_file = "";
 	char cmd_buf[500];
 	const char *cmd;
 	int cmd_len;
@@ -134,8 +136,11 @@ main(int argc, char **argv)
 		el_set(el_e, EL_GETCFN, getcfn);
 	}
 
-	while ((i = getopt(argc, argv, "hVdNF:E:S:c:")) != -1) {
+	while ((i = getopt(argc, argv, "hVdNF:E:S:c:n:")) != -1) {
 		switch (i) {
+		case 'n':
+			config_file = optarg;
+			break;
 		case 'V':
 			version = true;
 			break;
@@ -203,6 +208,7 @@ main(int argc, char **argv)
 	nmsg_pres = nmsg_output_open_pres(STDOUT_FILENO);
 
 	axa_load_fields(fields_file);
+	axa_load_client_config(config_file);
 
 	/* Answer commands from the control file. */
 	if (cfile != NULL) {

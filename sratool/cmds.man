@@ -4,12 +4,18 @@
 .\" and \(TL to contain sratool or radtool
 .It Ic accounting
 Tell the server to report counts of packets seen, missed, sent, and lost.
+.It Ic alias
+List the available connection aliases (culled from the axa client config file).
 .It Ic ciphers Op cipher-list
 set the list of ciphers for the next TLS connection or show the current
 contents of the list.
 .It Xo
 .Ic connect
 .Oo
+.Sm off Ar alias Sm on
+|
+.Sm off Ar apikey: Ar <apikey>@ Ar host,port Sm on
+|
 .Sm off Ar tcp: Oo Ar user@ Oc Ar host,port Sm on
 |
 .Sm off Ar unix: Oo Ar user@ Oc Ar /ud/socket Sm on
@@ -23,6 +29,14 @@ By itself
 .Ic connect
 shows the current connection.
 Otherwise connect to the specified \*(SR server.
+.Pp
+.Ic alias:
+use a connection alias specified in the AXA config file (see FILES).
+.Pp
+.Ic apikey:
+identify and authenticate the user via a Farsight Security provided apikey.
+The connection will be encrypted using the same TLS semantics as the tls
+transport below.
 .Pp
 .Ic ssh:
 connections use
@@ -44,6 +58,13 @@ file.
 If not absolute, the files are in the
 .Fl S Ar certs
 directory.
+.Pp
+.Ic tcp:
+unused.
+.Pp
+.Ic unix:
+unused.
+.Pp
 .It Ic count Op N | off
 sets terminal output to stop displaying packets after a
 number of packets (including immediately with a number of 0),

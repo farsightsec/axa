@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -60,19 +60,27 @@ usage(const char *msg, ...)
 	const char *rad = "Real-time Anomaly Detection Tunnel (radtunnel)\n";
 	va_list args;
 
+	if (msg != NULL) {
+		printf("%s: ", axa_prog_name);
+		va_start(args, msg);
+		axa_verror_msg(msg, args);
+		va_end(args);
+		printf("\n");
+	}
+
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2016 Farsight Security, Inc.\n");
-	printf("%s [options]\n", axa_prog_name);
+	printf("(c) 2014-2017 Farsight Security, Inc.\n");
+	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
 		printf("-o output\t\tspecify destination of SIE data\n");
-		printf("-s [user@]SRA-server\tconnect to SRA server\n");
+		printf("-s [user@]server|alias\tconnect to SRA server\n");
 		printf("-w watch\t\tset watch\n");
 	}
 	if (mode == RAD) {
 		printf("-a anomaly\t\tenable anomaly detection module\n");
 		printf("-o output\t\tspecify destination of SIE data\n");
-		printf("-s [user@]RAD-server\tconnect to RAD server\n");
+		printf("-s [user@]server|alias\tconnect to RAD server\n");
 		printf("-w watch\t\tset watch\n");
 	}
 	printf("\n[-A interval]\t\temit acct messages to stdout every interval seconds\n");
@@ -89,17 +97,13 @@ usage(const char *msg, ...)
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
-	if (msg != NULL) {
-		va_start(args, msg);
-		axa_verror_msg(msg, args);
-		va_end(args);
-	}
 	exit(EX_USAGE);
 }
 
 int
 main(int argc, char **argv)
 {
+	const char *config_file = "";
 	arg_t *arg;
 	struct timeval now;
 	time_t ms;
@@ -123,7 +127,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:z"))
+	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:z"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -157,6 +161,9 @@ main(int argc, char **argv)
 				axa_error_msg("invalid \"-a %s\"", optarg);
 				exit(EX_USAGE);
 			}
+			break;
+		case 'n':
+			config_file = optarg;
 			break;
 
 		case 'O':
@@ -277,6 +284,8 @@ main(int argc, char **argv)
 			exit(0);
 		}
 	}
+
+	axa_load_client_config(config_file);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, sigterm);

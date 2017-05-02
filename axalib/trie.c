@@ -13,7 +13,7 @@
  * Domain names are kept in uint64_t words in host bit order and
  * padded with zero bits.
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -266,7 +266,7 @@ ck_num(axa_emsg_t *emsg, const char *name, uint val, uint min, uint max)
 static bool
 watch_to_trie_key(axa_emsg_t *emsg, trie_key_t *key,
 		  axa_p_watch_type_t type, trie_bitlen_t *prefixp,
-		  const axa_p_watch_pat_t *pat, size_t len)
+		  const axa_p_watch_t *watch, size_t len)
 {
 	trie_bitlen_t prefix;
 	u_int32_t addr_mask;
@@ -288,8 +288,8 @@ watch_to_trie_key(axa_emsg_t *emsg, trie_key_t *key,
 		 * Copy 32 bits of IPv4 address to key->addr[0].
 		 * Then clear the 32 bits not copied
 		 * and the bits beyond the prefix. */
-		memcpy(&key->addr[(MAX_TRIE_IPV4_PREFIX)/32-1], &pat->addr, 
-			 sizeof(key->addr[1]));
+		memcpy(&key->addr[(MAX_TRIE_IPV4_PREFIX)/32-1],
+				&watch->pat.addr, sizeof(key->addr[1]));
 		addr_mask = (u_int32_t)-1;
 		if (*prefixp != 0)
 			 addr_mask <<= sizeof(addr_mask)*8 - *prefixp;
@@ -307,7 +307,7 @@ watch_to_trie_key(axa_emsg_t *emsg, trie_key_t *key,
 		if (!ck_num(emsg, "address length", len, (prefix+7)/8, 16))
 			return (false);
 		/* Use 64 or 128 bits for IPv6 keys. */
-		memcpy(&key->addr6, &pat->addr6, sizeof(key->addr6));
+		memcpy(&key->addr6, &watch->pat.addr6, sizeof(key->addr6));
 		key->w[0] = be64toh(key->w[0]);
 		if (prefix < AXA_WORD_BITS) {
 			key->w[0] &= axa_word_mask(*prefixp);
@@ -321,7 +321,7 @@ watch_to_trie_key(axa_emsg_t *emsg, trie_key_t *key,
 	case AXA_P_WATCH_DNS:
 		if (!ck_num(emsg, "domain name length", len, 1, 255))
 			return (false);
-		return (dns_to_key(emsg, key, prefixp, pat->dns, len));
+		return (dns_to_key(emsg, key, prefixp, watch->pat.dns, len));
 
 	case AXA_P_WATCH_CH:
 	case AXA_P_WATCH_ERRORS:
@@ -743,7 +743,7 @@ axa_trie_watch_add(axa_emsg_t *emsg,
 	trie_op_result_t search_result;
 
 	prefix = watch->prefix;
-	if (!watch_to_trie_key(emsg, &key, watch->type, &prefix, &watch->pat,
+	if (!watch_to_trie_key(emsg, &key, watch->type, &prefix, watch,
 			       watch_len - (sizeof(*watch)
 					    - sizeof(watch->pat))))
 		return (false);

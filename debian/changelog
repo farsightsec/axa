@@ -1,3 +1,18 @@
+axa (1.5.1-1) unstable; urgency=low
+
+  * Fix Clang compiler warnings
+  * Conditionally (don't) use deprecated openssl function
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 02 May 2017 16:43:44 +0000
+
+axa (1.5.0) UNRELEASED; urgency=low
+
+  * Add apikey support
+  * Add per-user config file
+  * Update copyright headers for 2017
+
+ -- Mike Schiffman <mschiffm@fsi.io>  Sat, 01 Apr 2017 19:17:41 +0000
+
 axa (1.4.0) UNRELEASED; urgency=low
 
   * Fix bug in sratunnel where pcap output could underflow a counter and crash

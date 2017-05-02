@@ -1,7 +1,7 @@
 /*
  * Print a dark channel packet
  *
- *  Copyright (c) 2014-2016 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1181,7 +1181,7 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 	time_t t;
 	uint8_t *p;
 	int j, ch_cnt;
-	struct timeval tv;
+	struct timeval tv, connected_since, last_cnt_update;
 	struct tm *tm_info;
 	const char *io_type, *server_type;
 	uint32_t i, users_cnt, total_watches;
@@ -1357,11 +1357,13 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 		}
 		printf("      from          : %s\n", addr_str);
 		printf("      serial number : %d\n", AXA_P2H32(user->sn));
-		t = AXA_P2H32(user->connected_since.tv_sec);
+		connected_since.tv_sec = user->connected_since.tv_sec;
+		connected_since.tv_usec = user->connected_since.tv_usec;
+		t = AXA_P2H32(connected_since.tv_sec);
 		tm_info = gmtime(&t);
 		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
 		printf("      since         : %s (%s)\n", time_buf,
-				convert_timeval(&user->connected_since));
+				convert_timeval(&connected_since));
 
 		switch (user->io_type) {
 			case AXA_IO_TYPE_UNIX:
@@ -1375,6 +1377,9 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 				break;
 			case AXA_IO_TYPE_TLS:
 				io_type = AXA_IO_TYPE_TLS_STR;
+				break;
+			case AXA_IO_TYPE_APIKEY:
+				io_type = AXA_IO_TYPE_APIKEY_STR;
 				break;
 			default:
 			case AXA_IO_TYPE_UNKN:
@@ -1428,11 +1433,13 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 				(float)AXA_P2H64(user->sample) * .0001);
 
 		printf("      packet counters\n");
-		t = AXA_P2H32(user->last_cnt_update.tv_sec);
+		last_cnt_update.tv_sec = user->last_cnt_update.tv_sec;
+		last_cnt_update.tv_usec = user->last_cnt_update.tv_usec;
+		t = AXA_P2H32(last_cnt_update.tv_sec);
 		tm_info = gmtime(&t);
 		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
 		printf("      last updated  : %s (%s)\n", time_buf,
-				convert_timeval(&user->last_cnt_update));
+				convert_timeval(&last_cnt_update));
 		printf("        filtered    : %"PRIu64"\n",
 				AXA_P2H64(user->filtered));
 		total_filtered += AXA_P2H64(user->filtered);
@@ -1459,5 +1466,26 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 		printf("    total sent      : %"PRIu64"\n", total_sent);
 		printf("    total rlimit    : %"PRIu64"\n", total_rlimit);
 		printf("    total congested : %"PRIu64"\n", total_congested);
+	}
+}
+
+void
+print_mgmt_kill(axa_p_mgmt_kill_t *mgmt_kill, size_t mgmt_len AXA_UNUSED)
+{
+	switch (mgmt_kill->result) {
+		case AXA_P_MGMT_K_R_SUCCESS:
+			printf("    success\n");
+			break;
+		case AXA_P_MGMT_K_R_FAIL_NF:
+			printf("    failed, %s not found\n",
+					mgmt_kill->mode == AXA_P_MGMT_K_M_SN ?
+					"serial number" : "user");
+			break;
+		case AXA_P_MGMT_K_R_FAIL_UNK:
+			printf("    failed, unknown reason\n");
+			break;
+		default:
+			printf("    unknown result code\n");
+			break;
 	}
 }
