@@ -622,9 +622,9 @@ run_cmd(axa_tag_t tag, const char *op, const char *arg,
 static bool				/* true=ok false=bad command */
 cmd(axa_tag_t tag, const char *op)
 {
-	const char *arg;
+	const char *arg, *best_argp = NULL;
 	int j;
-	const cmd_tbl_entry_t *ce, *ce1;
+	const cmd_tbl_entry_t *ce, *ce1, *best_ce = NULL;
 	bool iss;
 	int num_iss;
 
@@ -680,9 +680,21 @@ cmd(axa_tag_t tag, const char *op)
 				error_help_cmd(tag, op);
 				return (false);
 			}
-			return (run_cmd(tag, op, arg+j, ce));
+
+			if (best_ce) {
+				error_help_cmd(tag, op);
+				return (false);
+			}
+
+			best_argp = arg+j;
+			best_ce = ce;
+			continue;
 		}
 	}
+
+	if (best_ce)
+		return (run_cmd(tag, op, best_argp, best_ce));
+
 	/* run an unambiguous partial command */
 	if (ce1 != NULL && (ce1->help_str != NULL || num_iss <= 1))
 		return (run_cmd(tag, op, "", ce1));
