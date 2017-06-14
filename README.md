@@ -280,9 +280,8 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
 
  ~~~
  $ sratool
- sra> connect tls:<username>@axa.sie-remote.net,1021
- * HELLO srad version 1.5.1 axa AXA protocol 1
- * OK USER <username> authorized
+ sra> connect ssh:sra-service@sra.sie-remote.net
+ * HELLO srad version 1.5.1 sra AXA protocol 1
  ...
  ~~~
 
@@ -290,23 +289,22 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
 
  ~~~
  $ radtool
- rad> connect tls:<username>@axa.sie-remote.net,1022
- * HELLO radd version 1.5.1 axa AXA protocol 1
- * OK USER <username> authorized
+ rad> connect ssh:rad-service@rad.sie-remote.net
+ * HELLO radd version 1.5.1 rad AXA protocol 1
  ...
  ~~~
 
  **Connecting via sratunnel**
 
  ~~~
- $ sratunnel -s tls:<username>@axa.sie-remote.net,1021 ...
+ $ sratunnel -s 'ssh sra-service@sra.sie-remote.net' ...
  ...
  ~~~
 
  **Connecting via radtunnel**
 
  ~~~
- $ sratunnel -s tls:<username>@axa.sie-remote.net,1022 ...
+ $ radtunnel -s 'ssh rad-service@rad.sie-remote.net' ...
  ...
  ~~~
 
