@@ -214,6 +214,72 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
 
  ~~~
  $ sratool
+ sra> connect tls:user_name@sra.sie-remote.net,1021
+ * HELLO srad version 1.5.1 axa AXA protocol 1
+ * OK USER user_name authorized
+ ...
+ ~~~
+
+ **Connecting via radtool**
+
+ ~~~
+ $ radtool
+ rad> connect tls:user_name@rad.sie-remote.net,1022
+ * HELLO radd version 1.5.1 axa AXA protocol 1
+ * OK USER user_name authorized
+ ...
+ ~~~
+
+ **Connecting via sratunnel**
+
+ ~~~
+ $ sratunnel -s tls:user_name@sra.sie-remote.net,1021 ...
+ ...
+ ~~~
+
+ **Connecting via radtunnel**
+
+ ~~~
+ $ sratunnel -s tls:user_name@rad.sie-remote.net,1022 ...
+ ...
+ ~~~
+
+### Setting up and using AXA SSH
+The AXA SSH transport listens at the following URIs:
+
+ * **SRA**: `sra-service@sra.sie-remote.net`
+ * **RAD**: `rad-service@rad.sie-remote.net`
+
+Both services listen on TCP/22 for standard SSH traffic.
+
+To setup SSH access for SRA and/or RAD, you need to do the following:
+
+ 1. Generate a new SSH authentication key pair with `ssh-keygen`:
+
+	$ ssh-keygen -t rsa -b 4096 -f ~/.ssh/farsight-axa-id_rsa
+	Generating public/private rsa key pair.
+	Enter passphrase (empty for no passphrase):
+	Enter same passphrase again:
+	Your identification has been saved in /home/user/.ssh/farsight-axa-id_rsa.
+	Your public key has been saved in /home/user/.ssh/farsight-axa-id_rsa.pub.
+	The key fingerprint is:
+	SHA256...
+
+ 2. You will need to create or edit your `~/.ssh/config` file to specify the private half of the SSH key pair for the SRA and RAD servers:
+
+	~~~
+	Host sra.sie-remote.net rad.sie-remote.net
+	    IdentityFile ~/.ssh/farsight-axa-id_rsa
+	~~~
+
+ 3. Email your public key (`~/.ssh/farsight-axa-id_rsa.pub`) to your Farsight Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`~/.ssh/farsight-axa-id_rsa`). This is the private half of your generated key pair that you should keep safe. As soon as your account is provisioned you will receive notification from Farsight Security.
+
+ You can connect as per the following:
+
+ **Connecting via sratool**
+
+ ~~~
+ $ sratool
  sra> connect tls:<username>@axa.sie-remote.net,1021
  * HELLO srad version 1.5.1 axa AXA protocol 1
  * OK USER <username> authorized
@@ -243,36 +309,6 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
  $ sratunnel -s tls:<username>@axa.sie-remote.net,1022 ...
  ...
  ~~~
-
-### Setting up AXA SSH
-The AXA SSH transport listens at the following URIs:
-
- * **SRA**: `sra-service@sra.sie-remote.net`
- * **RAD**: `rad-service@rad.sie-remote.net`
-
-Both services listen on TCP/22 for standard SSH traffic.
-
-To setup SSH access for SRA and/or RAD, you need to do the following:
-
- 1. Generate a new SSH authentication key pair with `ssh-keygen`:
-
-	$ ssh-keygen -t rsa -b 4096 -f ~/.ssh/farsight-axa-id_rsa
-	Generating public/private rsa key pair.
-	Enter passphrase (empty for no passphrase):
-	Enter same passphrase again:
-	Your identification has been saved in /home/user/.ssh/farsight-axa-id_rsa.
-	Your public key has been saved in /home/user/.ssh/farsight-axa-id_rsa.pub.
-	The key fingerprint is:
-	SHA256...
-
- 2. You will need to create or edit your `~/.ssh/config` file to specify the private half of the SSH key pair for the SRA and RAD servers:
-
-	~~~
-	Host sra.sie-remote.net rad.sie-remote.net
-	    IdentityFile ~/.ssh/farsight-axa-id_rsa
-	~~~
-
- 3. Email your public key (`~/.ssh/farsight-axa-id_rsa.pub`) to your Farsight Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`~/.ssh/farsight-axa-id_rsa`). This is the private half of your generated key pair that you should keep safe. As soon as your account is provisioned you will receive notification from Farsight Security.
 
 #### AXA Config File Connection Aliases
 AXA supports a subscriber-side configuration file used as a convenience to
