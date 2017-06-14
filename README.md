@@ -124,44 +124,43 @@ The AXA apikey transport listens at the following URIs:
  * **SRA**: `apikey:<your_apikey_here>@axa.sie-remote.net,1023`
  * **RAD**: `apikey:<your_apikey_here>@axa.sie-remote.net,1024`
 
-SRA listens on `TCP/1023` and RAD listens on `TCP/1024` and both transit
-standard TLS data.
+SRA listens on `TCP/1023` and RAD listens on `TCP/1024` and both transit standard TLS data.
 
 You can connect as per the following:
 
 **Connecting via sratool**
 
-~~~
-$ sratool
-sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1023
-* HELLO srad version 1.5.0 axa AXA protocol 1
-* OK USER johndoe authorized
-...
-~~~
+  ~~~
+  $ sratool
+  sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1023
+  * HELLO srad version 1.5.0 axa AXA protocol 1
+  * OK USER johndoe authorized
+  ...
+  ~~~
 
 **Connecting via radtool**
 
-~~~
-$ radtool
-rad> connect apikey:<your_apikey_here>@axa.sie-remote.net,1024
-* HELLO radd version 1.5.0 axa AXA protocol 1
-* OK USER johndoe authorized
-...
-~~~
+  ~~~
+  $ radtool
+  rad> connect apikey:<your_apikey_here>@axa.sie-remote.net,1024
+  * HELLO radd version 1.5.0 axa AXA protocol 1
+  * OK USER johndoe authorized
+  ...
+  ~~~
 
 **Connecting via sratunnel**
 
-~~~
-$ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1023 ...
-...
-~~~
+  ~~~
+  $ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1023 ...
+  ...
+  ~~~
 
 **Connecting via radtunnel**
 
-~~~
-$ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1024 ...
-...
-~~~
+  ~~~
+  $ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1024 ...
+  ...
+  ~~~
 
 
 ### Setting up and using AXA TLS
@@ -208,41 +207,41 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
 
  5. Email your public certificate (`username.pem`) to your Farsight Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`username.key`). This is the private half of your generate key pair that you should keep safe. As soon as your account is provisioned you will receive notification from Farsight Security.
 
- You can connect as per the following:
+You can connect as per the following:
 
- **Connecting via sratool**
+**Connecting via sratool**
 
- ~~~
- $ sratool
- sra> connect tls:user_name@sra.sie-remote.net,1021
- * HELLO srad version 1.5.1 axa AXA protocol 1
- * OK USER user_name authorized
- ...
- ~~~
+   ~~~
+   $ sratool
+   sra> connect tls:user_name@sra.sie-remote.net,1021
+   * HELLO srad version 1.5.1 axa AXA protocol 1
+   * OK USER user_name authorized
+   ...
+   ~~~
 
  **Connecting via radtool**
 
- ~~~
- $ radtool
- rad> connect tls:user_name@rad.sie-remote.net,1022
- * HELLO radd version 1.5.1 axa AXA protocol 1
- * OK USER user_name authorized
- ...
- ~~~
+   ~~~
+   $ radtool
+   rad> connect tls:user_name@rad.sie-remote.net,1022
+   * HELLO radd version 1.5.1 axa AXA protocol 1
+   * OK USER user_name authorized
+   ...
+   ~~~
 
  **Connecting via sratunnel**
 
- ~~~
- $ sratunnel -s tls:user_name@sra.sie-remote.net,1021 ...
- ...
- ~~~
+   ~~~
+   $ sratunnel -s tls:user_name@sra.sie-remote.net,1021 ...
+   ...
+   ~~~
 
  **Connecting via radtunnel**
 
- ~~~
- $ radtunnel -s tls:user_name@rad.sie-remote.net,1022 ...
- ...
- ~~~
+   ~~~
+   $ radtunnel -s tls:user_name@rad.sie-remote.net,1022 ...
+   ...
+   ~~~
 
 ### Setting up and using AXA SSH
 The AXA SSH transport listens at the following URIs:
@@ -274,39 +273,39 @@ To setup SSH access for SRA and/or RAD, you need to do the following:
 
  3. Email your public key (`~/.ssh/farsight-axa-id_rsa.pub`) to your Farsight Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`~/.ssh/farsight-axa-id_rsa`). This is the private half of your generated key pair that you should keep safe. As soon as your account is provisioned you will receive notification from Farsight Security.
 
- You can connect as per the following:
+You can connect as per the following:
 
- **Connecting via sratool**
+**Connecting via sratool**
 
- ~~~
- $ sratool
- sra> connect ssh:sra-service@sra.sie-remote.net
- * HELLO srad version 1.5.1 sra AXA protocol 1
- ...
- ~~~
+   ~~~
+   $ sratool
+   sra> connect ssh:sra-service@sra.sie-remote.net
+   * HELLO srad version 1.5.1 sra AXA protocol 1
+   ...
+   ~~~
 
- **Connecting via radtool**
+**Connecting via radtool**
 
- ~~~
- $ radtool
- rad> connect ssh:rad-service@rad.sie-remote.net
- * HELLO radd version 1.5.1 rad AXA protocol 1
- ...
- ~~~
+   ~~~
+   $ radtool
+   rad> connect ssh:rad-service@rad.sie-remote.net
+   * HELLO radd version 1.5.1 rad AXA protocol 1
+   ...
+   ~~~
 
- **Connecting via sratunnel**
+**Connecting via sratunnel**
 
- ~~~
- $ sratunnel -s 'ssh sra-service@sra.sie-remote.net' ...
- ...
- ~~~
+   ~~~
+   $ sratunnel -s 'ssh sra-service@sra.sie-remote.net' ...
+   ...
+   ~~~
 
- **Connecting via radtunnel**
+**Connecting via radtunnel**
 
- ~~~
- $ radtunnel -s 'ssh rad-service@rad.sie-remote.net' ...
- ...
- ~~~
+   ~~~
+   $ radtunnel -s 'ssh rad-service@rad.sie-remote.net' ...
+   ...
+   ~~~
 
 #### AXA Config File Connection Aliases
 AXA supports a subscriber-side configuration file used as a convenience to
