@@ -164,7 +164,7 @@ $ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1024 ...
 ~~~
 
 
-### Setting up AXA TLS
+### Setting up and using AXA TLS
 The AXA TLS transport listens at the following URIs:
 
  * **SRA**: `tls:user_name@sra.sie-remote.net,1021`
@@ -207,6 +207,42 @@ To setup TLS access for SRA and/or RAD, you need to do the following:
 	~~~
 
  5. Email your public certificate (`username.pem`) to your Farsight Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`username.key`). This is the private half of your generate key pair that you should keep safe. As soon as your account is provisioned you will receive notification from Farsight Security.
+
+ You can connect as per the following:
+
+ **Connecting via sratool**
+
+ ~~~
+ $ sratool
+ sra> connect tls:<username>@axa.sie-remote.net,1021
+ * HELLO srad version 1.5.1 axa AXA protocol 1
+ * OK USER <username> authorized
+ ...
+ ~~~
+
+ **Connecting via radtool**
+
+ ~~~
+ $ radtool
+ rad> connect tls:<username>@axa.sie-remote.net,1022
+ * HELLO radd version 1.5.1 axa AXA protocol 1
+ * OK USER <username> authorized
+ ...
+ ~~~
+
+ **Connecting via sratunnel**
+
+ ~~~
+ $ sratunnel -s tls:<username>@axa.sie-remote.net,1021 ...
+ ...
+ ~~~
+
+ **Connecting via radtunnel**
+
+ ~~~
+ $ sratunnel -s tls:<username>@axa.sie-remote.net,1022 ...
+ ...
+ ~~~
 
 ### Setting up AXA SSH
 The AXA SSH transport listens at the following URIs:
