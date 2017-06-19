@@ -547,6 +547,8 @@ extern bool axa_tls_parse(axa_emsg_t *emsg,
 			  char **cert_filep, char **key_filep, char **addr,
 			  const char *spec);
 
+extern bool axa_apikey_load_and_check_key(axa_emsg_t *emsg,
+			  const char *key_file, const char *cert_file);
 /* Internal functions */
 extern axa_io_result_t axa_tls_start(axa_emsg_t *emsg, axa_io_t *io);
 extern axa_io_result_t axa_apikey_start(axa_emsg_t *emsg, axa_io_t *io);
