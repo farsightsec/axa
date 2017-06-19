@@ -44,6 +44,7 @@ static bool apikey_initialized = false;
 static bool tls_srvr = false;
 static bool apikey_srvr = false;
 static bool tls_threaded = false;
+static bool apikey_threaded = false;
 static bool tls_cleaned = false;
 static bool apikey_cleaned = false;
 static pthread_t init_id;
@@ -495,7 +496,7 @@ axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 
 	if (apikey_initialized) {
 		/* Require consistency. */
-		AXA_ASSERT(apikey_srvr == srvr && tls_threaded == threaded);
+		AXA_ASSERT(apikey_srvr == srvr && apikey_threaded == threaded);
 
 		/*
 		 * Check that every initialization is just as threaded.
@@ -503,7 +504,7 @@ axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 		 * callers of this, because libaxa uses libnmsg which uses
 		 * pthreads.
 		 */
-		if (!tls_threaded)
+		if (!apikey_threaded)
 			AXA_ASSERT(pthread_self() == apikey_init_id);
 
 		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
@@ -512,7 +513,7 @@ axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 
 	apikey_initialized = true;
 	apikey_srvr = srvr;
-	tls_threaded = threaded;
+	apikey_threaded = threaded;
 	apikey_init_id = pthread_self();
 
 	SSL_library_init();
@@ -525,7 +526,7 @@ axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 	/*
 	 * Turn on OpenSSL threading if needed.
 	 */
-	if (tls_threaded) {
+	if (apikey_threaded) {
 		/* static locks */
 		CRYPTO_set_id_callback(id_function);
 		num_locks = CRYPTO_num_locks();
