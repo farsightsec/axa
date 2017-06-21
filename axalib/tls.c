@@ -1033,6 +1033,44 @@ axa_tls_start(axa_emsg_t *emsg, axa_io_t *io)
 	return (AXA_IO_OK);
 }
 
+bool
+axa_apikey_load_and_check_key(axa_emsg_t *emsg, const char *key_file,
+		const char *cert_file) {
+	/* Apparently the following functions are either not
+	 * thread-safe or not idempotent, or both. Calling
+	 * them for each new apikey session appeared to race
+	 * with other threads and resulted in spurious crashes
+	 * when apikey sessions would arrive "concurrently".
+	 *
+	 * The solution appears to be calling them once when
+	 * the first apikey session shows up. This should be called after
+	 * axa_apikey_init() successfully completes.
+	 */
+	if (!apikey_srvr)
+		return (false);
+
+	if (0 >= SSL_CTX_use_PrivateKey_file(apikey_ssl_ctx, key_file,
+				SSL_FILETYPE_PEM)) {
+		q_pemsg(emsg, "SSL_use_PrivateKey_file(%s)", key_file);
+		return (false);
+	}
+
+	if (0 >= SSL_CTX_use_certificate_chain_file(apikey_ssl_ctx,
+				cert_file)) {
+		q_pemsg(emsg, "SSL_CTX_use_certificate_chain_file(%s)",
+				cert_file);
+		return (false);
+	}
+
+	if (0 >= SSL_CTX_check_private_key(apikey_ssl_ctx)) {
+		q_pemsg(emsg, "SSL_check_private_key(%s %s)", cert_file,
+				key_file);
+		return (false);
+	}
+
+	return (true);
+}
+
 /* Initialize per-connection OpenSSL data and complete the TLS handshake. */
 axa_io_result_t
 axa_apikey_start(axa_emsg_t *emsg, axa_io_t *io)
@@ -1051,30 +1089,6 @@ axa_apikey_start(axa_emsg_t *emsg, axa_io_t *io)
 
 		ERR_clear_error();
 
-		if (apikey_srvr) {
-			if (0 >= SSL_CTX_use_PrivateKey_file(apikey_ssl_ctx,
-						io->key_file,
-						SSL_FILETYPE_PEM)) {
-				q_pemsg(emsg, "SSL_use_PrivateKey_file(%s)",
-					io->key_file);
-				return (AXA_IO_ERR);
-			}
-
-			if (0 >= SSL_CTX_use_certificate_chain_file(
-						apikey_ssl_ctx,
-						io->cert_file)) {
-				q_pemsg(emsg,
-				"SSL_CTX_use_certificate_chain_file(%s)",
-				io->cert_file);
-				return (AXA_IO_ERR);
-			}
-
-			if (0 >= SSL_CTX_check_private_key(apikey_ssl_ctx)) {
-				q_pemsg(emsg, "SSL_check_private_key(%s %s)",
-					io->cert_file, io->key_file);
-				return (AXA_IO_ERR);
-			}
-		}
 		io->ssl = SSL_new(apikey_ssl_ctx);
 		if (io->ssl == NULL) {
 			q_pemsg(emsg, "SSL_new()");
