@@ -296,14 +296,14 @@ You can connect as per the following:
 **Connecting via sratunnel**
 
    ~~~
-   $ sratunnel -s 'ssh sra-service@sra.sie-remote.net' ...
+   $ sratunnel -s 'ssh:sra-service@sra.sie-remote.net' ...
    ...
    ~~~
 
 **Connecting via radtunnel**
 
    ~~~
-   $ radtunnel -s 'ssh rad-service@rad.sie-remote.net' ...
+   $ radtunnel -s 'ssh:rad-service@rad.sie-remote.net' ...
    ...
    ~~~
 
@@ -542,9 +542,9 @@ Values that originate in SRA or RAD servers such as message lengths use little e
 
 The stream protocols below the AXA protocol are responsible for authentication and authorization. An AXA client and server pair on a computer can use unadorned TCP through the loop-back interface or use a UNIX domain socket. The AXA protocol assumes this is safe.
 
-Between separate computers, the AXA protocol can use UNIX pipes to the `stdin` and `stdout` streams provided by the ssh command or the functions of an SSH library such as `libssh2` (SSH must identify and authenticate the client and server to each other) or the TLS library.
+Between separate computers, the AXA protocol can use UNIX pipes to the `stdin` and `stdout` streams provided by the `ssh` command or the functions of an SSH library such as `libssh2` (SSH must identify and authenticate the client and server to each other) or the TLS library.
 
-The AXA client starts by waiting for an `AXA_P_OP_HELLO` message from the server. Over a local stream, the client then sends an `AXA_P_OP_USER` message to tell the server which parameters to use. When `ssh` is used, the user name is provided through the SSH protocol.
+The AXA client starts by waiting for an `AXA_P_OP_HELLO` message from the server. Over a local stream, the client then sends an `AXA_P_OP_USER` message to tell the server which parameters to use. When SSH is used, the user name is provided through the SSH protocol.
 
 ### AXA message header
 
