@@ -119,5 +119,8 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 		}
 	}
 
+	/* unbuffer all nmsg outputs */
+	nmsg_output_set_buffered(*out_nmsg_output, false);
+
 	return (1);
 }
