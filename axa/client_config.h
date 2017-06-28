@@ -53,9 +53,13 @@ void axa_unload_client_config(void);
 /**
  *  Load client config.
  *
+ *  \param[out] emsg error message if something went wrong
  *  \param[in] config_file0 canonical name of config file
+ *
+ *  \retval true if file was successfully opened and parsed
+ *  \retval false if there was an error, emsg will contain the reason
  */
-void axa_load_client_config(const char *config_file0);
+bool axa_load_client_config(axa_emsg_t *emsg, const char *config_file0);
 
 /**
  *  Check for a connection alias.
