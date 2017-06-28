@@ -32,7 +32,8 @@
 #include <nmsg.h>
 
 /**
- *  Open an output NMSG stream for output or forwarding by sratunnel or sratool.
+ *  Open an output nmsg stream for output or forwarding by sratunnel or
+ *  sratool. Note that all nmsg output objects are unbuffered.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[out] out_nmsg_output nmsg_output_t of the newly opened NMSG
