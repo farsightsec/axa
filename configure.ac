@@ -76,6 +76,7 @@ if test "x$with_yajl" != "xno"; then
 else
 	use_yajl="false"
 fi
+AM_CONDITIONAL([HAVE_YAJL], [test "$use_yajl" = "true"])
 
 PKG_CHECK_MODULES([check], [check >= 0.10.0],
 		[CHECK_MOD_MSG="yes"], [CHECK_MOD_MSG="no"])
