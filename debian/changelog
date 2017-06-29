@@ -1,3 +1,13 @@
+axa (1.6.0) unstable; urgency=low
+
+  * Fix make check Clang compiler warnings
+  * Fix small bugs in apikey transport
+  * Fix sratool/radtool command completion bug
+  * Add axa_apikey_load_and_check_key()
+  * Update README (additional examples)
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 29 Jun 2017 01:54:44 +0000
+
 axa (1.5.1-1) unstable; urgency=low
 
   * Fix Clang compiler warnings
