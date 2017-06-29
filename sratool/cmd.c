@@ -865,7 +865,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		if (num_help == 1)
 			help_usage_print(usage_ce);
 		return (1);
-	} else if (strlen(arg)) {
+	} else if (arg && strlen(arg)) {
 		printf("No matching help topic could be found\n");
 		return (1);
 	}
