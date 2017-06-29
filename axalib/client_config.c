@@ -17,6 +17,7 @@
  */
 
 #include <config.h>
+#include <axa/axa.h>
 #include <axa/client_config.h>
 
 #include <stdlib.h>
@@ -114,15 +115,17 @@ _config_entry_parse(const char *line0)
 /*
  * Read AXA client config file.
  */
-void
-axa_load_client_config(const char *config_file0)
+bool
+axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
 {
 	FILE *f;
 	char line_buf[1024], *p, *config_file;
 	uint line_num;
 	size_t line_buf_size;
 	const char *line0;
+	bool retval;
 
+	retval = true;
 	axa_unload_client_config();
 
 	/*
@@ -142,23 +145,24 @@ axa_load_client_config(const char *config_file0)
 		}
 	}
 	if (f == NULL) {
-		axa_error_msg("cannot open \"%s\": %s",
+		axa_pemsg(emsg, "cannot open \"%s\": %s",
 			      config_file, strerror(errno));
 		free(config_file);
-		return;
+		return (false);
 	}
 
 	/* alias section */
 	if (regcomp(&alias_re, alias_re_s, REG_EXTENDED | REG_NOSUB) != 0) {
-		axa_error_msg("invalid alias regex \"%s\"", alias_re_s);
+		axa_pemsg(emsg, "invalid alias regex \"%s\"", alias_re_s);
+		retval = false;
 		goto done;
 	}
 
 	p = line_buf;
 	line_buf_size = sizeof(line_buf);
 	line_num = 0;
-	/* Parse config file, line by line. A parsing error will throw an
-	 * error message and control will continue to the next line. */
+	/* Parse config file, line by line. A parsing error will generate an
+	 * error message and quit the parser. */
 	for (;;) {
 		line0 = axa_fgetln(f, config_file, &line_num, &p,
 				&line_buf_size);
@@ -168,16 +172,19 @@ axa_load_client_config(const char *config_file0)
 		}
 
 		if (_config_entry_parse(line0) == false) {
-			axa_error_msg("invalid \"%s\" in line %d of"
+			axa_pemsg(emsg, "invalid \"%s\" in line %d of"
 					"\"%s\"", line0, line_num,
 					config_file);
-			continue;
+			retval = false;
+			goto done;
 		}
 	}
 done:
 	regfree(&alias_re);
 	free(config_file);
 	fclose(f);
+
+	return (retval);
 }
 
 const char *

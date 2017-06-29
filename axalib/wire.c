@@ -1699,7 +1699,20 @@ axa_io_close(axa_io_t *io)
 {
 	int wstatus;
 
-	axa_tls_stop(io);
+	switch (io->type) {
+		case AXA_IO_TYPE_APIKEY:
+			axa_apikey_stop(io);
+			break;
+		case AXA_IO_TYPE_TLS:
+			axa_tls_stop(io);
+			break;
+		case AXA_IO_TYPE_UNIX:
+		case AXA_IO_TYPE_UNKN:
+		case AXA_IO_TYPE_SSH:
+		case AXA_IO_TYPE_TCP:
+		default:
+			break;
+	}
 
 	if (io->i_fd >= 0 && io->i_fd != io->o_fd)
 		ck_close(io->i_fd, "io->i_fd");

@@ -410,7 +410,7 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 	p = strpbrk(addr, AXA_WHITESPACE":");
 	if (p == NULL) {
 		axa_pemsg(emsg,
-			"invalid AXA transport protocol or alias \"%s\"",
+			"missing AXA transport delimiter in \"%s\"",
 			addr);
 		axa_client_backoff_max(client);
 		return (AXA_CONNECT_ERR);

@@ -622,9 +622,9 @@ run_cmd(axa_tag_t tag, const char *op, const char *arg,
 static bool				/* true=ok false=bad command */
 cmd(axa_tag_t tag, const char *op)
 {
-	const char *arg;
+	const char *arg, *best_argp = NULL;
 	int j;
-	const cmd_tbl_entry_t *ce, *ce1;
+	const cmd_tbl_entry_t *ce, *ce1, *best_ce = NULL;
 	bool iss;
 	int num_iss;
 
@@ -680,9 +680,21 @@ cmd(axa_tag_t tag, const char *op)
 				error_help_cmd(tag, op);
 				return (false);
 			}
-			return (run_cmd(tag, op, arg+j, ce));
+
+			if (best_ce) {
+				error_help_cmd(tag, op);
+				return (false);
+			}
+
+			best_argp = arg+j;
+			best_ce = ce;
+			continue;
 		}
 	}
+
+	if (best_ce)
+		return (run_cmd(tag, op, best_argp, best_ce));
+
 	/* run an unambiguous partial command */
 	if (ce1 != NULL && (ce1->help_str != NULL || num_iss <= 1))
 		return (run_cmd(tag, op, "", ce1));
@@ -812,7 +824,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		}
 	}
 	/* If we found something, show it */
-	if (found >= 0) {
+	if (found > 0) {
 		help_ce = NULL;
 		usage_ce = NULL;
 		num_help = 0;
@@ -852,6 +864,9 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		}
 		if (num_help == 1)
 			help_usage_print(usage_ce);
+		return (1);
+	} else if (arg && strlen(arg)) {
+		printf("No matching help topic could be found\n");
 		return (1);
 	}
 

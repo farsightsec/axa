@@ -285,7 +285,10 @@ main(int argc, char **argv)
 		}
 	}
 
-	axa_load_client_config(config_file);
+	if (!axa_load_client_config(&emsg, config_file)) {
+		if (axa_debug != 0)
+			axa_error_msg("%s", emsg.c);
+	}
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, sigterm);

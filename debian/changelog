@@ -1,3 +1,18 @@
+axa (1.6.0-1) unstable; urgency=low
+
+  * Fix make check Clang compiler warnings
+  * Fix small bugs in apikey transport
+  * Fix sratool/radtool command completion bug
+  * Fix sratool/radtool overzealous help bug
+  * Fix `make check` when building without yajl
+  * Add axa_apikey_load_and_check_key()
+  * Update README (additional examples)
+  * Remove configure option to select compile-time list of available ciphers
+  * Make config file errors emitted according to axa_debug level
+  * Make nmsg file and udp output objects unbuffered
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 29 Jun 2017 18:10:44 +0000
+
 axa (1.5.1-1) unstable; urgency=low
 
   * Fix Clang compiler warnings

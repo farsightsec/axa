@@ -1,5 +1,5 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.5.1])
+AC_INIT([axa], [1.6.0])
 PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
 AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
@@ -76,6 +76,7 @@ if test "x$with_yajl" != "xno"; then
 else
 	use_yajl="false"
 fi
+AM_CONDITIONAL([HAVE_YAJL], [test "$use_yajl" = "true"])
 
 PKG_CHECK_MODULES([check], [check >= 0.10.0],
 		[CHECK_MOD_MSG="yes"], [CHECK_MOD_MSG="no"])
@@ -127,12 +128,6 @@ AC_CONFIG_FILES([cert_tools/axa_make_cert],
 AC_CONFIG_FILES([cert_tools/axa_server_cert],
 		[chmod +x cert_tools/axa_server_cert])
 
-AC_ARG_WITH([ciphers],
-AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),
-[TLS_CIPHERS="$withval"],[TLS_CIPHERS="ALL"])
-AC_DEFINE_UNQUOTED(TLS_CIPHERS,"$TLS_CIPHERS",[TLS cipher list])
-
-
 AC_OUTPUT
 AC_MSG_RESULT([
     $PACKAGE $VERSION
@@ -150,7 +145,6 @@ AC_MSG_RESULT([
 
         building html docs:     ${DOC_HTML_MSG}
 
-	TLS ciphers:		$TLS_CIPHERS
 	yajl support:           ${use_yajl}
 	make check available:   ${CHECK_MOD_MSG}
 ])
