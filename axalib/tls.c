@@ -32,7 +32,7 @@
 
 static char *certs_dir = NULL;
 
-static char cipher_list0[] = TLS_CIPHERS;
+static char cipher_list0[] = "ALL";
 static char *cipher_list = cipher_list0;
 
 /* All apikey related TLS data and functions are in the 'axa_apikey_'

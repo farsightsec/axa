@@ -127,12 +127,6 @@ AC_CONFIG_FILES([cert_tools/axa_make_cert],
 AC_CONFIG_FILES([cert_tools/axa_server_cert],
 		[chmod +x cert_tools/axa_server_cert])
 
-AC_ARG_WITH([ciphers],
-AS_HELP_STRING([--with-ciphers=list], [TLS cipher list]),
-[TLS_CIPHERS="$withval"],[TLS_CIPHERS="ALL"])
-AC_DEFINE_UNQUOTED(TLS_CIPHERS,"$TLS_CIPHERS",[TLS cipher list])
-
-
 AC_OUTPUT
 AC_MSG_RESULT([
     $PACKAGE $VERSION
@@ -150,7 +144,6 @@ AC_MSG_RESULT([
 
         building html docs:     ${DOC_HTML_MSG}
 
-	TLS ciphers:		$TLS_CIPHERS
 	yajl support:           ${use_yajl}
 	make check available:   ${CHECK_MOD_MSG}
 ])
