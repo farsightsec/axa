@@ -24,7 +24,7 @@ START_TEST(test_load_client_config)
 	p = getenv("top_srcdir");
 	ck_assert_ptr_ne(p, NULL);
 
-	n = strlcpy(buf, p, sizeof (buf));
+	strlcpy(buf, p, sizeof (buf));
 	n = strlen(buf);
 	strlcpy(buf + n, "/tests/test-config", sizeof (buf) - n);
 	ck_assert(axa_load_client_config(&emsg, buf));
