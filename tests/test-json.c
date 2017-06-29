@@ -370,7 +370,11 @@ START_TEST(test_watch_ip4)
 	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
-	fail_unless(inet_aton("12.34.56.0", &(watch.pat.addr)));
+	struct in_addr addr;
+
+	ck_assert(inet_aton("12.34.56.0", &addr));
+	watch.pat.addr.s_addr = addr.s_addr;
+
 	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
@@ -399,7 +403,11 @@ START_TEST(test_watch_ip4_overflow)
 	char *out = NULL;
 	axa_json_res_t res;
 	axa_emsg_t emsg;
-	fail_unless(inet_aton("12.34.56.78", &(watch.pat.addr)));
+	struct in_addr addr;
+
+	ck_assert(inet_aton("12.34.56.78", &addr));
+	watch.pat.addr.s_addr = addr.s_addr;
+
 	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_FAILURE);
 	ck_assert_ptr_eq(out, NULL);
@@ -416,7 +424,25 @@ START_TEST(test_watch_ip6)
 	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), 1, AXA_P_PVERS, AXA_P_OP_WATCH };
 	char *out = NULL;
 	axa_json_res_t res;
-	fail_unless(inet_pton(AF_INET6, "1:2:3:4:5:6::", &(watch.pat.addr6)));
+	struct in6_addr addr6;
+
+	ck_assert(inet_pton(AF_INET6, "1:2:3:4:5:6::", &addr6));
+	watch.pat.addr6.s6_addr[0] = addr6.s6_addr[0];
+	watch.pat.addr6.s6_addr[1] = addr6.s6_addr[1];
+	watch.pat.addr6.s6_addr[2] = addr6.s6_addr[2];
+	watch.pat.addr6.s6_addr[3] = addr6.s6_addr[3];
+	watch.pat.addr6.s6_addr[4] = addr6.s6_addr[4];
+	watch.pat.addr6.s6_addr[5] = addr6.s6_addr[5];
+	watch.pat.addr6.s6_addr[6] = addr6.s6_addr[6];
+	watch.pat.addr6.s6_addr[7] = addr6.s6_addr[7];
+	watch.pat.addr6.s6_addr[8] = addr6.s6_addr[8];
+	watch.pat.addr6.s6_addr[9] = addr6.s6_addr[9];
+	watch.pat.addr6.s6_addr[10] = addr6.s6_addr[10];
+	watch.pat.addr6.s6_addr[11] = addr6.s6_addr[11];
+	watch.pat.addr6.s6_addr[12] = addr6.s6_addr[12];
+	watch.pat.addr6.s6_addr[13] = addr6.s6_addr[13];
+	watch.pat.addr6.s6_addr[14] = addr6.s6_addr[14];
+	watch.pat.addr6.s6_addr[15] = addr6.s6_addr[15];
 	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t*)&watch, watch_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
@@ -620,7 +646,10 @@ START_TEST(test_wlist)
 	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + wlist_len), 1, AXA_P_PVERS, AXA_P_OP_WLIST };
 	char *out = NULL;
 	axa_json_res_t res;
-	fail_unless(inet_aton("12.34.56.0", &(wlist.w.pat.addr)));
+	struct in_addr addr;
+
+	ck_assert(inet_aton("12.34.56.0", &addr));
+	wlist.w.pat.addr.s_addr = addr.s_addr;
 	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t*)&wlist, wlist_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
