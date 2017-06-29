@@ -65,7 +65,6 @@ nmsg_input_t nmsg_input;
 	ck_assert_ptr_eq(out, NULL); \
 } while (0)
 
-#if HAVE_YAJL
 START_TEST(test_nop)
 {
 	empty_test(AXA_P_OP_NOP, "NOP");
@@ -1092,7 +1091,6 @@ START_TEST(test_mgmt_killrsp)
 	free(out);
 }
 END_TEST
-#endif /* HAVE_YAJL */
 
 int main(void) {
 	int number_failed;
@@ -1110,7 +1108,6 @@ int main(void) {
 
 	s = suite_create("axa_json");
 	tc_core = tcase_create("core");
-#if HAVE_YAJL
 	tcase_add_test(tc_core, test_nop);
 	tcase_add_test(tc_core, test_hello);
 	tcase_add_test(tc_core, test_hello_empty);
@@ -1186,7 +1183,6 @@ int main(void) {
 	tcase_add_test(tc_core, test_mgmt_getrsp_trunc);
 	tcase_add_test(tc_core, test_mgmt_kill);
 	tcase_add_test(tc_core, test_mgmt_killrsp);
-#endif
 	suite_add_tcase(s, tc_core);
 
 	sr = srunner_create(s);

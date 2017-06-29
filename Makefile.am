@@ -296,12 +296,13 @@ spotless: distclean
 ##
 #
 
-
+if HAVE_YAJL
 TESTS += tests/test-json
 check_PROGRAMS += tests/test-json
 tests_test_json_SOURCES = tests/test-json.c
 tests_test_json_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
 tests_test_json_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
+endif
 
 TESTS += tests/test-apikey
 check_PROGRAMS += tests/test-apikey
