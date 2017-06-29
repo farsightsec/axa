@@ -1,4 +1,4 @@
-axa (1.6.0) unstable; urgency=low
+axa (1.6.0-1) unstable; urgency=low
 
   * Fix make check Clang compiler warnings
   * Fix small bugs in apikey transport
