@@ -238,10 +238,14 @@ ck_certs_dir(axa_emsg_t *emsg, char *dir)
 
 	/* Tell the SSL library about the new directory only when it
 	 * knows about the previous directory. */
-	if (ssl_ctx != NULL
-	    && 0 >= SSL_CTX_load_verify_locations(ssl_ctx, NULL, certs_dir)) {
+	if (ssl_ctx != NULL) {
+	    if (0 >= SSL_CTX_load_verify_locations(ssl_ctx, NULL, certs_dir)) {
 		q_pemsg(emsg, "SSL_CTX_load_verify_locations(%s)", certs_dir);
-		return (NULL);
+		return (false);
+	    } else if (0 >= SSL_CTX_set_default_verify_paths(ssl_ctx)) {
+		q_pemsg(emsg, "SSL_CTX_set_default_verify_paths()");
+		return (false);
+	    }
 	}
 
 	return (true);
