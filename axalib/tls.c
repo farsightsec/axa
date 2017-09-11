@@ -452,10 +452,6 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 			   | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
 			   NULL);
 
-	/* Require self-signed certificates from clients. */
-	if (!srvr)
-		SSL_CTX_set_verify_depth(ssl_ctx, 0);
-
 	/*
 	 * Is SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3 needed?
 	 */
