@@ -117,7 +117,11 @@ io_wait(bool cmds_ok,			/* false=waiting for connect */
 			ms = (AXA_KEEPALIVE_MS
 			      - axa_elapsed_ms(&now, &client.io.alive));
 			if (ms <= 0) {
-				srvr_send(AXA_TAG_NONE, AXA_P_OP_NOP, NULL, 0);
+				/* nothing to do here if srvr_send() fails, we
+				 * just hope it was ephemeral and do our
+				 * backoff and retry thing */
+				(void) srvr_send(AXA_TAG_NONE, AXA_P_OP_NOP,
+						NULL, 0);
 				continue;
 			}
 			if (poll_ms > ms)

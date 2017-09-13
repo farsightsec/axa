@@ -356,7 +356,9 @@ main(int argc, char **argv)
 		if (acct_interval) {
 			gettimeofday(&now, NULL);
 			if (now.tv_sec - acct_timer.tv_sec >= acct_interval) {
-				srvr_send(1, AXA_P_OP_ACCT, NULL, 0);
+				if (!srvr_send(1, AXA_P_OP_ACCT, NULL, 0)) {
+					continue;
+				}
 				acct_timer.tv_sec = now.tv_sec;
 			}
 		}
@@ -376,7 +378,10 @@ main(int argc, char **argv)
 		case AXA_IO_BUSY:
 			break;
 		case AXA_IO_KEEPALIVE:
-			srvr_send(AXA_TAG_NONE, AXA_P_OP_NOP, NULL, 0);
+			/* nothing to do here if srvr_send() fails, we just
+			 * hope it was ephemeral and do our backoff and retry
+			 * thing */
+			(void) srvr_send(AXA_TAG_NONE, AXA_P_OP_NOP, NULL, 0);
 			continue;
 		case AXA_IO_OK:
 			/* Process a message from the server. */
