@@ -441,7 +441,7 @@ void print_status(void)
                 printf("NOT-");
         printf("connected, ");
 
-        // print with the proper pluralization
+        /* print with the proper pluralization */
         printf("sent %lu message%s, received %lu message%s, %lu hit%s\n",
                count_messages_sent, count_messages_sent != 1 ? "s" : "",
                count_messages_rcvd, count_messages_rcvd != 1 ? "s" : "",

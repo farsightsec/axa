@@ -29,10 +29,10 @@ sigterm(int sig)
 	signal(sig, SIG_DFL);		/* quit early on repeated signals */
 }
 
-#ifdef SIGINFO
 /* global */
 int give_status;		 /* != 0 when should print status */
 
+#ifdef SIGINFO
 void
 siginfo(int __attribute__((__unused__)) sig)
 {
