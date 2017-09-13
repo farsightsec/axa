@@ -21,6 +21,7 @@
 /* extern: main.c */
 extern uint axa_debug;
 extern int trace;
+extern unsigned long count_messages_sent;
 extern bool first_time;
 extern const char *srvr_addr;
 extern axa_mode_t mode;
@@ -48,6 +49,7 @@ srvr_send(axa_tag_t tag, axa_p_op_t op, const void *body, size_t body_len)
 	axa_emsg_t emsg;
 
 	if (axa_client_send(&emsg, &client, tag, op, &hdr, body, body_len)) {
+                ++count_messages_sent;
 		print_op(false, true, &hdr, body);
 		return (true);
 	}

@@ -20,6 +20,8 @@
 
 /* extern: main.c */
 extern int count;
+extern unsigned long count_messages_rcvd;
+extern unsigned long count_hits;
 extern bool counting;
 extern uint axa_debug;
 extern int initial_count;
@@ -92,6 +94,8 @@ forward(void)
 		AXA_FAIL("impossible axa_recv_buf() result");
 	}
 
+        ++count_messages_rcvd;
+
 	switch ((axa_p_op_t)client.io.recv_hdr.op) {
 	case AXA_P_OP_NOP:
 		print_op(false, false,
@@ -111,6 +115,7 @@ forward(void)
 	case AXA_P_OP_WHIT:
 		print_op(false, false,
 			 &client.io.recv_hdr, client.io.recv_body);
+                ++count_hits;
 		forward_hit(&client.io.recv_body->whit,
 			    client.io.recv_body_len
 			    - sizeof(client.io.recv_hdr));
@@ -119,6 +124,7 @@ forward(void)
 	case AXA_P_OP_AHIT:
 		print_op(false, false,
 			 &client.io.recv_hdr, client.io.recv_body);
+                ++count_hits;
 		forward_hit(&client.io.recv_body->ahit.whit,
 			    client.io.recv_body_len
 			    - sizeof(client.io.recv_hdr)

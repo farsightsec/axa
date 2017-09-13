@@ -87,4 +87,8 @@ bool srvr_send(axa_tag_t tag, axa_p_op_t op, const void *b, size_t b_len);
 /* signal.c */
 void sigterm(int sig);
 
+#ifdef SIGINFO
+void siginfo(int);
+#endif
+
 #endif /* SRATUNNEL_H */
