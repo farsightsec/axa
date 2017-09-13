@@ -27,10 +27,14 @@ extern axa_client_t client;
 
 /* extern signal.c */
 extern int terminated;
+extern int give_status;
 
 /* global */
 uint axa_debug;				/* debug level */
 int count;				/* limit to this many */
+unsigned long count_messages_sent = 0;  /* how many messages we have sent */
+unsigned long count_messages_rcvd = 0;  /* how many messages we have received */
+unsigned long count_hits = 0;           /* how many hits received */
 int trace = 0;				/* server-side trace level */
 int initial_count;			/* initial count */
 bool counting = false;			/* true == limiting packets to count */
@@ -52,6 +56,8 @@ static bool version;
 static struct timeval time_out_flush;
 static uint acct_interval;
 static struct timeval acct_timer;
+
+void print_status(void);
 
 static void AXA_NORETURN AXA_PF(1,2)
 usage(const char *msg, ...)
@@ -297,7 +303,9 @@ main(int argc, char **argv)
 #ifdef SIGXFSZ
 	signal(SIGXFSZ, SIG_IGN);
 #endif
-
+#ifdef SIGINFO
+        signal(SIGINFO, siginfo);
+#endif
 	if (!out_open())
 		exit(EX_IOERR);
 
@@ -324,6 +332,10 @@ main(int argc, char **argv)
 	for (;;) {
 		if (terminated != 0)
 			stop(terminated);
+                if (give_status != 0) {
+                        give_status = 0;
+                        print_status();
+                }
 
 		/* (Re)connect to the server if it is time. */
 		if (!AXA_CLIENT_CONNECTED(&client)) {
@@ -421,3 +433,19 @@ stop(int s)
 					strerror(errno));
 	exit(s);
 }
+
+void print_status(void)
+{
+        printf("%s ", mode == SRA ? "sra" : "rad");
+        if (!AXA_CLIENT_CONNECTED(&client))
+                printf("NOT-");
+        printf("connected, ");
+
+        // print with the proper pluralization
+        printf("sent %lu message%s, received %lu message%s, %lu hit%s\n",
+               count_messages_sent, count_messages_sent != 1 ? "s" : "",
+               count_messages_rcvd, count_messages_rcvd != 1 ? "s" : "",
+               count_hits, count_hits != 1 ? "s" : "");
+}
+
+

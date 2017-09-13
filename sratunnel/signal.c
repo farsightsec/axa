@@ -28,3 +28,14 @@ sigterm(int sig)
 
 	signal(sig, SIG_DFL);		/* quit early on repeated signals */
 }
+
+#ifdef SIGINFO
+/* global */
+int give_status;		 /* != 0 when should print status */
+
+void
+siginfo(int __attribute__((__unused__)) sig)
+{
+        give_status = 1;         /* print out some status in response to ^T */
+}
+#endif
