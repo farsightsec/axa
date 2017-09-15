@@ -220,36 +220,35 @@ default,
 .Pa ~/.axa
 or
 .Pa @CONFDIR@ .
-.Sh SIGNALs
-Some operating systems support a signal named \fBSIGINFO\fP, in
-particular, macOS and the BSD variants, but not Linux.  In those OSs,
-by default, typing control-T in a terminal will send signal
-\fBSIGINFO\fP to the top-level running process.  This program will
-report its status on the tty (terminal):
+.Sh SIGNALS
+On operating systems that support \fBSIGINFO\fP (including BSDish systems like
+FreeBSD and OS X), the user can type
+"ctrl-t" at the command line during a running
+.Nm
+process and get information about the session. For example:
 .Bd -literal -offset 4n
 \fB^T\fPsra connected, sent 4 messages, received 176 messages, 176 hits
 
 .Ed
 Note that by default, an additional line of information is printed by
-the kernel (load:...):
+the kernel (system load and process information):
 .Bd -literal -offset 4n
 \fB^T\fPload: 1.39  cmd: sratunnel 7060 running 0.06u 0.00s
 sra connected, sent 4 messages, received 304 messages, 304 hits
 
 .Ed
-To disable that other info, use: \fIstty nokerninfo\fP. Example:
+This can be disabled via: \fIstty nokerninfo\fP. Example:
 .Bd -literal -offset 4n
-$ sratunnel -A 10 -d -s sra-apikey ....
-connecting to sra-apike....23
+$ sratunnel -A 10 -d -s sra-apikey...
+connecting to sra-apikey...
 \fB^T\fPload: 1.39  cmd: sratunnel 7060 running 0.06u 0.00s
 sra connected, sent 4 messages, received 304 messages, 304 hits
 ^C
 $ stty nokerninfo
-$ sratunnel -A 10 -d -s sra-apikey -...
-connecting to sra-apike....23
+$ sratunnel -A 10 -d -s sra-apikey...
+connecting to sra-apikey...
 \fB^T\fPsra connected, sent 4 messages, received 176 messages, 176 hits
 \fB^T\fPsra connected, sent 4 messages, received 416 messages, 416 hits
-
 .Ed
 .Sh SEE ALSO
 .Xr radtunnel 1 ,
