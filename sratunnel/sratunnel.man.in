@@ -222,7 +222,7 @@ or
 .Pa @CONFDIR@ .
 .Sh SIGNALS
 On operating systems that support \fBSIGINFO\fP (including BSDish systems like
-FreeBSD and OS X), the user can type
+FreeBSD and macOS), the user can type
 "ctrl-t" at the command line during a running
 .Nm
 process and get information about the session. For example:
