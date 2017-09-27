@@ -41,8 +41,11 @@ echo | $TOOL -c $DATADIR/002100-unrecognized-command 2>&1 | grep 'unrecognized c
 echo 002110 test -c to read unrecognized command should fail with no output to stdout
 echo | $TOOL -c $DATADIR/002100-unrecognized-command | grep 'unrecognized command "thisdoesnotexist"' && exit 1
 
-echo 002200 test -c to read unrecognized command after good commands should run the commands until failure
+echo 002200 test -c to read unrecognized command after good commands should run the commands until that failure
 echo | $TOOL -c $DATADIR/002200-valid-then-unrecognized-command 2>&1| grep -3 "radtool version" | grep 'unrecognized command "this is not valid"'
+
+echo 002210 test -c to read unrecognized command after good commands should run commands before, but none after a failure
+echo | $TOOL -c $DATADIR/002210-valid-before-and-after-unrecognized-command 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
 
 echo 002300 test -c to read non-existent file should fail
 echo | $TOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*failed"
@@ -52,9 +55,15 @@ echo | $TOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*faile
 echo 003000 using source command without argument should fail
 echo "rad ; source" | $TOOL | grep "source filename"
 
-echo 003100 using source command without argument should fail and next command not run
+echo 003100 using source command without argument should fail and next command on same line should not run
 echo "rad ; source /dev/null ; mode" | $TOOL | grep "RAD mode"
 echo "rad ; source ; mode" | $TOOL | grep -2 "source filename" | grep "RAD mode" && exit 1
+
+echo 003200 using source command to read unrecognized command after good commands should run commands before, but none after the failure
+echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command" | $TOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
+
+echo 003210 using source command to read unrecognized command after good commands should run commands before, but none after the failure in the sourced file, but will still run next command on the same command line
+echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command ; debug off" | $TOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep -3 "debug off" | grep -3 "radtool version" && exit 1
 
 echo 004000 use source command to read single command
 echo "rad ; source $DATADIR/001000-single-command" | $TOOL | grep "radtool version"
@@ -83,6 +92,10 @@ echo 008000 pipe in multiple commands on separate lines
 echo 009000 pipe in multiple commands on separate lines, including multiple commands on single lines
 { echo "rad ; verbose" ;
   echo "version ; mode" ; } | $TOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+
+echo 002210 test -c to read unrecognized command after good commands should run commands before, but none after a failure
+echo 009100 pipe in multiple commands on separate lines, with an unrecognized command should run commands before, but not after the failure
+cat $DATADIR/002210-valid-before-and-after-unrecognized-command | $TOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
 
 echo 010000 use mixed-case "Rad" to set RAD mode
 echo "Rad ; mode" | $TOOL | grep "RAD mode"
