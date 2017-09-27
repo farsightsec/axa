@@ -1,0 +1,116 @@
+#!/bin/sh -e
+
+# using -e to exit on mistake
+
+# these tests output to stdout, can consider collecting all to temp files
+# and checking in there instead so test output is more organized
+
+# This contains tests that don't require an AXA server.
+
+# This tests the radtool command tool.
+TOOL=@builddir@/sratool/radtool
+DATADIR=@srcdir@/tests/tool-tests-data
+ 
+# The radtool/sratool are the same commands. Note that when using libtool,
+# when running from source tree, the radtool libtool temporary wrapper
+# script runs lt-radtool (which runs as sratool) so several following
+# tests run the "rad" command first to set the mode.
+
+# feel free to add numbers between;
+# or if substantially change a test, use a new number.
+
+# running this radtool test should identify as SRA mode
+echo 000100 use rad mode to set RAD mode should have no output
+echo rad | $TOOL | grep . && exit 1
+
+echo 000110 use rad mode to set RAD mode and check is RAD mode
+echo "rad ; mode"| $TOOL | grep "RAD mode"
+
+echo 001000 test -c to read single command
+echo | $TOOL -c $DATADIR/001000-single-command | grep "radtool version"
+
+echo 001010 test -c to read one command line with multiple commands
+echo | $TOOL -c $DATADIR/001010-multiple-commands-on-single-line | grep -1 "radtool version" | grep "RAD mode"
+
+echo 002000 test -c to read multiple commands from a single file
+echo | $TOOL -c $DATADIR/002000-multiple-commands | tail -1 | grep "RAD mode"
+
+echo 002100 test -c to read unrecognized command should fail
+echo | $TOOL -c $DATADIR/002100-unrecognized-command 2>&1 | grep 'unrecognized command "thisdoesnotexist"'
+
+echo 002110 test -c to read unrecognized command should fail with no output to stdout
+echo | $TOOL -c $DATADIR/002100-unrecognized-command | grep 'unrecognized command "thisdoesnotexist"' && exit 1
+
+echo 002200 test -c to read unrecognized command after good commands should run the commands until failure
+echo | $TOOL -c $DATADIR/002200-valid-then-unrecognized-command 2>&1| grep -3 "radtool version" | grep 'unrecognized command "this is not valid"'
+
+echo 002300 test -c to read non-existent file should fail
+echo | $TOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*failed"
+
+# TODO: maybe radtool should exit with return code if couldn't open -c file
+
+echo 003000 using source command without argument should fail
+echo "rad ; source" | $TOOL | grep "source filename"
+
+echo 003100 using source command without argument should fail and next command not run
+echo "rad ; source /dev/null ; mode" | $TOOL | grep "RAD mode"
+echo "rad ; source ; mode" | $TOOL | grep -2 "source filename" | grep "RAD mode" && exit 1
+
+echo 004000 use source command to read single command
+echo "rad ; source $DATADIR/001000-single-command" | $TOOL | grep "radtool version"
+
+echo 004100 use source command to one command line with multiple commands
+# well this doesn't test perfectly since also setting rad here
+echo "rad ; source $DATADIR/001010-multiple-commands-on-single-line" | $TOOL | grep -1 "radtool version" | grep "RAD mode"
+
+echo 005000 use source command to read multiple commands from a single file
+echo "rad ; source $DATADIR/002000-multiple-commands" | $TOOL | tail -1 | grep "RAD mode"
+
+echo 006000 pipe in single command
+# this is redundant since already did several times
+echo "version" | $TOOL | grep "tool version"
+
+echo 007000 pipe in multiple semicolon-separated commands on single line
+# this is redundant since already did several times
+echo "rad ; verbose ; version ; mode" | $TOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+
+echo 008000 pipe in multiple commands on separate lines
+{ echo rad ;
+  echo verbose ;
+  echo version ;
+  echo mode ; } | $TOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+
+echo 009000 pipe in multiple commands on separate lines, including multiple commands on single lines
+{ echo "rad ; verbose" ;
+  echo "version ; mode" ; } | $TOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+
+echo 010000 use mixed-case "Rad" to set RAD mode
+echo "Rad ; mode" | $TOOL | grep "RAD mode"
+
+echo 011000 use mixed-case "veRsiOn" to get version
+echo "rad ; veRsiOn" | $TOOL | grep "radtool version"
+
+exit
+
+# The following are tests to do
+
+partial commands
+typos of commands
+commands missing arguments
+commands with too many arguments
+
+space in front of command
+space after command
+tab in front
+tab after
+
+test various server required commands say that
+
+test # (pound-sign) for comment
+TODO: # comment needs to be documented, note if on same single command line
+with multiple  semicolon-separated commands, later commands are ignored
+
+read commands from pipe and file at same time
+TODO: should that be supported, as it is, so document it too?
+
+

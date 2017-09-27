@@ -322,3 +322,6 @@ check_PROGRAMS += tests/test-mgmt
 tests_test_mgmt_SOURCES = tests/test-mgmt.c
 tests_test_mgmt_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
 tests_test_mgmt_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+
+TESTS += tests/test-radtool-without-server.sh
+
