@@ -2,6 +2,10 @@
 
 # using -e to exit on mistake
 
+# use local source configurations and not already installed configs
+AXACONF=@srcdir@/etc
+export AXACONF
+
 # these tests output to stdout, can consider collecting all to temp files
 # and checking in there instead so test output is more organized
 
