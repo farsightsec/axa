@@ -128,8 +128,8 @@ AC_CONFIG_FILES([cert_tools/axa_make_cert],
 AC_CONFIG_FILES([cert_tools/axa_server_cert],
 		[chmod +x cert_tools/axa_server_cert])
 
-AC_CONFIG_FILES([tests/test-radtool-without-server.sh],
-		[chmod +x tests/test-radtool-without-server.sh])
+AC_CONFIG_FILES([tests/test-tools-without-server.sh],
+		[chmod +x tests/test-tools-without-server.sh])
 
 AC_OUTPUT
 AC_MSG_RESULT([

@@ -7,112 +7,113 @@
 
 # This contains tests that don't require an AXA server.
 
-# This tests the radtool command tool.
-TOOL=@builddir@/sratool/radtool
+# This tests the radtool / sratool command tool.
+RADTOOL=@builddir@/sratool/radtool
 DATADIR=@srcdir@/tests/tool-tests-data
  
-# The radtool/sratool are the same commands. Note that when using libtool,
-# when running from source tree, the radtool libtool temporary wrapper
-# script runs lt-radtool (which runs as sratool) so several following
-# tests run the "rad" command first to set the mode.
+# radtool and sratool are the same tools, but mode is set by what
+# command name is used to execute it.
+# Note that when using libtool, when running from source tree, the radtool
+# libtool temporary wrapper script runs lt-radtool (which runs as sratool)
+# so several following tests run the "rad" command first to set the mode.
 
 # feel free to add numbers between;
 # or if substantially change a test, use a new number.
 
 # running this radtool test should identify as SRA mode
 echo 000100 use rad mode to set RAD mode should have no output
-echo rad | $TOOL | grep . && exit 1
+echo rad | $RADTOOL | grep . && exit 1
 
 echo 000110 use rad mode to set RAD mode and check is RAD mode
-echo "rad ; mode"| $TOOL | grep "RAD mode"
+echo "rad ; mode"| $RADTOOL | grep "RAD mode"
 
 echo 001000 test -c to read single command
-echo | $TOOL -c $DATADIR/001000-single-command | grep "radtool version"
+echo | $RADTOOL -c $DATADIR/001000-single-command | grep "radtool version"
 
 echo 001010 test -c to read one command line with multiple commands
-echo | $TOOL -c $DATADIR/001010-multiple-commands-on-single-line | grep -1 "radtool version" | grep "RAD mode"
+echo | $RADTOOL -c $DATADIR/001010-multiple-commands-on-single-line | grep -1 "radtool version" | grep "RAD mode"
 
 echo 002000 test -c to read multiple commands from a single file
-echo | $TOOL -c $DATADIR/002000-multiple-commands | tail -1 | grep "RAD mode"
+echo | $RADTOOL -c $DATADIR/002000-multiple-commands | tail -1 | grep "RAD mode"
 
 echo 002100 test -c to read unrecognized command should fail
-echo | $TOOL -c $DATADIR/002100-unrecognized-command 2>&1 | grep 'unrecognized command "thisdoesnotexist"'
+echo | $RADTOOL -c $DATADIR/002100-unrecognized-command 2>&1 | grep 'unrecognized command "thisdoesnotexist"'
 
 echo 002110 test -c to read unrecognized command should fail with no output to stdout
-echo | $TOOL -c $DATADIR/002100-unrecognized-command | grep 'unrecognized command "thisdoesnotexist"' && exit 1
+echo | $RADTOOL -c $DATADIR/002100-unrecognized-command | grep 'unrecognized command "thisdoesnotexist"' && exit 1
 
 echo 002200 test -c to read unrecognized command after good commands should run the commands until that failure
-echo | $TOOL -c $DATADIR/002200-valid-then-unrecognized-command 2>&1| grep -3 "radtool version" | grep 'unrecognized command "this is not valid"'
+echo | $RADTOOL -c $DATADIR/002200-valid-then-unrecognized-command 2>&1| grep -3 "radtool version" | grep 'unrecognized command "this is not valid"'
 
 echo 002210 test -c to read unrecognized command after good commands should run commands before, but none after a failure
-echo | $TOOL -c $DATADIR/002210-valid-before-and-after-unrecognized-command 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
+echo | $RADTOOL -c $DATADIR/002210-valid-before-and-after-unrecognized-command 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
 
 echo 002300 test -c to read non-existent file should fail
-echo | $TOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*failed"
+echo | $RADTOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*failed"
 
 # TODO: maybe radtool should exit with return code if couldn't open -c file
 
 echo 003000 using source command without argument should fail
-echo "rad ; source" | $TOOL | grep "source filename"
+echo "rad ; source" | $RADTOOL | grep "source filename"
 
 echo 003100 using source command without argument should fail and next command on same line should not run
-echo "rad ; source /dev/null ; mode" | $TOOL | grep "RAD mode"
-echo "rad ; source ; mode" | $TOOL | grep -2 "source filename" | grep "RAD mode" && exit 1
+echo "rad ; source /dev/null ; mode" | $RADTOOL | grep "RAD mode"
+echo "rad ; source ; mode" | $RADTOOL | grep -2 "source filename" | grep "RAD mode" && exit 1
 
 echo 003200 using source command to read unrecognized command after good commands should run commands before, but none after the failure
-echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command" | $TOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
+echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command" | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
 
 echo 003210 using source command to read unrecognized command after good commands should run commands before, but none after the failure in the sourced file, but will still run next command on the same command line
-echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command ; debug off" | $TOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep -3 "debug off" | grep -3 "radtool version" && exit 1
+echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command ; debug off" | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep -3 "debug off" | grep -3 "radtool version" && exit 1
 
 echo 004000 use source command to read single command
-echo "rad ; source $DATADIR/001000-single-command" | $TOOL | grep "radtool version"
+echo "rad ; source $DATADIR/001000-single-command" | $RADTOOL | grep "radtool version"
 
 echo 004100 use source command to one command line with multiple commands
 # well this doesn't test perfectly since also setting rad here
-echo "rad ; source $DATADIR/001010-multiple-commands-on-single-line" | $TOOL | grep -1 "radtool version" | grep "RAD mode"
+echo "rad ; source $DATADIR/001010-multiple-commands-on-single-line" | $RADTOOL | grep -1 "radtool version" | grep "RAD mode"
 
 echo 005000 use source command to read multiple commands from a single file
-echo "rad ; source $DATADIR/002000-multiple-commands" | $TOOL | tail -1 | grep "RAD mode"
+echo "rad ; source $DATADIR/002000-multiple-commands" | $RADTOOL | tail -1 | grep "RAD mode"
 
 echo 006000 pipe in single command
 # this is redundant since already did several times
-echo "version" | $TOOL | grep "tool version"
+echo "version" | $RADTOOL | grep "tool version"
 
 echo 007000 pipe in multiple semicolon-separated commands on single line
 # this is redundant since already did several times
-echo "rad ; verbose ; version ; mode" | $TOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+echo "rad ; verbose ; version ; mode" | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
 
 echo 008000 pipe in multiple commands on separate lines
 { echo rad ;
   echo verbose ;
   echo version ;
-  echo mode ; } | $TOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+  echo mode ; } | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
 
 echo 009000 pipe in multiple commands on separate lines, including multiple commands on single lines
 { echo "rad ; verbose" ;
-  echo "version ; mode" ; } | $TOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+  echo "version ; mode" ; } | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
 
 echo 009100 pipe in multiple commands on separate lines, with an unrecognized command should run commands before, but not after the failure
-cat $DATADIR/002210-valid-before-and-after-unrecognized-command | $TOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
+cat $DATADIR/002210-valid-before-and-after-unrecognized-command | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
 
 echo 010000 use mixed-case "Rad" to set RAD mode
-echo "Rad ; mode" | $TOOL | grep "RAD mode"
+echo "Rad ; mode" | $RADTOOL | grep "RAD mode"
 
 echo 011000 use mixed-case "veRsiOn" to get version
-echo "rad ; veRsiOn" | $TOOL | grep "radtool version"
+echo "rad ; veRsiOn" | $RADTOOL | grep "radtool version"
 
 echo 050000 RAD mode has runits command
-echo "rad ; runits" | $TOOL 2>&1 | grep '"runits" requires a connection to a server'
+echo "rad ; runits" | $RADTOOL 2>&1 | grep '"runits" requires a connection to a server'
 
 echo 050100 SRA mode does not have runits command
-echo "sra ; runits" | $TOOL 2>&1 | grep 'unrecognized command "runits"'
+echo "sra ; runits" | $RADTOOL 2>&1 | grep 'unrecognized command "runits"'
 
 echo 050200 RAD mode has anomaly command
-echo "rad ; anomaly foo" | $TOOL 2>&1 | grep '"anomaly foo" requires a connection to a server'
+echo "rad ; anomaly foo" | $RADTOOL 2>&1 | grep '"anomaly foo" requires a connection to a server'
 
 echo 050300 SRA mode does not have anomaly command
-echo "sra ; anomaly foo" | $TOOL 2>&1 | grep 'unrecognized command "anomaly foo"'
+echo "sra ; anomaly foo" | $RADTOOL 2>&1 | grep 'unrecognized command "anomaly foo"'
 
 # rad has delete anomaly
 # rad has get anomaly
@@ -120,10 +121,10 @@ echo "sra ; anomaly foo" | $TOOL 2>&1 | grep 'unrecognized command "anomaly foo"
 # rad has list anomalies
 
 echo 050300 SRA mode has channel command
-echo "sra ; channel" | $TOOL 2>&1 | grep '"channel" requires a connection to a server'
+echo "sra ; channel" | $RADTOOL 2>&1 | grep '"channel" requires a connection to a server'
 
 echo 050400 RAD mode does not have channel command
-echo "rad ; channel" | $TOOL 2>&1 | grep 'unrecognized command "channel"'
+echo "rad ; channel" | $RADTOOL 2>&1 | grep 'unrecognized command "channel"'
 
 # sra has get channels
 # sra has list channels
@@ -132,7 +133,7 @@ echo "rad ; channel" | $TOOL 2>&1 | grep 'unrecognized command "channel"'
 # delete watches, get watches, list watches documented and in help for rad?
 
 echo 050500 SRA mode has watch command
-echo "sra ; watch" | $TOOL 2>&1 | grep '"watch" requires a connection to a server'
+echo "sra ; watch" | $RADTOOL 2>&1 | grep '"watch" requires a connection to a server'
 
 # sra has delete watches
 # sra has get watches
