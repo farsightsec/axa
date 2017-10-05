@@ -1,6 +1,7 @@
 #!/bin/sh -e
 
-# using -e to exit on mistake
+# exit on first failure
+set -o errexit
 
 # use local source configurations and not already installed configs
 AXACONF=@srcdir@/etc
@@ -59,6 +60,12 @@ echo | $RADTOOL -c $DATADIR/002210-valid-before-and-after-unrecognized-command 2
 echo 002300 test -c to read non-existent file should fail
 echo | $RADTOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*failed"
 
+# TODO: pipe and -c together work, if that is correct, document it.
+# TODO: document that -c happens before piped in command
+echo 002400 test -c happens before piped in command
+# NOTE:  sets rad but version is "sra" so shows what happens first
+echo "rad ; mode" | $SRATOOL -c "$DATADIR/001000-single-command" | grep -1 "sratool version" | grep "RAD mode"
+
 # TODO: maybe radtool should exit with return code if couldn't open -c file
 
 echo 003000 using source command without argument should fail
@@ -74,7 +81,10 @@ echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command" 
 echo 003210 using source command to read unrecognized command after good commands should run commands before, but none after the failure in the sourced file, but will still run next command on the same command line
 echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command ; debug off" | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep -3 "debug off" | grep -3 "radtool version" && exit 1
 
-echo 004000 use source command to read single command
+# TODO: pipe and source together work, if that is correct, document it.
+
+echo 004000 use source command to read single command \
+  " ; also tests that pipe and source together work"
 echo "rad ; source $DATADIR/001000-single-command" | $RADTOOL | grep "radtool version"
 
 echo 004100 use source command to one command line with multiple commands
@@ -162,27 +172,57 @@ echo "watch" | $SRATOOL 2>&1 | grep '"watch" requires a connection to a server'
 # sra has get watches
 # sra has list watches
 
-exit
+echo 060000 'test "?" with partial commands to match multiple command names, but not show full help'
+echo "? st" | $SRATOOL 2>&1 | grep -5 "status" | grep -5 "stop" | grep "server status" && exit 1
 
-# The following are tests to do
+echo 060010 'test "?" with partial command to match a single command name'
+echo "? stat" | $SRATOOL 2>&1 | grep "server status"
 
-partial commands
-typos of commands
-commands missing arguments
-commands with too many arguments
+echo 060020 partial command that matches multiple should show full names of matching commands with synopsis
+echo "ver" | $SRATOOL 2>&1 | grep -2 "verbose .*off" | grep "version"
 
-space in front of command
-space after command
-tab in front
-tab after
+echo 060030 partial command that matches single command should run \
+  "; this also tests that exit will exit and no commands ran after it"
+echo "ex ; version" | $SRATOOL 2>&1 | grep "tool version" && exit 1
 
-test various server required commands say that
+# Note: the "mode" argument is optional
+echo 060040 partial command and arguments that matches single command should run \
+  "; this also tests the error mode toggle"
+echo "err mo d ; err" | $SRATOOL 2>&1 | grep "error mode disconnect"
 
-test # (pound-sign) for comment
-TODO: # comment needs to be documented, note if on same single command line
-with multiple semicolon-separated commands, later commands are ignored
+echo 060050 command with too many arguments will fail
+# NOTE: this error message is to unclear so if it is fixed, change this:
+echo "count 5 10" | $SRATOOL 2>&1 | grep "No matching help topic could be found"
 
-read commands from pipe and file at same time
-TODO: should that be supported, as it is, so document it too?
+echo 060060 command missing argument will show help output
+# NOTE: later could have a real error message
+echo "sleep" | $RADTOOL 2>&1 | grep "Stop accepting commands"
 
+echo 060100 tab in front of a command is okay
+echo "	version" | $SRATOOL | grep "tool version"
+
+echo 060110 tab after a command is okay
+echo "verbose	" | $SRATOOL | grep "verbose off"
+
+# TODO: # comment needs to be documented, note if on same single command line
+# with multiple semicolon-separated commands, later commands are ignored
+#echo 'test # (pound-sign) starts a comment and following text on the line is ignored"
+#echo "verbose ;  # version" | $RADTOOL | grep "tool version" && exit 1
+# TODO: verbose # ; does not work
+
+echo 070000 count command can set a count
+echo "count 72 ; count" | $RADTOOL 2>&1 | grep "72 packets remaining to print of 72 total"
+
+echo 070100 sleep command should sleep for correct time
+before=`date +%s`
+echo "sleep 2" | $SRATOOL
+after=`date +%s`
+delay=$(($after-$before))
+echo $after - $before = $delay
+# assume no other delay beyond a second on test system
+if [ $delay -gt 3 -o $delay -le 1 ] ; then exit 1 ; fi
+
+# These are also tested in the various above tests:
+# space in front of command
+# space after command
 
