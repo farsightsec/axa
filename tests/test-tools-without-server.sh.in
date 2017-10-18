@@ -4,7 +4,7 @@
 set -o errexit
 
 # use local source configurations and not already installed configs
-AXACONF=@srcdir@/etc
+AXACONF=@abs_top_srcdir@/etc
 export AXACONF
 
 # these tests output to stdout, can consider collecting all to temp files
@@ -15,7 +15,7 @@ export AXACONF
 # This tests the radtool / sratool command tool.
 RADTOOL=@builddir@/sratool/radtool
 SRATOOL=@builddir@/sratool/sratool
-DATADIR=@srcdir@/tests/tool-tests-data
+DATADIR=@abs_top_srcdir@/tests/tool-tests-data
  
 # radtool and sratool are the same tools, but mode is set by what
 # command name is used to execute it.
