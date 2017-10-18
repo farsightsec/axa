@@ -60,13 +60,9 @@ echo | $RADTOOL -c $DATADIR/002210-valid-before-and-after-unrecognized-command 2
 echo 002300 test -c to read non-existent file should fail
 echo | $RADTOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*failed"
 
-# TODO: pipe and -c together work, if that is correct, document it.
-# TODO: document that -c happens before piped in command
 echo 002400 test -c happens before piped in command
 # NOTE:  sets rad but version is "sra" so shows what happens first
 echo "rad ; mode" | $SRATOOL -c "$DATADIR/001000-single-command" | grep -1 "sratool version" | grep "RAD mode"
-
-# TODO: maybe radtool should exit with return code if couldn't open -c file
 
 echo 003000 using source command without argument should fail
 echo "rad ; source" | $RADTOOL | grep "source filename"
@@ -80,8 +76,6 @@ echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command" 
 
 echo 003210 using source command to read unrecognized command after good commands should run commands before, but none after the failure in the sourced file, but will still run next command on the same command line
 echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command ; debug off" | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep -3 "debug off" | grep -3 "radtool version" && exit 1
-
-# TODO: pipe and source together work, if that is correct, document it.
 
 echo 004000 use source command to read single command \
   " ; also tests that pipe and source together work"
@@ -159,9 +153,6 @@ echo "rad ; channel" | $RADTOOL 2>&1 | grep 'unrecognized command "channel"'
 # sra has get channels
 # sra has list channels
 
-# TODO: does rad have watch or not, if it does, then why isn't
-# delete watches, get watches, list watches documented and in help for rad?
-
 echo 050500 SRA mode has watch command
 echo "sra ; watch" | $RADTOOL 2>&1 | grep '"watch" requires a connection to a server'
 
@@ -204,8 +195,7 @@ echo "	version" | $SRATOOL | grep "tool version"
 echo 060110 tab after a command is okay
 echo "verbose	" | $SRATOOL | grep "verbose off"
 
-# TODO: # comment needs to be documented, note if on same single command line
-# with multiple semicolon-separated commands, later commands are ignored
+# TODO:
 #echo 'test # (pound-sign) starts a comment and following text on the line is ignored"
 #echo "verbose ;  # version" | $RADTOOL | grep "tool version" && exit 1
 # TODO: verbose # ; does not work
