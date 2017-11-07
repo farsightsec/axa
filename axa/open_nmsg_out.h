@@ -42,13 +42,15 @@
  *	(SOCK_STREAM or SOCK_DGRAM)
  *  \param[in] addr canonical protocol/address of the format:
  *	"host,port", "tcp:host,port", "udp:host,port", "file:filename"
+ * \param[in] output_buffering true == enable nmsg output buffering
  *
  *  \retval -1 on error
  *  \retval 0 on bad host/port/filename
  *  \retval 1 on success and out_nmsg_output/out_sock_type will be set
  */
 extern int axa_open_nmsg_out(axa_emsg_t *emsg, nmsg_output_t *out_nmsg_output,
-			     int *out_sock_type, const char *addr);
+			     int *out_sock_type, const char *addr,
+			     bool output_buffering);
 
 /**@}*/
 

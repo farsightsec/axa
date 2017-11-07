@@ -63,7 +63,7 @@ void forward(void);
 void stop(int s) AXA_NORETURN;
 
 /* output.c */
-bool out_open(void);
+bool out_open(bool);
 void out_close(void);
 void out_flush(void);
 void out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len);

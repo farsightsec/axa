@@ -20,7 +20,7 @@
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhOtVz
+.Op Fl dhOtVuz
 .Fl c Ar channel
 .Fl o Ar out-addr
 .Fl s Ar SRA-server
@@ -161,6 +161,8 @@ and
 .Ar
 dns
 watches to indicate addresses or domains that are not used exclusively.
+.It Fl u
+disable NMSG output buffering.
 .It Fl z
 enable NMSG zlib container compression.
 .El

@@ -118,6 +118,7 @@ main(int argc, char **argv)
 	char *p;
 	const char *cp;
 	int i;
+	bool output_buffering = true;
 
 	axa_set_me(argv[0]);
 	AXA_ASSERT(axa_parse_log_opt(&emsg, "trace,off,stdout"));
@@ -133,7 +134,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:z"))
+	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -241,6 +242,10 @@ main(int argc, char **argv)
 			anomalies = arg;
 			break;
 
+		case 'u':
+			output_buffering = false;
+			break;
+
 		case 'z':
 			nmsg_zlib = true;
 			break;
@@ -306,7 +311,7 @@ main(int argc, char **argv)
 #ifdef SIGINFO
         signal(SIGINFO, siginfo);
 #endif
-	if (!out_open())
+	if (!out_open(output_buffering))
 		exit(EX_IOERR);
 
 	AXA_DEBUG_TO_NMSG(axa_debug);

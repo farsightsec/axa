@@ -6,6 +6,9 @@
 Tell the server to report counts of packets seen, missed, sent, and lost.
 .It Ic alias
 List the available connection aliases (culled from the axa client config file).
+.It Ic buffer
+Toggle NMSG output buffering. By default, this is enabled which buffers network writes until
+the container is full. If disabled, NMSG payloads are emitted as quickly as possible.
 .It Ic ciphers Op cipher-list
 set the list of ciphers for the next TLS connection or show the current
 contents of the list.
