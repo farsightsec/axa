@@ -120,7 +120,6 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 	}
 
 	if (output_buffering == false)
-		fprintf(stderr, "not buffering\n");
 		/* unbuffer all nmsg outputs */
 		nmsg_output_set_buffered(*out_nmsg_output, false);
 
