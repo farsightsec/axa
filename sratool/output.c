@@ -31,6 +31,7 @@ int out_pcap_datalink;			/* link-layer header type */
 int output_count;			/* limit forwarded packets */
 int output_count_total;			/* total packets to output */
 bool output_counting;			/* true if counting output packets */
+bool output_buffering = true;		/* true if buffering nmsg output */
 int output_errno;			/* output device errno */
 int out_sock_type;			/* output socket, DGRAM or STREAM */
 static struct timeval time_out_flush;	/* timestamp of last output flush */

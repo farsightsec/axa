@@ -101,6 +101,7 @@ usage(const char *msg, ...)
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
 	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
+	printf("[-u]\t\t\tunbuffer nmsg container output\n");
 	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
 	exit(EX_USAGE);
@@ -118,6 +119,7 @@ main(int argc, char **argv)
 	char *p;
 	const char *cp;
 	int i;
+	bool output_buffering = true;
 
 	axa_set_me(argv[0]);
 	AXA_ASSERT(axa_parse_log_opt(&emsg, "trace,off,stdout"));
@@ -133,7 +135,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:z"))
+	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -241,6 +243,10 @@ main(int argc, char **argv)
 			anomalies = arg;
 			break;
 
+		case 'u':
+			output_buffering = false;
+			break;
+
 		case 'z':
 			nmsg_zlib = true;
 			break;
@@ -306,7 +312,7 @@ main(int argc, char **argv)
 #ifdef SIGINFO
         signal(SIGINFO, siginfo);
 #endif
-	if (!out_open())
+	if (!out_open(output_buffering))
 		exit(EX_IOERR);
 
 	AXA_DEBUG_TO_NMSG(axa_debug);

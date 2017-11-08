@@ -44,6 +44,7 @@ extern size_t out_buf_base;
 extern int output_count;
 extern int output_count_total;
 extern bool output_counting;
+extern bool output_buffering;
 extern bool out_on;
 extern char *out_addr;
 extern int output_errno;
@@ -117,6 +118,7 @@ static cmd_t nmsg_zlib_cmd;
 static cmd_t mgmt_get_cmd;
 static cmd_t mgmt_kill_cmd;
 static cmd_t alias_cmd;
+static cmd_t buffer_cmd;
 
 typedef enum {
 	NO,
@@ -152,6 +154,16 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "tag anomaly name [parameters]",
     "Start the named anomaly detector module.\n"
     " \"Tag\" is the number labeling the module."
+},
+{"buffering",		buffer_cmd,		BOTH, NO, NO,
+    "nmsg output buffering",
+    "Toggle nmsg container buffering.\nFor this option to have any"
+    " effect, output mode must be enabled in nmsg socket mode. "
+    "When enabled, (by default) nmsg containers will fill with payloads"
+    " before being emitted. When disabled, nmsg payloads will be emitted as"
+    " rapidly as possible.\n"
+    "Note, for this command to take effect, it must be set before using"
+    " the 'forward' command."
 },
 {"ciphers",		ciphers_cmd,		BOTH, MB, NO,
     "ciphers [cipher-list]",
@@ -1212,6 +1224,9 @@ out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		} else {
 			printf("forwarding messages to %s\n", out_addr);
 		}
+		if (out_on_nmsg == true)
+			printf("output buffering is %s\n",
+				output_buffering == true ? "on" : "off");
 		return (1);
 	}
 
@@ -1251,7 +1266,8 @@ out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	} else if (AXA_CLITCMP(out_addr, "nmsg:")) {
 		result = axa_open_nmsg_out(&emsg, &out_nmsg_output,
 					   &out_sock_type,
-					   strchr(out_addr, ':')+1);
+					   strchr(out_addr, ':')+1,
+					   output_buffering);
 		if (result <= 0)
 			error_msg("%s", emsg.c);
 		out_on_nmsg = true;
@@ -1922,6 +1938,31 @@ out_cmd_pcap_file(const char *addr, bool want_fifo)
 		return (0);
 	}
 
+	return (1);
+}
+
+static int
+buffer_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	if (out_on == false) {
+		printf("    output mode not enabled\n");
+		return (0);
+	}
+	if (out_on_nmsg == false) {
+		printf("    output mode not emitting nmsgs\n");
+		return (0);
+	}
+	if (output_buffering == false) {
+		output_buffering = true;
+		nmsg_output_set_buffered(out_nmsg_output, true);
+		printf("    enabled\n");
+	}
+	else if (output_buffering == true) {
+		output_buffering = false;
+		nmsg_output_set_buffered(out_nmsg_output, false);
+		printf("    disabled\n");
+	}
 	return (1);
 }
 
