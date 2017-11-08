@@ -160,7 +160,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Toggle nmsg container buffering.\nFor this option to have any"
     " effect, output mode must be enabled in nmsg socket mode. "
     "When enabled, (by default) nmsg containers will fill with payloads"
-    " before being emitted. When disabled, nmsg payloads will emited as"
+    " before being emitted. When disabled, nmsg payloads will emitted as"
     " rapidly as possible.\n"
     "Note, for this command to take effect, it must be set before using"
     " the 'forward' command."
