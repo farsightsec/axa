@@ -1955,12 +1955,12 @@ buffer_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	}
 	if (output_buffering == false) {
 		output_buffering = true;
-		nmsg_output_set_buffered(out_nmsg_output, false);
+		nmsg_output_set_buffered(out_nmsg_output, true);
 		printf("    enabled\n");
 	}
 	else if (output_buffering == true) {
 		output_buffering = false;
-		nmsg_output_set_buffered(out_nmsg_output, true);
+		nmsg_output_set_buffered(out_nmsg_output, false);
 		printf("    disabled\n");
 	}
 	return (1);
