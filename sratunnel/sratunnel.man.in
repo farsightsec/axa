@@ -199,7 +199,6 @@ $ cat ~/.axa/config
 alias:sra-apikey=apikey:<elided>@example.com,1023
 
 .Ed
-
 If the user wanted to connect to SRA, she would only have to remember
 "sra-apikey" and could do:
 .Bd -literal -offset 4n
@@ -223,6 +222,36 @@ default,
 .Pa ~/.axa
 or
 .Pa @CONFDIR@ .
+.Sh SIGNALS
+On operating systems that support \fBSIGINFO\fP (including BSDish systems like
+FreeBSD and macOS), the user can type
+"ctrl-t" at the command line during a running
+.Nm
+process and get information about the session. For example:
+.Bd -literal -offset 4n
+\fB^T\fPsra connected, sent 4 messages, received 176 messages, 176 hits
+
+.Ed
+Note that by default, an additional line of information is printed by
+the kernel (system load and process information):
+.Bd -literal -offset 4n
+\fB^T\fPload: 1.39  cmd: sratunnel 7060 running 0.06u 0.00s
+sra connected, sent 4 messages, received 304 messages, 304 hits
+
+.Ed
+This can be disabled via: \fIstty nokerninfo\fP. Example:
+.Bd -literal -offset 4n
+$ sratunnel -A 10 -d -s sra-apikey...
+connecting to sra-apikey...
+\fB^T\fPload: 1.39  cmd: sratunnel 7060 running 0.06u 0.00s
+sra connected, sent 4 messages, received 304 messages, 304 hits
+^C
+$ stty nokerninfo
+$ sratunnel -A 10 -d -s sra-apikey...
+connecting to sra-apikey...
+\fB^T\fPsra connected, sent 4 messages, received 176 messages, 176 hits
+\fB^T\fPsra connected, sent 4 messages, received 416 messages, 416 hits
+.Ed
 .Sh SEE ALSO
 .Xr radtunnel 1 ,
 .Xr sratool 1 ,
