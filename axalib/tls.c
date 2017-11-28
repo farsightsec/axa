@@ -61,7 +61,8 @@ struct CRYPTO_dynlock_value {
 	pthread_mutex_t mutex;
 };
 static int num_locks;
-static pthread_mutex_t *mutex_buf = NULL;
+static pthread_mutex_t *mutex_buf_tls = NULL;
+static pthread_mutex_t *mutex_buf_apikey = NULL;
 
 
 
@@ -173,18 +174,31 @@ __attribute__((used)) id_function(void)
 #pragma clang diagnostic pop
 }
 
-/* Lock or unlock a static (created at initialization) lock for OpenSSL */
+/* Lock or unlock a static (created at initialization) lock for OpenSSL
+ * (tls) */
 static void
-__attribute__((used)) locking_function(int mode, int n,
+__attribute__((used)) locking_function_tls(int mode, int n,
 		 const char *file AXA_UNUSED, int line AXA_UNUSED)
 {
 	if (mode & CRYPTO_LOCK) {
-		AXA_ASSERT(0 == pthread_mutex_lock(&mutex_buf[n]));
+		AXA_ASSERT(0 == pthread_mutex_lock(&mutex_buf_tls[n]));
 	} else {
-		AXA_ASSERT(0 == pthread_mutex_unlock(&mutex_buf[n]));
+		AXA_ASSERT(0 == pthread_mutex_unlock(&mutex_buf_tls[n]));
 	}
 }
 
+/* Lock or unlock a static (created at initialization) lock for OpenSSL
+ * (apikey) */
+static void
+__attribute__((used)) locking_function_apikey(int mode, int n,
+		 const char *file AXA_UNUSED, int line AXA_UNUSED)
+{
+	if (mode & CRYPTO_LOCK) {
+		AXA_ASSERT(0 == pthread_mutex_lock(&mutex_buf_apikey[n]));
+	} else {
+		AXA_ASSERT(0 == pthread_mutex_unlock(&mutex_buf_apikey[n]));
+	}
+}
 /* Create a "dynamic" lock for OpenSSL */
 static struct CRYPTO_dynlock_value *
 __attribute__((used)) dyn_create_function(const char *file AXA_UNUSED,
@@ -378,14 +392,15 @@ axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 		CRYPTO_set_id_callback(id_function);
 		num_locks = CRYPTO_num_locks();
 		if (num_locks != 0) {
-			mutex_buf = axa_malloc(num_locks
+			mutex_buf_tls = axa_malloc(num_locks
 					       * sizeof(pthread_mutex_t));
 			for (i = 0; i < num_locks; i++)
-				AXA_ASSERT(0 == pthread_mutex_init(&mutex_buf[i],
+				AXA_ASSERT(0 ==
+					pthread_mutex_init(&mutex_buf_tls[i],
 							NULL));
 		}
 
-		CRYPTO_set_locking_callback(locking_function);
+		CRYPTO_set_locking_callback(locking_function_tls);
 
 		/* dynamic locks */
 		CRYPTO_set_dynlock_create_callback(dyn_create_function);
@@ -531,15 +546,15 @@ axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 		CRYPTO_set_id_callback(id_function);
 		num_locks = CRYPTO_num_locks();
 		if (num_locks != 0) {
-			mutex_buf = axa_malloc(num_locks
+			mutex_buf_apikey = axa_malloc(num_locks
 					       * sizeof(pthread_mutex_t));
 			for (i = 0; i < num_locks; i++)
 				AXA_ASSERT(0 == pthread_mutex_init(
-							&mutex_buf[i],
+							&mutex_buf_apikey[i],
 							NULL));
 		}
 
-		CRYPTO_set_locking_callback(locking_function);
+		CRYPTO_set_locking_callback(locking_function_apikey);
 
 		/* dynamic locks */
 		CRYPTO_set_dynlock_create_callback(dyn_create_function);
@@ -650,12 +665,12 @@ axa_tls_cleanup(void)
 
 	CRYPTO_set_locking_callback(NULL);
 
-	if (mutex_buf != NULL) {
+	if (mutex_buf_tls != NULL) {
 		for (i = 0; i < num_locks; i++) {
-			pthread_mutex_destroy(&mutex_buf[i]);
+			pthread_mutex_destroy(&mutex_buf_tls[i]);
 		}
-		free(mutex_buf);
-		mutex_buf = NULL;
+		free(mutex_buf_tls);
+		mutex_buf_tls = NULL;
 	}
 
 	if (ssl_ctx != NULL) {
@@ -698,12 +713,12 @@ axa_apikey_cleanup(void)
 
 	CRYPTO_set_locking_callback(NULL);
 
-	if (mutex_buf != NULL) {
+	if (mutex_buf_apikey != NULL) {
 		for (i = 0; i < num_locks; i++) {
-			pthread_mutex_destroy(&mutex_buf[i]);
+			pthread_mutex_destroy(&mutex_buf_apikey[i]);
 		}
-		free(mutex_buf);
-		mutex_buf = NULL;
+		free(mutex_buf_apikey);
+		mutex_buf_apikey = NULL;
 	}
 
 	if (apikey_ssl_ctx != NULL) {
