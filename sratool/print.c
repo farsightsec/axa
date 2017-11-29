@@ -581,7 +581,12 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 	if (!dnsdedupe->has_response
 	    && (field == NULL || strcmp(field->name, "rdata") != 0)
 	    && dnsdedupe->n_rdata >= 1 && dnsdedupe->has_rrtype) {
-		printf(NMSG_LEADER"rdata=%s",
+                /* handle strange case of null rdata contents */
+                if (dnsdedupe->rdata->len == 0
+                    || dnsdedupe->rdata->data == NULL) 
+                    printf(NMSG_LEADER"rdata=");
+                else
+                    printf(NMSG_LEADER"rdata=%s",
 		       rdata_to_buf(rdata_buf, sizeof(rdata_buf),
 				    "rdata", dnsdedupe->rrtype,
 				    dnsdedupe->rdata->data,
