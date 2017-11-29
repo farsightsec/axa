@@ -96,6 +96,10 @@ get_domain(void *ctxt, axa_walk_ops_t *ops,
 	ssize_t checked, label_len, name_len, offset;
 
 	p = *pp;
+        if (p == NULL) {
+            error(ctxt, ops, "invalid NULL rdata", "in", s);
+            return false;
+        }
 	name_len = 0;
 	checked = 0;
 	do {
