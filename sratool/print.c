@@ -1475,18 +1475,18 @@ print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len)
 }
 
 void
-print_mgmt_kill(axa_p_mgmt_kill_t *mgmt_kill, size_t mgmt_len AXA_UNUSED)
+print_kill(axa_p_kill_t *kill, size_t len AXA_UNUSED)
 {
-	switch (mgmt_kill->result) {
-		case AXA_P_MGMT_K_R_SUCCESS:
+	switch (kill->result) {
+		case AXA_P_KILL_R_SUCCESS:
 			printf("    success\n");
 			break;
-		case AXA_P_MGMT_K_R_FAIL_NF:
+		case AXA_P_KILL_R_FAIL_NF:
 			printf("    failed, %s not found\n",
-					mgmt_kill->mode == AXA_P_MGMT_K_M_SN ?
+					kill->mode == AXA_P_KILL_M_SN ?
 					"serial number" : "user");
 			break;
-		case AXA_P_MGMT_K_R_FAIL_UNK:
+		case AXA_P_KILL_R_FAIL_UNK:
 			printf("    failed, unknown reason\n");
 			break;
 		default:

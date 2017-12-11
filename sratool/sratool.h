@@ -160,7 +160,7 @@ void print_raw(const uint8_t *pkt, size_t pkt_len);
 bool print_dns_pkt(const uint8_t *data, size_t data_len, const char *str);
 void print_raw_ip(const uint8_t *data, size_t data_len, axa_p_ch_t ch);
 void print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len);
-void print_mgmt_kill(axa_p_mgmt_kill_t *mgmt_kill, size_t mgmt_len);
+void print_kill(axa_p_kill_t *kill, size_t len);
 
 /* server.c */
 void read_srvr(void);

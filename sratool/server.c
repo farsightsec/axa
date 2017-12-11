@@ -194,9 +194,9 @@ read_srvr(void)
 				   - sizeof(client.io.recv_hdr));
 			break;
 
-		case AXA_P_OP_MGMT_KILLRSP:
+		case AXA_P_OP_KILLRSP:
 			clear_prompt();
-			print_mgmt_kill(&client.io.recv_body->mgmt_kill,
+			print_kill(&client.io.recv_body->kill,
 				   client.io.recv_body_len
 				   - sizeof(client.io.recv_hdr));
 			break;
@@ -216,7 +216,7 @@ read_srvr(void)
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
 		case AXA_P_OP_MGMT_GET:
-		case AXA_P_OP_MGMT_KILL:
+		case AXA_P_OP_KILL:
 		default:
 			AXA_FAIL("impossible AXA %s from %s",
 				 axa_op_to_str(buf, sizeof(buf),
