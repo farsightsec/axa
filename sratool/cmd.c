@@ -1834,7 +1834,7 @@ kill_cmd(axa_tag_t tag, const char *arg,
 		kill.mode = AXA_P_KILL_M_SN;
 	}
 
-	return (srvr_send(tag, AXA_P_OP_KILL, &kill, sizeof (kill)));
+	return (srvr_send(tag, AXA_P_OP_KILL_REQ, &kill, sizeof (kill)));
 }
 
 static int

@@ -234,7 +234,7 @@ typedef enum {
 	AXA_P_OP_CLIST	    =9,		/**< axa_p_clist_t */
 	AXA_P_OP_MISSED_RAD =10,	/**< axa_p_missed_rad_t */
 	AXA_P_OP_MGMT_GETRSP=11,	/**< axa_p_mgmt_t */
-	AXA_P_OP_KILLRSP    =12,	/**< axa_p_kill_t */
+	AXA_P_OP_KILL_RSP    =12,	/**< axa_p_kill_t */
 
 	/** from client to SRA or RAD server */
 	AXA_P_OP_USER	    =129,	/**< axa_p_user_t */
@@ -254,7 +254,7 @@ typedef enum {
 
 	AXA_P_OP_RADU	    =143,	/**< no data */
 	AXA_P_OP_MGMT_GET   =144,	/**< no data */
-	AXA_P_OP_KILL       =145,	/**< axa_p_kill_t */
+	AXA_P_OP_KILL_REQ   =145,	/**< axa_p_kill_t */
 } axa_p_op_t;
 
 /**

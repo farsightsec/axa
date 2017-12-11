@@ -482,7 +482,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	case AXA_P_OP_CGET:
 	case AXA_P_OP_ACCT:
 	case AXA_P_OP_MGMT_GET:
-	case AXA_P_OP_KILL:
+	case AXA_P_OP_KILL_REQ:
 		dir = AXA_P_TO_SRA;
 		break;
 	case AXA_P_OP_ANOM:
@@ -838,8 +838,8 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 		break;
 	}
-	case AXA_P_OP_KILL:
-	case AXA_P_OP_KILLRSP:
+	case AXA_P_OP_KILL_REQ:
+	case AXA_P_OP_KILL_RSP:
 		add_yajl_string(g, "mode");
 		add_yajl_integer(g, body->kill.mode);
 		add_yajl_string(g, "user");

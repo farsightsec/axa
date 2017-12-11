@@ -184,8 +184,8 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
 		case AXA_P_OP_MGMT_GET:
-		case AXA_P_OP_KILL:
-		case AXA_P_OP_KILLRSP:
+		case AXA_P_OP_KILL_REQ:
+		case AXA_P_OP_KILL_RSP:
 		default:
 			AXA_FAIL("impossible AXA op of %d from %s",
 				 client.io.recv_hdr.op, client.io.label);

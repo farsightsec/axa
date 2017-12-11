@@ -340,8 +340,8 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	case AXA_P_OP_RADU:	strlcpy(buf, "RAD UNITS GET",	buflen); break;
 	case AXA_P_OP_MGMT_GET:	strlcpy(buf, "MGMT GET",	buflen); break;
 	case AXA_P_OP_MGMT_GETRSP:strlcpy(buf, "MGMT GET RSP",	buflen); break;
-	case AXA_P_OP_KILL:strlcpy(buf,      "KILL REQ",	buflen); break;
-	case AXA_P_OP_KILLRSP:strlcpy(buf,   "KILL RSP",	buflen); break;
+	case AXA_P_OP_KILL_REQ:strlcpy(buf,  "KILL REQ",	buflen); break;
+	case AXA_P_OP_KILL_RSP:strlcpy(buf,  "KILL RSP",	buflen); break;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
@@ -983,8 +983,8 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	case AXA_P_OP_RADU:
 	case AXA_P_OP_MGMT_GET:
 	case AXA_P_OP_MGMT_GETRSP:
-	case AXA_P_OP_KILL:
-	case AXA_P_OP_KILLRSP:
+	case AXA_P_OP_KILL_REQ:
+	case AXA_P_OP_KILL_RSP:
 	default:
 		break;
 	}
@@ -1179,12 +1179,12 @@ axa_ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 		tagged = 0;
 		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
 		break;
-	case AXA_P_OP_KILL:
+	case AXA_P_OP_KILL_REQ:
 		max_len = min_len = sizeof(axa_p_kill_t);
 		tagged = 0;
 		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
 		break;
-	case AXA_P_OP_KILLRSP:
+	case AXA_P_OP_KILL_RSP:
 		min_len = max_len = sizeof(axa_p_kill_t);
 		tagged = 0;
 		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
@@ -1588,9 +1588,9 @@ axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_body_t *body,
 		break;
 	case AXA_P_OP_MGMT_GETRSP:
 		break;
-	case AXA_P_OP_KILL:
+	case AXA_P_OP_KILL_REQ:
 		break;
-	case AXA_P_OP_KILLRSP:
+	case AXA_P_OP_KILL_RSP:
 		break;
 	}
 
