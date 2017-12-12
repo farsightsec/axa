@@ -260,7 +260,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 },
 {"kill",		kill_req_cmd,		BOTH, YES, YES,
     "kill user_name | serial_number",
-    "Send a request to the server to kill off a user's session(s) (admin"
+    "Send a request to the server to kill a user's session(s) (admin"
     " users only). If serial number is specified, kill a single session;"
     "if user name is specified, kill all sessions belonging to that user."
 },
