@@ -116,7 +116,7 @@ static cmd_t sleep_cmd;
 static cmd_t radunit_cmd;
 static cmd_t nmsg_zlib_cmd;
 static cmd_t mgmt_get_cmd;
-static cmd_t mgmt_kill_cmd;
+static cmd_t kill_req_cmd;
 static cmd_t alias_cmd;
 static cmd_t buffer_cmd;
 
@@ -258,11 +258,11 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "help [cmd]",
     "List all commands or get more information about a command."
 },
-{"kill",		mgmt_kill_cmd,		BOTH, YES, YES,
+{"kill",		kill_req_cmd,		BOTH, YES, YES,
     "kill user_name | serial_number",
-    "Kill off user session (admin users only). If serial number is specified"
-    " kill a single session; if user name is specified, kill all sessions"
-    " belonging to that user."
+    "Send a request to the server to kill a user's session(s) (admin"
+    " users only). If serial number is specified, kill a single session;"
+    "if user name is specified, kill all sessions belonging to that user."
 },
 {"list channels",	list_cmd,		SRA, MB, YES,
     "list channels",
@@ -1805,37 +1805,35 @@ mgmt_get_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
 }
 
 static int
-mgmt_kill_cmd(axa_tag_t tag, const char *arg,
+kill_req_cmd(axa_tag_t tag, const char *arg,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	char *p;
 	uint32_t sn;
-	axa_p_mgmt_kill_t mgmt_kill;
+	axa_p_kill_t kill;
 
 	if (*arg == '\0') {
-		error_msg("kill command requires a valid user name or"
-				" serial number");
+		error_msg("kill requires a valid user name or serial number");
 		return (0);
 	}
 
-	memset(&mgmt_kill, 0, sizeof (mgmt_kill));
+	memset(&kill, 0, sizeof (kill));
 	sn = strtoul(arg, &p, 0);
 	if (*p != '\0') {
-		printf("    sending mgmt kill request to server"
+		printf("    sending kill request to server"
 				" (kill all sessions belonging to %s)...\n",
 				arg);
-		strlcpy(mgmt_kill.user.name, arg, sizeof(mgmt_kill.user.name));
-		mgmt_kill.mode = AXA_P_MGMT_K_M_U;
+		strlcpy(kill.user.name, arg, sizeof(kill.user.name));
+		kill.mode = AXA_P_KILL_M_U;
 	}
 	else {
-		printf("    sending mgmt kill request to server"
+		printf("    sending kill request to server"
 				" (kill session serial number %d)...\n", sn);
-		mgmt_kill.sn = AXA_H2P32(sn);
-		mgmt_kill.mode = AXA_P_MGMT_K_M_SN;
+		kill.sn = AXA_H2P32(sn);
+		kill.mode = AXA_P_KILL_M_SN;
 	}
 
-	return (srvr_send(tag, AXA_P_OP_MGMT_KILL, &mgmt_kill,
-				sizeof (mgmt_kill)));
+	return (srvr_send(tag, AXA_P_OP_KILL_REQ, &kill, sizeof (kill)));
 }
 
 static int
