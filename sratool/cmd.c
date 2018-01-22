@@ -2005,9 +2005,14 @@ do_cmds(const char *str)
 }
 
 int
+#if HAVE_LIBEDIT_IS_UNICODE
+getcfn(EditLine *e AXA_UNUSED, wchar_t *buf)
+#else
 getcfn(EditLine *e AXA_UNUSED, char *buf)
+#endif
 {
 	int i;
+	char c = '\0';
 
 	/* Wait until the user types something or a redisplay is faked */
 	for (;;) {
@@ -2019,7 +2024,11 @@ getcfn(EditLine *e AXA_UNUSED, char *buf)
 			 * to return immediately
 			 * so that the interrupt can be acknowledged. */
 			el_set(el_e, EL_UNBUFFERED, 1);
+#if HAVE_LIBEDIT_IS_UNICODE
+			*buf = btowc('\0');
+#else
 			*buf = '\0';
+#endif
 			return (1);
 		}
 
@@ -2036,9 +2045,14 @@ getcfn(EditLine *e AXA_UNUSED, char *buf)
 		/* Restore the prompt before echoing user's input. */
 		if (prompt_cleared.tv_sec != 0)
 			reprompt();
-		i = read(STDIN_FILENO, buf, 1);
+		i = read(STDIN_FILENO, &c, 1);
 		if (i == 1) {
 			gettimeofday(&cmd_input, NULL);
+#if HAVE_LIBEDIT_IS_UNICODE
+			*buf = btowc(c);
+#else
+			*buf = c;
+#endif
 			return (1);
 		}
 		close(STDIN_FILENO);
