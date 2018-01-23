@@ -108,7 +108,11 @@ void history_get_savefile(void);
 const char *el_prompt(EditLine *e AXA_UNUSED);
 void clear_prompt(void);
 void reprompt(void);
+#if HAVE_LIBEDIT_IS_UNICODE
+int getcfn(EditLine *e AXA_UNUSED, wchar_t *buf);
+#else
 int getcfn(EditLine *e AXA_UNUSED, char *buf);
+#endif
 void AXA_NORETURN usage(void);
 int version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED,
 		const cmd_tbl_entry_t *ce AXA_UNUSED);
