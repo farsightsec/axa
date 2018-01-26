@@ -188,13 +188,17 @@ read_srvr(void)
 			break;
 
 		case AXA_P_OP_MGMT_GETRSP:
+			printf("deprecated protocol, please use \"stats\"\n");
+			break;
+
+		case _AXA_P_OP_STATS_RSP:
 			clear_prompt();
-			print_mgmt(&client.io.recv_body->mgmt,
+			print_stats(&client.io.recv_body->stats_rsp,
 				   client.io.recv_body_len
 				   - sizeof(client.io.recv_hdr));
 			break;
 
-		case AXA_P_OP_KILL_RSP:
+		case _AXA_P_OP_KILL_RSP:
 			clear_prompt();
 			print_kill(&client.io.recv_body->kill,
 				   client.io.recv_body_len
@@ -216,7 +220,8 @@ read_srvr(void)
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
 		case AXA_P_OP_MGMT_GET:
-		case AXA_P_OP_KILL_REQ:
+		case _AXA_P_OP_STATS_REQ:
+		case _AXA_P_OP_KILL_REQ:
 		default:
 			AXA_FAIL("impossible AXA %s from %s",
 				 axa_op_to_str(buf, sizeof(buf),

@@ -162,11 +162,10 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_WLIST:
 		case AXA_P_OP_ALIST:
 		case AXA_P_OP_CLIST:
-			print_bad_op("unexpected ");
-			break;
-
 		case AXA_P_OP_MGMT_GETRSP:
-			/* NYI */
+		case _AXA_P_OP_KILL_RSP:
+		case _AXA_P_OP_STATS_RSP:
+			print_bad_op("unexpected ");
 			break;
 
 		case AXA_P_OP_USER:
@@ -184,8 +183,8 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
 		case AXA_P_OP_MGMT_GET:
-		case AXA_P_OP_KILL_REQ:
-		case AXA_P_OP_KILL_RSP:
+		case _AXA_P_OP_KILL_REQ:
+		case _AXA_P_OP_STATS_REQ:
 		default:
 			AXA_FAIL("impossible AXA op of %d from %s",
 				 client.io.recv_hdr.op, client.io.label);
