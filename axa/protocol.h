@@ -233,8 +233,9 @@ typedef enum {
 	AXA_P_OP_ALIST	    =8,		/**< axa_p_alist_t */
 	AXA_P_OP_CLIST	    =9,		/**< axa_p_clist_t */
 	AXA_P_OP_MISSED_RAD =10,	/**< axa_p_missed_rad_t */
-	AXA_P_OP_MGMT_GETRSP=11,	/**< axa_p_mgmt_t */
-	AXA_P_OP_KILL_RSP    =12,	/**< axa_p_kill_t */
+	AXA_P_OP_MGMT_GETRSP=11,	/**< deprecated */
+	_AXA_P_OP_KILL_RSP  =12,	/**< _axa_p_kill_t */
+	_AXA_P_OP_STATS_RSP =13,	/**< _axa_p_stats_t */
 
 	/** from client to SRA or RAD server */
 	AXA_P_OP_USER	    =129,	/**< axa_p_user_t */
@@ -253,8 +254,9 @@ typedef enum {
 	AXA_P_OP_ACCT	    =142,	/**< no data */
 
 	AXA_P_OP_RADU	    =143,	/**< no data */
-	AXA_P_OP_MGMT_GET   =144,	/**< no data */
-	AXA_P_OP_KILL_REQ   =145,	/**< axa_p_kill_t */
+	AXA_P_OP_MGMT_GET   =144,	/**< deprecated */
+	_AXA_P_OP_KILL_REQ  =145,	/**< _axa_p_kill_t */
+	_AXA_P_OP_STATS_REQ =146,	/**< _axa_p_stats_req_t */
 } axa_p_op_t;
 
 /**
@@ -628,14 +630,252 @@ typedef struct _PK {
 } axa_p_opt_t;
 
 /**< @cond */
-/* AXA back-office management statistics header. Holds system and server stats
- * and heralds the presence of current user stats.
- * */
+
+/**
+ * ** Begin AXA stats interface. **
+ *
+ * 'stats' is a request/response protocol that provides a way for AXA servers
+ * (both SRA or RAD) to report a current state of affairs to interested
+ * clients.
+ *
+ * It introduces two new private opcodes:
+ * - _AXA_P_OP_STATS_REQ (client to server)
+ * - _AXA_P_OP_STATS_RSP (server to client).
+ *
+ * Both request and response headers are versioned and typed. This allows for
+ * protocol extensibility in both directions.
+ *
+ * The process is initiated by a client who asks a server for stats by building
+ * an AXA header with the _AXA_P_OP_STATS_REQ opcode and an stats request
+ * header (_axa_p_stats_req_t) and sending this to the server, who may in turn
+ * respond with an _AXA_P_OP_STATS_RSP opcode, stats response
+ * header (_axa_p_stats_rsp_t) and one or more response objects.
+ *
+ * An _axa_p_stats_req_t header will contain the type of request:
+ * - AXA_P_STATS_M_M_SUM (summary): ask just for system/server stats only
+ * - AXA_P_STATS_M_M_ALL (all): ask for system/server and all user stats
+ * - AXA_P_STATS_M_M_U (username): ask for system/server and stats on usernm
+ * - AXA_P_STATS_M_M_SN (serial number): ask for system/server and stats on sn
+ *
+ * Depending on the type, the username or sn field will be populated in the
+ * request.
+ *
+ * An _axa_p_stats_rsp_t header will contain a result code:
+ * - AXA_P_STATS_R_SUCCESS (success): op was successful; proceed w/ processing
+ * - AXA_P_STATS_R_FAIL_NF (failure): user or sn was not found
+ * - AXA_P_STATS_R_FAIL_UNK (failure): unknown failure
+ *
+ * IF the result code is AXA_P_STATS_R_SUCCESS, the server's response can be
+ * one or more response objects and the sys_objs_cnt and user_objs_cnt fields
+ * should be checked. After the stats response header, a valid response will
+ * contain zero or one _AXA_P_STATS_TYPE_SYS (system) objects and/or zero to
+ * _AXA_STATS_MAX_USER_OBJS _AXA_P_STATS_TYPE_USER (user) objects. If the
+ * number of in-flight user objects would exceed _AXA_STATS_MAX_USER_OBJS,
+ * multiple _AXA_P_OP_STATS_RSP opcodes (each containing a specified number of
+ * user objects) will be returned to the client until all have been sent.
+ *
+ * System and user objects contain both general stats applicable to both SRA
+ * and RAD servers as well as SRA/RAD specific areas in a union named "srvr".
+ *
+ * When in RAD mode, user objects may be followed by up to
+ * _AXA_STATS_MAX_USER_RAD_AN_OBJS trailing RAD user anomaly objects (each of
+ * which will carry information about a single module instance a user has
+ * loaded).
+ *
+ * Consider the following example use cases:
+ *
+ * Use Case 1: End user wants only system/server stats, not interested in user
+ * activity.
+ *
+ *   client -> server
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_REQ]
+ *   [_axa_p_stats_req_t:AXA_P_STATS_M_M_SUM]
+ *
+ *   server -> client (server returns only system/server stats object)
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
+ *   [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:0]
+ *   [_axa_p_stats_sys_t]
+ *
+ * Use Case 2: End user wants information on all of a single user's sessions
+ * (in this case, user has three active sessions).
+ *
+ *   client -> server (client asks for stats by username)
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_REQ]
+ *   [_axa_p_stats_req_t:AXA_P_STATS_M_M_U]
+ *
+ *   server -> client (server returns system/server stats object and three
+ *   user objects)
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
+ *   [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:3]
+ *   [_axa_p_stats_sys_t]
+ *   [_axa_p_stats_user_t]
+ *   [_axa_p_stats_user_t]
+ *   [_axa_p_stats_user_t]
+ *
+ * Use Case 3: End user asks for stats on all users (user count exceeds
+ * _AXA_STATS_MAX_USER_OBJS).
+ *
+ *   client -> server
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_REQ]
+ *   [_axa_p_stats_req_t:AXA_P_STATS_M_M_ALL]
+ *
+ *   server -> client (server returns system/server stats object and one user
+ *                     object for each logged in client; this number exceeds
+ *                     _AXA_STATS_MAX_USER_OBJS so user objects are sent via
+ *                     multiple _AXA_P_OP_STATS_RSP "packets"; note no
+ *                     system/server object is sent after the first one)
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
+ *   [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:_AXA_STATS_MAX_USER_OBJS]
+ *   [_axa_p_stats_sys_t]
+ *   [_axa_p_stats_user_t]
+ *   [_axa_p_stats_user_t]
+ *   [_axa_p_stats_user_t]
+ *   [...]
+ *   [_axa_p_stats_user_t]
+ *   ...
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
+ *   [_axa_p_stats_rsp_t:sys_objs_cnt:0,user_objs_cnt:10]
+ *   [_axa_p_stats_user_t]
+ *   [...]
+ *   [_axa_p_stats_user_t]
+ *
+ * Use Case 4: RAD end user asks for stats on all users.
+ *
+ *   client -> server
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_REQ]
+ *   [_axa_p_stats_req_t:AXA_P_STATS_M_M_ALL]
+ *
+ *   server -> client (server returns system/server stats object and one user
+ *                     object for each logged in client; this number exceeds
+ *                     _AXA_STATS_MAX_USER_OBJS so writes are broken up as
+ *                     above. Users who have loaded RAD modules will have one
+ *                     trailing RAD anomaly object per loaded module, up to
+ *                     _AXA_STATS_MAX_USER_RAD_AN_OBJS)
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
+ *   [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:_AXA_STATS_MAX_USER_OBJS]
+ *   [_axa_p_stats_sys_t:srvr.rad.an_obj_cnt:0]
+ *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:1]
+ *   [_axa_p_stats_user_rad_an_t]
+ *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:0]
+ *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:2]
+ *   [_axa_p_stats_user_rad_an_t]
+ *   [_axa_p_stats_user_rad_an_t]
+ *   [...]
+ *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:0]
+ *   ...
+ *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
+ *   [_axa_p_stats_rsp_t:sys_objs_cnt:0,user_objs_cnt:10]
+ *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:4]
+ *   [_axa_p_stats_user_rad_an_t]
+ *   [_axa_p_stats_user_rad_an_t]
+ *   [_axa_p_stats_user_rad_an_t]
+ *   [_axa_p_stats_user_rad_an_t]
+ *   [...]
+ *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:0]
+ *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:1]
+ *   [_axa_p_stats_user_rad_an_t]
+ *
+ * The functionality exposed here is for admin users only and is not intended
+ * to be part of the public API.
+ *
+ * If a non-privileged user requests stats, the server should return an error
+ * via output_error() and reference the original opcode.
+ *
+ * This replaces the deprecated "MGMT" protocol.
+ *
+ * IF any user requests the MGMT opcode, the server should return an error
+ * via output_error() and inform the user of its deprecation.
+ */
+#define _AXA_STATS_VERSION_ONE	1
+#define _AXA_STATS_VERSION 	_AXA_STATS_VERSION_ONE
+
+/* AXA statistics request object types. */
+typedef enum {
+	AXA_P_STATS_M_M_SUM	=1,		/* summary only */
+	AXA_P_STATS_M_M_ALL	=2,		/* summary + all users */
+	AXA_P_STATS_M_M_SN	=3,		/* summary + usr by sn */
+	AXA_P_STATS_M_M_U	=4,		/* summary + usr by name */
+} _axa_p_stats_req_type_t;
+
+/* AXA statistics request header. */
 typedef struct _PK {
-	uint8_t 		version;	/* version */
-#define AXA_MGMT_FLAG_SRA	0x01		/* implementation should set */
-#define AXA_MGMT_FLAG_RAD	0x02		/* one or the other not both */
+	uint8_t			version;	/* _AXA_STATS_VERSION */
+	uint8_t			type;		/* _axa_p_stats_req_type_t */
+	axa_p_user_t		user;		/* optional user name */
+	uint32_t		sn;		/* optional serial num */
+} _axa_p_stats_req_t;
+
+/* AXA statistics response codes. */
+typedef enum {
+	AXA_P_STATS_R_SUCCESS  =1,		/* successful operation */
+	AXA_P_STATS_R_FAIL_NF  =2,		/* failed: sn/user not found */
+	AXA_P_STATS_R_FAIL_UNK =3,		/* failed: unknown reason */
+} _axa_p_stats_rsp_code_t;
+
+/* AXA statistics response header. */
+typedef struct _PK {
+	uint8_t			version;	/* _AXA_STATS_VERSION */
+	uint8_t			sys_objs_cnt;	/* _axa_p_stats_sys_t count */
+	uint16_t		user_objs_cnt;	/* _axa_p_stats_user_t count */
+	uint8_t			result;		/* result code */
+} _axa_p_stats_rsp_t;
+
+/* AXA statistics watches object. */
+typedef struct _PK {
+	uint32_t		ipv4_cnt;	/* number of IPv4 watches */
+	uint32_t		ipv6_cnt;	/* number of IPv6 watches */
+	uint32_t		dns_cnt;	/* number of DNS watches */
+	uint32_t		ch_cnt;		/* number of ch watches */
+	uint32_t		err_cnt;	/* number of err watches */
+} _axa_p_stats_watches_t;
+
+/* AXA statistics SRA server specific stats object. */
+typedef struct _PK {
+	_axa_p_stats_watches_t	watches;	/* watch count */
+	axa_ch_mask_t		ch_mask;	/* channels open */
+} _axa_p_stats_srvr_sra_t;
+
+/* AXA statistics RAD server specific stats object. */
+typedef struct _PK {
+	uint16_t		an_cnt;		/* total anomaly count */
+} _axa_p_stats_srvr_rad_t;
+
+/* AXA statistics response object types. */
+typedef enum {
+	AXA_P_STATS_TYPE_SYS	=1,		/* system/server object */
+	AXA_P_STATS_TYPE_USER	=2,		/* user object */
+} _axa_p_stats_rsp_type_t;
+
+/* AXA statistics SRA specific user stats object. */
+typedef struct _PK {
+	_axa_p_stats_watches_t	watches;	/* watches user has loaded */
+	axa_ch_mask_t		ch_mask;	/* channels user has open */
+	uint8_t			flags;		/* control flags (unused) */
+} _axa_p_stats_user_sra_t;
+
+/* AXA statistics RAD specific user stats object. */
+typedef int32_t runits_t;			/* RAD Units */
+typedef struct _PK {
+#define _AXA_STATS_MAX_USER_RAD_AN_OBJS 100	/* max number of an objs */
+	uint8_t			an_obj_cnt;	/* number of anomaly objects
+						 * in flight */
+	uint8_t			an_obj_cnt_total;/* total number of anomaly
+						  * objects user has loaded */
 	uint8_t			flags;		/* control flags */
+} _axa_p_stats_user_rad_t;
+
+/**
+ * AXA statistics system/server object.
+ *
+ * This is a first class citizen and can be sent to a client. It must be
+ * prefaced by a _axa_p_stats_rsp_t header. It must choose a server type and
+ * populate the appropriate union values.
+ */
+typedef struct _PK {
+	uint8_t			type;		/* _AXA_P_STATS_TYPE_SYS */
+#define _AXA_STATS_SRVR_TYPE_SRA 1		/* implementation should set */
+#define _AXA_STATS_SRVR_TYPE_RAD 2		/* one or the other not both */
+	uint8_t			server_type;	/* server type */
 	uint32_t		load[3];        /* load avg */
 	uint32_t		cpu_usage;      /* cpu usage */
 	uint32_t		uptime;         /* system uptime */
@@ -649,49 +889,37 @@ typedef struct _PK {
 	uint64_t		rchar;		/* bytes read via read() */
 	uint64_t		wchar;		/* bytes written via write() */
 	uint32_t		thread_cnt;	/* number of server threads */
-	uint16_t		users_cnt;      /* number of user objects */
-	uint8_t			b[0];		/* start of user objects */
-} axa_p_mgmt_t;
+	uint16_t		user_cnt;	/* number of connected users */
+	union _axa_p_stats_sys_srvr {
+		_axa_p_stats_srvr_sra_t sra;	/* sra server specific stats */
+		_axa_p_stats_srvr_rad_t rad;	/* rad server specific stats */
+	} srvr;
+} _axa_p_stats_sys_t;
 
-/* SRA/RAD user watches stats */
+/**
+ * AXA statistics user object.
+ *
+ * This is a first class citizen and one or more can be sent to a client.
+ * It/they must be prefaced by a _axa_p_stats_rsp_t header and sometimes a
+ * _axa_p_stats_sys_t object. Multiple user objects can be sent consecutively
+ * as dictated by the user_obj_cnt in the _axa_p_stats_rsp_t header.
+ *
+ * This holds SRA or RAD specific data for a single user. It must set a
+ * server_type and populate the appropriate union values.
+ */
+#define _AXA_STATS_MAX_USER_OBJS 50		/* max in-flight user objs */
 typedef struct _PK {
-	uint32_t		ipv4_cnt;	/* number of IPv4 watches */
-	uint32_t		ipv6_cnt;	/* number of IPv6 watches */
-	uint32_t		dns_cnt;	/* number of DNS watches */
-	uint32_t		ch_cnt;		/* number of ch watches */
-	uint32_t		err_cnt;	/* number of err watches */
-} axa_p_mgmt_user_watches_t;
-
-/* SRA specific user stats */
-typedef struct _PK {
-	axa_p_mgmt_user_watches_t watches;	/* watch info */
-	axa_ch_mask_t		ch_mask;	/* channels user has open */
-} axa_p_mgmt_user_sra_t;
-
-/* RAD specific user stats */
-typedef int32_t runits_t;			/* RAD Units */
-typedef struct _PK {
-	uint16_t		an_cnt;		/* number of anomalies */
-	runits_t		ru_original;	/* runits original balance */
-	runits_t		ru_balance;	/* runits current balance */
-#if NEXT_MGMT_VERSION_WE_WILL_ADD_THIS_STUFF
-	char			anomalies[128];	/* anomaly names */
-	axa_p_mgmt_user_wc_t	watches;	/* watch info */
-	axa_ch_mask_t		ch_mask;	/* channels user has open */
-	char			options[128];	/* options */
-#endif
-} axa_p_mgmt_user_rad_t;
-
-/* AXA management user object */
-typedef struct _PK {
+	uint8_t			type;		/* AXA_P_STATS_TYPE_USER */
+	uint8_t			server_type;	/* server type (as above) */
 	axa_p_user_t		user;		/* user name */
+	uint8_t			is_admin;	/* 1 == is an admin */
 	uint8_t			io_type;	/* transport type */
 #define AXA_AF_INET    0			/* IPv4 */
 #define AXA_AF_INET6   1			/* IPv6 */
 #define AXA_AF_UNKNOWN 2			/* unknown */
 	uint8_t 		addr_type;	/* address type */
 	uint8_t			pad[6];		/*< to 0 mod 8 */
-	union axa_p_mgmt_ip {
+	union _axa_p_stats_ip {
 		uint8_t		ipv6[16];	/* ipv6 address */
 		uint32_t 	ipv4;		/* ipv4 address */
 	} ip;
@@ -706,32 +934,54 @@ typedef struct _PK {
 	axa_cnt_t		sent;		/* sent to client */
 	axa_cnt_t		rlimit;		/* lost to rate limiting */
 	axa_cnt_t		congested;	/* lost to server->client */
-	union axa_p_mgmt_srvr {
-		axa_p_mgmt_user_sra_t sra;	/* sra specific stats */
-		axa_p_mgmt_user_rad_t rad;	/* rad specific stats */
+	union _axa_p_stats_srvr {
+		_axa_p_stats_user_sra_t sra;	/* sra specific stats */
+		_axa_p_stats_user_rad_t rad;	/* rad specific stats */
 	} srvr;
-} axa_p_mgmt_user_t;
+} _axa_p_stats_user_t;
 
-/** AXA kill response codes  */
+/**
+ * AXA statistics RAD anomaly object.
+ *
+ * This is a first class citizen and one or more can be sent to a client.
+ * It/they must be originally prefaced by a _axa_p_stats_user_t object
+ * (with a server_type set to _AXA_STATS_SRVR_TYPE_RAD). Multiple user objects
+ * can be sent consecutively as dictated by the an_obj_cnt in the
+ * _axa_p_stats_user_t --> _axa_p_stats_user_rad_t header.
+ */
+typedef struct _PK {
+	char			name[32];	/* anomaly common name */
+	char			opt[128];	/* options, if list is too long
+  						 * "..." will be appended to
+						 * the string */
+	runits_t		ru_original;	/* runits original balance */
+	runits_t		ru_current;	/* runits current balance */
+	runits_t		ru_cost;	/* runits cost this instance */
+	axa_ch_mask_t		ch_mask;	/* channels */
+} _axa_p_stats_user_rad_an_t;
+
+/* ** End AXA stats interface. **/
+
+/* AXA kill response codes  */
 typedef enum {
 	AXA_P_KILL_R_SUCCESS  =1,		/* successful operation */
 	AXA_P_KILL_R_FAIL_NF  =2,		/* failed: sn/user not found */
 	AXA_P_KILL_R_FAIL_UNK =3,		/* failed: unknown reason */
-} axa_p_kill_rsp_t;
+} _axa_p_kill_rsp_t;
 
-/** AXA kill modes  */
+/* AXA kill modes  */
 typedef enum {
 	AXA_P_KILL_M_SN  =1,			/* kill by serial number */
 	AXA_P_KILL_M_U   =2,			/* kill by user name */
-} axa_p_kill_mode_t;
+} _axa_p_kill_mode_t;
 
 /* AXA kill response */
 typedef struct _PK {
-	axa_p_kill_mode_t	mode;		/* mode of kill request */
+	_axa_p_kill_mode_t	mode;		/* mode of kill request */
 	axa_p_user_t		user;		/* user name */
 	uint32_t		sn;		/* server-side serial num */
-	axa_p_kill_rsp_t	result;		/* result code */
-} axa_p_kill_t;
+	_axa_p_kill_rsp_t	result;		/* result code */
+} _axa_p_kill_t;
 /**< @endcond */
 
 /** AXA protocol body */
@@ -744,7 +994,7 @@ typedef union {
 	axa_p_ahit_t	ahit;		/**< anomaly hit */
 	axa_p_alist_t	alist;		/**< list an anomaly */
 	axa_p_clist_t	clist;		/**< channel list */
-	axa_p_missed_rad_t missed_rad;	/**< report missed data by RAD*/
+	axa_p_missed_rad_t missed_rad;	/**< report missed data by RAD */
 
 	axa_p_user_t    user;		/**< tell server which user */
 	axa_p_join_t    join;		/**< bundle TCP */
@@ -752,8 +1002,9 @@ typedef union {
 	axa_p_anom_t	anom;		/**< ask anomaly detection */
 	axa_p_channel_t	channel;	/**< enable or disable a channel */
 	axa_p_opt_t	opt;		/**< options */
-	axa_p_mgmt_t	mgmt;		/**< management info */
-	axa_p_kill_t	kill;		/**< kill info */
+	_axa_p_stats_req_t stats_req;	/**< statistics request */
+	_axa_p_stats_rsp_t stats_rsp;	/**< statistics response */
+	_axa_p_kill_t	kill;		/**< kill (both directions) */
 
 	uint8_t		b[1];		/**< ... */
 } axa_p_body_t;
