@@ -317,11 +317,17 @@ tests_test_client_config_SOURCES = tests/test-client_config.c $(top_builddir)/te
 tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
 tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
 
-TESTS += tests/test-mgmt
-check_PROGRAMS += tests/test-mgmt
-tests_test_mgmt_SOURCES = tests/test-mgmt.c
-tests_test_mgmt_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
-tests_test_mgmt_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+TESTS += tests/test-stats
+check_PROGRAMS += tests/test-stats
+tests_test_stats_SOURCES = tests/test-stats.c
+tests_test_stats_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_stats_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+
+TESTS += tests/test-kill
+check_PROGRAMS += tests/test-kill
+tests_test_kill_SOURCES = tests/test-kill.c
+tests_test_kill_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_kill_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
 
 TESTS += tests/test-tools-without-server.sh
 
