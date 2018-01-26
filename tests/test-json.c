@@ -962,130 +962,473 @@ START_TEST(test_radu)
 }
 END_TEST
 
-START_TEST(test_mgmt_get)
+START_TEST(test_stats_req)
 {
-	empty_test(AXA_P_OP_MGMT_GET, "MGMT GET");
-}
-END_TEST
-
-START_TEST(test_mgmt_getrsp_sra)
-{
-	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSP\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[{\"ipv4_watch_cnt\":1,\"ipv6_watch_cnt\":0,\"dns_watch_cnt\":0,\"ch_watch_cnt\":0,\"err_watch_cnt\":0,\"channels\":[\"ch16\"]},{\"ipv4_watch_cnt\":2,\"ipv6_watch_cnt\":0,\"dns_watch_cnt\":0,\"ch_watch_cnt\":0,\"err_watch_cnt\":0,\"channels\":[\"ch17\"]}]}";
+	const char *expected ="{\"tag\":\"*\",\"op\":\"STATS REQ\",\"version\":1,\"type\":\"all\"}";
 	axa_emsg_t emsg;
-	axa_p_mgmt_t mgmt_data = { 1, 1, { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}};
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-	axa_p_mgmt_user_sra_t users[2] = { { {0},{{0}} } };
-#pragma clang diagnostic pop
-	size_t watch_len = offsetof(axa_p_mgmt_t, b) + sizeof(users);
-	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
-	axa_p_mgmt_t *mgmt = alloca(watch_len);
+	axa_p_hdr_t hdr;
+	_axa_p_stats_req_t stats_req;
+	size_t stats_len;
+
+	memset(&hdr, 0, sizeof (hdr));
+	memset(&stats_req, 0, sizeof (stats_req));
+
+	stats_len = sizeof (stats_req);
+	uint8_t *stats = alloca(stats_len);
 	char *out = NULL;
 	axa_json_res_t res;
 
-	users[0].watches.ipv4_cnt = 1;
-	users[1].watches.ipv4_cnt = 2;
-	axa_set_bitwords(users[0].ch_mask.m, 16);
-	axa_set_bitwords(users[1].ch_mask.m, 17);
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + stats_len);
+	hdr.tag = AXA_H2P_TAG(0);
+	hdr.pvers = AXA_P_PVERS;
+	hdr.op = _AXA_P_OP_STATS_REQ;
 
-	*mgmt = mgmt_data;
-	memcpy(((char*)mgmt) + offsetof(axa_p_mgmt_t, b), users, sizeof(users));
-	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t*)mgmt, watch_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
-	ck_assert_str_eq(out, expected);
-	free(out);
-}
-END_TEST
+	stats_req.version = _AXA_STATS_VERSION_ONE;
+	stats_req.type = AXA_P_STATS_M_M_ALL;
 
-START_TEST(test_mgmt_getrsp_rad)
-{
-	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSP\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[{\"an_cnt\":1},{\"an_cnt\":2}]}";
-	axa_emsg_t emsg;
-	axa_p_mgmt_t mgmt_data = { 1, 1, { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2, {}};
-	axa_p_mgmt_user_rad_t users[2] = { {.an_cnt=1},{.an_cnt=2} };
-	size_t watch_len = offsetof(axa_p_mgmt_t, b) + sizeof(users);
-	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
-	axa_p_mgmt_t *mgmt = alloca(watch_len);
-	char *out = NULL;
-	axa_json_res_t res;
+	memcpy(stats, (uint8_t *)&stats_req, sizeof (stats_req));
 
-	*mgmt = mgmt_data;
-	memcpy(((char*)mgmt) + offsetof(axa_p_mgmt_t, b), users, sizeof(users));
-	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t*)mgmt, watch_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
-	ck_assert_str_eq(out, expected);
-	free(out);
-}
-END_TEST
-
-START_TEST(test_mgmt_getrsp_no_users)
-{
-	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT GET RSP\",\"load\":[1,2,3],\"cpu_usage\":4,\"uptime\":5,\"starttime\":6,\"fd_sockets\":7,\"fd_pipes\":8,\"fd_anon_inodes\":9,\"fd_other\":10,\"vmsize\":11,\"vmrss\":12,\"rchar\":13,\"wchar\":14,\"thread_cnt\":15,\"users\":[]}";
-	axa_emsg_t emsg;
-	axa_p_mgmt_t mgmt = { 1, 1, { 1, 2, 3}, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, {}};
-	size_t watch_len = offsetof(axa_p_mgmt_t, b);
-	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + watch_len), AXA_H2P_TAG(0), AXA_P_PVERS, AXA_P_OP_MGMT_GETRSP};
-	char *out = NULL;
-	axa_json_res_t res;
-	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t*)&mgmt, watch_len, &out);
-	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
-	ck_assert_str_eq(out, expected);
-	free(out);
-}
-END_TEST
-
-START_TEST(test_mgmt_getrsp_trunc)
-{
-	truncated_test(AXA_P_OP_MGMT_GETRSP, axa_p_mgmt_t, offsetof(axa_p_mgmt_t, b) - 1);
-}
-END_TEST
-
-START_TEST(test_mgmt_kill)
-{
-	axa_emsg_t emsg;
-	axa_p_mgmt_kill_t kill_data = {1, {"wink"}, 0, 1};
-	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT KILL\",\"mode\":1,\"user\":\"wink\",\"sn\":0,\"result\":1}";
-	size_t kill_data_len = sizeof(axa_p_mgmt_kill_t);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#pragma clang diagnostic pop
-	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + kill_data_len),
-		AXA_H2P_TAG(0),
-		AXA_P_PVERS, AXA_P_OP_MGMT_KILL};
-	axa_p_mgmt_kill_t *mgmt_kill = alloca(sizeof(axa_p_mgmt_kill_t));
-	char *out = NULL;
-	axa_json_res_t res;
-
-	*mgmt_kill = kill_data;
 	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
-			(axa_p_body_t *)mgmt_kill,
-			kill_data_len, &out);
+			(axa_p_body_t *)&stats_req, stats_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
 }
 END_TEST
 
-START_TEST(test_mgmt_killrsp)
+START_TEST(test_stats_rsp_sra_one_user)
 {
+	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"result\":\"success\",\"load\":[6700,7900,8300],\"cpu_usage\":5144,\"uptime\":19287627,\"starttime\":19279187,\"vmsize\":1428819968,\"vmrss\":21204992,\"thread_cnt\":145,\"user_cnt\":1,\"fd_sockets\":13,\"fd_pipes\":3,\"fd_anon_inodes\":0,\"fd_other\":5,\"rchar\":17362446,\"wchar\":755982917,\"sra_ipv4_watch_cnt\":0,\"sra_ipv6_watch_cnt\":0,\"sra_dns_watch_cnt\":0,\"sra_ch_watch_cnt\":0,\"sra_err_watch_cnt\":0,\"sra_channels\":[\"ch213\",\"ch255\"],\"users\":[\"user_obj\",{\"server_type\":\"sra\",\"user\":\"mschiffm\",\"is_admin\":true,\"io_type\":\"apikey\",\"address\":\"73.170.71.223\",\"sn\":251,\"connected_since\":\"2018-01-03T23:50:00Z\",\"ratelimit\":0,\"sample\":100.00,\"last_count_update\":\"2018-01-03T23:50:00Z\",\"filtered\":0,\"missed\":0,\"collected\":0,\"sent\":0,\"rlimit\":0,\"congested\":0,\"ipv4_watch_cnt\":0,\"ipv6_watch_cnt\":0,\"dns_watch_cnt\":0,\"ch_watch_cnt\":0,\"err_watch_cnt\":0,\"channels\":[\"ch255\"]}]}";
 	axa_emsg_t emsg;
-	axa_p_mgmt_kill_t kill_data = {2, {"wink"}, 10, 2};
-	const char *expected = "{\"tag\":\"*\",\"op\":\"MGMT KILL RSP\",\"mode\":2,\"user\":\"wink\",\"sn\":10,\"result\":2}";
-	size_t kill_data_len = sizeof(axa_p_mgmt_kill_t);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#pragma clang diagnostic pop
-	axa_p_hdr_t hdr = { AXA_H2P32(sizeof(axa_p_hdr_t) + kill_data_len),
-		AXA_H2P_TAG(0),
-		AXA_P_PVERS, AXA_P_OP_MGMT_KILLRSP};
-	axa_p_mgmt_kill_t *mgmt_kill = alloca(sizeof(axa_p_mgmt_kill_t));
+	axa_p_hdr_t hdr;
+	_axa_p_stats_rsp_t stats_rsp;
+	_axa_p_stats_sys_t stats_sys;
+	_axa_p_stats_user_t stats_users[1];
+	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys)
+		+ sizeof (stats_users);
+	uint8_t *stats = alloca(stats_len);
+	axa_json_res_t res;
+	char *out = NULL;
+
+	memset(&hdr, 0, sizeof (hdr));
+	memset(&stats_rsp, 0, sizeof (stats_rsp));
+	memset(&stats_sys, 0, sizeof (stats_sys));
+	memset(&stats_users, 0, sizeof (stats_users));
+
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + stats_len);
+	hdr.tag = AXA_H2P_TAG(0);
+	hdr.pvers = AXA_P_PVERS;
+	hdr.op = _AXA_P_OP_STATS_RSP;
+
+	stats_rsp.version = _AXA_STATS_VERSION_ONE;
+	stats_rsp.sys_objs_cnt = 1;
+	stats_rsp.user_objs_cnt = 1;
+	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
+
+	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_SRA;
+	stats_sys.load[0] = 6700;
+	stats_sys.load[1] = 7900;
+	stats_sys.load[2] = 8300;
+	stats_sys.cpu_usage = 5144;
+	stats_sys.uptime = 19287627;
+	stats_sys.starttime = 19279187;
+	stats_sys.fd_sockets = 13;
+	stats_sys.fd_pipes = 3;
+	stats_sys.fd_anon_inodes = 0;
+	stats_sys.fd_other = 5;
+	stats_sys.vmsize = 1428819968;
+	stats_sys.vmrss = 21204992;
+	stats_sys.rchar = 17362446;
+	stats_sys.wchar = 755982917;
+	stats_sys.thread_cnt = 145;
+	stats_sys.user_cnt = 1;
+	stats_sys.srvr.sra.watches.ipv4_cnt = 0;
+	stats_sys.srvr.sra.watches.ipv6_cnt = 0;
+	stats_sys.srvr.sra.watches.dns_cnt = 0;
+	stats_sys.srvr.sra.watches.ch_cnt = 0;
+	stats_sys.srvr.sra.watches.err_cnt = 0;
+	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 213);
+	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 255);
+
+	stats_users[0].type = AXA_P_STATS_TYPE_USER;
+	stats_users[0].server_type = _AXA_STATS_SRVR_TYPE_SRA;
+	strcpy(stats_users[0].user.name, "mschiffm");
+	stats_users[0].is_admin = 1;
+	stats_users[0].io_type = AXA_IO_TYPE_APIKEY;
+	stats_users[0].addr_type = AXA_AF_INET;
+	stats_users[0].ip.ipv4 = inet_addr("73.170.71.223");
+	stats_users[0].sn = 251;
+	stats_users[0].connected_since.tv_sec = 1515023400;
+	stats_users[0].ratelimit = 0;
+	stats_users[0].sample = 100;
+	stats_users[0].last_cnt_update.tv_sec = 1515023400;
+	stats_users[0].filtered = 0;
+	stats_users[0].missed = 0;
+	stats_users[0].collected = 0;
+	stats_users[0].sent = 0;
+	stats_users[0].rlimit = 0;
+	stats_users[0].congested = 0;
+	axa_set_bitwords(stats_users[0].srvr.sra.ch_mask.m, 255);
+	stats_users[0].srvr.sra.watches.ipv4_cnt = 0;
+	stats_users[0].srvr.sra.watches.ipv6_cnt = 0;
+	stats_users[0].srvr.sra.watches.dns_cnt = 0;
+	stats_users[0].srvr.sra.watches.ch_cnt = 0;
+	stats_users[0].srvr.sra.watches.err_cnt = 0;
+
+	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,
+			sizeof (stats_sys));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp) + sizeof (stats_sys),
+			(uint8_t *)&stats_users, sizeof (stats_users));
+
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
+			(axa_p_body_t *)stats, stats_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_stats_rsp_rad_one_user)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"result\":\"success\",\"load\":[6300,6200,7100],\"cpu_usage\":0,\"uptime\":19449048,\"starttime\":19373104,\"vmsize\":91680768,\"vmrss\":4968448,\"thread_cnt\":2,\"user_cnt\":1,\"rad_anomaly_cnt\":0,\"users\":[\"user_obj\",{\"server_type\":\"rad\",\"user\":\"mschiffm\",\"is_admin\":true,\"io_type\":\"apikey\",\"address\":\"73.170.71.223\",\"sn\":2,\"connected_since\":\"2018-01-05T20:40:31Z\",\"ratelimit\":0,\"sample\":100.00,\"last_count_update\":\"2018-01-05T20:40:31Z\",\"filtered\":0,\"missed\":0,\"collected\":0,\"sent\":0,\"rlimit\":0,\"congested\":0,\"anomaly_count_in_flight\":0,\"anomaly_count_total\":0}]}";
+	axa_emsg_t emsg;
+	axa_p_hdr_t hdr;
+	_axa_p_stats_rsp_t stats_rsp;
+	_axa_p_stats_sys_t stats_sys;
+	_axa_p_stats_user_t stats_users[1];
+	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys)
+		+ sizeof (stats_users);
+	uint8_t *stats = alloca(stats_len);
+	axa_json_res_t res;
+	char *out = NULL;
+
+	memset(&hdr, 0, sizeof (hdr));
+	memset(&stats_rsp, 0, sizeof (stats_rsp));
+	memset(&stats_sys, 0, sizeof (stats_sys));
+	memset(&stats_users, 0, sizeof (stats_users));
+
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + stats_len);
+	hdr.tag = AXA_H2P_TAG(0);
+	hdr.pvers = AXA_P_PVERS;
+	hdr.op = _AXA_P_OP_STATS_RSP;
+
+	stats_rsp.version = _AXA_STATS_VERSION_ONE;
+	stats_rsp.sys_objs_cnt = 1;
+	stats_rsp.user_objs_cnt = 1;
+	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
+
+	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_RAD;
+	stats_sys.load[0] = 6300;
+	stats_sys.load[1] = 6200;
+	stats_sys.load[2] = 7100;
+	stats_sys.cpu_usage = 0;
+	stats_sys.uptime = 19449048;
+	stats_sys.starttime = 19373104;
+	stats_sys.fd_sockets = 91680768;
+	stats_sys.fd_pipes = 4968448;
+	stats_sys.vmsize = 91680768;
+	stats_sys.vmrss = 4968448;
+	stats_sys.thread_cnt = 2;
+	stats_sys.user_cnt = 1;
+	stats_sys.srvr.rad.an_cnt = 0;
+
+	stats_users[0].type = AXA_P_STATS_TYPE_USER;
+	stats_users[0].server_type = _AXA_STATS_SRVR_TYPE_RAD;
+	strcpy(stats_users[0].user.name, "mschiffm");
+	stats_users[0].is_admin = 1;
+	stats_users[0].io_type = AXA_IO_TYPE_APIKEY;
+	stats_users[0].addr_type = AXA_AF_INET;
+	stats_users[0].ip.ipv4 = inet_addr("73.170.71.223");
+	stats_users[0].sn = 2;
+	stats_users[0].connected_since.tv_sec = 1515184831;
+	stats_users[0].ratelimit = 0;
+	stats_users[0].sample = 100;
+	stats_users[0].last_cnt_update.tv_sec = 1515184831;
+	stats_users[0].filtered = 0;
+	stats_users[0].missed = 0;
+	stats_users[0].collected = 0;
+	stats_users[0].sent = 0;
+	stats_users[0].rlimit = 0;
+	stats_users[0].congested = 0;
+	stats_users[0].srvr.rad.an_obj_cnt = 0;
+	stats_users[0].srvr.rad.an_obj_cnt_total = 0;
+
+	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,
+			sizeof (stats_sys));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp) + sizeof (stats_sys),
+			(uint8_t *)&stats_users, sizeof (stats_users));
+
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
+			(axa_p_body_t *)stats, stats_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"result\":\"success\",\"load\":[6300,6200,7100],\"cpu_usage\":0,\"uptime\":19449048,\"starttime\":19373104,\"vmsize\":91680768,\"vmrss\":4968448,\"thread_cnt\":2,\"user_cnt\":1,\"rad_anomaly_cnt\":1,\"users\":[\"user_obj\",{\"server_type\":\"rad\",\"user\":\"mschiffm\",\"is_admin\":true,\"io_type\":\"apikey\",\"address\":\"73.170.71.223\",\"sn\":2,\"connected_since\":\"2018-01-05T20:40:31Z\",\"ratelimit\":0,\"sample\":100.00,\"last_count_update\":\"2018-01-05T20:40:31Z\",\"filtered\":0,\"missed\":0,\"collected\":0,\"sent\":0,\"rlimit\":0,\"congested\":0,\"anomaly_count_in_flight\":1,\"anomaly_count_total\":1,\"anomalies\":[\"an_obj\",{\"name\":\"brand_sentry\",\"options\":\"b=farsight,fsi;m=hgl,lit\",\"ru_original\":\"unlimited\",\"ru_current\":\"unlimited\",\"ru_cost\":0,\"channels\":[\"ch204\"]}]}]}";
+	axa_emsg_t emsg;
+	axa_p_hdr_t hdr;
+	_axa_p_stats_rsp_t stats_rsp;
+	_axa_p_stats_sys_t stats_sys;
+	_axa_p_stats_user_t stats_users[1];
+	_axa_p_stats_user_rad_an_t an_obj;
+	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys)
+		+ sizeof (stats_users) + sizeof (an_obj);
+	uint8_t *stats = alloca(stats_len);
+	axa_json_res_t res;
+	char *out = NULL;
+
+	memset(&hdr, 0, sizeof (hdr));
+	memset(&stats_rsp, 0, sizeof (stats_rsp));
+	memset(&stats_sys, 0, sizeof (stats_sys));
+	memset(&stats_users, 0, sizeof (stats_users));
+	memset(&an_obj, 0, sizeof (an_obj));
+
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + stats_len);
+	hdr.tag = AXA_H2P_TAG(0);
+	hdr.pvers = AXA_P_PVERS;
+	hdr.op = _AXA_P_OP_STATS_RSP;
+
+	stats_rsp.version = _AXA_STATS_VERSION_ONE;
+	stats_rsp.sys_objs_cnt = 1;
+	stats_rsp.user_objs_cnt = 1;
+	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
+
+	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_RAD;
+	stats_sys.load[0] = 6300;
+	stats_sys.load[1] = 6200;
+	stats_sys.load[2] = 7100;
+	stats_sys.cpu_usage = 0;
+	stats_sys.uptime = 19449048;
+	stats_sys.starttime = 19373104;
+	stats_sys.fd_sockets = 91680768;
+	stats_sys.fd_pipes = 4968448;
+	stats_sys.vmsize = 91680768;
+	stats_sys.vmrss = 4968448;
+	stats_sys.thread_cnt = 2;
+	stats_sys.user_cnt = 1;
+	stats_sys.srvr.rad.an_cnt = 1;
+
+	stats_users[0].type = AXA_P_STATS_TYPE_USER;
+	stats_users[0].server_type = _AXA_STATS_SRVR_TYPE_RAD;
+	strcpy(stats_users[0].user.name, "mschiffm");
+	stats_users[0].is_admin = 1;
+	stats_users[0].io_type = AXA_IO_TYPE_APIKEY;
+	stats_users[0].addr_type = AXA_AF_INET;
+	stats_users[0].ip.ipv4 = inet_addr("73.170.71.223");
+	stats_users[0].sn = 2;
+	stats_users[0].connected_since.tv_sec = 1515184831;
+	stats_users[0].ratelimit = 0;
+	stats_users[0].sample = 100;
+	stats_users[0].last_cnt_update.tv_sec = 1515184831;
+	stats_users[0].filtered = 0;
+	stats_users[0].missed = 0;
+	stats_users[0].collected = 0;
+	stats_users[0].sent = 0;
+	stats_users[0].rlimit = 0;
+	stats_users[0].congested = 0;
+	stats_users[0].srvr.rad.an_obj_cnt = 1;
+	stats_users[0].srvr.rad.an_obj_cnt_total = 1;
+
+	strcpy(an_obj.name, "brand_sentry");
+	strcpy(an_obj.opt, "b=farsight,fsi;m=hgl,lit");
+	an_obj.ru_original = INT_MAX;
+	an_obj.ru_current = INT_MAX;
+	an_obj.ru_cost = 0;
+	axa_set_bitwords(an_obj.ch_mask.m, 204);
+
+	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,
+			sizeof (stats_sys));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp) + sizeof (stats_sys),
+			(uint8_t *)&stats_users, sizeof (stats_users));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp) + sizeof (stats_sys) +
+			sizeof (stats_users), (uint8_t *)&an_obj,
+			sizeof (an_obj));
+
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
+			(axa_p_body_t *)stats, stats_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+START_TEST(test_stats_rsp_sra_no_users)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"result\":\"success\",\"load\":[6700,7900,8300],\"cpu_usage\":5144,\"uptime\":19287627,\"starttime\":19279187,\"vmsize\":1428819968,\"vmrss\":21204992,\"thread_cnt\":145,\"user_cnt\":0,\"fd_sockets\":13,\"fd_pipes\":3,\"fd_anon_inodes\":0,\"fd_other\":5,\"rchar\":17362446,\"wchar\":755982917,\"sra_ipv4_watch_cnt\":0,\"sra_ipv6_watch_cnt\":0,\"sra_dns_watch_cnt\":0,\"sra_ch_watch_cnt\":0,\"sra_err_watch_cnt\":0,\"sra_channels\":[\"ch213\",\"ch255\"]}";
+	axa_emsg_t emsg;
+	axa_p_hdr_t hdr;
+	_axa_p_stats_rsp_t stats_rsp;
+	_axa_p_stats_sys_t stats_sys;
+	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys);
+	uint8_t *stats = alloca(stats_len);
+	axa_json_res_t res;
+	char *out = NULL;
+
+	memset(&hdr, 0, sizeof (hdr));
+	memset(&stats_rsp, 0, sizeof (stats_rsp));
+	memset(&stats_sys, 0, sizeof (stats_sys));
+
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + stats_len);
+	hdr.tag = AXA_H2P_TAG(0);
+	hdr.pvers = AXA_P_PVERS;
+	hdr.op = _AXA_P_OP_STATS_RSP;
+
+	stats_rsp.version = _AXA_STATS_VERSION_ONE;
+	stats_rsp.sys_objs_cnt = 1;
+	stats_rsp.user_objs_cnt = 0;
+	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
+
+	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_SRA;
+	stats_sys.load[0] = 6700;
+	stats_sys.load[1] = 7900;
+	stats_sys.load[2] = 8300;
+	stats_sys.cpu_usage = 5144;
+	stats_sys.uptime = 19287627;
+	stats_sys.starttime = 19279187;
+	stats_sys.fd_sockets = 13;
+	stats_sys.fd_pipes = 3;
+	stats_sys.fd_anon_inodes = 0;
+	stats_sys.fd_other = 5;
+	stats_sys.vmsize = 1428819968;
+	stats_sys.vmrss = 21204992;
+	stats_sys.rchar = 17362446;
+	stats_sys.wchar = 755982917;
+	stats_sys.thread_cnt = 145;
+	stats_sys.user_cnt = 0;
+	stats_sys.srvr.sra.watches.ipv4_cnt = 0;
+	stats_sys.srvr.sra.watches.ipv6_cnt = 0;
+	stats_sys.srvr.sra.watches.dns_cnt = 0;
+	stats_sys.srvr.sra.watches.ch_cnt = 0;
+	stats_sys.srvr.sra.watches.err_cnt = 0;
+	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 213);
+	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 255);
+
+	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,
+			sizeof (stats_sys));
+
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
+			(axa_p_body_t *)stats, stats_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_stats_rsp_rad_no_users)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"result\":\"success\",\"load\":[6300,6200,7100],\"cpu_usage\":0,\"uptime\":19449048,\"starttime\":19373104,\"vmsize\":91680768,\"vmrss\":4968448,\"thread_cnt\":2,\"user_cnt\":0,\"rad_anomaly_cnt\":0}";
+	axa_emsg_t emsg;
+	axa_p_hdr_t hdr;
+	_axa_p_stats_rsp_t stats_rsp;
+	_axa_p_stats_sys_t stats_sys;
+	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys);
+	uint8_t *stats = alloca(stats_len);
+	axa_json_res_t res;
+	char *out = NULL;
+
+	memset(&hdr, 0, sizeof (hdr));
+	memset(&stats_rsp, 0, sizeof (stats_rsp));
+	memset(&stats_sys, 0, sizeof (stats_sys));
+
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + stats_len);
+	hdr.tag = AXA_H2P_TAG(0);
+	hdr.pvers = AXA_P_PVERS;
+	hdr.op = _AXA_P_OP_STATS_RSP;
+
+	stats_rsp.version = _AXA_STATS_VERSION_ONE;
+	stats_rsp.sys_objs_cnt = 1;
+	stats_rsp.user_objs_cnt = 0;
+	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
+
+	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_RAD;
+	stats_sys.load[0] = 6300;
+	stats_sys.load[1] = 6200;
+	stats_sys.load[2] = 7100;
+	stats_sys.cpu_usage = 0;
+	stats_sys.uptime = 19449048;
+	stats_sys.starttime = 19373104;
+	stats_sys.fd_sockets = 91680768;
+	stats_sys.fd_pipes = 4968448;
+	stats_sys.vmsize = 91680768;
+	stats_sys.vmrss = 4968448;
+	stats_sys.thread_cnt = 2;
+	stats_sys.user_cnt = 0;
+	stats_sys.srvr.rad.an_cnt = 0;
+
+	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
+	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,
+			sizeof (stats_sys));
+
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
+			(axa_p_body_t *)stats, stats_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_kill_req)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"KILL REQ\",\"mode\":1,\"user\":\"wink\",\"sn\":0,\"result\":1}";
+	axa_emsg_t emsg;
+	axa_p_hdr_t hdr;
+	_axa_p_kill_t kill;
+	size_t kill_len = sizeof(_axa_p_kill_t);
 	char *out = NULL;
 	axa_json_res_t res;
 
-	*mgmt_kill = kill_data;
-	res = axa_body_to_json(&emsg, nmsg_input, &hdr,
-			(axa_p_body_t *)mgmt_kill,
-			kill_data_len, &out);
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + kill_len);
+	hdr.tag = AXA_H2P_TAG(0);
+	hdr.pvers = AXA_P_PVERS;
+	hdr.op = _AXA_P_OP_KILL_REQ;
+
+	kill.mode = 1;
+	strcpy(kill.user.name, "wink");
+	kill.sn = 0;
+	kill.result = 1;
+
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t *)&kill,
+			kill_len, &out);
+	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
+	ck_assert_str_eq(out, expected);
+	free(out);
+}
+END_TEST
+
+START_TEST(test_kill_rsp)
+{
+	const char *expected = "{\"tag\":\"*\",\"op\":\"KILL RSP\",\"mode\":2,\"user\":\"wink\",\"sn\":10,\"result\":2}";
+	axa_emsg_t emsg;
+	_axa_p_kill_t kill;
+	size_t kill_len = sizeof(_axa_p_kill_t);
+	axa_p_hdr_t hdr;
+	char *out = NULL;
+	axa_json_res_t res;
+
+	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + kill_len);
+	hdr.tag = AXA_H2P_TAG(0);
+	hdr.pvers = AXA_P_PVERS;
+	hdr.op = _AXA_P_OP_KILL_RSP;
+
+	kill.mode = 2;
+	strcpy(kill.user.name, "wink");
+	kill.sn = 10;
+	kill.result = 2;
+
+	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t *)&kill,
+			kill_len, &out);
 	ck_assert_int_eq(res, AXA_JSON_RES_SUCCESS);
 	ck_assert_str_eq(out, expected);
 	free(out);
@@ -1176,13 +1519,14 @@ int main(void) {
 	tcase_add_test(tc_core, test_cget);
 	tcase_add_test(tc_core, test_acct);
 	tcase_add_test(tc_core, test_radu);
-	tcase_add_test(tc_core, test_mgmt_get);
-	tcase_add_test(tc_core, test_mgmt_getrsp_sra);
-	tcase_add_test(tc_core, test_mgmt_getrsp_rad);
-	tcase_add_test(tc_core, test_mgmt_getrsp_no_users);
-	tcase_add_test(tc_core, test_mgmt_getrsp_trunc);
-	tcase_add_test(tc_core, test_mgmt_kill);
-	tcase_add_test(tc_core, test_mgmt_killrsp);
+	tcase_add_test(tc_core, test_stats_req);
+	tcase_add_test(tc_core, test_stats_rsp_sra_one_user);
+	tcase_add_test(tc_core, test_stats_rsp_rad_one_user);
+	tcase_add_test(tc_core, test_stats_rsp_rad_one_user_one_anomaly);
+	tcase_add_test(tc_core, test_stats_rsp_sra_no_users);
+	tcase_add_test(tc_core, test_stats_rsp_rad_no_users);
+	tcase_add_test(tc_core, test_kill_req);
+	tcase_add_test(tc_core, test_kill_rsp);
 	suite_add_tcase(s, tc_core);
 
 	sr = srunner_create(s);
