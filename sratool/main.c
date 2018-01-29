@@ -90,7 +90,7 @@ main(int argc, char **argv)
 {
 	const char *fields_file = "";
 	const char *config_file = "";
-#if HAVE_LIBEDIT_IS_UNICODE
+#if LIBEDIT_IS_UNICODE
 	wchar_t wc;
 #endif
 	char cmd_buf[500];
@@ -287,7 +287,7 @@ main(int argc, char **argv)
 			/* Get a command from stdin. */
 			n = 0;
 			for (;;) {
-#if HAVE_LIBEDIT_IS_UNICODE
+#if LIBEDIT_IS_UNICODE
 				getcfn(NULL, &wc);
 				cmd_buf[n] = wctob(wc);
 #else

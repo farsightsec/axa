@@ -56,10 +56,15 @@ LIBS="$save_LIBS"
 AC_SUBST(strlcpy_LIBS)
 
 PKG_CHECK_MODULES([libedit], [libedit], [], [MY_CHECK_LIBEDIT])
-# the following check was sourced from the Asterisk Project:
-# https://github.com/asterisk/asterisk/blob/master/configure.ac#L1595
-C_COMPILE_CHECK([LIBEDIT_IS_UNICODE], [el_rfunc_t *callback;], [histedit.h],
-		[], [libedit unicode support])
+
+save_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$libedit_CFLAGS"
+AC_MSG_CHECKING(libedit has unicode) 
+AC_CHECK_TYPES([el_rfunc_t],
+		AC_DEFINE([LIBEDIT_IS_UNICODE], [1],
+			[Define if libedit has unicode support.]),
+		[], [[#include <histedit.h>]])
+CPPFLAGS="$save_CPPFLAGS"
 
 PKG_CHECK_MODULES([libnmsg], [libnmsg >= 0.9.1])
 
