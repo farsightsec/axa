@@ -1812,11 +1812,11 @@ stats_req_cmd(axa_tag_t tag, const char *arg,
 
 	memset(&stats_req, 0, sizeof (stats_req));
 
-	stats_req.version = _AXA_STATS_VERSION_ONE;
+	stats_req.version = _AXA_STATS_VERSION;
 
 	/* no argument == summary */
 	if (*arg == '\0') {
-	printf("    sending stats summary request to server\n");
+		printf("    sending stats summary request to server\n");
 		stats_req.type = AXA_P_STATS_M_M_SUM;
 	}
 	/* all == everything */
@@ -1828,11 +1828,11 @@ stats_req_cmd(axa_tag_t tag, const char *arg,
 	else {
 		sn = strtoul(arg, &p, 0);
 		if (*p != '\0') {
-		printf("    sending stats request to server for"
+			printf("    sending stats request to server for"
 				" user \"%s\"\n", arg);
-		strlcpy(stats_req.user.name, arg,
-				sizeof(stats_req.user.name));
-		stats_req.type = AXA_P_STATS_M_M_U;
+			strlcpy(stats_req.user.name, arg,
+					sizeof(stats_req.user.name));
+			stats_req.type = AXA_P_STATS_M_M_U;
 		}
 		else {
 			printf("    sending stats request to server for"

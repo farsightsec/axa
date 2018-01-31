@@ -96,6 +96,7 @@ START_TEST(test_stats_sra)
 	stats_user.srvr.sra.watches.ch_cnt = 1;
 	stats_user.srvr.sra.watches.err_cnt = 0;
 	res = axa_set_bitwords(stats_user.srvr.sra.ch_mask.m, 255);
+	stats_user.srvr.sra.flags = 0;
 	ck_assert_int_eq(res, 0);
 
 	total = axa_make_hdr(&emsg, &hdr, pvers, tag, _AXA_P_OP_STATS_RSP,

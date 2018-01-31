@@ -188,7 +188,7 @@ read_srvr(void)
 			break;
 
 		case AXA_P_OP_MGMT_GETRSP:
-			printf("deprecated protocol, please use \"stats\"\n");
+			printf("deprecated command, please use \"stats\"\n");
 			break;
 
 		case _AXA_P_OP_STATS_RSP:

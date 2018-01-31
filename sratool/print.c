@@ -1314,17 +1314,17 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 
 	if (sys->server_type == _AXA_STATS_SRVR_TYPE_SRA) {
 		printf("    watches\n");
-		printf("      ipv4 watches  : %d\n",
+		printf("      ipv4 watches  : %u\n",
 			AXA_P2H32(sys->srvr.sra.watches.ipv4_cnt));
-		printf("      ipv6 watches  : %d\n",
+		printf("      ipv6 watches  : %u\n",
 			AXA_P2H32(sys->srvr.sra.watches.ipv6_cnt));
-		printf("      dns watches   : %d\n",
+		printf("      dns watches   : %u\n",
 			AXA_P2H32(sys->srvr.sra.watches.dns_cnt));
-		printf("      ch watches    : %d\n",
+		printf("      ch watches    : %u\n",
 			AXA_P2H32(sys->srvr.sra.watches.ch_cnt));
-		printf("      err watches   : %d\n",
+		printf("      err watches   : %u\n",
 			AXA_P2H32(sys->srvr.sra.watches.err_cnt));
-		printf("      total watches : %d\n",
+		printf("      total watches : %u\n",
 			AXA_P2H32(sys->srvr.sra.watches.ipv4_cnt) +
 			AXA_P2H32(sys->srvr.sra.watches.ipv6_cnt) +
 			AXA_P2H32(sys->srvr.sra.watches.dns_cnt) +
@@ -1334,7 +1334,7 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 		for (j = ch_cnt = 0; j < 256; j++) {
 			if (axa_get_bitwords(
 				sys->srvr.sra.ch_mask.m, j)) {
-					printf("%d ", j);
+					printf("%u ", j);
 					ch_cnt++;
 			}
 		}
@@ -1343,7 +1343,7 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 		printf("\n");
 	}
 	else /* AXA_STATS_SRVR_TYPE_RAD */ {
-		printf("      anomalies     : %d\n",
+		printf("      anomalies     : %u\n",
 			AXA_P2H32(sys->srvr.rad.an_cnt));
 	}
 }
@@ -1356,6 +1356,8 @@ print_stats_user_an(_axa_p_stats_user_rad_an_t *an_obj)
 
 	printf("        anomaly     : %s\n", an_obj->name);
 	printf("        options     : %s\n", an_obj->opt);
+
+	memset(&ru_buf, 0, sizeof (ru_buf));
 
 	if (an_obj->ru_original == INT_MAX)
 		strlcpy(ru_buf, "unlimited", sizeof(ru_buf));
@@ -1379,9 +1381,8 @@ print_stats_user_an(_axa_p_stats_user_rad_an_t *an_obj)
 	}
 	if (ch_cnt == 0)
 		printf("none");
-	printf("\n");
+	printf("\n\n");
 
-	printf("\n");
 	return (sizeof (_axa_p_stats_user_rad_an_t));
 }
 
@@ -1420,7 +1421,7 @@ print_stats_user(_axa_p_stats_user_t *user)
 			break;
 	}
 	printf("      from          : %s\n", addr_str);
-	printf("      serial number : %d\n", AXA_P2H32(user->sn));
+	printf("      serial number : %u\n", AXA_P2H32(user->sn));
 	connected_since.tv_sec = user->connected_since.tv_sec;
 	connected_since.tv_usec = user->connected_since.tv_usec;
 	t = AXA_P2H32(connected_since.tv_sec);
@@ -1445,8 +1446,8 @@ print_stats_user(_axa_p_stats_user_t *user)
 		case AXA_IO_TYPE_APIKEY:
 			io_type = AXA_IO_TYPE_APIKEY_STR;
 			break;
-		default:
 		case AXA_IO_TYPE_UNKN:
+		default:
 			io_type = "unknown";
 			break;
 	}
@@ -1498,22 +1499,19 @@ print_stats_user(_axa_p_stats_user_t *user)
 	if (mode == RAD && user->srvr.rad.an_obj_cnt > 0) {
 		if (user->srvr.rad.an_obj_cnt >
 			_AXA_STATS_MAX_USER_RAD_AN_OBJS) {
-			printf("invalid rad anomaly object count: %d",
+			printf("invalid rad anomaly object count: %u",
 					user->srvr.rad.an_obj_cnt);
 			return (bytes_printed);
 		}
-		int q = 0;
+
 		printf("      loaded modules\n");
 		an_objs_cnt = user->srvr.rad.an_obj_cnt;
 		p = (uint8_t *)user + sizeof (_axa_p_stats_user_t);
-		for (_axa_p_stats_user_rad_an_t *an_objs =
-				(_axa_p_stats_user_rad_an_t *)p;
-					an_objs_cnt;
-					an_objs_cnt--,
-					p += q,
-					an_objs = (_axa_p_stats_user_rad_an_t *)p) {
-			q = print_stats_user_an(an_objs);
-			bytes_printed += q;
+		for (an_objs_cnt = user->srvr.rad.an_obj_cnt; an_objs_cnt;
+				an_objs_cnt--) {
+			print_stats_user_an((_axa_p_stats_user_rad_an_t *)p);
+			bytes_printed += sizeof(_axa_p_stats_user_rad_an_t);
+			p += sizeof(_axa_p_stats_user_rad_an_t);
 		}
 	}
 
@@ -1590,21 +1588,16 @@ print_stats(_axa_p_stats_rsp_t *stats, size_t len)
 		return;
 	}
 
-	if (stats->sys_objs_cnt == 1) {
-		p = (uint8_t *)stats;
-		print_stats_sys((_axa_p_stats_sys_t *)(p +
-					sizeof (_axa_p_stats_rsp_t)));
-	}
+	p = (uint8_t *)stats + sizeof(_axa_p_stats_rsp_t);
+	if (stats->sys_objs_cnt == 1)
+		print_stats_sys((_axa_p_stats_sys_t *)p);
 
 	user_objs_cnt = stats->user_objs_cnt;
-	p = (uint8_t *)stats + sizeof (_axa_p_stats_rsp_t) +
-		stats->sys_objs_cnt * sizeof (_axa_p_stats_sys_t);
-	for (_axa_p_stats_user_t *user_objs = (_axa_p_stats_user_t *)p;
-				user_objs_cnt;
-				user_objs_cnt--,
-				p += q,
-				user_objs = (_axa_p_stats_user_t *)p) {
-		q = print_stats_user(user_objs);
+	p += (stats->sys_objs_cnt * sizeof (_axa_p_stats_sys_t));
+	for (user_objs_cnt = stats->user_objs_cnt; user_objs_cnt;
+			user_objs_cnt--) {
+		q = print_stats_user((_axa_p_stats_user_t *)p);
+		p += q;
 	}
 }
 

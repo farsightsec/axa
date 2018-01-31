@@ -781,7 +781,7 @@ typedef struct _PK {
  * If a non-privileged user requests stats, the server should return an error
  * via output_error() and reference the original opcode.
  *
- * This replaces the deprecated "MGMT" protocol.
+ * This replaces the deprecated "MGMT" opcode/command/protocol.
  *
  * IF any user requests the MGMT opcode, the server should return an error
  * via output_error() and inform the user of its deprecation.
