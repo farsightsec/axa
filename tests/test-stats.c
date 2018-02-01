@@ -48,7 +48,7 @@ START_TEST(test_stats_sra)
 	stats_rsp.user_objs_cnt = 1;
 	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
 
-	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.type = _AXA_P_STATS_TYPE_SYS;
 	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_SRA;
 	stats_sys.load[0] = AXA_H2P32(30.0 * AXA_P_OPT_SAMPLE_SCALE);
 	stats_sys.load[1] = AXA_H2P32(45.0 * AXA_P_OPT_SAMPLE_SCALE);
@@ -143,7 +143,7 @@ START_TEST(test_stats_rad)
 	stats_rsp.user_objs_cnt = 1;
 	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
 
-	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.type = _AXA_P_STATS_TYPE_SYS;
 	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_RAD;
 	stats_sys.load[0] = AXA_H2P32(30.0 * AXA_P_OPT_SAMPLE_SCALE);
 	stats_sys.load[1] = AXA_H2P32(45.0 * AXA_P_OPT_SAMPLE_SCALE);

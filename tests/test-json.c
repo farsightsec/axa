@@ -1023,7 +1023,7 @@ START_TEST(test_stats_rsp_sra_one_user)
 	stats_rsp.user_objs_cnt = 1;
 	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
 
-	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.type = _AXA_P_STATS_TYPE_SYS;
 	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_SRA;
 	stats_sys.load[0] = 6700;
 	stats_sys.load[1] = 7900;
@@ -1049,7 +1049,7 @@ START_TEST(test_stats_rsp_sra_one_user)
 	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 213);
 	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 255);
 
-	stats_users[0].type = AXA_P_STATS_TYPE_USER;
+	stats_users[0].type = _AXA_P_STATS_TYPE_USER;
 	stats_users[0].server_type = _AXA_STATS_SRVR_TYPE_SRA;
 	strcpy(stats_users[0].user.name, "mschiffm");
 	stats_users[0].is_admin = 1;
@@ -1117,7 +1117,7 @@ START_TEST(test_stats_rsp_rad_one_user)
 	stats_rsp.user_objs_cnt = 1;
 	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
 
-	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.type = _AXA_P_STATS_TYPE_SYS;
 	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_RAD;
 	stats_sys.load[0] = 6300;
 	stats_sys.load[1] = 6200;
@@ -1133,7 +1133,7 @@ START_TEST(test_stats_rsp_rad_one_user)
 	stats_sys.user_cnt = 1;
 	stats_sys.srvr.rad.an_cnt = 0;
 
-	stats_users[0].type = AXA_P_STATS_TYPE_USER;
+	stats_users[0].type = _AXA_P_STATS_TYPE_USER;
 	stats_users[0].server_type = _AXA_STATS_SRVR_TYPE_RAD;
 	strcpy(stats_users[0].user.name, "mschiffm");
 	stats_users[0].is_admin = 1;
@@ -1199,7 +1199,7 @@ START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 	stats_rsp.user_objs_cnt = 1;
 	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
 
-	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.type = _AXA_P_STATS_TYPE_SYS;
 	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_RAD;
 	stats_sys.load[0] = 6300;
 	stats_sys.load[1] = 6200;
@@ -1213,7 +1213,7 @@ START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 	stats_sys.user_cnt = 1;
 	stats_sys.srvr.rad.an_cnt = 1;
 
-	stats_users[0].type = AXA_P_STATS_TYPE_USER;
+	stats_users[0].type = _AXA_P_STATS_TYPE_USER;
 	stats_users[0].server_type = _AXA_STATS_SRVR_TYPE_RAD;
 	strcpy(stats_users[0].user.name, "mschiffm");
 	stats_users[0].is_admin = 1;
@@ -1283,7 +1283,7 @@ START_TEST(test_stats_rsp_sra_no_users)
 	stats_rsp.user_objs_cnt = 0;
 	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
 
-	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.type = _AXA_P_STATS_TYPE_SYS;
 	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_SRA;
 	stats_sys.load[0] = 6700;
 	stats_sys.load[1] = 7900;
@@ -1347,7 +1347,7 @@ START_TEST(test_stats_rsp_rad_no_users)
 	stats_rsp.user_objs_cnt = 0;
 	stats_rsp.result = AXA_P_STATS_R_SUCCESS;
 
-	stats_sys.type = AXA_P_STATS_TYPE_SYS;
+	stats_sys.type = _AXA_P_STATS_TYPE_SYS;
 	stats_sys.server_type = _AXA_STATS_SRVR_TYPE_RAD;
 	stats_sys.load[0] = 6300;
 	stats_sys.load[1] = 6200;

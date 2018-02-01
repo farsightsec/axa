@@ -467,7 +467,6 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	axa_p_direction_t dir;
 	uint8_t *p, *q;
 	uint16_t user_objs_cnt, an_objs_cnt;
-	bool have_user_objs = false, have_an_objs = false;
 	_axa_p_stats_sys_t *sys;
 	char time_buf[30];
 	struct tm *tm_info;
@@ -929,7 +928,6 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 			body->stats_rsp.sys_objs_cnt *
 			sizeof (_axa_p_stats_sys_t);
 		if (user_objs_cnt > 0) {
-			have_user_objs = true;
 			add_yajl_string(g, "users");
 			add_yajl_array(g);
 			_axa_p_stats_user_t *user_obj =
@@ -1089,7 +1087,6 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 							sizeof (_axa_p_stats_sys_t) +
 							sizeof (_axa_p_stats_user_t);
 						if (an_objs_cnt > 0) {
-							have_an_objs = true;
 							add_yajl_string(g,
 								"anomalies");
 							add_yajl_array(g);
