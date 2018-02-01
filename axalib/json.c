@@ -817,7 +817,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 			sys = (_axa_p_stats_sys_t *)(p +
 					sizeof (_axa_p_stats_rsp_t));
 
-			if (sys->type != AXA_P_STATS_TYPE_SYS) {
+			if (sys->type != _AXA_P_STATS_TYPE_SYS) {
 				res = AXA_JSON_RES_FAILURE;
 				goto err;
 			}

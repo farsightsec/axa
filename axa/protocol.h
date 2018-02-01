@@ -845,8 +845,8 @@ typedef struct _PK {
 
 /* AXA statistics response object types. */
 typedef enum {
-	AXA_P_STATS_TYPE_SYS	=1,		/* system/server object */
-	AXA_P_STATS_TYPE_USER	=2,		/* user object */
+	_AXA_P_STATS_TYPE_SYS	=1,		/* system/server object */
+	_AXA_P_STATS_TYPE_USER	=2,		/* user object */
 } _axa_p_stats_rsp_type_t;
 
 /* AXA statistics SRA specific user stats object. */

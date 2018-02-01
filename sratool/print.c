@@ -1191,7 +1191,7 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 	uint32_t user_cnt;
 	char time_buf[30];
 
-	if (sys->type != AXA_P_STATS_TYPE_SYS) {
+	if (sys->type != _AXA_P_STATS_TYPE_SYS) {
 		printf("expected system/server stats, got type \"%d\"\n",
 				sys->type);
 		return;
