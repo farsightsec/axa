@@ -645,17 +645,19 @@ typedef struct _PK {
  * Both request and response headers are versioned and typed. This allows for
  * protocol extensibility in both directions.
  *
- * The process is initiated by a client who asks a server for stats by building
+ * The process is initiated by a client that asks a server for stats by building
  * an AXA header with the _AXA_P_OP_STATS_REQ opcode and an stats request
- * header (_axa_p_stats_req_t) and sending this to the server, who may in turn
+ * header (_axa_p_stats_req_t) and sending this to the server, which may in turn
  * respond with an _AXA_P_OP_STATS_RSP opcode, stats response
  * header (_axa_p_stats_rsp_t) and one or more response objects.
  *
  * An _axa_p_stats_req_t header will contain the type of request:
- * - AXA_P_STATS_M_M_SUM (summary): ask just for system/server stats only
- * - AXA_P_STATS_M_M_ALL (all): ask for system/server and all user stats
- * - AXA_P_STATS_M_M_U (username): ask for system/server and stats on usernm
- * - AXA_P_STATS_M_M_SN (serial number): ask for system/server and stats on sn
+ * - AXA_P_STATS_M_M_SUM (summary): ask for system/server stats only
+ * - AXA_P_STATS_M_M_ALL (all): ask for system/server stats and all user stats
+ * - AXA_P_STATS_M_M_U (username): ask for system/server stats and stats on
+ *   usermame
+ * - AXA_P_STATS_M_M_SN (serial number): ask for system/server stats and stats
+ *   on sn
  *
  * Depending on the type, the username or sn field will be populated in the
  * request.
@@ -667,9 +669,10 @@ typedef struct _PK {
  *
  * IF the result code is AXA_P_STATS_R_SUCCESS, the server's response can be
  * one or more response objects and the sys_objs_cnt and user_objs_cnt fields
- * should be checked. After the stats response header, a valid response will
- * contain zero or one _AXA_P_STATS_TYPE_SYS (system) objects and/or zero to
- * _AXA_STATS_MAX_USER_OBJS _AXA_P_STATS_TYPE_USER (user) objects. If the
+ * should be checked. After the stats response, a valid response will always
+ * begin with one _AXA_P_STATS_TYPE_SYS (system) object, or if the response is
+ * broken into multiple messages (termed "flights") because of length
+ * restrictions, subsequent messages will leave this field empty. If the
  * number of in-flight user objects would exceed _AXA_STATS_MAX_USER_OBJS,
  * multiple _AXA_P_OP_STATS_RSP opcodes (each containing a specified number of
  * user objects) will be returned to the client until all have been sent.
@@ -694,7 +697,7 @@ typedef struct _PK {
  *   server -> client (server returns only system/server stats object)
  *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
  *   [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:0]
- *   [_axa_p_stats_sys_t]
+ *   [_axa_p_stats_sys_t:server_type:_AXA_STATS_SRVR_TYPE_SRA]
  *
  * Use Case 2: End user wants information on all of a single user's sessions
  * (in this case, user has three active sessions).
@@ -707,7 +710,7 @@ typedef struct _PK {
  *   user objects)
  *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
  *   [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:3]
- *   [_axa_p_stats_sys_t]
+ *   [_axa_p_stats_sys_t:server_type:_AXA_STATS_SRVR_TYPE_SRA]
  *   [_axa_p_stats_user_t]
  *   [_axa_p_stats_user_t]
  *   [_axa_p_stats_user_t]
@@ -726,6 +729,7 @@ typedef struct _PK {
  *                     system/server object is sent after the first one)
  *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
  *   [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:_AXA_STATS_MAX_USER_OBJS]
+ *   [_axa_p_stats_sys_t:server_type:_AXA_STATS_SRVR_TYPE_SRA]
  *   [_axa_p_stats_sys_t]
  *   [_axa_p_stats_user_t]
  *   [_axa_p_stats_user_t]
@@ -753,27 +757,26 @@ typedef struct _PK {
  *                     _AXA_STATS_MAX_USER_RAD_AN_OBJS)
  *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
  *   [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:_AXA_STATS_MAX_USER_OBJS]
- *   [_axa_p_stats_sys_t:srvr.rad.an_obj_cnt:0]
+ *   [_axa_p_stats_sys_t:server_type:_AXA_STATS_SRVR_TYPE_RAD,srvr.rad.an_obj_cnt:18]
  *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:1]
- *   [_axa_p_stats_user_rad_an_t]
+ *      [_axa_p_stats_user_rad_an_t]
  *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:0]
  *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:2]
- *   [_axa_p_stats_user_rad_an_t]
- *   [_axa_p_stats_user_rad_an_t]
+ *      [_axa_p_stats_user_rad_an_t]
  *   [...]
  *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:0]
  *   ...
  *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
  *   [_axa_p_stats_rsp_t:sys_objs_cnt:0,user_objs_cnt:10]
  *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:4]
- *   [_axa_p_stats_user_rad_an_t]
- *   [_axa_p_stats_user_rad_an_t]
- *   [_axa_p_stats_user_rad_an_t]
- *   [_axa_p_stats_user_rad_an_t]
+ *      [_axa_p_stats_user_rad_an_t]
+ *      [_axa_p_stats_user_rad_an_t]
+ *      [_axa_p_stats_user_rad_an_t]
+ *      [_axa_p_stats_user_rad_an_t]
  *   [...]
  *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:0]
  *   [_axa_p_stats_user_t:srvr.rad.an_obj_cnt:1]
- *   [_axa_p_stats_user_rad_an_t]
+ *      [_axa_p_stats_user_rad_an_t]
  *
  * The functionality exposed here is for admin users only and is not intended
  * to be part of the public API.
@@ -945,15 +948,15 @@ typedef struct _PK {
  *
  * This is a first class citizen and one or more can be sent to a client.
  * It/they must be originally prefaced by a _axa_p_stats_user_t object
- * (with a server_type set to _AXA_STATS_SRVR_TYPE_RAD). Multiple user objects
- * can be sent consecutively as dictated by the an_obj_cnt in the
+ * (with a server_type set to _AXA_STATS_SRVR_TYPE_RAD). Multiple anonmaly
+ * objects can be sent consecutively as dictated by the an_obj_cnt in the
  * _axa_p_stats_user_t --> _axa_p_stats_user_rad_t header.
  */
 typedef struct _PK {
 	char			name[32];	/* anomaly common name */
 	char			opt[128];	/* options, if list is too long
   						 * "..." will be appended to
-						 * the string */
+						 * the truncated string */
 	runits_t		ru_original;	/* runits original balance */
 	runits_t		ru_current;	/* runits current balance */
 	runits_t		ru_cost;	/* runits cost this instance */
