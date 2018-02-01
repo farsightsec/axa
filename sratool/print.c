@@ -1404,6 +1404,11 @@ print_stats_user(_axa_p_stats_user_t *user)
         axa_cnt_t total_congested = 0;
 	char addr_str[INET6_ADDRSTRLEN];
 
+	if (user->type != _AXA_P_STATS_TYPE_USER) {
+		printf("expected user object, got type \"%d\"\n", user->type);
+		return (0);
+	}
+
 	printf("\n    user            : %s (%s)\n", user->user.name,
 			user->is_admin == 1 ? "admin" : "non-admin");
 	switch (user->addr_type)
