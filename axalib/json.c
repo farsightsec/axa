@@ -852,7 +852,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 			switch (sys->server_type) {
 				case _AXA_STATS_SRVR_TYPE_SRA:
 					add_yajl_string(g, "server_type");
-					add_yajl_string(g, "srad");
+					add_yajl_string(g, "sra");
 					add_yajl_string(g, "fd_sockets");
 					add_yajl_integer(g,
 						AXA_P2H32(sys->fd_sockets));
@@ -911,7 +911,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 					break;
 				case _AXA_STATS_SRVR_TYPE_RAD:
 					add_yajl_string(g, "server_type");
-					add_yajl_string(g, "radd");
+					add_yajl_string(g, "rad");
 					add_yajl_string(g, "rad_anomaly_cnt");
 					add_yajl_integer(g,
 						AXA_P2H32(sys->srvr.rad.an_cnt));

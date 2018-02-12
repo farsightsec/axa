@@ -1220,7 +1220,7 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 	}
 
 	server_type = sys->server_type == _AXA_STATS_SRVR_TYPE_SRA
-		? "srad" : "radd";
+		? "sra" : "rad";
 	printf("    %s sys\n", server_type);
 	if (sys->cpu_usage == UINT32_MAX) {
 		printf("      CPU usage     : unavailable\n");
