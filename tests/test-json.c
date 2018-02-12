@@ -968,13 +968,12 @@ START_TEST(test_stats_req)
 	axa_emsg_t emsg;
 	axa_p_hdr_t hdr;
 	_axa_p_stats_req_t stats_req;
+	uint8_t stats[sizeof(_axa_p_stats_req_t)];
+	axa_json_res_t res;
+	char *out = NULL;
 
 	memset(&hdr, 0, sizeof (hdr));
 	memset(&stats_req, 0, sizeof (stats_req));
-
-	uint8_t *stats[sizeof(_axa_p_stats_req_t)];
-	char *out = NULL;
-	axa_json_res_t res;
 
 	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + sizeof (stats_req));
 	hdr.tag = AXA_H2P_TAG(0);
@@ -1004,7 +1003,7 @@ START_TEST(test_stats_rsp_sra_one_user)
 	_axa_p_stats_user_t stats_users[1];
 	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys)
 		+ sizeof (stats_users);
-	uint8_t *stats[stats_len];
+	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
 
@@ -1098,7 +1097,7 @@ START_TEST(test_stats_rsp_rad_one_user)
 	_axa_p_stats_user_t stats_users[1];
 	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys)
 		+ sizeof (stats_users);
-	uint8_t *stats[stats_len];
+	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
 
@@ -1179,7 +1178,7 @@ START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 	_axa_p_stats_user_rad_an_t an_obj;
 	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys)
 		+ sizeof (stats_users) + sizeof (an_obj);
-	uint8_t *stats[stats_len];
+	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
 
@@ -1265,7 +1264,7 @@ START_TEST(test_stats_rsp_sra_no_users)
 	_axa_p_stats_rsp_t stats_rsp;
 	_axa_p_stats_sys_t stats_sys;
 	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys);
-	uint8_t *stats[stats_len];
+	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
 
@@ -1329,7 +1328,7 @@ START_TEST(test_stats_rsp_rad_no_users)
 	_axa_p_stats_rsp_t stats_rsp;
 	_axa_p_stats_sys_t stats_sys;
 	size_t stats_len = sizeof (stats_rsp) + sizeof (stats_sys);
-	uint8_t *stats[stats_len];
+	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
 
