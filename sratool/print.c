@@ -1348,7 +1348,7 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 	}
 }
 
-static int
+static void
 print_stats_user_an(_axa_p_stats_user_rad_an_t *an_obj)
 {
 	int j, ch_cnt;
@@ -1382,8 +1382,6 @@ print_stats_user_an(_axa_p_stats_user_rad_an_t *an_obj)
 	if (ch_cnt == 0)
 		printf("none");
 	printf("\n\n");
-
-	return (sizeof (_axa_p_stats_user_rad_an_t));
 }
 
 static int
@@ -1510,7 +1508,6 @@ print_stats_user(_axa_p_stats_user_t *user)
 		}
 
 		printf("      loaded modules\n");
-		an_objs_cnt = user->srvr.rad.an_obj_cnt;
 		p = (uint8_t *)user + sizeof (_axa_p_stats_user_t);
 		for (an_objs_cnt = user->srvr.rad.an_obj_cnt; an_objs_cnt;
 				an_objs_cnt--) {
@@ -1597,7 +1594,6 @@ print_stats(_axa_p_stats_rsp_t *stats, size_t len)
 	if (stats->sys_objs_cnt == 1)
 		print_stats_sys((_axa_p_stats_sys_t *)p);
 
-	user_objs_cnt = stats->user_objs_cnt;
 	p += (stats->sys_objs_cnt * sizeof (_axa_p_stats_sys_t));
 	for (user_objs_cnt = stats->user_objs_cnt; user_objs_cnt;
 			user_objs_cnt--) {
