@@ -29,6 +29,7 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #ifdef __linux
+#include <bsd/string.h>                 /* for strlcpy() */
 #define __FAVOR_BSD
 #endif
 #include <netinet/udp.h>
@@ -462,7 +463,15 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	yajl_gen g = NULL;
 	int yajl_rc;
 	char op_str[AXA_P_OP_STRLEN];
+	char addr_str[INET6_ADDRSTRLEN];
 	axa_p_direction_t dir;
+	uint8_t *p, *q;
+	uint16_t user_objs_cnt, an_objs_cnt;
+	_axa_p_stats_sys_t *sys;
+	char time_buf[30];
+	struct tm *tm_info;
+	time_t t;
+	runits_t ru;
 
 	switch(AXA_P2H16(hdr->op)) {
 	case AXA_P_OP_MISSED_RAD:
@@ -481,8 +490,8 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	case AXA_P_OP_CHANNEL:
 	case AXA_P_OP_CGET:
 	case AXA_P_OP_ACCT:
-	case AXA_P_OP_MGMT_GET:
-	case AXA_P_OP_KILL_REQ:
+	case _AXA_P_OP_KILL_REQ:
+	case _AXA_P_OP_STATS_REQ:
 		dir = AXA_P_TO_SRA;
 		break;
 	case AXA_P_OP_ANOM:
@@ -740,106 +749,407 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 		add_yajl_number(g, sb_tmp, AXA_P2H64(body->join.id));
 		break;
 
-	case AXA_P_OP_MGMT_GETRSP: {
-		add_yajl_string(g, "load");
-		add_yajl_array(g);
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.load[0]));
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.load[1]));
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.load[2]));
-		close_yajl_array(g);
-
-		add_yajl_string(g, "cpu_usage");
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.cpu_usage));
-
-		add_yajl_string(g, "uptime");
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.uptime));
-
-		add_yajl_string(g, "starttime");
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.starttime));
-
-		add_yajl_string(g, "fd_sockets");
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.fd_sockets));
-
-		add_yajl_string(g, "fd_pipes");
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.fd_pipes));
-
-		add_yajl_string(g, "fd_anon_inodes");
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.fd_anon_inodes));
-
-		add_yajl_string(g, "fd_other");
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.fd_other));
-
-		add_yajl_string(g, "vmsize");
-		add_yajl_number(g, sb_tmp, AXA_P2H64(body->mgmt.vmsize));
-
-		add_yajl_string(g, "vmrss");
-		add_yajl_number(g, sb_tmp, AXA_P2H64(body->mgmt.vmrss));
-
-		add_yajl_string(g, "rchar");
-		add_yajl_number(g, sb_tmp, AXA_P2H64(body->mgmt.rchar));
-
-		add_yajl_string(g, "wchar");
-		add_yajl_number(g, sb_tmp, AXA_P2H64(body->mgmt.wchar));
-
-		add_yajl_string(g, "thread_cnt");
-		add_yajl_integer(g, AXA_P2H32(body->mgmt.thread_cnt));
-
-		add_yajl_string(g, "users");
-		add_yajl_array(g);
-		/* we have to guess whether this is SRA or RAD mode */
-		AXA_ASSERT(sizeof(axa_p_mgmt_user_sra_t) != sizeof(axa_p_mgmt_user_rad_t));
-		if ((body_len - offsetof(axa_p_mgmt_t, b)) / sizeof(axa_p_mgmt_user_sra_t) == AXA_P2H16(body->mgmt.users_cnt)) {
-			axa_p_mgmt_user_sra_t *users = (axa_p_mgmt_user_sra_t*)body->mgmt.b;
-			for (int i = 0; i < AXA_P2H16(body->mgmt.users_cnt); i++) {
-				add_yajl_map(g);
-
-				add_yajl_string(g, "ipv4_watch_cnt");
-				add_yajl_integer(g, AXA_P2H32(users[i].watches.ipv4_cnt));
-				add_yajl_string(g, "ipv6_watch_cnt");
-				add_yajl_integer(g, AXA_P2H32(users[i].watches.ipv6_cnt));
-				add_yajl_string(g, "dns_watch_cnt");
-				add_yajl_integer(g, AXA_P2H32(users[i].watches.dns_cnt));
-				add_yajl_string(g, "ch_watch_cnt");
-				add_yajl_integer(g, AXA_P2H32(users[i].watches.ch_cnt));
-				add_yajl_string(g, "err_watch_cnt");
-				add_yajl_integer(g, AXA_P2H32(users[i].watches.err_cnt));
-
-				add_yajl_string(g, "channels");
-				add_yajl_array(g);
-				/* TODO magic number of channels = bad */
-				for (int j = 0; j < 256; j++) {
-					if (axa_get_bitwords(users[i].ch_mask.m, j)) {
-						axa_strbuf_reset(sb_tmp);
-						axa_strbuf_append(sb_tmp, "ch%d", (j));
-						add_yajl_string(g, (const char*)sb_tmp->data);
-					}
-				}
-				close_yajl_array(g);
-
-				close_yajl_map(g);
-			}
-		} else if ((body_len - offsetof(axa_p_mgmt_t, b)) / sizeof(axa_p_mgmt_user_rad_t) == AXA_P2H16(body->mgmt.users_cnt)) {
-			axa_p_mgmt_user_rad_t *users = (axa_p_mgmt_user_rad_t*)body->mgmt.b;
-			for (int i = 0; i < AXA_P2H16(body->mgmt.users_cnt); i++) {
-				add_yajl_map(g);
-
-				add_yajl_string(g, "an_cnt");
-				add_yajl_integer(g, AXA_P2H32(users[i].an_cnt));
-
-				close_yajl_map(g);
-			}
-		} else {
-			axa_pemsg(emsg, "invalid users length %zu",
-					body_len - offsetof(axa_p_mgmt_t, b));
+	case _AXA_P_OP_STATS_REQ:
+		if (body->stats_req.version != _AXA_STATS_VERSION_ONE) {
 			res = AXA_JSON_RES_FAILURE;
 			goto err;
 		}
-		close_yajl_array(g);
+		add_yajl_string(g, "version");
+		add_yajl_integer(g, body->stats_req.version);
+
+		add_yajl_string(g, "type");
+		switch (body->stats_req.type) {
+			case AXA_P_STATS_M_M_SUM:
+				add_yajl_string(g, "summary");
+				break;
+			case AXA_P_STATS_M_M_ALL:
+				add_yajl_string(g, "all");
+				break;
+			case AXA_P_STATS_M_M_SN:
+				add_yajl_string(g, "serial number");
+				break;
+			case AXA_P_STATS_M_M_U:
+				add_yajl_string(g, "user name");
+				break;
+			default:
+				add_yajl_string(g, "unknown");
+		}
+
+		if (body->stats_req.type == AXA_P_STATS_M_M_SN) {
+			add_yajl_string(g, "serial number");
+			add_yajl_integer(g, body->stats_req.sn);
+		}
+
+		if (body->stats_req.type == AXA_P_STATS_M_M_U) {
+			add_yajl_string(g, "user name");
+			add_yajl_string(g, body->stats_req.user.name);
+		}
 
 		break;
-	}
-	case AXA_P_OP_KILL_REQ:
-	case AXA_P_OP_KILL_RSP:
+
+	case _AXA_P_OP_STATS_RSP:
+		if (body->stats_rsp.version != _AXA_STATS_VERSION_ONE) {
+			res = AXA_JSON_RES_FAILURE;
+			goto err;
+		}
+		add_yajl_string(g, "version");
+		add_yajl_integer(g, body->stats_rsp.version);
+
+		if (body->stats_rsp.sys_objs_cnt > 1) {
+			res = AXA_JSON_RES_FAILURE;
+			goto err;
+		}
+
+		add_yajl_string(g, "result");
+		switch (body->stats_rsp.result) {
+			case AXA_P_STATS_R_SUCCESS:
+				add_yajl_string(g, "success");
+				break;
+			case AXA_P_STATS_R_FAIL_NF:
+				add_yajl_string(g, "failed: user not found");
+				break;
+			case AXA_P_STATS_R_FAIL_UNK:
+			default:
+				add_yajl_string(g, "failed: unknown reason");
+		}
+
+		if (body->stats_rsp.sys_objs_cnt == 1) {
+			p = (uint8_t *)&body->stats_rsp;
+			sys = (_axa_p_stats_sys_t *)(p +
+					sizeof (_axa_p_stats_rsp_t));
+
+			if (sys->type != _AXA_P_STATS_TYPE_SYS) {
+				res = AXA_JSON_RES_FAILURE;
+				goto err;
+			}
+
+			add_yajl_string(g, "load");
+			add_yajl_array(g);
+			add_yajl_integer(g, AXA_P2H32(sys->load[0]));
+			add_yajl_integer(g, AXA_P2H32(sys->load[1]));
+			add_yajl_integer(g, AXA_P2H32(sys->load[2]));
+			close_yajl_array(g);
+
+			add_yajl_string(g, "cpu_usage");
+			add_yajl_integer(g, AXA_P2H32(sys->cpu_usage));
+
+			add_yajl_string(g, "uptime");
+			add_yajl_integer(g, AXA_P2H32(sys->uptime));
+
+			add_yajl_string(g, "starttime");
+			add_yajl_integer(g, AXA_P2H32(sys->starttime));
+
+			add_yajl_string(g, "vmsize");
+			add_yajl_number(g, sb_tmp, AXA_P2H64(sys->vmsize));
+
+			add_yajl_string(g, "vmrss");
+			add_yajl_number(g, sb_tmp, AXA_P2H64(sys->vmrss));
+
+			add_yajl_string(g, "thread_cnt");
+			add_yajl_integer(g, AXA_P2H32(sys->thread_cnt));
+
+			add_yajl_string(g, "user_cnt");
+			add_yajl_integer(g, AXA_P2H32(sys->user_cnt));
+
+			switch (sys->server_type) {
+				case _AXA_STATS_SRVR_TYPE_SRA:
+					add_yajl_string(g, "server_type");
+					add_yajl_string(g, "sra");
+					add_yajl_string(g, "fd_sockets");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->fd_sockets));
+
+					add_yajl_string(g, "fd_pipes");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->fd_pipes));
+
+					add_yajl_string(g, "fd_anon_inodes");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->fd_anon_inodes));
+
+					add_yajl_string(g, "fd_other");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->fd_other));
+
+					add_yajl_string(g, "rchar");
+					add_yajl_number(g, sb_tmp,
+						AXA_P2H64(sys->rchar));
+
+					add_yajl_string(g, "wchar");
+					add_yajl_number(g, sb_tmp,
+						AXA_P2H64(sys->wchar));
+
+					add_yajl_string(g,
+							"sra_ipv4_watch_cnt");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->srvr.sra.watches.ipv4_cnt));
+					add_yajl_string(g,
+							"sra_ipv6_watch_cnt");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->srvr.sra.watches.ipv6_cnt));
+					add_yajl_string(g,
+							"sra_dns_watch_cnt");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->srvr.sra.watches.dns_cnt));
+					add_yajl_string(g,
+							"sra_ch_watch_cnt");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->srvr.sra.watches.ch_cnt));
+					add_yajl_string(g,
+							"sra_err_watch_cnt");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->srvr.sra.watches.err_cnt));
+
+					add_yajl_string(g, "sra_channels");
+					add_yajl_array(g);
+					for (int j = 0; j < 256; j++) {
+						if (axa_get_bitwords(sys->srvr.sra.ch_mask.m, j)) {
+							axa_strbuf_reset(sb_tmp);
+							axa_strbuf_append(sb_tmp, "ch%d", (j));
+							add_yajl_string(g, (const char*)sb_tmp->data);
+						}
+					}
+					close_yajl_array(g);
+					break;
+				case _AXA_STATS_SRVR_TYPE_RAD:
+					add_yajl_string(g, "server_type");
+					add_yajl_string(g, "rad");
+					add_yajl_string(g, "rad_anomaly_cnt");
+					add_yajl_integer(g,
+						AXA_P2H32(sys->srvr.rad.an_cnt));
+					break;
+				default:
+					res = AXA_JSON_RES_FAILURE;
+					goto err;
+			}
+		}
+
+		user_objs_cnt = body->stats_rsp.user_objs_cnt;
+		p = (uint8_t *)&body->stats_rsp +
+			sizeof (_axa_p_stats_rsp_t) +
+			body->stats_rsp.sys_objs_cnt *
+			sizeof (_axa_p_stats_sys_t);
+		if (user_objs_cnt > 0) {
+			add_yajl_string(g, "users");
+			add_yajl_array(g);
+			_axa_p_stats_user_t *user_obj =
+				(_axa_p_stats_user_t *)p;
+			for (; user_objs_cnt; user_objs_cnt--, user_obj++) {
+				add_yajl_string(g, "user_obj");
+				add_yajl_map(g);
+
+				add_yajl_string(g, "server_type");
+				switch (user_obj->server_type) {
+					case _AXA_STATS_SRVR_TYPE_SRA:
+						add_yajl_string(g, "sra");
+						break;
+					case _AXA_STATS_SRVR_TYPE_RAD:
+						add_yajl_string(g, "rad");
+						break;
+					default:
+						add_yajl_string(g,
+								"unkwn");
+						break;
+				}
+				add_yajl_string(g, "user");
+				add_yajl_string(g, user_obj->user.name);
+				add_yajl_string(g, "is_admin");
+				add_yajl_bool(g, user_obj->is_admin == 1 ?
+						true : false);
+
+				add_yajl_string(g, "io_type");
+				switch (user_obj->io_type) {
+					case AXA_IO_TYPE_UNIX:
+						add_yajl_string(g,
+							AXA_IO_TYPE_UNIX_STR);
+						break;
+					case AXA_IO_TYPE_TCP:
+						add_yajl_string(g,
+							AXA_IO_TYPE_TCP_STR);
+						break;
+					case AXA_IO_TYPE_SSH:
+						add_yajl_string(g,
+							AXA_IO_TYPE_SSH_STR);
+						break;
+					case AXA_IO_TYPE_TLS:
+						add_yajl_string(g,
+							AXA_IO_TYPE_TLS_STR);
+						break;
+					case AXA_IO_TYPE_APIKEY:
+						add_yajl_string(g,
+							AXA_IO_TYPE_APIKEY_STR);
+						break;
+					case AXA_IO_TYPE_UNKN:
+					default:
+						add_yajl_string(g, "unknown");
+						break;
+				}
+				add_yajl_string(g, "address");
+				switch (user_obj->addr_type) {
+					case AXA_AF_INET:
+						inet_ntop(AF_INET, &user_obj->ip.ipv4,
+							addr_str, sizeof(addr_str));
+						break;
+					case AXA_AF_INET6:
+						inet_ntop(AF_INET6, &user_obj->ip.ipv6,
+							addr_str, sizeof(addr_str));
+						break;
+					case AXA_AF_UNKNOWN:
+						strlcpy(addr_str, "unknown",
+							sizeof(addr_str));
+						break;
+				}
+				add_yajl_string(g, addr_str);
+				add_yajl_string(g, "sn");
+				add_yajl_integer(g, user_obj->sn);
+				add_yajl_string(g, "connected_since");
+				t = AXA_P2H32(user_obj->connected_since.tv_sec);
+				tm_info = gmtime(&t);
+				strftime(time_buf, sizeof (time_buf),
+						"%Y-%m-%dT%H:%M:%SZ",
+						tm_info);
+				add_yajl_string(g, time_buf);
+				add_yajl_string(g, "ratelimit");
+				if (AXA_P2H64(user_obj->ratelimit) == AXA_RLIMIT_OFF) {
+					add_yajl_integer(g, 0);
+				}
+				else {
+					add_yajl_integer(g,
+						AXA_P2H64(user_obj->ratelimit));
+				}
+				add_yajl_string(g, "sample");
+				axa_strbuf_reset(sb_tmp);
+				axa_strbuf_append(sb_tmp, "%0.2f",
+					((double)AXA_P2H64(user_obj->sample)));
+				add_yajl_number_sb(g, sb_tmp);
+				add_yajl_string(g, "last_count_update");
+				t = AXA_P2H32(user_obj->last_cnt_update.tv_sec);
+				tm_info = gmtime(&t);
+				strftime(time_buf, sizeof (time_buf),
+						"%Y-%m-%dT%H:%M:%SZ",
+						tm_info);
+				add_yajl_string(g, time_buf);
+				add_yajl_string(g, "filtered");
+				add_yajl_integer(g, user_obj->filtered);
+				add_yajl_string(g, "missed");
+				add_yajl_integer(g, user_obj->missed);
+				add_yajl_string(g, "collected");
+				add_yajl_integer(g, user_obj->collected);
+				add_yajl_string(g, "sent");
+				add_yajl_integer(g, user_obj->sent);
+				add_yajl_string(g, "rlimit");
+				add_yajl_integer(g, user_obj->rlimit);
+				add_yajl_string(g, "congested");
+				add_yajl_integer(g, user_obj->congested);
+				switch (user_obj->server_type) {
+					case _AXA_STATS_SRVR_TYPE_SRA:
+						add_yajl_string(g,
+								"ipv4_watch_cnt");
+						add_yajl_integer(g,
+								AXA_P2H32(user_obj->srvr.sra.watches.ipv4_cnt));
+						add_yajl_string(g,
+								"ipv6_watch_cnt");
+						add_yajl_integer(g,
+								AXA_P2H32(user_obj->srvr.sra.watches.ipv6_cnt));
+						add_yajl_string(g,
+								"dns_watch_cnt");
+						add_yajl_integer(g,
+								AXA_P2H32(user_obj->srvr.sra.watches.dns_cnt));
+						add_yajl_string(g,
+								"ch_watch_cnt");
+						add_yajl_integer(g,
+								AXA_P2H32(user_obj->srvr.sra.watches.ch_cnt));
+						add_yajl_string(g,
+								"err_watch_cnt");
+						add_yajl_integer(g,
+								AXA_P2H32(user_obj->srvr.sra.watches.err_cnt));
+
+						add_yajl_string(g, "channels");
+						add_yajl_array(g);
+						for (int j = 0; j < 256; j++) {
+							if (axa_get_bitwords(user_obj->srvr.sra.ch_mask.m, j)) {
+								axa_strbuf_reset(sb_tmp);
+								axa_strbuf_append(sb_tmp, "ch%d", (j));
+								add_yajl_string(g, (const char*)sb_tmp->data);
+							}
+						}
+						close_yajl_array(g);
+						break;
+					case _AXA_STATS_SRVR_TYPE_RAD:
+						add_yajl_string(g, "anomaly_count_in_flight");
+						add_yajl_integer(g,
+							AXA_P2H32(user_obj->srvr.rad.an_obj_cnt));
+						add_yajl_string(g, "anomaly_count_total");
+						add_yajl_integer(g,
+							AXA_P2H32(user_obj->srvr.rad.an_obj_cnt_total));
+						an_objs_cnt = user_obj->srvr.rad.an_obj_cnt;
+						q = (uint8_t *)&body->stats_rsp +
+							sizeof (_axa_p_stats_rsp_t) +
+							body->stats_rsp.sys_objs_cnt *
+							sizeof (_axa_p_stats_sys_t) +
+							sizeof (_axa_p_stats_user_t);
+						if (an_objs_cnt > 0) {
+							add_yajl_string(g,
+								"anomalies");
+							add_yajl_array(g);
+							_axa_p_stats_user_rad_an_t *an_obj = (_axa_p_stats_user_rad_an_t *)q;
+							for ( ; an_objs_cnt; an_objs_cnt--, an_obj++) {
+								add_yajl_string(g, "an_obj");
+								add_yajl_map(g);
+								add_yajl_string(g, "name");
+								add_yajl_string(g,
+									an_obj->name);
+								add_yajl_string(g, "options");
+								add_yajl_string(g,
+									an_obj->opt);
+								add_yajl_string(g,
+									"ru_original");
+								ru = AXA_P2H32(an_obj->ru_original);
+								if (ru == INT_MAX)
+									add_yajl_string(g,
+										"unlimited");
+								else
+									add_yajl_integer(g,
+										AXA_P2H32(an_obj->ru_original));
+								add_yajl_string(g,
+									"ru_current");
+								ru = AXA_P2H32(an_obj->ru_current);
+								if (ru == INT_MAX)
+									add_yajl_string(g,
+										"unlimited");
+								else
+									add_yajl_integer(g,
+										AXA_P2H32(an_obj->ru_current));
+								add_yajl_string(g, "ru_cost");
+								add_yajl_integer(g,
+									AXA_P2H32(an_obj->ru_cost));
+								add_yajl_string(g,
+									"channels");
+								add_yajl_array(g);
+								for (int j = 0; j < 256; j++) {
+									if (axa_get_bitwords(an_obj->ch_mask.m, j)) {
+										axa_strbuf_reset(sb_tmp);
+										axa_strbuf_append(sb_tmp, "ch%d", (j));
+										add_yajl_string(g, (const char*)sb_tmp->data);
+									}
+								}
+								close_yajl_array(g);
+								close_yajl_map(g);
+							}
+							close_yajl_array(g);
+						}
+						break;
+					default:
+						res = AXA_JSON_RES_FAILURE;
+						goto err;
+				} /* switch (user_obj->server_type) */
+				close_yajl_map(g);
+			} /* for (; user_objs_cnt; user_objs_cnt--, ... */
+			close_yajl_array(g);
+		} /* if (user_objs_cnt > 0) */
+		break;
+	case _AXA_P_OP_KILL_REQ:
+	case _AXA_P_OP_KILL_RSP:
 		add_yajl_string(g, "mode");
 		add_yajl_integer(g, body->kill.mode);
 		add_yajl_string(g, "user");
@@ -858,7 +1168,10 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	case AXA_P_OP_CGET:
 	case AXA_P_OP_ACCT:
 	case AXA_P_OP_RADU:
+		break;
+	case AXA_P_OP_MGMT_GETRSP:
 	case AXA_P_OP_MGMT_GET:
+		add_yajl_string(g, "mgmt is deprecated; please upgrade and use \"stats\"");
 		break;
 	} /* switch */
 

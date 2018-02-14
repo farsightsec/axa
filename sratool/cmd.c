@@ -115,8 +115,8 @@ static cmd_t go_cmd;
 static cmd_t sleep_cmd;
 static cmd_t radunit_cmd;
 static cmd_t nmsg_zlib_cmd;
-static cmd_t mgmt_get_cmd;
-static cmd_t kill_req_cmd;
+static cmd_t stats_req_cmd;
+static cmd_t kill_cmd;
 static cmd_t alias_cmd;
 static cmd_t buffer_cmd;
 
@@ -258,11 +258,11 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "help [cmd]",
     "List all commands or get more information about a command."
 },
-{"kill",		kill_req_cmd,		BOTH, YES, YES,
+{"kill",		kill_cmd,		BOTH, YES, YES,
     "kill user_name | serial_number",
-    "Send a request to the server to kill a user's session(s) (admin"
-    " users only). If serial number is specified, kill a single session;"
-    "if user name is specified, kill all sessions belonging to that user."
+    "Kill off user session (admin users only). If serial number is specified"
+    " kill a single session; if user name is specified, kill all sessions"
+    " belonging to that user."
 },
 {"list channels",	list_cmd,		SRA, MB, YES,
     "list channels",
@@ -281,9 +281,15 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "With a tag, list the specified watch."
     "  List all watches without a tag."
 },
-{"mgmt",		mgmt_get_cmd,		BOTH, NO, YES,
-    "mgmt",
-    "Get server back office details (admin users only)."
+{"stats",		stats_req_cmd,		BOTH, MB, YES,
+    "stats [all | user_name | serial_number]",
+    "Get current system, server, and user statistics (admin users only)."
+    " If no argument is provided, return a top-level summary containing"
+    " system and server statistics."
+    " If a user name or serial number is provided, proceed summary with"
+    " information on all current sessions for that user."
+    " If the keyword \"all\" is specified, proceed summary with information"
+    " on all current sessions for all logged in users."
 },
 {"mode",		mode_cmd,		BOTH, MB, NO,
     "mode [SRA | RAD]",
@@ -1797,23 +1803,60 @@ nmsg_zlib_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 }
 
 static int
-mgmt_get_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
-	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+stats_req_cmd(axa_tag_t tag, const char *arg,
+		const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	printf("    sending mgmt request to server...\n");
-	return (srvr_send(tag, AXA_P_OP_MGMT_GET, NULL, 0));
+	char *p;
+	uint32_t sn;
+	_axa_p_stats_req_t stats_req;
+
+	memset(&stats_req, 0, sizeof (stats_req));
+
+	stats_req.version = _AXA_STATS_VERSION;
+
+	/* no argument == summary */
+	if (*arg == '\0') {
+		printf("    sending stats summary request to server\n");
+		stats_req.type = AXA_P_STATS_M_M_SUM;
+	}
+	/* all == everything */
+	else if (word_cmp(&arg,"all")) {
+		printf("    sending stats all request to server\n");
+		stats_req.type = AXA_P_STATS_M_M_ALL;
+	}
+	/* username or serial number */
+	else {
+		sn = strtoul(arg, &p, 0);
+		if (*p != '\0') {
+			printf("    sending stats request to server for"
+				" user \"%s\"\n", arg);
+			strlcpy(stats_req.user.name, arg,
+					sizeof(stats_req.user.name));
+			stats_req.type = AXA_P_STATS_M_M_U;
+		}
+		else {
+			stats_req.sn = AXA_H2P32(sn);
+			stats_req.type = AXA_P_STATS_M_M_SN;
+			printf("    sending stats request to server for"
+					" serial number \"%u\"\n",
+					stats_req.sn);
+		}
+	}
+	return (srvr_send(tag, _AXA_P_OP_STATS_REQ, &stats_req,
+				sizeof (stats_req)));
 }
 
 static int
-kill_req_cmd(axa_tag_t tag, const char *arg,
+kill_cmd(axa_tag_t tag, const char *arg,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	char *p;
 	uint32_t sn;
-	axa_p_kill_t kill;
+	_axa_p_kill_t kill;
 
 	if (*arg == '\0') {
-		error_msg("kill requires a valid user name or serial number");
+		error_msg("kill command requires a valid user name or"
+				" serial number");
 		return (0);
 	}
 
@@ -1833,7 +1876,7 @@ kill_req_cmd(axa_tag_t tag, const char *arg,
 		kill.mode = AXA_P_KILL_M_SN;
 	}
 
-	return (srvr_send(tag, AXA_P_OP_KILL_REQ, &kill, sizeof (kill)));
+	return (srvr_send(tag, _AXA_P_OP_KILL_REQ, &kill, sizeof (kill)));
 }
 
 static int

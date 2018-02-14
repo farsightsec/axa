@@ -25,6 +25,11 @@ axa/version.h
 Doxyfile
 /html
 /latex
+tests/test-apikey
 tests/test-json
+tests/test-client_config
+tests/test-kill
+tests/test-stats
+tests/test-tools-without-server.sh
 *.log
 *.trs

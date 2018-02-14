@@ -167,7 +167,7 @@ echo 060000 'test "?" with partial commands to match multiple command names, but
 echo "? st" | $SRATOOL 2>&1 | grep -5 "status" | grep -5 "stop" | grep "server status" && exit 1
 
 echo 060010 'test "?" with partial command to match a single command name'
-echo "? stat" | $SRATOOL 2>&1 | grep "server status"
+echo "? statu" | $SRATOOL 2>&1 | grep "server status"
 
 echo 060020 partial command that matches multiple should show full names of matching commands with synopsis
 echo "ver" | $SRATOOL 2>&1 | grep -2 "verbose .*off" | grep "version"
