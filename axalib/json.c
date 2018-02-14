@@ -755,7 +755,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 			goto err;
 		}
 		add_yajl_string(g, "version");
-		add_yajl_integer(g, _AXA_STATS_VERSION_ONE);
+		add_yajl_integer(g, body->stats_req.version);
 
 		add_yajl_string(g, "type");
 		switch (body->stats_req.type) {
