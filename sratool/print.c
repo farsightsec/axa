@@ -1584,12 +1584,12 @@ print_stats(_axa_p_stats_rsp_t *stats, size_t len)
 	}
 
 	if (stats->sys_objs_cnt > 1) {
-		printf("invalid stats response: too many sys objects (%d > 1)\n", stats->sys_objs_cnt);
+		printf("invalid stats response: too many sys objects (%u > 1)\n", stats->sys_objs_cnt);
 		return;
 	}
 
 	if (stats->user_objs_cnt > _AXA_STATS_MAX_USER_OBJS) {
-		printf("invalid stats response: too many user objects (%d > %d)\n", stats->user_objs_cnt, _AXA_STATS_MAX_USER_OBJS);
+		printf("invalid stats response: too many user objects (%u > %u)\n", stats->user_objs_cnt, _AXA_STATS_MAX_USER_OBJS);
 		return;
 	}
 
