@@ -730,7 +730,6 @@ typedef struct _PK {
  *   [axa_p_hdr_t:_AXA_P_OP_STATS_RSP]
  *     [_axa_p_stats_rsp_t:sys_objs_cnt:1,user_objs_cnt:_AXA_STATS_MAX_USER_OBJS]
  *       [_axa_p_stats_sys_t:server_type:_AXA_STATS_SRVR_TYPE_SRA]
- *       [_axa_p_stats_sys_t]
  *       [_axa_p_stats_user_t]
  *       [_axa_p_stats_user_t]
  *       [_axa_p_stats_user_t]
