@@ -1205,7 +1205,8 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 		gettimeofday(&tv, NULL);
 		tv.tv_sec -= AXA_P2H32(sys->uptime);
 		tm_info = gmtime(&t);
-		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		strftime(time_buf, sizeof (time_buf),
+				"%Y-%m-%dT%H:%M:%SZ", tm_info);
 		printf("    server uptime   : %s\n", convert_timeval(&tv));
 	}
 	if (sys->load[0] == UINT32_MAX && sys->load[1] == UINT32_MAX &&
@@ -1237,7 +1238,8 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 		tv.tv_sec -= (AXA_P2H32(sys->uptime) -
 				AXA_P2H32(sys->starttime));
 		tm_info = gmtime(&t);
-		strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		strftime(time_buf, sizeof (time_buf),
+				"%Y-%m-%dT%H:%M:%SZ", tm_info);
 		printf("      uptime        : %s\n", convert_timeval(&tv));
 	}
 	if (sys->vmsize == UINT64_MAX) {
@@ -1429,7 +1431,8 @@ print_stats_user(_axa_p_stats_user_t *user)
 	connected_since.tv_usec = user->connected_since.tv_usec;
 	t = AXA_P2H32(connected_since.tv_sec);
 	tm_info = gmtime(&t);
-	strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+		strftime(time_buf, sizeof (time_buf),
+				"%Y-%m-%dT%H:%M:%SZ", tm_info);
 	printf("      since         : %s (%s)\n", time_buf,
 			convert_timeval(&connected_since));
 
@@ -1522,7 +1525,7 @@ print_stats_user(_axa_p_stats_user_t *user)
 	last_cnt_update.tv_usec = user->last_cnt_update.tv_usec;
 	t = AXA_P2H32(last_cnt_update.tv_sec);
 	tm_info = gmtime(&t);
-	strftime(time_buf, 26, "%Y-%m-%dT%H:%M:%SZ", tm_info);
+	strftime(time_buf, sizeof (time_buf), "%Y-%m-%dT%H:%M:%SZ", tm_info);
 	printf("      last updated  : %s (%s)\n", time_buf,
 			convert_timeval(&last_cnt_update));
 	printf("        filtered    : %"PRIu64"\n",
