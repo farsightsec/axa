@@ -792,6 +792,8 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 			res = AXA_JSON_RES_FAILURE;
 			goto err;
 		}
+		add_yajl_string(g, "version");
+		add_yajl_integer(g, body->stats_rsp.version);
 
 		if (body->stats_rsp.sys_objs_cnt > 1) {
 			res = AXA_JSON_RES_FAILURE;
