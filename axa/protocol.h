@@ -635,7 +635,7 @@ typedef struct _PK {
  * ** Begin AXA stats interface. **
  *
  * 'stats' is a request/response protocol that provides a way for AXA servers
- * (both SRA or RAD) to report a current state of affairs to interested
+ * (both SRA and RAD) to report a current state of affairs to interested
  * clients.
  *
  * It introduces two new private opcodes:
