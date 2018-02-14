@@ -1835,10 +1835,11 @@ stats_req_cmd(axa_tag_t tag, const char *arg,
 			stats_req.type = AXA_P_STATS_M_M_U;
 		}
 		else {
-			printf("    sending stats request to server for"
-					" serial number \"%s\"\n", arg);
 			stats_req.sn = AXA_H2P32(sn);
 			stats_req.type = AXA_P_STATS_M_M_SN;
+			printf("    sending stats request to server for"
+					" serial number \"%u\"\n",
+					stats_req.sn);
 		}
 	}
 	return (srvr_send(tag, _AXA_P_OP_STATS_REQ, &stats_req,
