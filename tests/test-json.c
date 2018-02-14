@@ -1374,13 +1374,15 @@ END_TEST
 
 START_TEST(test_kill_req)
 {
-	const char *expected = "{\"tag\":\"*\",\"op\":\"KILL REQ\",\"mode\":1,\"user\":\"wink\",\"sn\":0,\"result\":1}";
+	const char *expected = "{\"tag\":\"*\",\"op\":\"KILL REQ\",\"mode\":1,\"user\":\"wink\",\"sn\":0,\"result\":0}";
 	axa_emsg_t emsg;
 	axa_p_hdr_t hdr;
 	_axa_p_kill_t kill;
 	size_t kill_len = sizeof(_axa_p_kill_t);
 	char *out = NULL;
 	axa_json_res_t res;
+
+	memset(&kill, 0, sizeof (kill));
 
 	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + kill_len);
 	hdr.tag = AXA_H2P_TAG(0);
@@ -1390,7 +1392,6 @@ START_TEST(test_kill_req)
 	kill.mode = AXA_P_KILL_M_SN;
 	strcpy(kill.user.name, "wink");
 	kill.sn = 0;
-	kill.result = AXA_P_KILL_R_SUCCESS;
 
 	res = axa_body_to_json(&emsg, nmsg_input, &hdr, (axa_p_body_t *)&kill,
 			kill_len, &out);
@@ -1409,6 +1410,8 @@ START_TEST(test_kill_rsp)
 	axa_p_hdr_t hdr;
 	char *out = NULL;
 	axa_json_res_t res;
+
+	memset(&kill, 0, sizeof (kill));
 
 	hdr.len = AXA_H2P32(sizeof(axa_p_hdr_t) + kill_len);
 	hdr.tag = AXA_H2P_TAG(0);
