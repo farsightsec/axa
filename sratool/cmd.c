@@ -1016,16 +1016,24 @@ verbose_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 }
 
 int
-version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED,
+version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
+	char *out = NULL;
+	const char *origin = ((mode == RAD) ? "radtool" : "sratool");
 #if AXA_P_PVERS_MIN != AXA_P_PVERS_MAX
-	printf("%s "AXA_PVERS_STR" AXA protocol %d in %d to %d\n",
+	printf("%s "AXA_PVERS_STR" AXA protocol %d [support from %d to %d]\n",
 	       axa_prog_name, AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
 #else
 	printf("%s "AXA_PVERS_STR" AXA protocol %d\n",
 	       axa_prog_name, AXA_P_PVERS);
 #endif
+	if (!axa_client_get_hello_string(&emsg, origin, &out))
+		axa_error_msg("error retrieving client HELLO: %s", emsg.c);
+	else {
+		printf("client HELLO: %s\n", out);
+		free(out);
+	}
 	return (1);
 }
 

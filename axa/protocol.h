@@ -104,14 +104,15 @@ typedef uint16_t	axa_tag_t;
 
 /** define old versions for eventual "#ifdef AXA_P_VERSx" */
 typedef uint8_t		axa_p_pvers_t;
-/** protocol version 1 */
+/** protocol versions */
 #define AXA_P_PVERS1	1
+#define AXA_P_PVERS2	2
 /** current protocol version */
-#define AXA_P_PVERS	AXA_P_PVERS1
+#define AXA_P_PVERS	AXA_P_PVERS2
 /** maximum understood protocol version */
 #define AXA_P_PVERS_MIN	AXA_P_PVERS1
 /** minimum understood protocol version */
-#define AXA_P_PVERS_MAX	AXA_P_PVERS1
+#define AXA_P_PVERS_MAX	AXA_P_PVERS2
 
 /** a number of messages or seconds */
 typedef uint64_t	axa_cnt_t;
@@ -276,13 +277,13 @@ typedef uint64_t axa_p_clnt_id_t;
  *  all versions of the AXA protocol.
  */
 typedef struct _PK {
-	axa_p_clnt_id_t	id;		    /**< client ID for bundled TCP */
+	axa_p_clnt_id_t	id;		/**< client ID for bundled TCP */
 	axa_p_pvers_t	pvers_min;	/**< min protocol version accepted */
 	axa_p_pvers_t	pvers_max;	/**< max protocol version accepted */
 	/**
 	 *  Human readable string containing name and version of the SRA or RAD
-	 *  server.  It is a variable length string up to 512 bytes including
-	 *  terminating  NULL.
+	 *  server. It is a variable length string up to 512 bytes including
+	 *  terminating NULL.
 	 */
 	char		str[512];
 } axa_p_hello_t;

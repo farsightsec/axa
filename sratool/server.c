@@ -105,7 +105,8 @@ read_srvr(void)
 			break;
 
 		case AXA_P_OP_HELLO:
-			if (!axa_client_hello(&emsg, &client, NULL)) {
+			if (!axa_client_hello(&emsg, &client, NULL,
+				(mode == RAD ? "radtool" : "sratool"))) {
 				error_msg("%s", emsg.c);
 				disconnect(true);
 				return;

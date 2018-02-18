@@ -109,7 +109,8 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 			break;
 
 		case AXA_P_OP_HELLO:
-			if (!axa_client_hello(&emsg, &client, NULL)) {
+			if (!axa_client_hello(&emsg, &client, NULL,
+				(mode == RAD ? "radtunnel" : "sratunnel"))) {
 				axa_error_msg("%s", emsg.c);
 			} else {
 				print_op(false, false,

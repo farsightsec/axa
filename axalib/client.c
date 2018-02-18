@@ -18,6 +18,9 @@
 
 #include <axa/client.h>
 #include <axa/socket.h>
+#include <axa/strbuf.h>
+
+#include <libmy/ubuf-pb.h>		/* query protobuf version */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -28,11 +31,47 @@
 #include <bsd/string.h>			/* for strlcpy() */
 #endif
 #include <sysexits.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 
+#include <yajl/yajl_version.h>
+#include <yajl/yajl_gen.h>
+
+#define add_yajl_map(g) do {						\
+	yajl_gen_status g_status;					\
+	g_status = yajl_gen_map_open(g);				\
+	AXA_ASSERT(g_status == yajl_gen_status_ok);			\
+} while (0)
+
+#define close_yajl_map(g) do {                                             \
+	yajl_gen_status g_status;                                            \
+	g_status = yajl_gen_map_close(g);                                  \
+	AXA_ASSERT(g_status == yajl_gen_status_ok);                          \
+} while (0)
+
+#define add_yajl_string_len(g, s, l) do {				\
+	yajl_gen_status g_status;					\
+	g_status = yajl_gen_string(g, (const unsigned char *) s, l);	\
+	AXA_ASSERT(g_status == yajl_gen_status_ok);			\
+} while (0)
+
+#define add_yajl_string(g, s) add_yajl_string_len((g), (s), strlen((s)))
+
+#define add_yajl_integer(g, i) do {                                        \
+        yajl_gen_status g_status;                                          \
+        g_status = yajl_gen_integer(g, i);                                 \
+        AXA_ASSERT(g_status == yajl_gen_status_ok);                        \
+} while (0)
 
 #define	MIN_BACKOFF_MS	(1*1000)
 #define	MAX_BACKOFF_MS	(60*1000)
+
+static void
+callback_print_yajl_axa_strbuf(void *ctx, const char *str, size_t len)
+{
+	struct axa_strbuf *sb = (struct axa_strbuf *) ctx;
+	axa_strbuf_append(sb, "%.*s", len, str);
+}
 
 void
 axa_client_init(axa_client_t *client)
@@ -550,12 +589,125 @@ axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
 	return (true);
 }
 
+/* Retrieve the exact version of AXA supported from a client or server
+ * HELLO string. */
+static bool
+axa_parse_hello_string(const char *hstr, unsigned int *major,
+		unsigned int *minor, unsigned int *build)
+{
+	return (sscanf(hstr, "%*s version %u.%u.%u %*s",
+				major, minor, build) == 3);
+}
+
+bool
+axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
+{
+	int yajl_rc;
+	yajl_gen g = NULL;
+	struct axa_strbuf *sb = NULL;
+	char hostname[256];
+	struct utsname utsbuf;
+
+	sb = axa_strbuf_init();
+	if (sb == NULL) {
+		axa_pemsg(emsg, "could not allocate axa_strbuf");
+		return (false);
+	}
+
+	g = yajl_gen_alloc(NULL);
+	AXA_ASSERT (g != NULL);
+
+	yajl_rc = yajl_gen_config(g,
+			yajl_gen_print_callback,
+			callback_print_yajl_axa_strbuf,
+			sb);
+	AXA_ASSERT(yajl_rc != 0);
+
+	add_yajl_map(g);
+
+	if (0 > gethostname(hostname, 256)) {
+		axa_pemsg(emsg, "gethostname(): %s", strerror(errno));
+		goto err;
+	}
+	add_yajl_string(g, "hostname");
+	add_yajl_string(g, hostname);
+
+	if (uname(&utsbuf) < 0) {
+		axa_pemsg(emsg, "uname(): %s", strerror(errno));
+		goto err;
+	} else {
+		add_yajl_string(g, "uname_sysname");
+		add_yajl_string(g, utsbuf.sysname);
+		add_yajl_string(g, "uname_release");
+		add_yajl_string(g, utsbuf.release);
+		add_yajl_string(g, "uname_version");
+		add_yajl_string(g, utsbuf.version);
+		add_yajl_string(g, "uname_machine");
+		add_yajl_string(g, utsbuf.machine);
+	}
+
+	add_yajl_string(g, "origin");
+	if (origin == NULL) {
+		add_yajl_string(g, "unknown");
+	}
+	else {
+		add_yajl_string(g, origin);
+	}
+
+#if WHEN_YOU_WRITE_IT
+	add_yajl_string(g, "libaxa");
+	add_yajl_string(g, axa_get_version();
+#endif
+	add_yajl_string(g, "libnmsg");
+#if HAVE_NMSG_GET_VERSION
+	add_yajl_string(g, nmsg_get_version());
+#else
+	add_yajl_string(g, "unknown");
+#endif
+	add_yajl_string(g, "libwdns");
+#if HAVE_WDNS_GET_VERSION
+	add_yajl_string(g, nmsg_get_version());
+#else
+	add_yajl_string(g, "unknown");
+#endif
+	add_yajl_string(g, "libyajl");
+	add_yajl_integer(g, yajl_version());
+	add_yajl_string(g, "OpenSSL");
+	add_yajl_string(g, SSLeay_version(SSLEAY_VERSION));
+	add_yajl_string(g, "libprotobuf-c");
+	add_yajl_string(g, PROTOBUF_C_VERSION);
+
+	add_yajl_string(g, "AXA protocol");
+	add_yajl_integer(g, AXA_P_PVERS);
+
+	close_yajl_map(g);
+
+	yajl_gen_reset(g, "");
+	yajl_gen_free(g);
+
+	*out = sb->data;
+	/* Don't call axa_strbuf_destroy() here, rather, free the wrapper
+	 * structure now and leave it to the caller to release sb->data. */
+	free(sb);
+
+	return (true);
+err:
+	if (g != NULL)
+		yajl_gen_free(g);
+	axa_strbuf_destroy(&sb);
+	return (false);
+}
+
 /* Process AXA_P_OP_HELLO from the server. */
 bool
 axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
-		 const axa_p_hello_t *hello)
+		 const axa_p_hello_t *hello, const char *origin)
 {
-	char op_buf[AXA_P_OP_STRLEN];
+	axa_p_hdr_t hdr;
+	axa_p_hello_t *cl_hello;
+	char op_buf[AXA_P_OP_STRLEN], *out = NULL;
+	unsigned int maj, min, build;
+
 
 	/* Assume by default that the incoming HELLO is the latest message
 	 * in the client structure. */
@@ -594,6 +746,41 @@ axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 		client->io.pvers = AXA_P_PVERS_MIN;
 	if (client->io.pvers > AXA_P_PVERS_MAX)
 		client->io.pvers = AXA_P_PVERS_MAX;
+
+	if (axa_parse_hello_string(client->hello, &maj, &min, &build)) {
+		unsigned int ver_num = (maj * 100) + (min * 10) + build;
+
+		if (ver_num <= 160) {
+			axa_trace_msg("Skipping client HELLO to older server software");
+			return (true);
+		}
+	} else {
+		axa_error_msg("Skipping client HELLO; could not parse server greeting");
+		return (true);
+	}
+
+        cl_hello = AXA_SALLOC(axa_p_hello_t);
+        cl_hello->id = hello->id;
+        cl_hello->pvers_min = AXA_P_PVERS_MIN;
+        cl_hello->pvers_max = AXA_P_PVERS_MAX;
+
+	if (!axa_client_get_hello_string(emsg, origin, &out)) {
+		axa_error_msg("Error constructing detailed AXA HELLO string");
+
+		if (origin == NULL)
+			origin = "[unknown]";
+
+		snprintf(cl_hello->str, sizeof(cl_hello->str),
+				"%s "AXA_PVERS_STR" AXA protocol %d",
+				origin, AXA_P_PVERS);
+	}
+	strlcpy(cl_hello->str, out, sizeof (cl_hello->str));
+	fprintf(stderr, "we got: %s\n", out);
+	free(out);
+
+	axa_client_send(emsg, client, AXA_TAG_NONE, AXA_P_OP_HELLO, &hdr,
+			cl_hello, sizeof(*cl_hello) -
+			sizeof(cl_hello->str) + strlen(cl_hello->str) + 1);
 
 	return (true);
 }

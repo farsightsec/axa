@@ -68,6 +68,9 @@ CPPFLAGS="$save_CPPFLAGS"
 
 PKG_CHECK_MODULES([libnmsg], [libnmsg >= 0.9.1])
 
+#AC_CHECK_FUNCS([nmsg_get_version])
+#AC_CHECK_FUNCS([wdns_get_version])
+
 PKG_CHECK_MODULES([libwdns], [libwdns])
 
 PKG_CHECK_MODULES([libssl], [libssl])

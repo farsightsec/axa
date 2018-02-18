@@ -1872,7 +1872,7 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 			/* Stop when we have a complete message. */
 			hdr_len = AXA_P2H32(io->recv_hdr.len);
 			if (hdr_len == io->recv_body_len) {
-#if AXA_P_PVERS != 1
+#if AXA_P_PVERS > 2
 #error "write code to adjust other guy's AXA protocol to our version"
 #endif
 				if (!axa_ck_body(emsg, io->recv_hdr.op,
@@ -2088,7 +2088,7 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	int iovcnt;
 	ssize_t total, done;
 
-#if AXA_P_PVERS != 1
+#if AXA_P_PVERS > 2
 	if (pvers != AXA_P_PVERS) {
 #error "write code to adjust outgoing data to other guy's AXA protocol"
 	}
