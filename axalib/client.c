@@ -775,7 +775,6 @@ axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 				origin, AXA_P_PVERS);
 	}
 	strlcpy(cl_hello->str, out, sizeof (cl_hello->str));
-	fprintf(stderr, "we got: %s\n", out);
 	free(out);
 
 	axa_client_send(emsg, client, AXA_TAG_NONE, AXA_P_OP_HELLO, &hdr,
