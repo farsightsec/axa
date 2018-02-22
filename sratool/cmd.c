@@ -237,9 +237,12 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     " (default 0)."
     "  Stop forwarding after count messages."
 },
-{"get anomaly",		list_cmd,		RAD, MB, YES,
-    "[tag] get anomaly",
-    "List a specified or all available anomaly detection modules. "
+{"get",			list_cmd,		RAD, NO, YES,
+    "[tag] get",
+    "With a tag, list the set of watches and anomaly detection modules with"
+    " that tag."
+    " Without a tag, list all active as well as available anomaly detection"
+    " modules."
 },
 {"get channels",	list_cmd,		SRA, MB, YES,
     "get channels",
@@ -268,13 +271,12 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "list channels",
     "List all SIE channels available to the user on the SRA server."
 },
-{"list anomaly",	list_cmd,		RAD, NO, YES,
-    "[tag] list anomaly",
-    "List a specified or all available anomaly detection modules. "
-},
-{"list anomalies",	list_cmd,		RAD, MB, YES,
-    "list anomalies",
-    "List a specified or all available anomaly detection modules. "
+{"list",		list_cmd,		RAD, NO, YES,
+    "[tag] list",
+    "With a tag, list the set of watches and anomaly detection modules with"
+    " that tag."
+    " Without a tag, list all active as well as available anomaly detection"
+    " modules."
 },
 {"list watches",	list_cmd,		SRA, MB, YES,
     "[tag] list watches",
