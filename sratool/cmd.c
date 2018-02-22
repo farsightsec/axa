@@ -1478,7 +1478,6 @@ static int
 list_cmd(axa_tag_t tag, const char *arg, const cmd_tbl_entry_t *ce)
 {
 	if (mode == RAD) {
-		(void)word_cmp(&arg, "anomaly");
 		return (srvr_send(tag, AXA_P_OP_AGET, NULL, 0));
 	}
 
