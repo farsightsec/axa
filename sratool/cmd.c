@@ -891,7 +891,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	}
 
 	/* talk about all of the commands */
-	printf("  "AXA_PVERS_STR" AXA protocol %d\n", AXA_P_PVERS);
+	printf("  %s AXA protocol %d\n", axa_get_version(), AXA_P_PVERS);
 
 	for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
 		if (ce->mode != mode && ce->mode != BOTH)
@@ -1022,11 +1022,12 @@ version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 #if AXA_P_PVERS_MIN != AXA_P_PVERS_MAX
-	printf("%s "AXA_PVERS_STR" AXA protocol %d in %d to %d\n",
-	       axa_prog_name, AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
+	printf("%s built using AXA library %s, AXA protocol %d in %d to %d\n",
+	       axa_prog_name, axa_get_version(),
+	       AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
 #else
-	printf("%s "AXA_PVERS_STR" AXA protocol %d\n",
-	       axa_prog_name, AXA_P_PVERS);
+	printf("%s built using AXA library: %s, AXA protocol: %d\n",
+	       axa_prog_name, axa_get_version(), AXA_P_PVERS);
 #endif
 	return (1);
 }

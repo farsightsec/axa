@@ -261,7 +261,14 @@ main(int argc, char **argv)
 	}
 
 	if (version) {
-		axa_trace_msg(AXA_PVERS_STR" AXA protocol %d", AXA_P_PVERS);
+#if AXA_P_PVERS_MIN != AXA_P_PVERS_MAX
+	axa_trace_msg("%s built using AXA library %s, AXA protocol %d in %d to %d\n",
+	       axa_prog_name, axa_get_version(),
+	       AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
+#else
+	axa_trace_msg("%s built using AXA library: %s, AXA protocol: %d\n",
+	       axa_prog_name, axa_get_version(), AXA_P_PVERS);
+#endif
 		if (srvr_addr == NULL && out_addr == NULL
 		    && chs == NULL && watches == NULL
 		    && anomalies == NULL)

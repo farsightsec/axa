@@ -37,10 +37,10 @@ echo 000110 use rad mode to set RAD mode and check is RAD mode
 echo "rad ; mode"| $RADTOOL | grep "RAD mode"
 
 echo 001000 test -c to read single command
-echo | $RADTOOL -c $DATADIR/001000-single-command | grep "radtool version"
+echo | $RADTOOL -c $DATADIR/001000-single-command | grep "radtool built using AXA library"
 
 echo 001010 test -c to read one command line with multiple commands
-echo | $RADTOOL -c $DATADIR/001010-multiple-commands-on-single-line | grep -1 "radtool version" | grep "RAD mode"
+echo | $RADTOOL -c $DATADIR/001010-multiple-commands-on-single-line | grep -1 "radtool built using AXA library" | grep "RAD mode"
 
 echo 002000 test -c to read multiple commands from a single file
 echo | $RADTOOL -c $DATADIR/002000-multiple-commands | tail -1 | grep "RAD mode"
@@ -52,7 +52,7 @@ echo 002110 test -c to read unrecognized command should fail with no output to s
 echo | $RADTOOL -c $DATADIR/002100-unrecognized-command | grep 'unrecognized command "thisdoesnotexist"' && exit 1
 
 echo 002200 test -c to read unrecognized command after good commands should run the commands until that failure
-echo | $RADTOOL -c $DATADIR/002200-valid-then-unrecognized-command 2>&1| grep -3 "radtool version" | grep 'unrecognized command "this is not valid"'
+echo | $RADTOOL -c $DATADIR/002200-valid-then-unrecognized-command 2>&1| grep -3 "radtool built using AXA library" | grep 'unrecognized command "this is not valid"'
 
 echo 002210 test -c to read unrecognized command after good commands should run commands before, but none after a failure
 echo | $RADTOOL -c $DATADIR/002210-valid-before-and-after-unrecognized-command 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
@@ -62,7 +62,7 @@ echo | $RADTOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*fa
 
 echo 002400 test -c happens before piped in command
 # NOTE:  sets rad but version is "sra" so shows what happens first
-echo "rad ; mode" | $SRATOOL -c "$DATADIR/001000-single-command" | grep -1 "sratool version" | grep "RAD mode"
+echo "rad ; mode" | $SRATOOL -c "$DATADIR/001000-single-command" | grep -1 "sratool built using AXA library" | grep "RAD mode"
 
 echo 003000 using source command without argument should fail
 echo "rad ; source" | $RADTOOL | grep "source filename"
@@ -75,36 +75,36 @@ echo 003200 using source command to read unrecognized command after good command
 echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command" | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
 
 echo 003210 using source command to read unrecognized command after good commands should run commands before, but none after the failure in the sourced file, but will still run next command on the same command line
-echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command ; debug off" | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep -3 "debug off" | grep -3 "radtool version" && exit 1
+echo "rad ; source $DATADIR/002210-valid-before-and-after-unrecognized-command ; debug off" | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep -3 "debug off" | grep -3 "radtool radtool built using AXA library" && exit 1
 
 echo 004000 use source command to read single command \
   " ; also tests that pipe and source together work"
-echo "rad ; source $DATADIR/001000-single-command" | $RADTOOL | grep "radtool version"
+echo "rad ; source $DATADIR/001000-single-command" | $RADTOOL | grep "radtool built using AXA library"
 
 echo 004100 use source command to one command line with multiple commands
 # well this doesn't test perfectly since also setting rad here
-echo "rad ; source $DATADIR/001010-multiple-commands-on-single-line" | $RADTOOL | grep -1 "radtool version" | grep "RAD mode"
+echo "rad ; source $DATADIR/001010-multiple-commands-on-single-line" | $RADTOOL | grep -1 "radtool built using AXA library" | grep "RAD mode"
 
 echo 005000 use source command to read multiple commands from a single file
 echo "rad ; source $DATADIR/002000-multiple-commands" | $RADTOOL | tail -1 | grep "RAD mode"
 
 echo 006000 pipe in single command
 # this is redundant since already did several times
-echo "version" | $RADTOOL | grep "tool version"
+echo "version" | $RADTOOL | grep "built using AXA library"
 
 echo 007000 pipe in multiple semicolon-separated commands on single line
 # this is redundant since already did several times
-echo "rad ; verbose ; version ; mode" | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+echo "rad ; verbose ; version ; mode" | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool built using AXA library" | grep -3 "RAD mode"
 
 echo 008000 pipe in multiple commands on separate lines
 { echo rad ;
   echo verbose ;
   echo version ;
-  echo mode ; } | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+  echo mode ; } | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool built using AXA library" | grep -3 "RAD mode"
 
 echo 009000 pipe in multiple commands on separate lines, including multiple commands on single lines
 { echo "rad ; verbose" ;
-  echo "version ; mode" ; } | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool version" | grep -3 "RAD mode"
+  echo "version ; mode" ; } | $RADTOOL | grep -3 "verbose off" | grep -3 "radtool built using AXA library" | grep -3 "RAD mode"
 
 echo 009100 pipe in multiple commands on separate lines, with an unrecognized command should run commands before, but not after the failure
 cat $DATADIR/002210-valid-before-and-after-unrecognized-command | $RADTOOL 2>&1| grep -3 "verbose off" | grep -3 'unrecognized command "this is not valid"' | grep "RAD mode" && exit 1
@@ -113,10 +113,10 @@ echo 010000 'use mixed-case "Rad" to set RAD mode'
 echo "Rad ; mode" | $RADTOOL | grep "RAD mode"
 
 echo 011000 'set RAD mode and use mixed-case "veRsiOn" to get version'
-echo "rad ; veRsiOn" | $RADTOOL | grep "radtool version"
+echo "rad ; veRsiOn" | $RADTOOL | grep "radtool built using AXA library"
 
 echo 011010 'use mixed-case "veRsiOn" with sratool to get version'
-echo "veRsiOn" | $SRATOOL | grep "sratool version"
+echo "veRsiOn" | $SRATOOL | grep "sratool built using AXA library"
 
 echo 050000 RAD mode has runits command
 echo "rad ; runits" | $RADTOOL 2>&1 | grep '"runits" requires a connection to a server'
@@ -190,7 +190,7 @@ echo 060060 command missing argument will show help output
 echo "sleep" | $RADTOOL 2>&1 | grep "Stop accepting commands"
 
 echo 060100 tab in front of a command is okay
-echo "	version" | $SRATOOL | grep "tool version"
+echo "	version" | $SRATOOL | grep "built using AXA library"
 
 echo 060110 tab after a command is okay
 echo "verbose	" | $SRATOOL | grep "verbose off"
