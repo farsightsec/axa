@@ -112,7 +112,7 @@ axa_libaxa_la_SOURCES = \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
-	axalib/version.h \
+	axa/version.h \
 	axa/wire.h \
 	axalib/apikey.c \
 	axalib/bit_funcs.c \
