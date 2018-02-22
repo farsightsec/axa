@@ -93,6 +93,7 @@ nobase_include_HEADERS = \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
+	axa/version.h \
 	axa/wire.h \
 	libmy/b64_encode.h
 lib_LTLIBRARIES = axa/libaxa.la
@@ -111,6 +112,7 @@ axa_libaxa_la_SOURCES = \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
+	axalib/version.h \
 	axa/wire.h \
 	axalib/apikey.c \
 	axalib/bit_funcs.c \
@@ -130,6 +132,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/time.c \
 	axalib/tls.c \
 	axalib/trie.c \
+	axalib/version.c \
 	axalib/wdns_res.c \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \

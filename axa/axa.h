@@ -636,6 +636,19 @@ extern time_t axa_tv_diff2ms(const struct timeval *tv1,
  */
 extern time_t axa_elapsed_ms(const struct timeval *now, struct timeval *then);
 
+
+/**
+ * Retrieve the semantic library version as a string.
+ */
+extern const char *axa_get_version(void);
+
+/**
+ * Retrieve the semantic library version as a packed integer. The number is a
+ * combination of the major, minor, and patchelevel numbers as per:
+ * MAJOR * 1000000 + MINOR * 1000 + PATCHLEVEL.
+ */
+extern uint32_t axa_get_version_number(void);
+
 /**@}*/
 
 #endif /* AXA_AXA_H */
