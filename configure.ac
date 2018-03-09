@@ -1,5 +1,16 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.6.0])
+
+m4_define(axa_major_version, 1)
+m4_define(axa_minor_version, 6)
+m4_define(axa_patchlevel_version, 0)
+m4_define(axa_version,
+          axa_major_version.axa_minor_version.axa_patchlevel_version)
+
+AC_INIT([axa],
+	[axa_version()],
+	[https://github.com/farsightsec/axa/issues],
+	[axa],
+	[https://github.com/farsightsec/axa])
 PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
 AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
@@ -11,6 +22,16 @@ AC_SYS_LARGEFILE
 AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 LT_INIT
+
+AXA_MAJOR_VERSION=axa_major_version()
+AXA_MINOR_VERSION=axa_minor_version()
+AXA_PATCHLEVEL_VERSION=axa_patchlevel_version()
+AXA_VERSION=axa_version()
+
+AC_SUBST(AXA_MAJOR_VERSION)
+AC_SUBST(AXA_MINOR_VERSION)
+AC_SUBST(AXA_PATCHLEVEL_VERSION)
+AC_SUBST(AXA_VERSION)
 
 my_CFLAGS=" \
 -Wextra -Wall -Wbad-function-cast -Wcast-align -Wmissing-noreturn \
@@ -124,9 +145,7 @@ CPPFLAGS="$save_CPPFLAGS"
 AX_DEFINE_DIR([CONFDIR], [sysconfdir/axa], [config dir for axa])
 AC_DEFINE_UNQUOTED(AXACONFDIR,"$CONFDIR",[config dir for axa])
 
-AC_DEFINE_UNQUOTED(AXA_PVERS_STR,"version $PACKAGE_VERSION", [Version])
-
-AC_CONFIG_FILES([Makefile axa/libaxa.pc])
+AC_CONFIG_FILES([Makefile axa/libaxa.pc axa/version.h])
 
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
 		sratunnel/sratunnel.man sratunnel/radtunnel.man

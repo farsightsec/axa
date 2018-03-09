@@ -237,9 +237,12 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     " (default 0)."
     "  Stop forwarding after count messages."
 },
-{"get anomaly",		list_cmd,		RAD, MB, YES,
-    "[tag] get anomaly",
-    "List a specified or all available anomaly detection modules. "
+{"get",			list_cmd,		RAD, NO, YES,
+    "[tag] get",
+    "With a tag, list the set of watches and anomaly detection modules with"
+    " that tag."
+    " Without a tag, list all active as well as available anomaly detection"
+    " modules."
 },
 {"get channels",	list_cmd,		SRA, MB, YES,
     "get channels",
@@ -268,13 +271,12 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "list channels",
     "List all SIE channels available to the user on the SRA server."
 },
-{"list anomaly",	list_cmd,		RAD, NO, YES,
-    "[tag] list anomaly",
-    "List a specified or all available anomaly detection modules. "
-},
-{"list anomalies",	list_cmd,		RAD, MB, YES,
-    "list anomalies",
-    "List a specified or all available anomaly detection modules. "
+{"list",		list_cmd,		RAD, NO, YES,
+    "[tag] list",
+    "With a tag, list the set of watches and anomaly detection modules with"
+    " that tag."
+    " Without a tag, list all active as well as available anomaly detection"
+    " modules."
 },
 {"list watches",	list_cmd,		SRA, MB, YES,
     "[tag] list watches",
@@ -889,7 +891,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	}
 
 	/* talk about all of the commands */
-	printf("  "AXA_PVERS_STR" AXA protocol %d\n", AXA_P_PVERS);
+	printf("  %s AXA protocol %d\n", axa_get_version(), AXA_P_PVERS);
 
 	for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
 		if (ce->mode != mode && ce->mode != BOTH)
@@ -1022,11 +1024,12 @@ version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	char *out = NULL;
 	const char *origin = ((mode == RAD) ? "radtool" : "sratool");
 #if AXA_P_PVERS_MIN != AXA_P_PVERS_MAX
-	printf("%s "AXA_PVERS_STR" AXA protocol %d [support from %d to %d]\n",
-	       axa_prog_name, AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
+	printf("%s built using AXA library %s, AXA protocol %d [support from %d to %d]\n",
+	       axa_prog_name, axa_get_version(),
+	       AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
 #else
-	printf("%s "AXA_PVERS_STR" AXA protocol %d\n",
-	       axa_prog_name, AXA_P_PVERS);
+	printf("%s built using AXA library: %s, AXA protocol: %d\n",
+	       axa_prog_name, axa_get_version(), AXA_P_PVERS);
 #endif
 	if (!axa_client_get_hello_string(&emsg, origin, &out))
 		axa_error_msg("error retrieving client HELLO: %s", emsg.c);
@@ -1484,7 +1487,6 @@ static int
 list_cmd(axa_tag_t tag, const char *arg, const cmd_tbl_entry_t *ce)
 {
 	if (mode == RAD) {
-		(void)word_cmp(&arg, "anomaly");
 		return (srvr_send(tag, AXA_P_OP_AGET, NULL, 0));
 	}
 

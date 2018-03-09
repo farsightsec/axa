@@ -472,6 +472,8 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	struct tm *tm_info;
 	time_t t;
 	runits_t ru;
+	_axa_p_stats_user_t *user_obj;
+	_axa_p_stats_user_rad_an_t *an_obj;
 
 	switch(AXA_P2H16(hdr->op)) {
 	case AXA_P_OP_MISSED_RAD:
@@ -932,8 +934,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 		if (user_objs_cnt > 0) {
 			add_yajl_string(g, "users");
 			add_yajl_array(g);
-			_axa_p_stats_user_t *user_obj =
-				(_axa_p_stats_user_t *)p;
+			user_obj = (_axa_p_stats_user_t *)p;
 			for (; user_objs_cnt; user_objs_cnt--, user_obj++) {
 				add_yajl_string(g, "user_obj");
 				add_yajl_map(g);
@@ -1092,7 +1093,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 							add_yajl_string(g,
 								"anomalies");
 							add_yajl_array(g);
-							_axa_p_stats_user_rad_an_t *an_obj = (_axa_p_stats_user_rad_an_t *)q;
+							an_obj = (_axa_p_stats_user_rad_an_t *)q;
 							for ( ; an_objs_cnt; an_objs_cnt--, an_obj++) {
 								add_yajl_string(g, "an_obj");
 								add_yajl_map(g);
