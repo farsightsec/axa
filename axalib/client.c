@@ -690,18 +690,17 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 		add_yajl_string(g, origin);
 	}
 
-#if WHEN_YOU_WRITE_IT
 	add_yajl_string(g, "libaxa");
-	add_yajl_string(g, axa_get_version();
-#endif
+	add_yajl_string(g, axa_get_version());
+
 	add_yajl_string(g, "libnmsg");
-#if HAVE_NMSG_GET_VERSION
+#ifdef NMSG_LIBRARY_VERSION
 	add_yajl_string(g, nmsg_get_version());
 #else
 	add_yajl_string(g, "unknown");
 #endif
 	add_yajl_string(g, "libwdns");
-#if HAVE_WDNS_GET_VERSION
+#ifdef WDNS_LIBRARY_VERSION
 	add_yajl_string(g, nmsg_get_version());
 #else
 	add_yajl_string(g, "unknown");
