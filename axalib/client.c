@@ -635,16 +635,6 @@ axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
 	return (true);
 }
 
-/* Retrieve the exact version of AXA supported from a client or server
- * HELLO string. */
-static bool
-axa_parse_hello_string(const char *hstr, unsigned int *major,
-		unsigned int *minor, unsigned int *build)
-{
-	return (sscanf(hstr, "%*s version %u.%u.%u %*s",
-				major, minor, build) == 3);
-}
-
 bool
 axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 {
@@ -793,17 +783,9 @@ axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 	if (client->io.pvers > AXA_P_PVERS_MAX)
 		client->io.pvers = AXA_P_PVERS_MAX;
 
-	if (axa_parse_hello_string(client->hello, &maj, &min, &build)) {
-		unsigned int ver_num = (maj * 100) + (min * 10) + build;
-
-		if (ver_num <= 160) {
-			axa_trace_msg("Skipping client HELLO to older server software");
-			return (true);
-		}
-	} else {
-		axa_error_msg("Skipping client HELLO; could not parse server greeting");
+	/* client -> server HELLO was introduced in AXA_P_VERS2 */
+	if (hello->pvers_max < AXA_P_PVERS2)
 		return (true);
-	}
 
         cl_hello = AXA_SALLOC(axa_p_hello_t);
         cl_hello->id = hello->id;
