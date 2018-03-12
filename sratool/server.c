@@ -53,6 +53,7 @@ srvr_send(axa_tag_t tag, axa_p_op_t op, const void *body, size_t body_len)
 void
 read_srvr(void)
 {
+	uint8_t pvers;
 	char buf[AXA_P_STRLEN];
 
 	if (!AXA_CLIENT_CONNECTED(&client)) {
@@ -117,6 +118,8 @@ read_srvr(void)
 			printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
 						    &client.io.recv_hdr,
 						    client.io.recv_body));
+			axa_io_pvers_get(&client.io, &pvers);
+			printf("* Using AXA protocol %d\n", pvers);
 			if (mode == SRA) {
 				if (strstr(client.hello, "srad") == NULL) {
 					printf(

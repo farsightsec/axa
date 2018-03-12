@@ -321,16 +321,46 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 {
 	axa_p_hdr_t hdr;
 	axa_connect_result_t connect_result;
+	uint8_t pvers_save;
 
 	if (AXA_CLIENT_CONNECTED(client))
 		return (AXA_CONNECT_DONE);
+
+	/* Clamp the AXA protocol version to 1 (guaranteed to be spoken by all
+	 * AXA clients and servers. This is done just before the identification
+	 * and authentication (I&A) message exchange and subsequent  spin-up of
+	 * the encrypted tunnel. We do this for two reasons:
+	 *
+	 * 1. A client's preferred AXA protocol version (AXA_PVERS) may be
+	 *    higher than what the server can understand (such would be the
+	 *    case when a newer client connects to an older server).
+	 * 2. AXA protocol version negotiation is performed during the HELLO
+	 *    handshake. This happens after I&A, allowing it to be
+	 *    performed inside an encrypted tunnel and prevent information
+	 *    leakage to an observer. The is that the I&A process involves the
+	 *    exchange of AXA messages (AXA_P_OP_USER and/or AXA_P_OP_NOP). If
+	 *    the AXA protocol version was too new, the server wouldn't
+	 *    understand (but also wouldn't have had the option to tell the
+	 *    client to downgrade its AXA protocol version).
+	 *
+	 *    The downside here is that the AXA I&A message exchange protocol
+	 *    cannot change. New I&A methods can be added or removed but the
+	 *    structure of the messages must remain the same.
+	 *
+	 *    After I&A, the AXA protocol may be set to a version the client
+	 *    prefers, and the HELLO handshake should proceed.
+	 */
+	axa_io_pvers_get(&client->io, &pvers_save);
+	axa_io_pvers_set(&client->io, AXA_P_PVERS1);
 
 	switch (client->io.type) {
 	case AXA_IO_TYPE_UNIX:
 	case AXA_IO_TYPE_TCP:
 		connect_result = socket_connect(emsg, client);
-		if (connect_result != AXA_CONNECT_DONE)
+		if (connect_result != AXA_CONNECT_DONE) {
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
+		}
 		client->io.connected = true;
 
 		/* TCP and UNIX domain sockets need a user name */
@@ -340,11 +370,13 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 					     &client->io.user,
 					     sizeof(client->io.user))) {
 				axa_client_backoff(client);
+				axa_io_pvers_set(&client->io, pvers_save);
 				return (AXA_CONNECT_ERR);
 			}
 			axa_p_to_str(emsg->c, sizeof(emsg->c),
 				     true, &hdr,
 				     (axa_p_body_t *)&client->io.user);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_USER);
 		}
 		break;
@@ -354,6 +386,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 			if (!connect_ssh(emsg, client, client->io.nonblock,
 					 client->io.tun_debug)) {
 				axa_client_backoff_max(client);
+				axa_io_pvers_set(&client->io, pvers_save);
 				return (AXA_CONNECT_ERR);
 			}
 			client->io.connected_tcp = true;
@@ -363,16 +396,20 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 
 	case AXA_IO_TYPE_TLS:
 		connect_result = socket_connect(emsg, client);
-		if (connect_result != AXA_CONNECT_DONE)
+		if (connect_result != AXA_CONNECT_DONE) {
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
+		}
 		switch (axa_tls_start(emsg, &client->io)) {
 		case AXA_IO_OK:
 			break;
 		case AXA_IO_ERR:
 			axa_client_backoff_max(client);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_ERR);
 		case AXA_IO_BUSY:
 			AXA_ASSERT(client->io.nonblock);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
 		case AXA_IO_TUNERR:
 		case AXA_IO_KEEPALIVE:
@@ -382,8 +419,10 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 
 	case AXA_IO_TYPE_APIKEY:
 		connect_result = socket_connect(emsg, client);
-		if (connect_result != AXA_CONNECT_DONE)
+		if (connect_result != AXA_CONNECT_DONE) {
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
+		}
 		switch (axa_apikey_start(emsg, &client->io)) {
 		case AXA_IO_OK:
 			/* username field holds apikey */
@@ -392,18 +431,22 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 					     &client->io.user,
 					     sizeof(client->io.user))) {
 				axa_client_backoff(client);
+				axa_io_pvers_set(&client->io, pvers_save);
 				return (AXA_CONNECT_ERR);
 			}
 			axa_p_to_str(emsg->c, sizeof(emsg->c),
 				     true, &hdr,
 				     (axa_p_body_t *)&client->io.user);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_USER);
 			break;
 		case AXA_IO_ERR:
 			axa_client_backoff_max(client);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_ERR);
 		case AXA_IO_BUSY:
 			AXA_ASSERT(client->io.nonblock);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
 		case AXA_IO_TUNERR:
 		case AXA_IO_KEEPALIVE:
@@ -415,6 +458,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 	default:
 		axa_pemsg(emsg, "impossible client type");
 		axa_client_backoff_max(client);
+		axa_io_pvers_set(&client->io, pvers_save);
 		return (AXA_CONNECT_ERR);
 	}
 
@@ -422,10 +466,12 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 	if (!axa_client_send(emsg, client, AXA_TAG_NONE, AXA_P_OP_NOP,
 			     &hdr, NULL, 0)) {
 		axa_client_backoff(client);
+		axa_io_pvers_set(&client->io, pvers_save);
 		return (AXA_CONNECT_ERR);
 	}
 	axa_p_to_str(emsg->c, sizeof(emsg->c), true,
 		     &hdr, (axa_p_body_t *)&client->io.user);
+	axa_io_pvers_set(&client->io, pvers_save);
 	return (AXA_CONNECT_NOP);
 }
 

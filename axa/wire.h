@@ -399,6 +399,25 @@ typedef struct axa_io {
 extern void axa_io_init(axa_io_t *io);
 
 /**
+ *  Get the current protocol version used by an AXA I/O structure.
+ *
+ *  \param[in] io address of a io context
+ *  \param[out] pvers the protocol version
+ */
+extern void axa_io_pvers_get(axa_io_t *io, uint8_t *pvers);
+
+/**
+ *  Set the current protocol version that will be used by an AXA I/O structure.
+ *  Note this function can have drastic consequences if a connection was
+ *  previously established and the protocol version is changed to something
+ *  the other end does not understand.
+ *
+ *  \param[in] io address of a io context
+ *  \param[out] pvers the protocol version to change to
+ */
+extern void axa_io_pvers_set(axa_io_t *io, uint8_t pvers);
+
+/**
  *  Flush and free the received AXA protocol message (if any) in an I/O context
  *  from a previous use of axa_recv_buf() or axa_input().
  *

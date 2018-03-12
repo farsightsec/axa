@@ -1704,6 +1704,20 @@ axa_io_init(axa_io_t *io)
 }
 
 void
+axa_io_pvers_set(axa_io_t *io, uint8_t pvers)
+{
+	AXA_ASSERT(io != NULL);
+	io->pvers = pvers;
+}
+
+void
+axa_io_pvers_get(axa_io_t *io, uint8_t *pvers)
+{
+	AXA_ASSERT(io != NULL);
+	*pvers = io->pvers;
+}
+
+void
 axa_recv_flush(axa_io_t *io)
 {
 	if (io->recv_body != NULL) {
