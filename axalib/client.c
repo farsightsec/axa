@@ -740,9 +740,8 @@ axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 {
 	axa_p_hdr_t hdr;
 	axa_p_hello_t *cl_hello;
-	char op_buf[AXA_P_OP_STRLEN], *out = NULL;
-	unsigned int maj, min, build;
-
+	size_t len;
+	char op_buf[AXA_P_OP_STRLEN], *p, *out = NULL;
 
 	/* Assume by default that the incoming HELLO is the latest message
 	 * in the client structure. */
@@ -791,18 +790,24 @@ axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
         cl_hello->pvers_min = AXA_P_PVERS_MIN;
         cl_hello->pvers_max = AXA_P_PVERS_MAX;
 
+	p = cl_hello->str;
+	len = sizeof (cl_hello->str);
 	if (!axa_client_get_hello_string(emsg, origin, &out)) {
-		axa_error_msg("Error constructing detailed AXA HELLO string");
-
+		axa_error_msg("error getting detailed HELLO info: %s",
+				emsg->c);
 		if (origin == NULL)
 			origin = "[unknown]";
 
-		snprintf(cl_hello->str, sizeof(cl_hello->str),
-				"%s "AXA_PVERS_STR" AXA protocol %d",
-				origin, AXA_P_PVERS);
+		snprintf(cl_hello->str, sizeof (cl_hello->str) - 1,
+				"%s %s AXA protocol %d",
+				origin, axa_get_version(), AXA_P_PVERS);
 	}
-	strlcpy(cl_hello->str, out, sizeof (cl_hello->str));
-	free(out);
+	else {
+		/* Note, if strlen(out) is > sizeof (*p), the json blob will be
+		 * fouled. */
+		axa_buf_print(&p, &len, "%s", out);
+		free(out);
+	}
 
 	axa_client_send(emsg, client, AXA_TAG_NONE, AXA_P_OP_HELLO, &hdr,
 			cl_hello, sizeof(*cl_hello) -
