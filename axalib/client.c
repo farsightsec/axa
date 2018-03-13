@@ -636,7 +636,7 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 
 	add_yajl_map(g);
 
-	if (0 > gethostname(hostname, HOST_NAME_MAX - 1)) {
+	if (0 > gethostname(hostname, sizeof(hostname) - 1)) {
 		axa_pemsg(emsg, "gethostname(): %s", strerror(errno));
 		goto err;
 	}
