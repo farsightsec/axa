@@ -616,7 +616,7 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 	int yajl_rc;
 	yajl_gen g = NULL;
 	struct axa_strbuf *sb = NULL;
-	char hostname[256];
+	char hostname[HOST_NAME_MAX];
 	struct utsname utsbuf;
 
 	sb = axa_strbuf_init();
@@ -636,7 +636,7 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 
 	add_yajl_map(g);
 
-	if (0 > gethostname(hostname, 256)) {
+	if (0 > gethostname(hostname, HOST_NAME_MAX - 1)) {
 		axa_pemsg(emsg, "gethostname(): %s", strerror(errno));
 		goto err;
 	}
