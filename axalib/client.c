@@ -19,6 +19,7 @@
 #include <axa/client.h>
 #include <axa/socket.h>
 #include <axa/strbuf.h>
+#include <axa/yajl_shortcuts.h>
 
 #include <libmy/ubuf-pb.h>		/* query protobuf version */
 
@@ -36,32 +37,6 @@
 
 #include <yajl/yajl_version.h>
 #include <yajl/yajl_gen.h>
-
-#define add_yajl_map(g) do {						\
-	yajl_gen_status g_status;					\
-	g_status = yajl_gen_map_open(g);				\
-	AXA_ASSERT(g_status == yajl_gen_status_ok);			\
-} while (0)
-
-#define close_yajl_map(g) do {                                             \
-	yajl_gen_status g_status;                                            \
-	g_status = yajl_gen_map_close(g);                                  \
-	AXA_ASSERT(g_status == yajl_gen_status_ok);                          \
-} while (0)
-
-#define add_yajl_string_len(g, s, l) do {				\
-	yajl_gen_status g_status;					\
-	g_status = yajl_gen_string(g, (const unsigned char *) s, l);	\
-	AXA_ASSERT(g_status == yajl_gen_status_ok);			\
-} while (0)
-
-#define add_yajl_string(g, s) add_yajl_string_len((g), (s), strlen((s)))
-
-#define add_yajl_integer(g, i) do {                                        \
-        yajl_gen_status g_status;                                          \
-        g_status = yajl_gen_integer(g, i);                                 \
-        AXA_ASSERT(g_status == yajl_gen_status_ok);                        \
-} while (0)
 
 #define	MIN_BACKOFF_MS	(1*1000)
 #define	MAX_BACKOFF_MS	(60*1000)
