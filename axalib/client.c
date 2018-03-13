@@ -312,9 +312,9 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 	 * 2. AXA protocol version negotiation is performed during the HELLO
 	 *    handshake. This happens after I&A, allowing it to be
 	 *    performed inside an encrypted tunnel and prevent information
-	 *    leakage to an observer. The is that the I&A process involves the
+	 *    leakage to an observer. The issue is the I&A process involves the
 	 *    exchange of AXA messages (AXA_P_OP_USER and/or AXA_P_OP_NOP). If
-	 *    the AXA protocol version was too new, the server wouldn't
+	 *    the AXA protocol version were too new, the server wouldn't
 	 *    understand (but also wouldn't have had the option to tell the
 	 *    client to downgrade its AXA protocol version).
 	 *
