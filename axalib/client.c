@@ -19,6 +19,7 @@
 #include <axa/client.h>
 #include <axa/socket.h>
 #include <axa/strbuf.h>
+#include <axa/json.h>
 #include <axa/yajl_shortcuts.h>
 
 #include <libmy/ubuf-pb.h>		/* query protobuf version */
@@ -40,13 +41,6 @@
 
 #define	MIN_BACKOFF_MS	(1*1000)
 #define	MAX_BACKOFF_MS	(60*1000)
-
-static void
-callback_print_yajl_axa_strbuf(void *ctx, const char *str, size_t len)
-{
-	struct axa_strbuf *sb = (struct axa_strbuf *) ctx;
-	axa_strbuf_append(sb, "%.*s", len, str);
-}
 
 void
 axa_client_init(axa_client_t *client)
@@ -630,7 +624,7 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 
 	yajl_rc = yajl_gen_config(g,
 			yajl_gen_print_callback,
-			callback_print_yajl_axa_strbuf,
+			_callback_print_yajl_axa_strbuf,
 			sb);
 	AXA_ASSERT(yajl_rc != 0);
 

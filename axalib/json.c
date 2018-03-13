@@ -46,8 +46,8 @@
 #include <yajl/yajl_gen.h>
 
 
-static void
-callback_print_yajl_axa_strbuf(void *ctx, const char *str, size_t len)
+void
+_callback_print_yajl_axa_strbuf(void *ctx, const char *str, size_t len)
 {
 	struct axa_strbuf *sb = (struct axa_strbuf *) ctx;
 	axa_strbuf_append(sb, "%.*s", len, str);
@@ -476,7 +476,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 	yajl_rc = yajl_gen_config(g,
 				  yajl_gen_print_callback,
-				  callback_print_yajl_axa_strbuf,
+				  _callback_print_yajl_axa_strbuf,
 				  sb);
 	AXA_ASSERT(yajl_rc != 0);
 

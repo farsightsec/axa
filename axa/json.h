@@ -58,4 +58,9 @@ typedef enum {
 axa_json_res_t
 axa_body_to_json(axa_emsg_t *, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, size_t body_len, char **out);
 
+/** @cond */
+/* private callback for yajl functions */
+void _callback_print_yajl_axa_strbuf(void *ctx, const char *str, size_t len);
+/** @endcond */
+
 #endif /* AXA_JSON_H */
