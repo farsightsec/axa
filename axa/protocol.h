@@ -109,9 +109,9 @@ typedef uint8_t		axa_p_pvers_t;
 #define AXA_P_PVERS2	2
 /** current protocol version */
 #define AXA_P_PVERS	AXA_P_PVERS2
-/** maximum understood protocol version */
-#define AXA_P_PVERS_MIN	AXA_P_PVERS1
 /** minimum understood protocol version */
+#define AXA_P_PVERS_MIN	AXA_P_PVERS1
+/** maximum understood protocol version */
 #define AXA_P_PVERS_MAX	AXA_P_PVERS2
 
 /** a number of messages or seconds */
