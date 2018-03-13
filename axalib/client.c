@@ -672,13 +672,13 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 #ifdef NMSG_LIBRARY_VERSION
 	add_yajl_string(g, nmsg_get_version());
 #else
-	add_yajl_string(g, "unknown");
+	add_yajl_string(g, "<=0.13.2");
 #endif
 	add_yajl_string(g, "libwdns");
 #ifdef WDNS_LIBRARY_VERSION
-	add_yajl_string(g, nmsg_get_version());
+	add_yajl_string(g, wdns_get_version());
 #else
-	add_yajl_string(g, "unknown");
+	add_yajl_string(g, "<=0.9.1");
 #endif
 	add_yajl_string(g, "libyajl");
 	add_yajl_integer(g, yajl_version());
