@@ -616,7 +616,7 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 	int yajl_rc;
 	yajl_gen g = NULL;
 	struct axa_strbuf *sb = NULL;
-	char hostname[HOST_NAME_MAX];
+	char hostname[HOST_NAME_MAX] = {0};
 	struct utsname utsbuf;
 
 	sb = axa_strbuf_init();
