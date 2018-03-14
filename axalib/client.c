@@ -43,6 +43,10 @@
 #define	MIN_BACKOFF_MS	(1*1000)
 #define	MAX_BACKOFF_MS	(60*1000)
 
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 255
+#endif
+
 void
 axa_client_init(axa_client_t *client)
 {
