@@ -40,7 +40,7 @@ echo 001000 test -c to read single command
 echo | $RADTOOL -c $DATADIR/001000-single-command | grep "radtool built using AXA library"
 
 echo 001010 test -c to read one command line with multiple commands
-echo | $RADTOOL -c $DATADIR/001010-multiple-commands-on-single-line | grep -1 "radtool built using AXA library" | grep "RAD mode"
+echo | $RADTOOL -c $DATADIR/001010-multiple-commands-on-single-line | grep -2 "radtool built using AXA library" | grep -1 "RAD mode"
 
 echo 002000 test -c to read multiple commands from a single file
 echo | $RADTOOL -c $DATADIR/002000-multiple-commands | tail -1 | grep "RAD mode"
@@ -62,7 +62,7 @@ echo | $RADTOOL -c this-file-does-not-exist-x8y3746t7by 2>&1 | grep "initial.*fa
 
 echo 002400 test -c happens before piped in command
 # NOTE:  sets rad but version is "sra" so shows what happens first
-echo "rad ; mode" | $SRATOOL -c "$DATADIR/001000-single-command" | grep -1 "sratool built using AXA library" | grep "RAD mode"
+echo "rad ; mode" | $SRATOOL -c "$DATADIR/001000-single-command" | grep -2 "sratool built using AXA library" | grep "RAD mode"
 
 echo 003000 using source command without argument should fail
 echo "rad ; source" | $RADTOOL | grep "source filename"
@@ -83,7 +83,7 @@ echo "rad ; source $DATADIR/001000-single-command" | $RADTOOL | grep "radtool bu
 
 echo 004100 use source command to one command line with multiple commands
 # well this doesn't test perfectly since also setting rad here
-echo "rad ; source $DATADIR/001010-multiple-commands-on-single-line" | $RADTOOL | grep -1 "radtool built using AXA library" | grep "RAD mode"
+echo "rad ; source $DATADIR/001010-multiple-commands-on-single-line" | $RADTOOL | grep -2 "radtool built using AXA library" | grep "RAD mode"
 
 echo 005000 use source command to read multiple commands from a single file
 echo "rad ; source $DATADIR/002000-multiple-commands" | $RADTOOL | tail -1 | grep "RAD mode"

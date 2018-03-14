@@ -1704,6 +1704,20 @@ axa_io_init(axa_io_t *io)
 }
 
 void
+axa_io_pvers_set(axa_io_t *io, uint8_t pvers)
+{
+	AXA_ASSERT(io != NULL);
+	io->pvers = pvers;
+}
+
+void
+axa_io_pvers_get(axa_io_t *io, uint8_t *pvers)
+{
+	AXA_ASSERT(io != NULL);
+	*pvers = io->pvers;
+}
+
+void
 axa_recv_flush(axa_io_t *io)
 {
 	if (io->recv_body != NULL) {
@@ -1872,9 +1886,6 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 			/* Stop when we have a complete message. */
 			hdr_len = AXA_P2H32(io->recv_hdr.len);
 			if (hdr_len == io->recv_body_len) {
-#if AXA_P_PVERS != 1
-#error "write code to adjust other guy's AXA protocol to our version"
-#endif
 				if (!axa_ck_body(emsg, io->recv_hdr.op,
 						 io->recv_body,
 						 hdr_len-sizeof(io->recv_hdr)))
@@ -2087,12 +2098,6 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	struct iovec iov[3];
 	int iovcnt;
 	ssize_t total, done;
-
-#if AXA_P_PVERS != 1
-	if (pvers != AXA_P_PVERS) {
-#error "write code to adjust outgoing data to other guy's AXA protocol"
-	}
-#endif
 
 	if (hdr == NULL)
 		hdr = &hdr0;

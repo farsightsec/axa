@@ -31,5 +31,11 @@ tests/test-client_config
 tests/test-kill
 tests/test-stats
 tests/test-tools-without-server.sh
+cert_tools/axa_link_certs
+cert_tools/axa_link_certs.man
+cert_tools/axa_make_cert
+cert_tools/axa_make_cert.man
+cert_tools/axa_server_cert
+cert_tools/axa_server_cert.man
 *.log
 *.trs

@@ -56,6 +56,9 @@ extern pcap_dumper_t *out_pcap_dumper;
 extern bool interrupted;
 extern bool terminated;
 
+/* extern: server.c */
+extern axa_client_t client;
+
 /* global */
 bool eclose = false;            	/* disconnect on error */
 History *el_history;			/* command history */
@@ -1018,17 +1021,28 @@ verbose_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 }
 
 int
-version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED,
+version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
+	axa_p_pvers_t pvers;
+	char *out = NULL;
+	const char *origin = ((mode == RAD) ? "radtool" : "sratool");
+
+	pvers = client.io.pvers == 0 ? AXA_P_PVERS : client.io.pvers;
 #if AXA_P_PVERS_MIN != AXA_P_PVERS_MAX
-	printf("%s built using AXA library %s, AXA protocol %d in %d to %d\n",
+	printf("%s built using AXA library %s, supporting AXA protocols v%d to v%d; currently using v%d\n",
 	       axa_prog_name, axa_get_version(),
-	       AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
+	       AXA_P_PVERS_MIN, AXA_P_PVERS_MAX, pvers);
 #else
-	printf("%s built using AXA library: %s, AXA protocol: %d\n",
-	       axa_prog_name, axa_get_version(), AXA_P_PVERS);
+	printf("%s built using AXA library: %s, supporting AXA protocol v%d\n",
+	       axa_prog_name, axa_get_version(), pvers);
 #endif
+	if (!axa_client_get_hello_string(&emsg, origin, &client, &out))
+		axa_error_msg("error retrieving client HELLO: %s", emsg.c);
+	else {
+		printf("client HELLO: %s\n", out);
+		free(out);
+	}
 	return (1);
 }
 

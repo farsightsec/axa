@@ -104,14 +104,15 @@ typedef uint16_t	axa_tag_t;
 
 /** define old versions for eventual "#ifdef AXA_P_VERSx" */
 typedef uint8_t		axa_p_pvers_t;
-/** protocol version 1 */
+/** protocol versions */
 #define AXA_P_PVERS1	1
+#define AXA_P_PVERS2	2
 /** current protocol version */
-#define AXA_P_PVERS	AXA_P_PVERS1
-/** maximum understood protocol version */
-#define AXA_P_PVERS_MIN	AXA_P_PVERS1
+#define AXA_P_PVERS	AXA_P_PVERS2
 /** minimum understood protocol version */
-#define AXA_P_PVERS_MAX	AXA_P_PVERS1
+#define AXA_P_PVERS_MIN	AXA_P_PVERS1
+/** maximum understood protocol version */
+#define AXA_P_PVERS_MAX	AXA_P_PVERS2
 
 /** a number of messages or seconds */
 typedef uint64_t	axa_cnt_t;
@@ -266,25 +267,45 @@ typedef enum {
 typedef uint64_t axa_p_clnt_id_t;
 
 /**
- *  RAD and SRA servers start the client-server conversation with a
- *  AXA_P_OP_HELLO announcing the protocol versions that the server understands,
- *  a version string, and an ID unique among connections to a single server.
- *  Clients can include those IDs in AXA_P_OP_JOIN messages to flag
- *  connections that are part of a bundle.
- *  Because AXA_P_OP_HELLO is sent before the client has said anything and so
- *  declared its protocol version, AXA_P_OP_HELLO must remain the same in
- *  all versions of the AXA protocol.
+ *  The AXA HELLO protocol is a bidirectional handshaking process initiated
+ *  by the server, once a client has authenticated.
+ *
+ *  server -> client
+ *  After successful authentication, the server will send to the client a
+ *  HELLO message via an axa_p_hello_t header announcing the protocol versions
+ *  that the server understands, a version string, and a unique ID that can be
+ *  later used by clients via AXA_P_OP_JOIN messages to flag connections that
+ *  are part of a bundle. Because AXA_P_OP_HELLO is sent before the client has
+ *  said anything and so declared its protocol version, AXA_P_OP_HELLO must
+ *  remain the same in all versions of the AXA protocol.
+ *
+ *  client -> server
+ *  After receiving the server's HELLO, the client will respond with its
+ *  part of the handshake. It will populate the same axa_p_hello_t header
+ *  announcing the protocol versions it speaks and a detailed JSON blob
+ *  containing information about the client including the following:
+ *
+ *  - hostname of client system
+ *  - client system information as per the uname() function
+ *  - client program of origin (sratool, sratunnel, etc)
+ *  - libaxa version
+ *  - libnmsg version
+ *  - libwdns version
+ *  - libyajl version
+ *  - openssl version
+ *  - libprotobuf version
+ *  - AXA protocol version in current use
+ *
+ *  The ID field of the axa_p_hello_t header is unused in this direction. It
+ *  is expected the server will log this information for subsequent issue
+ *  debugging or data mining.
+ *
  */
 typedef struct _PK {
-	axa_p_clnt_id_t	id;		    /**< client ID for bundled TCP */
+	axa_p_clnt_id_t	id;		/**< client ID for bundled TCP */
 	axa_p_pvers_t	pvers_min;	/**< min protocol version accepted */
 	axa_p_pvers_t	pvers_max;	/**< max protocol version accepted */
-	/**
-	 *  Human readable string containing name and version of the SRA or RAD
-	 *  server.  It is a variable length string up to 512 bytes including
-	 *  terminating  NULL.
-	 */
-	char		str[512];
+	char		str[512];	/**< data about server/client */
 } axa_p_hello_t;
 
 /** AXA protocol join */
