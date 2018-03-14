@@ -283,11 +283,12 @@ typedef uint64_t axa_p_clnt_id_t;
  *  After receiving the server's HELLO, the client will respond with its
  *  part of the handshake. It will populate the same axa_p_hello_t header
  *  announcing the protocol versions it speaks and a detailed JSON blob
- *  containing information about client including the following:
+ *  containing information about the client including the following:
  *
  *  - hostname of client system
  *  - client system information as per the uname() function
  *  - client program of origin (sratool, sratunnel, etc)
+ *  - libaxa version
  *  - libnmsg version
  *  - libwdns version
  *  - libyajl version

@@ -394,14 +394,14 @@ typedef struct axa_io {
  *  When re-initializing, all buffers must have been freed and file descriptors
  *  closed.
  *
- *  \param[in] io address of an io context
+ *  \param[in] io address of an I/O context
  */
 extern void axa_io_init(axa_io_t *io);
 
 /**
  *  Get the current protocol version used by an AXA I/O structure.
  *
- *  \param[in] io address of an io context
+ *  \param[in] io address of an I/O context
  *  \param[out] pvers the protocol version
  */
 extern void axa_io_pvers_get(axa_io_t *io, uint8_t *pvers);
@@ -412,7 +412,7 @@ extern void axa_io_pvers_get(axa_io_t *io, uint8_t *pvers);
  *  previously established and the protocol version is changed to something
  *  the other end does not understand.
  *
- *  \param[in] io address of an io context
+ *  \param[in] io address of an I/O context
  *  \param[out] pvers the protocol version to change to
  */
 extern void axa_io_pvers_set(axa_io_t *io, uint8_t pvers);
@@ -428,7 +428,7 @@ extern void axa_recv_flush(axa_io_t *io);
 /**
  *  Close the connection and flush and release buffers.
  *
- *  \param[in] io address of an I/O structure
+ *  \param[in] io address of an I/O context
  */
 extern void axa_io_close(axa_io_t *io);
 
