@@ -787,6 +787,7 @@ axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 	axa_client_send(emsg, client, AXA_TAG_NONE, AXA_P_OP_HELLO, &hdr,
 			cl_hello, sizeof(*cl_hello) -
 			sizeof(cl_hello->str) + strlen(cl_hello->str) + 1);
+	free(cl_hello);
 
 	return (true);
 }
