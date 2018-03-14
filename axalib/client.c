@@ -35,6 +35,7 @@
 #include <sysexits.h>
 #include <sys/utsname.h>
 #include <unistd.h>
+#include <wdns.h>
 
 #include <yajl/yajl_version.h>
 #include <yajl/yajl_gen.h>
