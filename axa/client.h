@@ -215,6 +215,7 @@ extern bool axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] origin null-terminated string containing the name of the
  *  	requesting client application or service, i.e. radtool, sratunnel, etc.
+ *  \param[in] client address of the client context
  *  \param[out] out pointer to a char * that is assigned on success. Must be
  *  	freed by caller.
  *
@@ -222,7 +223,8 @@ extern bool axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
  *  \retval false error occurred making client HELLO string
  */
 extern bool
-axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out);
+axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin,
+		axa_client_t *client, char **out);
 
 /**
  *  Examine HELLO message from server to pick a common protocol version

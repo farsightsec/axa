@@ -610,7 +610,8 @@ axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
 }
 
 bool
-axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
+axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin,
+		axa_client_t *client, char **out)
 {
 	int yajl_rc;
 	yajl_gen g = NULL;
@@ -687,7 +688,7 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin, char **out)
 	add_yajl_string(g, PROTOBUF_C_VERSION);
 
 	add_yajl_string(g, "AXA protocol");
-	add_yajl_integer(g, AXA_P_PVERS);
+	add_yajl_integer(g, client->io.pvers);
 
 	close_yajl_map(g);
 
@@ -766,7 +767,7 @@ axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 
 	p = cl_hello->str;
 	len = sizeof (cl_hello->str);
-	if (!axa_client_get_hello_string(emsg, origin, &out)) {
+	if (!axa_client_get_hello_string(emsg, origin, client, &out)) {
 		axa_error_msg("error getting detailed HELLO info: %s",
 				emsg->c);
 		if (origin == NULL)
