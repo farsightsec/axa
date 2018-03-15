@@ -91,6 +91,7 @@ typedef uint64_t axa_word_t;
 typedef struct {
 	axa_word_t m[16];
 } axa_ch_mask_t;
+#define AXA_CH_MAX	255
 
 /**
  *  Get a numbered bit from an array of 64-bit words

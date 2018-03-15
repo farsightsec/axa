@@ -1333,7 +1333,7 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 			AXA_P2H32(sys->srvr.sra.watches.ch_cnt) +
 			AXA_P2H32(sys->srvr.sra.watches.err_cnt));
 		printf("    channels        : ");
-		for (j = ch_cnt = 0; j < 256; j++) {
+		for (j = ch_cnt = 0; j < AXA_CH_MAX; j++) {
 			if (axa_get_bitwords(
 				sys->srvr.sra.ch_mask.m, j)) {
 					printf("%u ", j);
@@ -1375,7 +1375,7 @@ print_stats_user_an(_axa_p_stats_user_rad_an_t *an_obj)
 	printf("        RU (cur)    : %s\n", ru_buf);
 	printf("        RU (cost)   : %d\n", AXA_P2H32(an_obj->ru_cost));
 	printf("        channels    : ");
-	for (j = ch_cnt = 0; j < 256; j++) {
+	for (j = ch_cnt = 0; j < AXA_CH_MAX; j++) {
 		if (axa_get_bitwords(an_obj->ch_mask.m, j)) {
 				printf("%d ", j);
 				ch_cnt++;
@@ -1461,7 +1461,7 @@ print_stats_user(_axa_p_stats_user_t *user)
 	switch (mode) {
 		case SRA:
 			printf("      channels      : ");
-			for (j = ch_cnt = 0; j < 256; j++) {
+			for (j = ch_cnt = 0; j < AXA_CH_MAX; j++) {
 				if (axa_get_bitwords(
 					user->srvr.sra.ch_mask.m, j)) {
 						printf("%d ", j);

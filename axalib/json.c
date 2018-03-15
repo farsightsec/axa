@@ -842,7 +842,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 					add_yajl_string(g, "sra_channels");
 					add_yajl_array(g);
-					for (int j = 0; j < 256; j++) {
+					for (int j = 0; j < AXA_CH_MAX; j++) {
 						if (axa_get_bitwords(sys->srvr.sra.ch_mask.m, j)) {
 							axa_strbuf_reset(sb_tmp);
 							axa_strbuf_append(sb_tmp, "ch%d", (j));
@@ -1005,7 +1005,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 						add_yajl_string(g, "channels");
 						add_yajl_array(g);
-						for (int j = 0; j < 256; j++) {
+						for (int j = 0; j < AXA_CH_MAX; j++) {
 							if (axa_get_bitwords(user_obj->srvr.sra.ch_mask.m, j)) {
 								axa_strbuf_reset(sb_tmp);
 								axa_strbuf_append(sb_tmp, "ch%d", (j));
@@ -1065,7 +1065,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 								add_yajl_string(g,
 									"channels");
 								add_yajl_array(g);
-								for (int j = 0; j < 256; j++) {
+								for (int j = 0; j < AXA_CH_MAX; j++) {
 									if (axa_get_bitwords(an_obj->ch_mask.m, j)) {
 										axa_strbuf_reset(sb_tmp);
 										axa_strbuf_append(sb_tmp, "ch%d", (j));
