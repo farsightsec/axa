@@ -95,6 +95,7 @@ nobase_include_HEADERS = \
 	axa/trie.h \
 	axa/version.h \
 	axa/wire.h \
+	axa/yajl_shortcuts.h \
 	libmy/b64_encode.h
 lib_LTLIBRARIES = axa/libaxa.la
 
@@ -137,7 +138,8 @@ axa_libaxa_la_SOURCES = \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \
 	axalib/wire.c \
-	libmy/b64_encode.c libmy/b64_encode.h
+	libmy/b64_encode.c libmy/b64_encode.h libmy/my_alloc.h \
+	libmy/ubuf.h libmy/ubuf-pb.h libmy/vector.h
 
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBAXA_CURRENT):$(LIBAXA_REVISION):$(LIBAXA_AGE) \
