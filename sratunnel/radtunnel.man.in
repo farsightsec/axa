@@ -103,7 +103,7 @@ Its default is
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
 .Bl -tag -width unix
-.It Sm off Ar alias
+.It Sm off Ar alias Sm on
 Connect to a server using an alias shortcut mnemonic (see FILES section for
 more information).
 .It Sm off Ar apikey: Ar <users_apikey>@ Ar host,port Sm on
@@ -200,7 +200,7 @@ is the
 configuration file used with
 .Ar connect\ ssh:...
 connections.
-"Host" stanzas in the file can simplify connections to \*(SR servers.
+"Host" stanzas in the file can simplify connections to AXA servers.
 .El
 .Sh ENVIRONMENT VARIABLES
 If set, AXACONF specifies the AXA configuration directory instead of the
