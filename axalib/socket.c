@@ -346,6 +346,10 @@ axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 	buf = axa_strdup(addr_port);
 	port = buf;
 	host = strsep(&port, ",/");
+	if (host == NULL) {
+		free(buf);
+		return (false);
+	}
 	if (*host == '\0') {
 		if (passive) {
 			host = NULL;
