@@ -1,5 +1,5 @@
 /*
- * Print a dark channel packet
+ * Print various SIE messages
  *
  *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
@@ -1396,12 +1396,6 @@ print_stats_user(_axa_p_stats_user_t *user)
 	struct tm *tm_info;
 	const char *io_type;
 	char time_buf[30];
-        axa_cnt_t total_filtered = 0;
-        axa_cnt_t total_missed = 0;
-        axa_cnt_t total_collected = 0;
-        axa_cnt_t total_sent = 0;
-        axa_cnt_t total_rlimit = 0;
-        axa_cnt_t total_congested = 0;
 	char addr_str[INET6_ADDRSTRLEN];
 
 	if (user->type != _AXA_P_STATS_TYPE_USER) {
@@ -1530,22 +1524,16 @@ print_stats_user(_axa_p_stats_user_t *user)
 			convert_timeval(&last_cnt_update));
 	printf("        filtered    : %"PRIu64"\n",
 			AXA_P2H64(user->filtered));
-	total_filtered += AXA_P2H64(user->filtered);
 	printf("        missed      : %"PRIu64"\n",
 			AXA_P2H64(user->missed));
-	total_missed += AXA_P2H64(user->missed);
 	printf("        collected   : %"PRIu64"\n",
 			AXA_P2H64(user->collected));
-	total_collected += AXA_P2H64(user->collected);
 	printf("        sent        : %"PRIu64"\n",
 			AXA_P2H64(user->sent));
-	total_sent += AXA_P2H64(user->sent);
 	printf("        rlimit      : %"PRIu64"\n",
 			AXA_P2H64(user->rlimit));
-	total_rlimit += AXA_P2H64(user->rlimit);
 	printf("        congested   : %"PRIu64"\n",
 			AXA_P2H64(user->congested));
-	total_congested += AXA_P2H64(user->congested);
 
 	bytes_printed += sizeof (_axa_p_stats_user_t);
 	return (bytes_printed);
