@@ -1,5 +1,5 @@
 /*
- * Print a dark channel packet
+ * Print various SIE messages
  *
  *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
