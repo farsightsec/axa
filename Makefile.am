@@ -260,15 +260,6 @@ bin_SCRIPTS = \
 ##
 #
 
-exampledir = ${docdir}/examples
-nobase_example_DATA = \
-	sratool/main.c \
-	sratool/print.c \
-	sratool/sratool.h \
-	sratool/README \
-	sratunnel/main.c \
-	sratunnel/README
-
 EXTRA_DIST += \
 	autogen.sh \
 	copyright \
