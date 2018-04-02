@@ -111,7 +111,7 @@ else
 fi
 AM_CONDITIONAL([HAVE_YAJL], [test "$use_yajl" = "true"])
 
-PKG_CHECK_MODULES([check], [check >= 0.10.0],
+PKG_CHECK_MODULES([check], [check >= 0.9.10],
 		[CHECK_MOD_MSG="yes"], [CHECK_MOD_MSG="no"])
 
 AC_PATH_PROG([DOXYGEN], [doxygen])
