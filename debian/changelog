@@ -1,4 +1,4 @@
-axa (2.0.0-1) debian-fsi urgency=medium
+axa (2.0.0-1) debian-fsi; urgency=medium
 
   * Fix assorted bugs in SSL, tools 
   * Update support of libedit <= 3.11 (forced wchar support)
@@ -8,8 +8,7 @@ axa (2.0.0-1) debian-fsi urgency=medium
   * Remove mgmt
   * Add stats (successor to mgmt)
   * Add library versioning
-  * Add client-side hello allowing client to send system and dependency
-    information
+  * Add client-side hello allowing client to send system and dependency information
   * Update various internal AXA protocol semantics for AXA Protocol 2
   * Add 8601 timestamps to accounting messages
 
