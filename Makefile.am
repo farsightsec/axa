@@ -54,7 +54,7 @@ EXTRA_DIST += \
 	debian/compat \
 	debian/control \
 	debian/gbp.conf \
-	debian/libaxa0.install \
+	debian/libaxa1.install \
 	debian/libaxa-dev.install \
 	debian/rules
 
@@ -74,7 +74,7 @@ DISTCLEANFILES += $(man_MANS)
 ##
 #
 
-LIBAXA_CURRENT=0
+LIBAXA_CURRENT=1
 LIBAXA_REVISION=0
 LIBAXA_AGE=0
 
@@ -331,4 +331,3 @@ tests/tool-tests-data/002200-valid-then-unrecognized-command \
 tests/tool-tests-data/002100-unrecognized-command \
 tests/tool-tests-data/001010-multiple-commands-on-single-line
 TESTS += tests/test-tools-without-server.sh
-

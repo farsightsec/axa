@@ -4,7 +4,7 @@
 	dh $@ --with autoreconf --parallel
 
 override_dh_strip:
-	dh_strip -p libaxa0 --dbg-package=libaxa0-dbg
+	dh_strip -p libaxa1 --dbg-package=libaxa1-dbg
 	dh_strip -p axa-tools --dbg-package=axa-tools-dbg
 	dh_strip -a --remaining-packages
 
