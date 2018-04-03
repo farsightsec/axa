@@ -167,21 +167,17 @@ disable NMSG output buffering.
 enable NMSG zlib container compression.
 .El
 .Sh EXAMPLES
-The following sends all new domain reports on channel 212
+The following sends all new domain reports on channel 213
 seen by the SRA server at example.com
 to the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-$ sratunnel -s tls:user@example.com,1021 -o nmsg:127.1,8000 \\
-	-c ch212 -w ch=ch212
+$ sratunnel -s apikey:<yourapikey>@example.com,1023 -o nmsg:127.1,8000 \\
+	-c ch213 -w ch=ch213
 .Ed
 .Pp
 Beware of specifying more data than will fit in the TCP/IP connections
 between the server and
 .Nm .
-The following is likely to be only a network stress test:
-.Bd -literal -offset 4n
-$ sratunnel -s tls:user@example.com,1021 -o nmsg:127.1,8000 \\
-	-c all -w ip=128.0/1  -w ip=0/1
 .Ed
 .Sh FILES
 .Bl -tag -width config
@@ -196,7 +192,7 @@ specify the SRA server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # SRA
-alias:sra-apikey=apikey:<elided>@example.com,1023
+alias:sra-apikey=apikey:<yourapikey>@example.com,1023
 
 .Ed
 If the user wanted to connect to SRA, she would only have to remember
