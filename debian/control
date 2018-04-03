@@ -29,12 +29,6 @@ Architecture: any
 Depends: libaxa0 (= ${binary:Version}), ${misc:Depends}
 Description: AXA development files
 
-Package: axa-doc
-Section: doc
-Architecture: all
-Depends: ${misc:Depends}
-Description: AXA documentation
-
 Package: axa-tools
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},

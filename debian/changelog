@@ -1,6 +1,6 @@
 axa (2.0.0-1) debian-fsi; urgency=medium
 
-  * Fix assorted bugs in SSL, tools 
+  * Fix assorted bugs in SSL, tool
   * Update support of libedit <= 3.11 (forced wchar support)
   * Deprecate use of self-signed certs
   * Add SIGINFO (ctrl-t) information getter for sratunnel/radtunnel
@@ -11,6 +11,7 @@ axa (2.0.0-1) debian-fsi; urgency=medium
   * Add client-side hello allowing client to send system and dependency information
   * Update various internal AXA protocol semantics for AXA Protocol 2
   * Add 8601 timestamps to accounting messages
+  * Remove axa-doc package as it had incomplete example code
 
  -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 03 Apr 2018 16:17:21 -0400
 

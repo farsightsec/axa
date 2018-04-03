@@ -49,7 +49,6 @@ EXTRA_DIST += \
 	README.md \
 	DoxygenLayout.xml \
 	json-schema.yaml \
-	debian/axa-doc.install \
 	debian/axa-tools.install \
 	debian/changelog \
 	debian/compat \
