@@ -121,19 +121,21 @@ command.
 The following captures and displays one SIE
 .Ic newdomain
 message.
-The "dns=*." watch or pattern was matched by the "ns1.xserver.jp"
+The "dns=*." watch or pattern was matched by the "nflxso.net"
 domain in DNS NS rdata.
 .Bd -literal -offset 4n
 $ sratool 
-sra> connect tls:user@axa.sie-remote.net,1021
-* HELLO srad version 1.4.1 sra AXA protocol 1
+sra> connect apikey:<yourapikey>@axa.sie-remote.net,1023
+* HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+* Using AXA protocol 2
+* OK USER mschiffm authorized
 sra> count 1
-sra> channel 211 on
-* OK CHANNEL ON/OFF channel ch211 on
+sra> channel 213 on
+* OK CHANNEL ON/OFF channel ch213 on
 sra> 1 watch dns=*.
 1 OK WATCH started
-1 ch211  SIE newdomain rdata=NS ns1.xserver.jp
- atopy100days.com/NS: atopy100days.com
+1 ch213  SIE newdomain
+ ad6uq65jvhekifbbgu36u.r.nflxso.net/CNAME: nflxso.net
 
 packet count limit exceeded
 sra> exit

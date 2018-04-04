@@ -1,3 +1,21 @@
+axa (2.0.0-1) debian-fsi; urgency=medium
+
+  * Fix assorted bugs in SSL, tool
+  * Update support of libedit <= 3.11 (forced wchar support)
+  * Deprecate use of self-signed certs
+  * Add SIGINFO (ctrl-t) information getter for sratunnel/radtunnel
+  * Add tools option to disable output buffering
+  * Remove mgmt
+  * Add stats (successor to mgmt)
+  * Add library versioning
+  * Add client-side hello allowing client to send system and dependency information
+  * Update various internal AXA protocol semantics for AXA Protocol 2
+  * Add 8601 timestamps to accounting messages
+  * Remove axa-doc package as it had incomplete example code
+  * Interfaces changes, library package changed from libaxa0 to libaxa1
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 03 Apr 2018 16:17:21 -0400
+
 axa (1.6.0-1) unstable; urgency=low
 
   * Fix make check Clang compiler warnings

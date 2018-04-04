@@ -166,7 +166,7 @@ The following connects to a RAD server at example.com, loads the Brand Sentry
 module looking for the brand "farsight", and sends all anomaly hit NMSGs to
 the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-radtunnel -s tls:user@example.com,1022 -o nmsg:127.1,8000 \\
+radtunnel -s apikey:<yourapikey>@example.com,1024 -o nmsg:127.1,8000 \\
 	-w dns=*. -a brand_sentry brand=farsight
 .Ed
 .Sh FILES
@@ -182,7 +182,7 @@ specify the RAD server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # RAD
-alias:rad-apikey=apikey:<elided>@example.com,1024
+alias:rad-apikey=apikey:<yourapikey>@example.com,1024
 
 .Ed
 If the user wanted to connect to RAD, she would only have to remember

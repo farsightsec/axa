@@ -133,7 +133,8 @@ You can connect as per the following:
   ~~~
   $ sratool
   sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1023
-  * HELLO srad version 1.5.1 axa AXA protocol 1
+  * HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+  * Using AXA protocol 2
   * OK USER johndoe authorized
   ...
   ~~~
@@ -143,7 +144,8 @@ You can connect as per the following:
   ~~~
   $ radtool
   rad> connect apikey:<your_apikey_here>@axa.sie-remote.net,1024
-  * HELLO radd version 1.5.1 axa AXA protocol 1
+  * HELLO radd v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+  * Using AXA protocol 2
   * OK USER johndoe authorized
   ...
   ~~~
@@ -214,8 +216,9 @@ You can connect as per the following:
    ~~~
    $ sratool
    sra> connect tls:user_name@sra.sie-remote.net,1021
-   * HELLO srad version 1.5.1 axa AXA protocol 1
-   * OK USER user_name authorized
+   * HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+   * Using AXA protocol 2
+   * OK USER johndoe authorized
    ...
    ~~~
 
@@ -224,8 +227,9 @@ You can connect as per the following:
    ~~~
    $ radtool
    rad> connect tls:user_name@rad.sie-remote.net,1022
-   * HELLO radd version 1.5.1 axa AXA protocol 1
-   * OK USER user_name authorized
+   * HELLO radd v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+   * Using AXA protocol 2
+   * OK USER johndoe authorized
    ...
    ~~~
 
@@ -280,7 +284,9 @@ You can connect as per the following:
    ~~~
    $ sratool
    sra> connect ssh:sra-service@sra.sie-remote.net
-   * HELLO srad version 1.5.1 sra AXA protocol 1
+   * HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+   * Using AXA protocol 2
+   * OK USER johndoe authorized
    ...
    ~~~
 
@@ -289,7 +295,9 @@ You can connect as per the following:
    ~~~
    $ radtool
    rad> connect ssh:rad-service@rad.sie-remote.net
-   * HELLO radd version 1.5.1 rad AXA protocol 1
+   * HELLO radd v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+   * Using AXA protocol 2
+   * OK USER johndoe authorized
    ...
    ~~~
 
@@ -333,13 +341,15 @@ After creating the above aliases, you can replace the server connection URI with
 ~~~
 $ sratool
 sra> connect sra-apikey
-* HELLO srad version 1.5.1 axa AXA protocol 1
+* HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+* Using AXA protocol 2
 * OK USER johndoe authorized
 ...
 sra> disconnect
 sra> mode rad
 rad> connect rad-apikey
-* HELLO radd version 1.5.1 axa AXA protocol 1
+* HELLO radd v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+* Using AXA protocol 2
 * OK USER johndoe authorized
 ...
 ~~~
@@ -357,7 +367,8 @@ Here's a simple example using `sratool` to stream five NMSGs seen on the
 ~~~
 $ sratool
 sra> connect sra-apikey
-* HELLO srad version 1.5.1 sra-server AXA protocol 1
+* HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+* Using AXA protocol 2
 * OK USER johndoe authorized
 sra> count 5
 sra> channel 213 on
@@ -365,15 +376,15 @@ sra> channel 213 on
 sra> 1 watch ch=213
 1 OK WATCH started
 1 ch213  SIE newdomain
- ino-usb.u922172.m10feedc30342.sos.atlas.ripe.net/A: ripe.net
+ fd2d733e580keyaiqbitav3aahjzyqic4uh7qu-uoxyqssz1522793901-sonar.xz.fbcdn.net/A: fbcdn.net
 1 ch213  SIE newdomain
- imap.ber-cert.ie/A: ber-cert.ie
+ ddhc4g.dm.files.1drv.com/CNAME: 1drv.com
 1 ch213  SIE newdomain
- d-35932728312275649984.ampproject.net/A: ampproject.net
+ accpots2ehi4qpqi22nzfcxl424kejn7mayzvqv6.r.nflxso.net/CNAME: nflxso.net
 1 ch213  SIE newdomain
- d-35642662481942204736.ampproject.net/A: ampproject.net
+ networkstart-myipgcloindhvkms.islonline.net/A: islonline.net
 1 ch213  SIE newdomain
- d-180710127737887937.ampproject.net/AAAA: ampproject.net
+ 2d35abd9540041939e6b1c188bc7cc7c-1ad356638475.cdn5.forter.com/A: forter.com
 
 packet count limit exceeded
 sra> disconnect
@@ -402,19 +413,19 @@ $ sratunnel -s sra-apikey -c 213 -w ch=213 -o nmsg:file:213.nmsg
 ^c
 $ nmsgtool -c 1 -r 213.nmsg -J - -- | jq .
 {
-  "time": "2017-02-24 01:26:08.512456893",
+  "time": "2018-04-03 22:21:55.897547006",
   "vname": "SIE",
   "mname": "newdomain",
   "source": "a1ba02cf",
   "message": {
-    "domain": "122jjc.com.",
-    "time_seen": "2017-02-24 01:21:24",
-    "bailiwick": "122jjc.com.",
-    "rrname": "153366.122jjc.com.",
+    "domain": "whatsapp.net.",
+    "time_seen": "2018-04-03 22:20:36",
+    "bailiwick": "snr.whatsapp.net.",
+    "rrname": "wa409c4891kqn22dwa-gmztiojygy3dcnbr.snr.whatsapp.net.",
     "rrclass": "IN",
     "rrtype": "A",
     "rdata": [
-      "174.139.176.10"
+      "185.60.219.53"
     ],
     "keys": [],
     "new_rr": []
@@ -426,25 +437,43 @@ $ nmsgtool -c 1 -r 213.nmsg -J - -- | jq .
  2. `$ nmsgtool -c 1 -r 213.nmsg -J - -- | jq .`: The `nmsgtool` program is run to read a single NMSG from the output file and pipeline to the jq program to pretty print it.
 
 ### 3. Watch for Anomalies with radtool
-Next, `radtool` is used to load the Brand Watch anomaly module watch for
-suspected brand infringement.
+Next, `radtool` is used to load the Brand Sentry anomaly module to watch for
+suspected brand infringement in the Internationalized Domain Names (IDN) namespace for four
+well-known brands.
 
 ~~~
 rad> connect rad-apikey
-* HELLO radd version 1.5.1 rad-server AXA protocol 1
+* HELLO radd v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+* Using AXA protocol 2
+* OK USER johndoe authorized
+rad> verbose on
 rad> 1 watch dns=*.
 1 OK WATCH saved
-rad> 1 anomaly brand_sentry brand=farsightsecurity whitelist=*.farsightsecurity.com,*.fsi.io
+rad> 1 anomaly brand_sentry brand=facebook,apple,netflix,google matcher=idn_homoglyph whitelist=*.facebook.com,*.apple.com,*.netflix.com,*.google.com
 1 OK ANOMALY anomaly detector started
-1 brand_sentry ch213  SIE newdomain rdata=CNAME www.webagent.fa.rsite.ru
- aronovichmilamailru.webagent.fa.rsite.ru/CNAME: rsite.ru
+1 brand_sentry ch204  SIE dnsdedupe bailiwick=xn--fcebook-s3a.com
+  type: INSERTION
+  count: 1
+  time_first: 2018-04-03 22:25:09
+  time_last: 2018-04-03 22:25:09
+  response_ip: 208.109.255.42
+  bailiwick: xn--fcebook-s3a.com.
+  rrname: xn--fcebook-s3a.com.
+  rrclass: IN (1)
+  rrtype: A (1)
+  rrttl: 600
+  rdata: 184.168.221.57
 ...
 rad> exit
+$ idn -u xn--fcebook-s3a.com.
+fācebook.com.
 ~~~
 
  1. `rad> connect rad-apikey`: We connected to RAD over the apikey transport using the "rad-apikey" alias. The `HELLO` response from the remote end tells us its version number and the protocol level.
- 2. `rad> 1 watch dns=*.`: We set a DNS wildcard "all-watch". This will match all dns hostnames which is what we want for Brand Sentry -- we want to look at the entire DNS namespace (except for two second level domains, as per below).
- 4. `rad> 1 anomaly brand_sentry brand=farsightsecurity whitelist=*.farsightsecurity.com,*.fsi.io`: We switched on the anomaly detector. This command enables the brand_sentry anomaly module looking for hostnames "suspiciously close" to "farsightsecurity". Hostnames in the `*.farsightsecurity.com` and `*.fsi.io` are considered safe and are ignored.
+ 2. `rad> verbose on`: We turn on verbose mode to get more information about each hit.
+ 3. `rad> 1 watch dns=*.`: We set a DNS wildcard "all-watch". This will match all dns hostnames which is what we want for Brand Sentry -- we want to look at the entire DNS namespace (except for four level domains, as per below).
+ 4. `rad> 1 anomaly brand_sentry brand=facebook,apple,netflix,google matcher=idn_homoglyph whitelist=*.facebook.com,*.apple.com,*.netflix.com,*.google.com`: We switched on the anomaly detector. This command enables the brand_sentry anomaly module looking for Internationalized Domain Names (IDNs) "suspiciously close" to "facebook, google, apple", or "netflix". Hostnames in the `*.facebook.com`, `*.apple.com`, `*.netflix.com`, and `*.google.com` are considered safe and are ignored.
+ 5. `$ idn -u xn--fcebook-s3a.com.`: We use the [GNU libidn idn](https://www.gnu.org/software/libidn/manual/html_node/Invoking-idn.html) command line tool to convert the punycode encoded domain into its Unicode representation.
 
 ### 5. Create Your Own Local SIE Node
 With `sratunnel` and `nmsgtool`, you can create your own local "SIE node". This can be useful if you want cobble together your own local SIE cloud with the channels you're subscribed to. First, invoke `sratunnel` as per the following:
@@ -475,44 +504,46 @@ Finally, we use `nmsgtool` to receive and decapsulate the data. Here we invoke i
 
 ~~~
 $ nmsgtool  -l 127.0.0.1/8000 -c 3
-[104] [2017-03-19 21:02:49.635906558] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
+[76] [2018-04-03 22:35:21.747374163] [2:1 SIE dnsdedupe] [a1ba02cf] [] [] 
 type: INSERTION
 count: 1
-time_first: 2017-03-19 21:01:16
-time_last: 2017-03-19 21:01:16
-response_ip: 192.50.43.53
-bailiwick: jp.
-rrname: hokunichi.co.jp.
+time_first: 2018-04-03 22:34:03
+time_last: 2018-04-03 22:34:03
+response_ip: 174.128.246.102
+bailiwick: yoga-power.com.
+rrname: www.yoga-power.com.
+rrclass: IN (1)
+rrtype: A (1)
+rrttl: 3600
+rdata: 216.86.147.31
+
+[138] [2018-04-03 22:35:21.747378349] [2:1 SIE dnsdedupe] [a1ba02cf] [] [] 
+type: INSERTION
+count: 1
+time_first: 2018-04-03 22:34:03
+time_last: 2018-04-03 22:34:03
+response_ip: 174.128.246.102
+bailiwick: yoga-power.com.
+rrname: yoga-power.com.
 rrclass: IN (1)
 rrtype: NS (2)
-rrttl: 86400
-rdata: ns.technowave.ne.jp.
-rdata: name.technowave.ad.jp.
+rrttl: 3600
+rdata: ns1.afraid.org.
+rdata: ns2.afraid.org.
+rdata: ns3.afraid.org.
+rdata: ns4.afraid.org.
 
-[127] [2017-03-19 21:02:49.635908718] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
+[141] [2018-04-03 22:35:21.747385912] [2:1 SIE dnsdedupe] [a1ba02cf] [] [] 
 type: EXPIRATION
-count: 3
-time_first: 2017-03-19 02:59:00
-time_last: 2017-03-19 02:59:00
-bailiwick: g01.yahoodns.net.
-rrname: g01.yahoodns.net.
-rrclass: IN (1)
-rrtype: SOA (6)
-rrttl: 300
-rdata: yf1.yahoo.com. hostmaster.yahoo-inc.com. 1489892340 30 30 86400 300
-
-[143] [2017-03-19 21:02:49.635910856] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
-type: INSERTION
 count: 1
-time_first: 2017-03-19 21:01:30
-time_last: 2017-03-19 21:01:30
-response_ip: 87.98.147.49
-bailiwick: torrentmaniacs.info.
-rrname: torrentmaniacs.info.
+time_first: 2018-04-03 20:09:54
+time_last: 2018-04-03 20:09:54
+bailiwick: vn.city.
+rrname: c.vn.city.
 rrclass: IN (1)
-rrtype: SOA (6)
-rrttl: 86400
-rdata: ns1.gennetworks.in. contact.gennetworks.in. 2017022300 3600 7200 1209600 86400
+rrtype: RRSIG (46)
+rrttl: 300
+rdata: CNAME 13 3 300 1522876195 1522696195 35273 vn.city. xU5jsRsbUQFzegFol6xhWCSUSbX8CXUSCRV9ge5WCe6/fy8jgDMt6Zyt YZTDNd7wYoi/O5hemCRQXJvYSJ7JWQ==
 ~~~
 
  1. `sratunnel -s sra-apikey -c 204 -w ch=204 -o nmsg:127.0.0.1,8000 &`: invoke `sratunnel` and stream all of channel 204 ([Passive DNS traffic that has been de-duplicated, filtered, and verified](https://www.farsightsecurity.com/assets/media/download/fsi-sie-channel-guide.pdf)). The output is set to be NMSGs to the loopback interface on port UDP/8000 (UDP is the default NMSG transport protocol).
