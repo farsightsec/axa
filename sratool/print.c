@@ -1553,7 +1553,7 @@ print_stats(_axa_p_stats_rsp_t *stats, size_t len)
 	}
 
 	if (axa_debug != 0) {
-		printf("    stats_len       : %zdb\n", AXA_P2H32(len));
+		printf("    stats_len       : %zub\n", (size_t)AXA_P2H32(len));
 	}
 
 	switch (stats->result) {
