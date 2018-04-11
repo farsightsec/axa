@@ -1102,8 +1102,9 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
 		} else if (client.hello == NULL) {
 			printf("connecting to %s\n", client.io.label);
 		} else {
-			printf("connected to \"%s\"\n    %s\n",
-			       client.hello, client.io.label);
+			printf("connected to: %s @ %s using AXA protocol %d\n",
+			       client.io.is_rad == true ? "radd" : "srad",
+			       client.io.addr, client.io.pvers);
 			printf("    connected for: %s\n",
 				convert_timeval(&connect_time));
 			if (client.io.tls_info != NULL)

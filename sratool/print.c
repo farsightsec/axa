@@ -1540,7 +1540,7 @@ print_stats_user(_axa_p_stats_user_t *user)
 }
 
 void
-print_stats(_axa_p_stats_rsp_t *stats, size_t len)
+print_stats(_axa_p_stats_rsp_t *stats, uint32_t len)
 {
 	uint16_t user_objs_cnt;
 	uint8_t *p;
@@ -1553,7 +1553,7 @@ print_stats(_axa_p_stats_rsp_t *stats, size_t len)
 	}
 
 	if (axa_debug != 0) {
-		printf("    stats_len       : %zdb\n", AXA_P2H32(len));
+		printf("    stats_len       : %ub\n", AXA_P2H32(len));
 	}
 
 	switch (stats->result) {

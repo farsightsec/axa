@@ -540,10 +540,11 @@ typedef struct _PK {			/**< anomaly module name */
 	char		c[32];		/**< wastefully null terminated */
 } axa_p_an_t;
 
+#define AXA_PARMS_MAX	8192		/**< max size of RAD module parms */
 /** AXA protocol anomaly module specified by RAD client */
 typedef struct _PK {
 	axa_p_an_t	an;		/**< anomaly module name */
-	char		parms[1024];	/**< parameters, null terminated */
+	char		parms[AXA_PARMS_MAX];	/**< parms, null terminated */
 } axa_p_anom_t;
 
 /** AXA protocol anomaly module hit */
