@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,10 +27,14 @@ extern axa_client_t client;
 
 /* extern signal.c */
 extern int terminated;
+extern int give_status;
 
 /* global */
 uint axa_debug;				/* debug level */
 int count;				/* limit to this many */
+unsigned long count_messages_sent = 0;  /* how many messages we have sent */
+unsigned long count_messages_rcvd = 0;  /* how many messages we have received */
+unsigned long count_hits = 0;           /* how many hits received */
 int trace = 0;				/* server-side trace level */
 int initial_count;			/* initial count */
 bool counting = false;			/* true == limiting packets to count */
@@ -52,6 +56,8 @@ static bool version;
 static struct timeval time_out_flush;
 static uint acct_interval;
 static struct timeval acct_timer;
+
+void print_status(void);
 
 static void AXA_NORETURN AXA_PF(1,2)
 usage(const char *msg, ...)
@@ -95,6 +101,7 @@ usage(const char *msg, ...)
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
 	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
+	printf("[-u]\t\t\tunbuffer nmsg container output\n");
 	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
 	exit(EX_USAGE);
@@ -112,6 +119,7 @@ main(int argc, char **argv)
 	char *p;
 	const char *cp;
 	int i;
+	bool output_buffering = true;
 
 	axa_set_me(argv[0]);
 	AXA_ASSERT(axa_parse_log_opt(&emsg, "trace,off,stdout"));
@@ -127,7 +135,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:z"))
+	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -235,6 +243,10 @@ main(int argc, char **argv)
 			anomalies = arg;
 			break;
 
+		case 'u':
+			output_buffering = false;
+			break;
+
 		case 'z':
 			nmsg_zlib = true;
 			break;
@@ -249,7 +261,14 @@ main(int argc, char **argv)
 	}
 
 	if (version) {
-		axa_trace_msg(AXA_PVERS_STR" AXA protocol %d", AXA_P_PVERS);
+#if AXA_P_PVERS_MIN != AXA_P_PVERS_MAX
+	axa_trace_msg("%s built using AXA library %s, AXA protocol %d in %d to %d\n",
+	       axa_prog_name, axa_get_version(),
+	       AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
+#else
+	axa_trace_msg("%s built using AXA library: %s, AXA protocol: %d\n",
+	       axa_prog_name, axa_get_version(), AXA_P_PVERS);
+#endif
 		if (srvr_addr == NULL && out_addr == NULL
 		    && chs == NULL && watches == NULL
 		    && anomalies == NULL)
@@ -297,8 +316,10 @@ main(int argc, char **argv)
 #ifdef SIGXFSZ
 	signal(SIGXFSZ, SIG_IGN);
 #endif
-
-	if (!out_open())
+#ifdef SIGINFO
+        signal(SIGINFO, siginfo);
+#endif
+	if (!out_open(output_buffering))
 		exit(EX_IOERR);
 
 	AXA_DEBUG_TO_NMSG(axa_debug);
@@ -324,6 +345,10 @@ main(int argc, char **argv)
 	for (;;) {
 		if (terminated != 0)
 			stop(terminated);
+                if (give_status != 0) {
+                        give_status = 0;
+                        print_status();
+                }
 
 		/* (Re)connect to the server if it is time. */
 		if (!AXA_CLIENT_CONNECTED(&client)) {
@@ -356,7 +381,9 @@ main(int argc, char **argv)
 		if (acct_interval) {
 			gettimeofday(&now, NULL);
 			if (now.tv_sec - acct_timer.tv_sec >= acct_interval) {
-				srvr_send(1, AXA_P_OP_ACCT, NULL, 0);
+				if (!srvr_send(1, AXA_P_OP_ACCT, NULL, 0)) {
+					continue;
+				}
 				acct_timer.tv_sec = now.tv_sec;
 			}
 		}
@@ -376,7 +403,10 @@ main(int argc, char **argv)
 		case AXA_IO_BUSY:
 			break;
 		case AXA_IO_KEEPALIVE:
-			srvr_send(AXA_TAG_NONE, AXA_P_OP_NOP, NULL, 0);
+			/* nothing to do here if srvr_send() fails, we just
+			 * hope it was ephemeral and do our backoff and retry
+			 * thing */
+			(void) srvr_send(AXA_TAG_NONE, AXA_P_OP_NOP, NULL, 0);
 			continue;
 		case AXA_IO_OK:
 			/* Process a message from the server. */
@@ -421,3 +451,19 @@ stop(int s)
 					strerror(errno));
 	exit(s);
 }
+
+void print_status(void)
+{
+        printf("%s ", mode == SRA ? "sra" : "rad");
+        if (!AXA_CLIENT_CONNECTED(&client))
+                printf("NOT-");
+        printf("connected, ");
+
+        /* print with the proper pluralization */
+        printf("sent %lu message%s, received %lu message%s, %lu hit%s\n",
+               count_messages_sent, count_messages_sent != 1 ? "s" : "",
+               count_messages_rcvd, count_messages_rcvd != 1 ? "s" : "",
+               count_hits, count_hits != 1 ? "s" : "");
+}
+
+

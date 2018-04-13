@@ -1,7 +1,7 @@
 /*
  * AXA protocol utilities
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -339,9 +339,11 @@ axa_op_to_str(char *buf, size_t buflen,	/* should be AXA_P_OP_STRLEN */
 	case AXA_P_OP_ACCT:	strlcpy(buf, "ACCOUNTING",	buflen); break;
 	case AXA_P_OP_RADU:	strlcpy(buf, "RAD UNITS GET",	buflen); break;
 	case AXA_P_OP_MGMT_GET:	strlcpy(buf, "MGMT GET",	buflen); break;
-	case AXA_P_OP_MGMT_GETRSP:strlcpy(buf, "MGMT GET RSP",buflen); break;
-	case AXA_P_OP_MGMT_KILL:strlcpy(buf, "MGMT KILL",	buflen); break;
-	case AXA_P_OP_MGMT_KILLRSP:strlcpy(buf, "MGMT KILL RSP",buflen); break;
+	case AXA_P_OP_MGMT_GETRSP:strlcpy(buf, "MGMT GET RSP",	buflen); break;
+	case _AXA_P_OP_KILL_REQ:strlcpy(buf, "KILL REQ",	buflen); break;
+	case _AXA_P_OP_KILL_RSP:strlcpy(buf, "KILL RSP",	buflen); break;
+	case _AXA_P_OP_STATS_REQ:strlcpy(buf,"STATS REQ",	buflen); break;
+	case _AXA_P_OP_STATS_RSP:strlcpy(buf,"STATS RSP",	buflen); break;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 	default:
@@ -983,8 +985,10 @@ axa_p_to_str(char *buf0, size_t buf_len,    /* should be AXA_P_STRLEN */
 	case AXA_P_OP_RADU:
 	case AXA_P_OP_MGMT_GET:
 	case AXA_P_OP_MGMT_GETRSP:
-	case AXA_P_OP_MGMT_KILL:
-	case AXA_P_OP_MGMT_KILLRSP:
+	case _AXA_P_OP_KILL_REQ:
+	case _AXA_P_OP_KILL_RSP:
+	case _AXA_P_OP_STATS_REQ:
+	case _AXA_P_OP_STATS_RSP:
 	default:
 		break;
 	}
@@ -1170,22 +1174,38 @@ axa_ck_hdr(axa_emsg_t *emsg, const axa_p_hdr_t *hdr,
 		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
 		break;
 	case AXA_P_OP_MGMT_GETRSP:
-		min_len = sizeof(axa_p_mgmt_t);
-		max_len = sizeof(axa_p_mgmt_t) +
-			/* max number of channels */
-			(255 * sizeof(axa_p_ch_t)) +
-			/* max number of output threads (users) */
-			(1024 * sizeof(axa_p_mgmt_user_t));
+		min_len = max_len =
+			strlen("mgmt is deprecated, please upgrade and use \"stats\"");
 		tagged = 0;
 		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
 		break;
-	case AXA_P_OP_MGMT_KILL:
-		max_len = min_len = sizeof(axa_p_mgmt_kill_t);
+	case _AXA_P_OP_KILL_REQ:
+		max_len = min_len = sizeof(_axa_p_kill_t);
 		tagged = 0;
 		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
 		break;
-	case AXA_P_OP_MGMT_KILLRSP:
-		min_len = max_len = sizeof(axa_p_mgmt_kill_t);
+	case _AXA_P_OP_KILL_RSP:
+		min_len = max_len = sizeof(_axa_p_kill_t);
+		tagged = 0;
+		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
+		break;
+	case _AXA_P_OP_STATS_REQ:
+		max_len = min_len = sizeof(_axa_p_stats_req_t);
+		tagged = 0;
+		dir_ok = (dir == AXA_P_TO_SRA || dir == AXA_P_TO_RAD);
+		break;
+	case _AXA_P_OP_STATS_RSP:
+		/* stats response header */
+		min_len = sizeof(_axa_p_stats_rsp_t);
+		/* stats response header + sys object + max user objs + max
+		 * rad an objs */
+		max_len = sizeof(_axa_p_stats_rsp_t) +
+			sizeof(_axa_p_stats_sys_t) +
+			(_AXA_STATS_MAX_USER_OBJS *
+			 sizeof(_axa_p_stats_user_t)) +
+			(_AXA_STATS_MAX_USER_OBJS *
+			 ((_AXA_STATS_MAX_USER_RAD_AN_OBJS *
+                         sizeof(_axa_p_stats_user_rad_an_t))));
 		tagged = 0;
 		dir_ok = (dir == AXA_P_FROM_SRA || dir == AXA_P_FROM_RAD);
 		break;
@@ -1588,9 +1608,17 @@ axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op, const axa_p_body_t *body,
 		break;
 	case AXA_P_OP_MGMT_GETRSP:
 		break;
-	case AXA_P_OP_MGMT_KILL:
+	case _AXA_P_OP_KILL_REQ:
+		/* TODO */
 		break;
-	case AXA_P_OP_MGMT_KILLRSP:
+	case _AXA_P_OP_KILL_RSP:
+		/* TODO */
+		break;
+	case _AXA_P_OP_STATS_REQ:
+		/* TODO */
+		break;
+	case _AXA_P_OP_STATS_RSP:
+		/* TODO */
 		break;
 	}
 
@@ -1673,6 +1701,20 @@ axa_io_init(axa_io_t *io)
 	io->tun_fd = -1;
 	io->tun_pid = -1;
 	io->pvers = AXA_P_PVERS;
+}
+
+void
+axa_io_pvers_set(axa_io_t *io, uint8_t pvers)
+{
+	AXA_ASSERT(io != NULL);
+	io->pvers = pvers;
+}
+
+void
+axa_io_pvers_get(axa_io_t *io, uint8_t *pvers)
+{
+	AXA_ASSERT(io != NULL);
+	*pvers = io->pvers;
 }
 
 void
@@ -1844,9 +1886,6 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 			/* Stop when we have a complete message. */
 			hdr_len = AXA_P2H32(io->recv_hdr.len);
 			if (hdr_len == io->recv_body_len) {
-#if AXA_P_PVERS != 1
-#error "write code to adjust other guy's AXA protocol to our version"
-#endif
 				if (!axa_ck_body(emsg, io->recv_hdr.op,
 						 io->recv_body,
 						 hdr_len-sizeof(io->recv_hdr)))
@@ -2059,12 +2098,6 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	struct iovec iov[3];
 	int iovcnt;
 	ssize_t total, done;
-
-#if AXA_P_PVERS != 1
-	if (pvers != AXA_P_PVERS) {
-#error "write code to adjust outgoing data to other guy's AXA protocol"
-	}
-#endif
 
 	if (hdr == NULL)
 		hdr = &hdr0;

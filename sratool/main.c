@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -90,6 +90,9 @@ main(int argc, char **argv)
 {
 	const char *fields_file = "";
 	const char *config_file = "";
+#if LIBEDIT_IS_UNICODE
+	wchar_t wc;
+#endif
 	char cmd_buf[500];
 	const char *cmd;
 	int cmd_len;
@@ -284,7 +287,12 @@ main(int argc, char **argv)
 			/* Get a command from stdin. */
 			n = 0;
 			for (;;) {
+#if LIBEDIT_IS_UNICODE
+				getcfn(NULL, &wc);
+				cmd_buf[n] = wctob(wc);
+#else
 				getcfn(NULL, &cmd_buf[n]);
+#endif
 				if (cmd_buf[n++] == '\n'
 				    || n >= sizeof(cmd_buf)-1)
 					break;

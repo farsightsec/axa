@@ -1,7 +1,7 @@
 /*
- * Tunnel SIE data from an SRA or RAD server.
+ * AXA version reporting
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,26 +16,17 @@
  *  limitations under the License.
  */
 
-#include "sratunnel.h"
+#include <axa/axa.h>
+#include <axa/version.h>
 
-/* global */
-int terminated;				/* > 0 when time to quit */
-
-void
-sigterm(int sig)
+const char *
+axa_get_version(void)
 {
-	terminated = sig;
-
-	signal(sig, SIG_DFL);		/* quit early on repeated signals */
+	return (AXA_LIBRARY_VERSION);
 }
 
-/* global */
-int give_status;		 /* != 0 when should print status */
-
-#ifdef SIGINFO
-void
-siginfo(int __attribute__((__unused__)) sig)
+uint32_t
+axa_get_version_number(void)
 {
-        give_status = 1;         /* print out some status in response to ^T */
+	return (AXA_LIBRARY_VERSION_NUMBER);
 }
-#endif

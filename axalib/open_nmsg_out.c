@@ -36,7 +36,7 @@
 int
 axa_open_nmsg_out(axa_emsg_t *emsg,
 		  nmsg_output_t *out_nmsg_output, int *out_sock_type,
-		  const char *addr0)
+		  const char *addr0, bool output_buffering)
 {
 	const char *addr;
 	axa_socku_t su;
@@ -119,8 +119,9 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 		}
 	}
 
-	/* unbuffer all nmsg outputs */
-	nmsg_output_set_buffered(*out_nmsg_output, false);
+	if (output_buffering == false)
+		/* unbuffer all nmsg outputs */
+		nmsg_output_set_buffered(*out_nmsg_output, false);
 
 	return (1);
 }

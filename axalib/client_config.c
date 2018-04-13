@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) parser for client config
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -101,8 +101,17 @@ _config_entry_parse(const char *line0)
 	line = axa_strdup(line0);
 	p = line;
 	type_str = strsep(&p, ":");
+	if (type_str == NULL) {
+		free(line);
+		return (false);
+	}
+
 	if (strncmp(type_str, "alias", 5) == 0) {
 		alias_str = strsep(&p, "=");
+		if (alias_str == NULL) {
+			free(line);
+			return (false);
+		}
 
 		_alias_add(alias_str, p);
 	}

@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014-2017 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2018 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhOtVz
+.Op Fl dhOtVuz
 .Fl c Ar channel
 .Fl o Ar out-addr
 .Fl s Ar SRA-server
@@ -107,7 +107,7 @@ Its default is
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
 .Bl -tag -width unix
-.It Sm off Ar alias
+.It Sm off Ar alias Sm on
 Connect to a server using an alias shortcut mnemonic (see FILES section for
 more information).
 .It Sm off Ar apikey: Ar <users_apikey>@ Ar host,port Sm on
@@ -161,25 +161,23 @@ and
 .Ar
 dns
 watches to indicate addresses or domains that are not used exclusively.
+.It Fl u
+disable NMSG output buffering.
 .It Fl z
 enable NMSG zlib container compression.
 .El
 .Sh EXAMPLES
-The following sends all new domain reports on channel 212
+The following sends all new domain reports on channel 213
 seen by the SRA server at example.com
 to the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-$ sratunnel -s tls:user@example.com,1021 -o nmsg:127.1,8000 \\
-	-c ch212 -w ch=ch212
+$ sratunnel -s apikey:<yourapikey>@example.com,1023 -o nmsg:127.1,8000 \\
+	-c ch213 -w ch=ch213
 .Ed
 .Pp
 Beware of specifying more data than will fit in the TCP/IP connections
 between the server and
 .Nm .
-The following is likely to be only a network stress test:
-.Bd -literal -offset 4n
-$ sratunnel -s tls:user@example.com,1021 -o nmsg:127.1,8000 \\
-	-c all -w ip=128.0/1  -w ip=0/1
 .Ed
 .Sh FILES
 .Bl -tag -width config
@@ -194,10 +192,9 @@ specify the SRA server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # SRA
-alias:sra-apikey=apikey:<elided>@example.com,1023
+alias:sra-apikey=apikey:<yourapikey>@example.com,1023
 
 .Ed
-
 If the user wanted to connect to SRA, she would only have to remember
 "sra-apikey" and could do:
 .Bd -literal -offset 4n
@@ -213,7 +210,7 @@ is the
 configuration file used with
 .Ar connect\ ssh:...
 connections.
-"Host" stanzas in the file can simplify connections to \*(SR servers.
+"Host" stanzas in the file can simplify connections to AXA servers.
 .El
 .Sh ENVIRONMENT VARIABLES
 If set, AXACONF specifies the AXA configuration directory instead of the
@@ -221,6 +218,36 @@ default,
 .Pa ~/.axa
 or
 .Pa @CONFDIR@ .
+.Sh SIGNALS
+On operating systems that support \fBSIGINFO\fP (including BSDish systems like
+FreeBSD and macOS), the user can type
+"ctrl-t" at the command line during a running
+.Nm
+process and get information about the session. For example:
+.Bd -literal -offset 4n
+\fB^T\fPsra connected, sent 4 messages, received 176 messages, 176 hits
+
+.Ed
+Note that by default, an additional line of information is printed by
+the kernel (system load and process information):
+.Bd -literal -offset 4n
+\fB^T\fPload: 1.39  cmd: sratunnel 7060 running 0.06u 0.00s
+sra connected, sent 4 messages, received 304 messages, 304 hits
+
+.Ed
+This can be disabled via: \fIstty nokerninfo\fP. Example:
+.Bd -literal -offset 4n
+$ sratunnel -A 10 -d -s sra-apikey...
+connecting to sra-apikey...
+\fB^T\fPload: 1.39  cmd: sratunnel 7060 running 0.06u 0.00s
+sra connected, sent 4 messages, received 304 messages, 304 hits
+^C
+$ stty nokerninfo
+$ sratunnel -A 10 -d -s sra-apikey...
+connecting to sra-apikey...
+\fB^T\fPsra connected, sent 4 messages, received 176 messages, 176 hits
+\fB^T\fPsra connected, sent 4 messages, received 416 messages, 416 hits
+.Ed
 .Sh SEE ALSO
 .Xr radtunnel 1 ,
 .Xr sratool 1 ,

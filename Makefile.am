@@ -49,13 +49,12 @@ EXTRA_DIST += \
 	README.md \
 	DoxygenLayout.xml \
 	json-schema.yaml \
-	debian/axa-doc.install \
 	debian/axa-tools.install \
 	debian/changelog \
 	debian/compat \
 	debian/control \
 	debian/gbp.conf \
-	debian/libaxa0.install \
+	debian/libaxa1.install \
 	debian/libaxa-dev.install \
 	debian/rules
 
@@ -75,7 +74,7 @@ DISTCLEANFILES += $(man_MANS)
 ##
 #
 
-LIBAXA_CURRENT=0
+LIBAXA_CURRENT=1
 LIBAXA_REVISION=0
 LIBAXA_AGE=0
 
@@ -93,7 +92,9 @@ nobase_include_HEADERS = \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
+	axa/version.h \
 	axa/wire.h \
+	axa/yajl_shortcuts.h \
 	libmy/b64_encode.h
 lib_LTLIBRARIES = axa/libaxa.la
 
@@ -111,6 +112,7 @@ axa_libaxa_la_SOURCES = \
 	axa/socket.h \
 	axa/strbuf.h \
 	axa/trie.h \
+	axa/version.h \
 	axa/wire.h \
 	axalib/apikey.c \
 	axalib/bit_funcs.c \
@@ -130,11 +132,13 @@ axa_libaxa_la_SOURCES = \
 	axalib/time.c \
 	axalib/tls.c \
 	axalib/trie.c \
+	axalib/version.c \
 	axalib/wdns_res.c \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \
 	axalib/wire.c \
-	libmy/b64_encode.c libmy/b64_encode.h
+	libmy/b64_encode.c libmy/b64_encode.h libmy/my_alloc.h \
+	libmy/ubuf.h libmy/ubuf-pb.h libmy/vector.h
 
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBAXA_CURRENT):$(LIBAXA_REVISION):$(LIBAXA_AGE) \
@@ -257,15 +261,6 @@ bin_SCRIPTS = \
 ##
 #
 
-exampledir = ${docdir}/examples
-nobase_example_DATA = \
-	sratool/main.c \
-	sratool/print.c \
-	sratool/sratool.h \
-	sratool/README \
-	sratunnel/main.c \
-	sratunnel/README
-
 EXTRA_DIST += \
 	autogen.sh \
 	copyright \
@@ -317,8 +312,22 @@ tests_test_client_config_SOURCES = tests/test-client_config.c $(top_builddir)/te
 tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
 tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
 
-TESTS += tests/test-mgmt
-check_PROGRAMS += tests/test-mgmt
-tests_test_mgmt_SOURCES = tests/test-mgmt.c
-tests_test_mgmt_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
-tests_test_mgmt_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+TESTS += tests/test-stats
+check_PROGRAMS += tests/test-stats
+tests_test_stats_SOURCES = tests/test-stats.c
+tests_test_stats_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_stats_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+
+TESTS += tests/test-kill
+check_PROGRAMS += tests/test-kill
+tests_test_kill_SOURCES = tests/test-kill.c
+tests_test_kill_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_kill_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+
+EXTRA_DIST += tests/tool-tests-data/001000-single-command \
+tests/tool-tests-data/002210-valid-before-and-after-unrecognized-command \
+tests/tool-tests-data/002000-multiple-commands \
+tests/tool-tests-data/002200-valid-then-unrecognized-command \
+tests/tool-tests-data/002100-unrecognized-command \
+tests/tool-tests-data/001010-multiple-commands-on-single-line
+TESTS += tests/test-tools-without-server.sh

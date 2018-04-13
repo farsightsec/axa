@@ -1,7 +1,7 @@
 /*
  * Socket utilities
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -346,6 +346,10 @@ axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 	buf = axa_strdup(addr_port);
 	port = buf;
 	host = strsep(&port, ",/");
+	if (host == NULL) {
+		free(buf);
+		return (false);
+	}
 	if (*host == '\0') {
 		if (passive) {
 			host = NULL;

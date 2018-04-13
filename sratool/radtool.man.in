@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014-2017 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2018 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ With a tag (numeric label), stop or delete the specified anomaly.
 Without a tag (or with the keyword "all"), delete all anomalies.
 .It Oo Ar tag Oc Ic stop Op Ar anomaly Op Ar all
 Synonym for the
-.Em delete
+.Ic delete
 command.
 .It Ar tag Ic watch Brq Ar ip=IP[/N][(shared) | dns=[*.]dom[(shared)]
 Specify IP addresses or domain names relevant to the
@@ -107,13 +107,17 @@ The parameters for each module are described it its man page.
 .Ic Tag
 is a number that labels the module and the relevant watches as well as
 other modules using the same watches.
-.It Oo Ar tag Oc Ic list anomaly
+.It Oo Ar tag Oc Ic list
 If a tag is present,
 list the set of watches and anomaly detection modules with that tag.
 Without a tag,
-list all active as well as available anomaly detection modules
+list all active as well as available anomaly detection modules.
+.It Oo Ar tag Oc Ic get
+Synonym for the
+.Ic list
+command.
 .It Ic runits
-Ask the server to report user's current RAD balance.
+Ask the server to report user's current RAD Units balances.
 .El
 .Sh FILES
 .Bl -tag -width fields

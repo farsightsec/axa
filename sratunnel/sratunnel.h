@@ -63,7 +63,7 @@ void forward(void);
 void stop(int s) AXA_NORETURN;
 
 /* output.c */
-bool out_open(void);
+bool out_open(bool);
 void out_close(void);
 void out_flush(void);
 void out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len);
@@ -86,5 +86,9 @@ bool srvr_send(axa_tag_t tag, axa_p_op_t op, const void *b, size_t b_len);
 
 /* signal.c */
 void sigterm(int sig);
+
+#ifdef SIGINFO
+void siginfo(int);
+#endif
 
 #endif /* SRATUNNEL_H */

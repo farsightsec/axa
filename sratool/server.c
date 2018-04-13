@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ srvr_send(axa_tag_t tag, axa_p_op_t op, const void *body, size_t body_len)
 void
 read_srvr(void)
 {
+	uint8_t pvers;
 	char buf[AXA_P_STRLEN];
 
 	if (!AXA_CLIENT_CONNECTED(&client)) {
@@ -105,7 +106,8 @@ read_srvr(void)
 			break;
 
 		case AXA_P_OP_HELLO:
-			if (!axa_client_hello(&emsg, &client, NULL)) {
+			if (!axa_client_hello(&emsg, &client, NULL,
+				(mode == RAD ? "radtool" : "sratool"))) {
 				error_msg("%s", emsg.c);
 				disconnect(true);
 				return;
@@ -116,6 +118,8 @@ read_srvr(void)
 			printf("%s\n", axa_p_to_str(buf, sizeof(buf), true,
 						    &client.io.recv_hdr,
 						    client.io.recv_body));
+			axa_io_pvers_get(&client.io, &pvers);
+			printf("* Using AXA protocol %d\n", pvers);
 			if (mode == SRA) {
 				if (strstr(client.hello, "srad") == NULL) {
 					printf(
@@ -188,15 +192,19 @@ read_srvr(void)
 			break;
 
 		case AXA_P_OP_MGMT_GETRSP:
+			printf("deprecated command, please use \"stats\"\n");
+			break;
+
+		case _AXA_P_OP_STATS_RSP:
 			clear_prompt();
-			print_mgmt(&client.io.recv_body->mgmt,
+			print_stats(&client.io.recv_body->stats_rsp,
 				   client.io.recv_body_len
 				   - sizeof(client.io.recv_hdr));
 			break;
 
-		case AXA_P_OP_MGMT_KILLRSP:
+		case _AXA_P_OP_KILL_RSP:
 			clear_prompt();
-			print_mgmt_kill(&client.io.recv_body->mgmt_kill,
+			print_kill(&client.io.recv_body->kill,
 				   client.io.recv_body_len
 				   - sizeof(client.io.recv_hdr));
 			break;
@@ -216,7 +224,8 @@ read_srvr(void)
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
 		case AXA_P_OP_MGMT_GET:
-		case AXA_P_OP_MGMT_KILL:
+		case _AXA_P_OP_STATS_REQ:
+		case _AXA_P_OP_KILL_REQ:
 		default:
 			AXA_FAIL("impossible AXA %s from %s",
 				 axa_op_to_str(buf, sizeof(buf),

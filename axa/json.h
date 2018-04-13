@@ -1,11 +1,9 @@
 /*
  * Advanced Exchange Access (AXA) protocol definitions
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
- *
  * This file is used outside the AXA programs.
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -57,5 +55,10 @@ typedef enum {
  */
 axa_json_res_t
 axa_body_to_json(axa_emsg_t *, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, size_t body_len, char **out);
+
+/** @cond */
+/* private callback for yajl functions */
+void _callback_print_yajl_axa_strbuf(void *ctx, const char *str, size_t len);
+/** @endcond */
 
 #endif /* AXA_JSON_H */

@@ -9,36 +9,30 @@ Build-Depends:
  libnmsg-dev (>= 0.11.2), nmsg-msg-module-sie-dev (>= 1.0.0), libssl-dev,
  libbsd-dev, libyajl-dev (>= 2.1.0), check
 
-Package: libaxa0
+Package: libaxa1
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  nmsg-msg8-module-sie (>= 0.16)
 Description: AXA C library
 
-Package: libaxa0-dbg
+Package: libaxa1-dbg
 Section: debug
 Priority: extra
 Architecture: any
-Depends: libaxa0 (= ${binary:Version}), ${misc:Depends}
+Depends: libaxa1 (= ${binary:Version}), ${misc:Depends}
 Description: AXA C library (debug symbols)
 
 Package: libaxa-dev
 Section: libdevel
 Architecture: any
-Depends: libaxa0 (= ${binary:Version}), ${misc:Depends}
+Depends: libaxa1 (= ${binary:Version}), ${misc:Depends}
 Description: AXA development files
-
-Package: axa-doc
-Section: doc
-Architecture: all
-Depends: ${misc:Depends}
-Description: AXA documentation
 
 Package: axa-tools
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
- libaxa0 (= ${binary:Version})
+ libaxa1 (= ${binary:Version})
 Description: AXA command line tools
  sratool, sratunnel, radtool, and radtunnel
 

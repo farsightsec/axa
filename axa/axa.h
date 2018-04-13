@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) definitions
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -635,6 +635,19 @@ extern time_t axa_tv_diff2ms(const struct timeval *tv1,
  *  \return the difference between the two tv_sec values, in ms
  */
 extern time_t axa_elapsed_ms(const struct timeval *now, struct timeval *then);
+
+
+/**
+ * Retrieve the semantic library version as a string.
+ */
+extern const char *axa_get_version(void);
+
+/**
+ * Retrieve the semantic library version as a packed integer. The number is a
+ * combination of the major, minor, and patchelevel numbers as per:
+ * MAJOR * 1000000 + MINOR * 1000 + PATCHLEVEL.
+ */
+extern uint32_t axa_get_version_number(void);
 
 /**@}*/
 

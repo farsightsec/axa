@@ -1,5 +1,16 @@
 AC_PREREQ(2.60)
-AC_INIT([axa], [1.6.0])
+
+m4_define(axa_major_version, 2)
+m4_define(axa_minor_version, 0)
+m4_define(axa_patchlevel_version, 1)
+m4_define(axa_version,
+          axa_major_version.axa_minor_version.axa_patchlevel_version)
+
+AC_INIT([axa],
+	[axa_version()],
+	[https://github.com/farsightsec/axa/issues],
+	[axa],
+	[https://github.com/farsightsec/axa])
 PACKAGE_DESCRIPTION="Farsight Security Advanced Exchange Access (AXA)"
 AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([axa/axa.h])
@@ -11,6 +22,16 @@ AC_SYS_LARGEFILE
 AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 LT_INIT
+
+AXA_MAJOR_VERSION=axa_major_version()
+AXA_MINOR_VERSION=axa_minor_version()
+AXA_PATCHLEVEL_VERSION=axa_patchlevel_version()
+AXA_VERSION=axa_version()
+
+AC_SUBST(AXA_MAJOR_VERSION)
+AC_SUBST(AXA_MINOR_VERSION)
+AC_SUBST(AXA_PATCHLEVEL_VERSION)
+AC_SUBST(AXA_VERSION)
 
 my_CFLAGS=" \
 -Wextra -Wall -Wbad-function-cast -Wcast-align -Wmissing-noreturn \
@@ -57,7 +78,19 @@ AC_SUBST(strlcpy_LIBS)
 
 PKG_CHECK_MODULES([libedit], [libedit], [], [MY_CHECK_LIBEDIT])
 
+save_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$libedit_CFLAGS"
+AC_MSG_CHECKING(libedit has unicode) 
+AC_CHECK_TYPES([el_rfunc_t],
+		AC_DEFINE([LIBEDIT_IS_UNICODE], [1],
+			[Define if libedit has unicode support.]),
+		[], [[#include <histedit.h>]])
+CPPFLAGS="$save_CPPFLAGS"
+
 PKG_CHECK_MODULES([libnmsg], [libnmsg >= 0.9.1])
+
+#AC_CHECK_FUNCS([nmsg_get_version])
+#AC_CHECK_FUNCS([wdns_get_version])
 
 PKG_CHECK_MODULES([libwdns], [libwdns])
 
@@ -78,7 +111,7 @@ else
 fi
 AM_CONDITIONAL([HAVE_YAJL], [test "$use_yajl" = "true"])
 
-PKG_CHECK_MODULES([check], [check >= 0.10.0],
+PKG_CHECK_MODULES([check], [check >= 0.9.10],
 		[CHECK_MOD_MSG="yes"], [CHECK_MOD_MSG="no"])
 
 AC_PATH_PROG([DOXYGEN], [doxygen])
@@ -112,9 +145,7 @@ CPPFLAGS="$save_CPPFLAGS"
 AX_DEFINE_DIR([CONFDIR], [sysconfdir/axa], [config dir for axa])
 AC_DEFINE_UNQUOTED(AXACONFDIR,"$CONFDIR",[config dir for axa])
 
-AC_DEFINE_UNQUOTED(AXA_PVERS_STR,"version $PACKAGE_VERSION", [Version])
-
-AC_CONFIG_FILES([Makefile axa/libaxa.pc])
+AC_CONFIG_FILES([Makefile axa/libaxa.pc axa/version.h])
 
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
 		sratunnel/sratunnel.man sratunnel/radtunnel.man
@@ -127,6 +158,9 @@ AC_CONFIG_FILES([cert_tools/axa_make_cert],
 		[chmod +x cert_tools/axa_make_cert])
 AC_CONFIG_FILES([cert_tools/axa_server_cert],
 		[chmod +x cert_tools/axa_server_cert])
+
+AC_CONFIG_FILES([tests/test-tools-without-server.sh],
+		[chmod +x tests/test-tools-without-server.sh])
 
 AC_OUTPUT
 AC_MSG_RESULT([

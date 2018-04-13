@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) common code for RAD and SRA clients
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -191,7 +191,7 @@ extern axa_connect_result_t axa_client_connect(axa_emsg_t *emsg,
 
 /**
  *  Send an AXA message to the server connected through a client context,
- *	blocking until finished.
+ *  blocking until finished.
  *
  *  \param[out] emsg if something goes wrong, this will contain the reason
  *  \param[in] client address of a client context
@@ -209,6 +209,24 @@ extern bool axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
 			    const void *body, size_t body_len);
 
 /**
+ *  Retrieve a detailed string describing the local host/config to pass to
+ *  the AXA server as part of a client HELLO message.
+ *
+ *  \param[out] emsg if something goes wrong, this will contain the reason
+ *  \param[in] origin null-terminated string containing the name of the
+ *  	requesting client application or service, i.e. radtool, sratunnel, etc.
+ *  \param[in] client address of the client context
+ *  \param[out] out pointer to a char * that is assigned on success. Must be
+ *  	freed by caller.
+ *
+ *  \retval true  version string was generated successfully
+ *  \retval false error occurred making client HELLO string
+ */
+extern bool
+axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin,
+		axa_client_t *client, char **out);
+
+/**
  *  Examine HELLO message from server to pick a common protocol version
  *  and save session information.
  *
@@ -217,13 +235,14 @@ extern bool axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
  *	default to &client->recv_body->hello if NULL
  *  \param[in] hello address of the received HELLO message or NULL, which
  *	    implies client->recv_body->hello
+ *  \param[in] origin null-terminated string with name of requesting
+ *  	    application, which will be sent back in a client HELLO string
  *
  *  \retval true parameters saved
  *  \retval false bad HELLO
  */
 extern bool axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
-			     const axa_p_hello_t* hello);
-
+			     const axa_p_hello_t* hello, const char *origin);
 /**@}*/
 
 #endif /* AXA_CLIENT_H */

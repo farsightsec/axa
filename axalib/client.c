@@ -1,7 +1,7 @@
 /*
  * radd, radtool, and sratool common client code
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,6 +18,11 @@
 
 #include <axa/client.h>
 #include <axa/socket.h>
+#include <axa/strbuf.h>
+#include <axa/json.h>
+#include <axa/yajl_shortcuts.h>
+
+#include <libmy/ubuf-pb.h>		/* query protobuf version */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -28,11 +33,19 @@
 #include <bsd/string.h>			/* for strlcpy() */
 #endif
 #include <sysexits.h>
+#include <sys/utsname.h>
 #include <unistd.h>
+#include <wdns.h>
 
+#include <yajl/yajl_version.h>
+#include <yajl/yajl_gen.h>
 
 #define	MIN_BACKOFF_MS	(1*1000)
 #define	MAX_BACKOFF_MS	(60*1000)
+
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 255
+#endif
 
 void
 axa_client_init(axa_client_t *client)
@@ -282,16 +295,46 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 {
 	axa_p_hdr_t hdr;
 	axa_connect_result_t connect_result;
+	uint8_t pvers_save;
 
 	if (AXA_CLIENT_CONNECTED(client))
 		return (AXA_CONNECT_DONE);
+
+	/* Clamp the AXA protocol version to 1 (guaranteed to be spoken by all
+	 * AXA clients and servers. This is done just before the identification
+	 * and authentication (I&A) message exchange and subsequent  spin-up of
+	 * the encrypted tunnel. We do this for two reasons:
+	 *
+	 * 1. A client's preferred AXA protocol version (AXA_PVERS) may be
+	 *    higher than what the server can understand (such would be the
+	 *    case when a newer client connects to an older server).
+	 * 2. AXA protocol version negotiation is performed during the HELLO
+	 *    handshake. This happens after I&A, allowing it to be
+	 *    performed inside an encrypted tunnel and prevent information
+	 *    leakage to an observer. The issue is the I&A process involves the
+	 *    exchange of AXA messages (AXA_P_OP_USER and/or AXA_P_OP_NOP). If
+	 *    the AXA protocol version were too new, the server wouldn't
+	 *    understand (but also wouldn't have had the option to tell the
+	 *    client to downgrade its AXA protocol version).
+	 *
+	 *    The downside here is that the AXA I&A message exchange protocol
+	 *    cannot change. New I&A methods can be added or removed but the
+	 *    structure of the messages must remain the same.
+	 *
+	 *    After I&A, the AXA protocol may be set to a version the client
+	 *    prefers, and the HELLO handshake should proceed.
+	 */
+	axa_io_pvers_get(&client->io, &pvers_save);
+	axa_io_pvers_set(&client->io, AXA_P_PVERS1);
 
 	switch (client->io.type) {
 	case AXA_IO_TYPE_UNIX:
 	case AXA_IO_TYPE_TCP:
 		connect_result = socket_connect(emsg, client);
-		if (connect_result != AXA_CONNECT_DONE)
+		if (connect_result != AXA_CONNECT_DONE) {
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
+		}
 		client->io.connected = true;
 
 		/* TCP and UNIX domain sockets need a user name */
@@ -301,11 +344,13 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 					     &client->io.user,
 					     sizeof(client->io.user))) {
 				axa_client_backoff(client);
+				axa_io_pvers_set(&client->io, pvers_save);
 				return (AXA_CONNECT_ERR);
 			}
 			axa_p_to_str(emsg->c, sizeof(emsg->c),
 				     true, &hdr,
 				     (axa_p_body_t *)&client->io.user);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_USER);
 		}
 		break;
@@ -315,6 +360,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 			if (!connect_ssh(emsg, client, client->io.nonblock,
 					 client->io.tun_debug)) {
 				axa_client_backoff_max(client);
+				axa_io_pvers_set(&client->io, pvers_save);
 				return (AXA_CONNECT_ERR);
 			}
 			client->io.connected_tcp = true;
@@ -324,16 +370,20 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 
 	case AXA_IO_TYPE_TLS:
 		connect_result = socket_connect(emsg, client);
-		if (connect_result != AXA_CONNECT_DONE)
+		if (connect_result != AXA_CONNECT_DONE) {
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
+		}
 		switch (axa_tls_start(emsg, &client->io)) {
 		case AXA_IO_OK:
 			break;
 		case AXA_IO_ERR:
 			axa_client_backoff_max(client);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_ERR);
 		case AXA_IO_BUSY:
 			AXA_ASSERT(client->io.nonblock);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
 		case AXA_IO_TUNERR:
 		case AXA_IO_KEEPALIVE:
@@ -343,8 +393,10 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 
 	case AXA_IO_TYPE_APIKEY:
 		connect_result = socket_connect(emsg, client);
-		if (connect_result != AXA_CONNECT_DONE)
+		if (connect_result != AXA_CONNECT_DONE) {
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
+		}
 		switch (axa_apikey_start(emsg, &client->io)) {
 		case AXA_IO_OK:
 			/* username field holds apikey */
@@ -353,18 +405,22 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 					     &client->io.user,
 					     sizeof(client->io.user))) {
 				axa_client_backoff(client);
+				axa_io_pvers_set(&client->io, pvers_save);
 				return (AXA_CONNECT_ERR);
 			}
 			axa_p_to_str(emsg->c, sizeof(emsg->c),
 				     true, &hdr,
 				     (axa_p_body_t *)&client->io.user);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_USER);
 			break;
 		case AXA_IO_ERR:
 			axa_client_backoff_max(client);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_ERR);
 		case AXA_IO_BUSY:
 			AXA_ASSERT(client->io.nonblock);
+			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
 		case AXA_IO_TUNERR:
 		case AXA_IO_KEEPALIVE:
@@ -376,6 +432,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 	default:
 		axa_pemsg(emsg, "impossible client type");
 		axa_client_backoff_max(client);
+		axa_io_pvers_set(&client->io, pvers_save);
 		return (AXA_CONNECT_ERR);
 	}
 
@@ -383,10 +440,12 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 	if (!axa_client_send(emsg, client, AXA_TAG_NONE, AXA_P_OP_NOP,
 			     &hdr, NULL, 0)) {
 		axa_client_backoff(client);
+		axa_io_pvers_set(&client->io, pvers_save);
 		return (AXA_CONNECT_ERR);
 	}
 	axa_p_to_str(emsg->c, sizeof(emsg->c), true,
 		     &hdr, (axa_p_body_t *)&client->io.user);
+	axa_io_pvers_set(&client->io, pvers_save);
 	return (AXA_CONNECT_NOP);
 }
 
@@ -550,12 +609,114 @@ axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
 	return (true);
 }
 
+bool
+axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin,
+		axa_client_t *client, char **out)
+{
+	int yajl_rc;
+	yajl_gen g = NULL;
+	struct axa_strbuf *sb = NULL;
+	char hostname[HOST_NAME_MAX] = {0};
+	struct utsname utsbuf;
+
+	sb = axa_strbuf_init();
+	if (sb == NULL) {
+		axa_pemsg(emsg, "could not allocate axa_strbuf");
+		return (false);
+	}
+
+	g = yajl_gen_alloc(NULL);
+	AXA_ASSERT (g != NULL);
+
+	yajl_rc = yajl_gen_config(g,
+			yajl_gen_print_callback,
+			_callback_print_yajl_axa_strbuf,
+			sb);
+	AXA_ASSERT(yajl_rc != 0);
+
+	add_yajl_map(g);
+
+	if (0 > gethostname(hostname, sizeof(hostname) - 1)) {
+		axa_pemsg(emsg, "gethostname(): %s", strerror(errno));
+		goto err;
+	}
+	add_yajl_string(g, "hostname");
+	add_yajl_string(g, hostname);
+
+	if (uname(&utsbuf) < 0) {
+		axa_pemsg(emsg, "uname(): %s", strerror(errno));
+		goto err;
+	} else {
+		add_yajl_string(g, "uname_sysname");
+		add_yajl_string(g, utsbuf.sysname);
+		add_yajl_string(g, "uname_release");
+		add_yajl_string(g, utsbuf.release);
+		add_yajl_string(g, "uname_version");
+		add_yajl_string(g, utsbuf.version);
+		add_yajl_string(g, "uname_machine");
+		add_yajl_string(g, utsbuf.machine);
+	}
+
+	add_yajl_string(g, "origin");
+	if (origin == NULL) {
+		add_yajl_string(g, "unknown");
+	}
+	else {
+		add_yajl_string(g, origin);
+	}
+
+	add_yajl_string(g, "libaxa");
+	add_yajl_string(g, axa_get_version());
+
+	add_yajl_string(g, "libnmsg");
+#ifdef NMSG_LIBRARY_VERSION
+	add_yajl_string(g, nmsg_get_version());
+#else
+	add_yajl_string(g, "<=0.13.2");
+#endif
+	add_yajl_string(g, "libwdns");
+#ifdef WDNS_LIBRARY_VERSION
+	add_yajl_string(g, wdns_get_version());
+#else
+	add_yajl_string(g, "<=0.9.1");
+#endif
+	add_yajl_string(g, "libyajl");
+	add_yajl_integer(g, yajl_version());
+	add_yajl_string(g, "OpenSSL");
+	add_yajl_string(g, SSLeay_version(SSLEAY_VERSION));
+	add_yajl_string(g, "libprotobuf-c");
+	add_yajl_string(g, PROTOBUF_C_VERSION);
+
+	add_yajl_string(g, "AXA protocol");
+	add_yajl_integer(g, client->io.pvers);
+
+	close_yajl_map(g);
+
+	yajl_gen_reset(g, "");
+	yajl_gen_free(g);
+
+	*out = sb->data;
+	/* Don't call axa_strbuf_destroy() here, rather, free the wrapper
+	 * structure now and leave it to the caller to release sb->data. */
+	free(sb);
+
+	return (true);
+err:
+	if (g != NULL)
+		yajl_gen_free(g);
+	axa_strbuf_destroy(&sb);
+	return (false);
+}
+
 /* Process AXA_P_OP_HELLO from the server. */
 bool
 axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
-		 const axa_p_hello_t *hello)
+		 const axa_p_hello_t *hello, const char *origin)
 {
-	char op_buf[AXA_P_OP_STRLEN];
+	axa_p_hdr_t hdr;
+	axa_p_hello_t *cl_hello;
+	size_t len;
+	char op_buf[AXA_P_OP_STRLEN], *p, *out = NULL;
 
 	/* Assume by default that the incoming HELLO is the latest message
 	 * in the client structure. */
@@ -594,6 +755,39 @@ axa_client_hello(axa_emsg_t *emsg, axa_client_t *client,
 		client->io.pvers = AXA_P_PVERS_MIN;
 	if (client->io.pvers > AXA_P_PVERS_MAX)
 		client->io.pvers = AXA_P_PVERS_MAX;
+
+	/* client -> server HELLO was introduced in AXA_P_VERS2 */
+	if (hello->pvers_max < AXA_P_PVERS2)
+		return (true);
+
+        cl_hello = AXA_SALLOC(axa_p_hello_t);
+        cl_hello->id = hello->id;
+        cl_hello->pvers_min = AXA_P_PVERS_MIN;
+        cl_hello->pvers_max = AXA_P_PVERS_MAX;
+
+	p = cl_hello->str;
+	len = sizeof (cl_hello->str);
+	if (!axa_client_get_hello_string(emsg, origin, client, &out)) {
+		axa_error_msg("error getting detailed HELLO info: %s",
+				emsg->c);
+		if (origin == NULL)
+			origin = "[unknown]";
+
+		snprintf(cl_hello->str, sizeof (cl_hello->str) - 1,
+				"%s %s AXA protocol %d",
+				origin, axa_get_version(), AXA_P_PVERS);
+	}
+	else {
+		/* Note, if strlen(out) is > sizeof (*p), the json blob will be
+		 * fouled. */
+		axa_buf_print(&p, &len, "%s", out);
+		free(out);
+	}
+
+	axa_client_send(emsg, client, AXA_TAG_NONE, AXA_P_OP_HELLO, &hdr,
+			cl_hello, sizeof(*cl_hello) -
+			sizeof(cl_hello->str) + strlen(cl_hello->str) + 1);
+	free(cl_hello);
 
 	return (true);
 }

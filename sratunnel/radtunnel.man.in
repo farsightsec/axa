@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014-2017 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2018 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ Its default is
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
 .Bl -tag -width unix
-.It Sm off Ar alias
+.It Sm off Ar alias Sm on
 Connect to a server using an alias shortcut mnemonic (see FILES section for
 more information).
 .It Sm off Ar apikey: Ar <users_apikey>@ Ar host,port Sm on
@@ -166,7 +166,7 @@ The following connects to a RAD server at example.com, loads the Brand Sentry
 module looking for the brand "farsight", and sends all anomaly hit NMSGs to
 the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-radtunnel -s tls:user@example.com,1022 -o nmsg:127.1,8000 \\
+radtunnel -s apikey:<yourapikey>@example.com,1024 -o nmsg:127.1,8000 \\
 	-w dns=*. -a brand_sentry brand=farsight
 .Ed
 .Sh FILES
@@ -182,10 +182,9 @@ specify the RAD server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # RAD
-alias:rad-apikey=apikey:<elided>@example.com,1024
+alias:rad-apikey=apikey:<yourapikey>@example.com,1024
 
 .Ed
-
 If the user wanted to connect to RAD, she would only have to remember
 "rad-apikey" and could do:
 .Bd -literal -offset 4n
@@ -201,7 +200,7 @@ is the
 configuration file used with
 .Ar connect\ ssh:...
 connections.
-"Host" stanzas in the file can simplify connections to \*(SR servers.
+"Host" stanzas in the file can simplify connections to AXA servers.
 .El
 .Sh ENVIRONMENT VARIABLES
 If set, AXACONF specifies the AXA configuration directory instead of the
@@ -209,6 +208,37 @@ default,
 .Pa ~/.axa
 or
 .Pa @CONFDIR@ .
+.Sh SIGNALS
+On operating systems that support \fBSIGINFO\fP (including BSDish systems like
+FreeBSD and macOS), the user can type
+"ctrl-t" at the command line during a running
+.Nm
+process and get information about the session. For example:
+.Bd -literal -offset 4n
+\fB^T\fPrad connected, sent 4 messages, received 176 messages, 176 hits
+
+.Ed
+Note that by default, an additional line of information is printed by
+the kernel (system load and process information):
+.Bd -literal -offset 4n
+\fB^T\fPload: 1.39  cmd: radtunnel 7060 running 0.06u 0.00s
+rad connected, sent 4 messages, received 304 messages, 304 hits
+
+.Ed
+This can be disabled via: \fIstty nokerninfo\fP. Example:
+.Bd -literal -offset 4n
+$ radtunnel -A 10 -d -s rad-apikey...
+connecting to rad-apikey...
+\fB^T\fPload: 1.39  cmd: radtunnel 7060 running 0.06u 0.00s
+rad connected, sent 4 messages, received 304 messages, 304 hits
+^C
+$ stty nokerninfo
+$ radtunnel -A 10 -d -s rad-apikey...
+connecting to rad-apikey...
+\fB^T\fPrad connected, sent 4 messages, received 176 messages, 176 hits
+\fB^T\fPrad connected, sent 4 messages, received 416 messages, 416 hits
+
+.Ed
 .Sh SEE ALSO
 .Xr sratunnel 1 ,
 .Xr sratool 1 ,

@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
 
 /* extern: main.c */
 extern int count;
+extern unsigned long count_messages_rcvd;
+extern unsigned long count_hits;
 extern bool counting;
 extern uint axa_debug;
 extern int initial_count;
@@ -92,6 +94,8 @@ forward(void)
 		AXA_FAIL("impossible axa_recv_buf() result");
 	}
 
+        ++count_messages_rcvd;
+
 	switch ((axa_p_op_t)client.io.recv_hdr.op) {
 	case AXA_P_OP_NOP:
 		print_op(false, false,
@@ -111,6 +115,7 @@ forward(void)
 	case AXA_P_OP_WHIT:
 		print_op(false, false,
 			 &client.io.recv_hdr, client.io.recv_body);
+                ++count_hits;
 		forward_hit(&client.io.recv_body->whit,
 			    client.io.recv_body_len
 			    - sizeof(client.io.recv_hdr));
@@ -119,6 +124,7 @@ forward(void)
 	case AXA_P_OP_AHIT:
 		print_op(false, false,
 			 &client.io.recv_hdr, client.io.recv_body);
+                ++count_hits;
 		forward_hit(&client.io.recv_body->ahit.whit,
 			    client.io.recv_body_len
 			    - sizeof(client.io.recv_hdr)
@@ -137,6 +143,8 @@ forward(void)
 	case AXA_P_OP_OPT:
 	case AXA_P_OP_CLIST:
 	case AXA_P_OP_MGMT_GETRSP:
+	case _AXA_P_OP_KILL_RSP:
+	case _AXA_P_OP_STATS_RSP:
 		print_bad_op("unexpected ");
 		break;
 
@@ -155,8 +163,8 @@ forward(void)
 	case AXA_P_OP_ACCT:
 	case AXA_P_OP_RADU:
 	case AXA_P_OP_MGMT_GET:
-	case AXA_P_OP_MGMT_KILL:
-	case AXA_P_OP_MGMT_KILLRSP:
+	case _AXA_P_OP_KILL_REQ:
+	case _AXA_P_OP_STATS_REQ:
 	default:
 		AXA_FAIL("impossible AXA op of %d from %s",
 			 client.io.recv_hdr.op, client.io.label);

@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 /* extern: main.c */
 extern uint axa_debug;
 extern int trace;
+extern unsigned long count_messages_sent;
 extern bool first_time;
 extern const char *srvr_addr;
 extern axa_mode_t mode;
@@ -48,6 +49,7 @@ srvr_send(axa_tag_t tag, axa_p_op_t op, const void *body, size_t body_len)
 	axa_emsg_t emsg;
 
 	if (axa_client_send(&emsg, &client, tag, op, &hdr, body, body_len)) {
+                ++count_messages_sent;
 		print_op(false, true, &hdr, body);
 		return (true);
 	}
@@ -107,7 +109,8 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 			break;
 
 		case AXA_P_OP_HELLO:
-			if (!axa_client_hello(&emsg, &client, NULL)) {
+			if (!axa_client_hello(&emsg, &client, NULL,
+				(mode == RAD ? "radtunnel" : "sratunnel"))) {
 				axa_error_msg("%s", emsg.c);
 			} else {
 				print_op(false, false,
@@ -160,11 +163,10 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_WLIST:
 		case AXA_P_OP_ALIST:
 		case AXA_P_OP_CLIST:
-			print_bad_op("unexpected ");
-			break;
-
 		case AXA_P_OP_MGMT_GETRSP:
-			/* NYI */
+		case _AXA_P_OP_KILL_RSP:
+		case _AXA_P_OP_STATS_RSP:
+			print_bad_op("unexpected ");
 			break;
 
 		case AXA_P_OP_USER:
@@ -182,8 +184,8 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 		case AXA_P_OP_ACCT:
 		case AXA_P_OP_RADU:
 		case AXA_P_OP_MGMT_GET:
-		case AXA_P_OP_MGMT_KILL:
-		case AXA_P_OP_MGMT_KILLRSP:
+		case _AXA_P_OP_KILL_REQ:
+		case _AXA_P_OP_STATS_REQ:
 		default:
 			AXA_FAIL("impossible AXA op of %d from %s",
 				 client.io.recv_hdr.op, client.io.label);

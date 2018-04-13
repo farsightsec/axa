@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) Bits in words
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -91,6 +91,8 @@ typedef uint64_t axa_word_t;
 typedef struct {
 	axa_word_t m[16];
 } axa_ch_mask_t;
+/** the largest SIE channel */
+#define AXA_NMSG_CH_MAX	255
 
 /**
  *  Get a numbered bit from an array of 64-bit words

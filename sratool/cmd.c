@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ extern size_t out_buf_base;
 extern int output_count;
 extern int output_count_total;
 extern bool output_counting;
+extern bool output_buffering;
 extern bool out_on;
 extern char *out_addr;
 extern int output_errno;
@@ -54,6 +55,9 @@ extern pcap_dumper_t *out_pcap_dumper;
 /* extern: signal.c */
 extern bool interrupted;
 extern bool terminated;
+
+/* extern: server.c */
+extern axa_client_t client;
 
 /* global */
 bool eclose = false;            	/* disconnect on error */
@@ -114,9 +118,10 @@ static cmd_t go_cmd;
 static cmd_t sleep_cmd;
 static cmd_t radunit_cmd;
 static cmd_t nmsg_zlib_cmd;
-static cmd_t mgmt_get_cmd;
-static cmd_t mgmt_kill_cmd;
+static cmd_t stats_req_cmd;
+static cmd_t kill_cmd;
 static cmd_t alias_cmd;
+static cmd_t buffer_cmd;
 
 typedef enum {
 	NO,
@@ -152,6 +157,16 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "tag anomaly name [parameters]",
     "Start the named anomaly detector module.\n"
     " \"Tag\" is the number labeling the module."
+},
+{"buffering",		buffer_cmd,		BOTH, NO, NO,
+    "nmsg output buffering",
+    "Toggle nmsg container buffering.\nFor this option to have any"
+    " effect, output mode must be enabled in nmsg socket mode. "
+    "When enabled, (by default) nmsg containers will fill with payloads"
+    " before being emitted. When disabled, nmsg payloads will be emitted as"
+    " rapidly as possible.\n"
+    "Note, for this command to take effect, it must be set before using"
+    " the 'forward' command."
 },
 {"ciphers",		ciphers_cmd,		BOTH, MB, NO,
     "ciphers [cipher-list]",
@@ -225,9 +240,12 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     " (default 0)."
     "  Stop forwarding after count messages."
 },
-{"get anomaly",		list_cmd,		RAD, MB, YES,
-    "[tag] get anomaly",
-    "List a specified or all available anomaly detection modules. "
+{"get",			list_cmd,		RAD, NO, YES,
+    "[tag] get",
+    "With a tag, list the set of watches and anomaly detection modules with"
+    " that tag."
+    " Without a tag, list all active as well as available anomaly detection"
+    " modules."
 },
 {"get channels",	list_cmd,		SRA, MB, YES,
     "get channels",
@@ -246,7 +264,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "help [cmd]",
     "List all commands or get more information about a command."
 },
-{"kill",		mgmt_kill_cmd,		BOTH, YES, YES,
+{"kill",		kill_cmd,		BOTH, YES, YES,
     "kill user_name | serial_number",
     "Kill off user session (admin users only). If serial number is specified"
     " kill a single session; if user name is specified, kill all sessions"
@@ -256,22 +274,27 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "list channels",
     "List all SIE channels available to the user on the SRA server."
 },
-{"list anomaly",	list_cmd,		RAD, NO, YES,
-    "[tag] list anomaly",
-    "List a specified or all available anomaly detection modules. "
-},
-{"list anomalies",	list_cmd,		RAD, MB, YES,
-    "list anomalies",
-    "List a specified or all available anomaly detection modules. "
+{"list",		list_cmd,		RAD, NO, YES,
+    "[tag] list",
+    "With a tag, list the set of watches and anomaly detection modules with"
+    " that tag."
+    " Without a tag, list all active as well as available anomaly detection"
+    " modules."
 },
 {"list watches",	list_cmd,		SRA, MB, YES,
     "[tag] list watches",
     "With a tag, list the specified watch."
     "  List all watches without a tag."
 },
-{"mgmt",		mgmt_get_cmd,		BOTH, NO, YES,
-    "mgmt",
-    "Get server back office details (admin users only)."
+{"stats",		stats_req_cmd,		BOTH, MB, YES,
+    "stats [all | user_name | serial_number]",
+    "Get current system, server, and user statistics (admin users only)."
+    " If no argument is provided, return a top-level summary containing"
+    " system and server statistics."
+    " If a user name or serial number is provided, proceed summary with"
+    " information on all current sessions for that user."
+    " If the keyword \"all\" is specified, proceed summary with information"
+    " on all current sessions for all logged in users."
 },
 {"mode",		mode_cmd,		BOTH, MB, NO,
     "mode [SRA | RAD]",
@@ -871,7 +894,7 @@ help_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	}
 
 	/* talk about all of the commands */
-	printf("  "AXA_PVERS_STR" AXA protocol %d\n", AXA_P_PVERS);
+	printf("  %s AXA protocol %d\n", axa_get_version(), AXA_P_PVERS);
 
 	for (ce = cmds_tbl; ce <= AXA_LAST(cmds_tbl); ++ce) {
 		if (ce->mode != mode && ce->mode != BOTH)
@@ -998,16 +1021,28 @@ verbose_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 }
 
 int
-version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED,
+version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
+	axa_p_pvers_t pvers;
+	char *out = NULL;
+	const char *origin = ((mode == RAD) ? "radtool" : "sratool");
+
+	pvers = client.io.pvers == 0 ? AXA_P_PVERS : client.io.pvers;
 #if AXA_P_PVERS_MIN != AXA_P_PVERS_MAX
-	printf("%s "AXA_PVERS_STR" AXA protocol %d in %d to %d\n",
-	       axa_prog_name, AXA_P_PVERS, AXA_P_PVERS_MIN, AXA_P_PVERS_MAX);
+	printf("%s built using AXA library %s, supporting AXA protocols v%d to v%d; currently using v%d\n",
+	       axa_prog_name, axa_get_version(),
+	       AXA_P_PVERS_MIN, AXA_P_PVERS_MAX, pvers);
 #else
-	printf("%s "AXA_PVERS_STR" AXA protocol %d\n",
-	       axa_prog_name, AXA_P_PVERS);
+	printf("%s built using AXA library: %s, supporting AXA protocol v%d\n",
+	       axa_prog_name, axa_get_version(), pvers);
 #endif
+	if (!axa_client_get_hello_string(&emsg, origin, &client, &out))
+		axa_error_msg("error retrieving client HELLO: %s", emsg.c);
+	else {
+		printf("client HELLO: %s\n", out);
+		free(out);
+	}
 	return (1);
 }
 
@@ -1067,8 +1102,9 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
 		} else if (client.hello == NULL) {
 			printf("connecting to %s\n", client.io.label);
 		} else {
-			printf("connected to \"%s\"\n    %s\n",
-			       client.hello, client.io.label);
+			printf("connected to: %s @ %s using AXA protocol %d\n",
+			       client.io.is_rad == true ? "radd" : "srad",
+			       client.io.addr, client.io.pvers);
 			printf("    connected for: %s\n",
 				convert_timeval(&connect_time));
 			if (client.io.tls_info != NULL)
@@ -1212,6 +1248,9 @@ out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 		} else {
 			printf("forwarding messages to %s\n", out_addr);
 		}
+		if (out_on_nmsg == true)
+			printf("output buffering is %s\n",
+				output_buffering == true ? "on" : "off");
 		return (1);
 	}
 
@@ -1251,7 +1290,8 @@ out_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	} else if (AXA_CLITCMP(out_addr, "nmsg:")) {
 		result = axa_open_nmsg_out(&emsg, &out_nmsg_output,
 					   &out_sock_type,
-					   strchr(out_addr, ':')+1);
+					   strchr(out_addr, ':')+1,
+					   output_buffering);
 		if (result <= 0)
 			error_msg("%s", emsg.c);
 		out_on_nmsg = true;
@@ -1454,7 +1494,6 @@ static int
 list_cmd(axa_tag_t tag, const char *arg, const cmd_tbl_entry_t *ce)
 {
 	if (mode == RAD) {
-		(void)word_cmp(&arg, "anomaly");
 		return (srvr_send(tag, AXA_P_OP_AGET, NULL, 0));
 	}
 
@@ -1781,20 +1820,56 @@ nmsg_zlib_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 }
 
 static int
-mgmt_get_cmd(axa_tag_t tag, const char *arg AXA_UNUSED,
-	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+stats_req_cmd(axa_tag_t tag, const char *arg,
+		const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
-	printf("    sending mgmt request to server...\n");
-	return (srvr_send(tag, AXA_P_OP_MGMT_GET, NULL, 0));
+	char *p;
+	uint32_t sn;
+	_axa_p_stats_req_t stats_req;
+
+	memset(&stats_req, 0, sizeof (stats_req));
+
+	stats_req.version = _AXA_STATS_VERSION;
+
+	/* no argument == summary */
+	if (*arg == '\0') {
+		printf("    sending stats summary request to server\n");
+		stats_req.type = AXA_P_STATS_M_M_SUM;
+	}
+	/* all == everything */
+	else if (word_cmp(&arg,"all")) {
+		printf("    sending stats all request to server\n");
+		stats_req.type = AXA_P_STATS_M_M_ALL;
+	}
+	/* username or serial number */
+	else {
+		sn = strtoul(arg, &p, 0);
+		if (*p != '\0') {
+			printf("    sending stats request to server for"
+				" user \"%s\"\n", arg);
+			strlcpy(stats_req.user.name, arg,
+					sizeof(stats_req.user.name));
+			stats_req.type = AXA_P_STATS_M_M_U;
+		}
+		else {
+			stats_req.sn = AXA_H2P32(sn);
+			stats_req.type = AXA_P_STATS_M_M_SN;
+			printf("    sending stats request to server for"
+					" serial number \"%u\"\n",
+					stats_req.sn);
+		}
+	}
+	return (srvr_send(tag, _AXA_P_OP_STATS_REQ, &stats_req,
+				sizeof (stats_req)));
 }
 
 static int
-mgmt_kill_cmd(axa_tag_t tag, const char *arg,
+kill_cmd(axa_tag_t tag, const char *arg,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	char *p;
 	uint32_t sn;
-	axa_p_mgmt_kill_t mgmt_kill;
+	_axa_p_kill_t kill;
 
 	if (*arg == '\0') {
 		error_msg("kill command requires a valid user name or"
@@ -1802,24 +1877,23 @@ mgmt_kill_cmd(axa_tag_t tag, const char *arg,
 		return (0);
 	}
 
-	memset(&mgmt_kill, 0, sizeof (mgmt_kill));
+	memset(&kill, 0, sizeof (kill));
 	sn = strtoul(arg, &p, 0);
 	if (*p != '\0') {
-		printf("    sending mgmt kill request to server"
+		printf("    sending kill request to server"
 				" (kill all sessions belonging to %s)...\n",
 				arg);
-		strlcpy(mgmt_kill.user.name, arg, sizeof(mgmt_kill.user.name));
-		mgmt_kill.mode = AXA_P_MGMT_K_M_U;
+		strlcpy(kill.user.name, arg, sizeof(kill.user.name));
+		kill.mode = AXA_P_KILL_M_U;
 	}
 	else {
-		printf("    sending mgmt kill request to server"
+		printf("    sending kill request to server"
 				" (kill session serial number %d)...\n", sn);
-		mgmt_kill.sn = AXA_H2P32(sn);
-		mgmt_kill.mode = AXA_P_MGMT_K_M_SN;
+		kill.sn = AXA_H2P32(sn);
+		kill.mode = AXA_P_KILL_M_SN;
 	}
 
-	return (srvr_send(tag, AXA_P_OP_MGMT_KILL, &mgmt_kill,
-				sizeof (mgmt_kill)));
+	return (srvr_send(tag, _AXA_P_OP_KILL_REQ, &kill, sizeof (kill)));
 }
 
 static int
@@ -1925,6 +1999,31 @@ out_cmd_pcap_file(const char *addr, bool want_fifo)
 	return (1);
 }
 
+static int
+buffer_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
+	 const cmd_tbl_entry_t *ce AXA_UNUSED)
+{
+	if (out_on == false) {
+		printf("    output mode not enabled\n");
+		return (0);
+	}
+	if (out_on_nmsg == false) {
+		printf("    output mode not emitting nmsgs\n");
+		return (0);
+	}
+	if (output_buffering == false) {
+		output_buffering = true;
+		nmsg_output_set_buffered(out_nmsg_output, true);
+		printf("    enabled\n");
+	}
+	else if (output_buffering == true) {
+		output_buffering = false;
+		nmsg_output_set_buffered(out_nmsg_output, false);
+		printf("    disabled\n");
+	}
+	return (1);
+}
+
 bool				/* true=ok  false=bad command */
 do_cmds(const char *str)
 {
@@ -1966,9 +2065,14 @@ do_cmds(const char *str)
 }
 
 int
+#if LIBEDIT_IS_UNICODE
+getcfn(EditLine *e AXA_UNUSED, wchar_t *buf)
+#else
 getcfn(EditLine *e AXA_UNUSED, char *buf)
+#endif
 {
 	int i;
+	char c = '\0';
 
 	/* Wait until the user types something or a redisplay is faked */
 	for (;;) {
@@ -1980,7 +2084,11 @@ getcfn(EditLine *e AXA_UNUSED, char *buf)
 			 * to return immediately
 			 * so that the interrupt can be acknowledged. */
 			el_set(el_e, EL_UNBUFFERED, 1);
+#if LIBEDIT_IS_UNICODE
+			*buf = btowc('\0');
+#else
 			*buf = '\0';
+#endif
 			return (1);
 		}
 
@@ -1997,9 +2105,14 @@ getcfn(EditLine *e AXA_UNUSED, char *buf)
 		/* Restore the prompt before echoing user's input. */
 		if (prompt_cleared.tv_sec != 0)
 			reprompt();
-		i = read(STDIN_FILENO, buf, 1);
+		i = read(STDIN_FILENO, &c, 1);
 		if (i == 1) {
 			gettimeofday(&cmd_input, NULL);
+#if LIBEDIT_IS_UNICODE
+			*buf = btowc(c);
+#else
+			*buf = c;
+#endif
 			return (1);
 		}
 		close(STDIN_FILENO);

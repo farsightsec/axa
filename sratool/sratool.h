@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool definitions
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -108,7 +108,11 @@ void history_get_savefile(void);
 const char *el_prompt(EditLine *e AXA_UNUSED);
 void clear_prompt(void);
 void reprompt(void);
+#if LIBEDIT_IS_UNICODE
+int getcfn(EditLine *e AXA_UNUSED, wchar_t *buf);
+#else
 int getcfn(EditLine *e AXA_UNUSED, char *buf);
+#endif
 void AXA_NORETURN usage(void);
 int version_cmd(axa_tag_t tag AXA_UNUSED, const char *arg  AXA_UNUSED,
 		const cmd_tbl_entry_t *ce AXA_UNUSED);
@@ -159,8 +163,8 @@ void wlist_alist(void);
 void print_raw(const uint8_t *pkt, size_t pkt_len);
 bool print_dns_pkt(const uint8_t *data, size_t data_len, const char *str);
 void print_raw_ip(const uint8_t *data, size_t data_len, axa_p_ch_t ch);
-void print_mgmt(axa_p_mgmt_t *mgmt, size_t mgmt_len);
-void print_mgmt_kill(axa_p_mgmt_kill_t *mgmt_kill, size_t mgmt_len);
+void print_stats(_axa_p_stats_rsp_t *stats, uint32_t len);
+void print_kill(_axa_p_kill_t *kill, size_t len);
 
 /* server.c */
 void read_srvr(void);
