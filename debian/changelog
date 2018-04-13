@@ -1,3 +1,11 @@
+axa (2.0.1-1) debian-fsi; urgency=medium
+
+  * Increase the size of the anomaly parameters buffer
+  * Fix format warning
+  * Fix reporting of AXA protocol version used for startup 
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 12 Apr 2018 12:47:33 -0400
+
 axa (2.0.0-1) debian-fsi; urgency=medium
 
   * Fix assorted bugs in SSL, tool
