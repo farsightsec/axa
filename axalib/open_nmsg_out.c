@@ -24,6 +24,8 @@
 #include <string.h>
 #include <unistd.h>
 
+bool axa_nmsg_out_json = false;
+
 
 /*
  * Parse
@@ -41,7 +43,7 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 	const char *addr;
 	axa_socku_t su;
 	struct addrinfo *ai;
-	bool isfile;
+	bool isfile, json = false;
 	int s;
 
 	if (AXA_CLITCMP(addr0, "tcp:")) {
@@ -55,6 +57,11 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 	} else if (AXA_CLITCMP(addr0, "file:")) {
 		addr = strchr(addr0, ':')+1;
 		isfile = true;
+	} else if (AXA_CLITCMP(addr0, "file_json:")) {
+		addr = strchr(addr0, ':')+1;
+		isfile = true;
+		json = true;
+		axa_nmsg_out_json = true;
 	} else {
 		addr = addr0;
 		*out_sock_type = SOCK_DGRAM;
@@ -110,7 +117,10 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 			return (0);
 		}
 	} else {
-		*out_nmsg_output = nmsg_output_open_file(s, NMSG_WBUFSZ_MAX);
+		if (json)
+			*out_nmsg_output = nmsg_output_open_json(s);
+		else
+			*out_nmsg_output = nmsg_output_open_file(s, NMSG_WBUFSZ_MAX);
 		if (out_nmsg_output == NULL) {
 			axa_pemsg(emsg, "nmsg_output_open_file(%s) failed",
 				  addr);
