@@ -22,6 +22,9 @@
 extern bool out_bar_on;
 extern bool nmsg_zlib;
 
+/* extern: axalib/open_nmsg_out.c */
+extern bool axa_out_file_append;
+
 /* extern: server.c */
 extern axa_client_t client;
 
@@ -75,7 +78,7 @@ usage(const char *msg, ...)
 	}
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2014-2017 Farsight Security, Inc.\n");
+	printf("(c) 2014-2018 Farsight Security, Inc.\n");
 	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
@@ -90,6 +93,7 @@ usage(const char *msg, ...)
 		printf("-w watch\t\tset watch\n");
 	}
 	printf("\n[-A interval]\t\temit acct messages to stdout every interval seconds\n");
+	printf("[-b count]\t\tstop after processing count messages\n");
 	printf("[-C count]\t\tstop after processing count messages\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
@@ -98,6 +102,7 @@ usage(const char *msg, ...)
 	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
 	printf("[-O]\t\t\tenable spinning bar on output\n");
 	printf("[-P file]\t\twrite PID to pidfile\n");
+	printf("[-p]\t\t\tappend to output file (only valid for file outputs)\n");
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
 	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
@@ -135,7 +140,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:A:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
+	while ((i = getopt(argc, argv, "ha:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -149,6 +154,10 @@ main(int argc, char **argv)
 
 		case 'V':
 			version = true;
+			break;
+
+		case 'p':
+			axa_out_file_append = true;
 			break;
 
 		case 'd':

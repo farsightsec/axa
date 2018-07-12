@@ -24,7 +24,8 @@
 #include <string.h>
 #include <unistd.h>
 
-bool axa_nmsg_out_json = false;
+bool axa_nmsg_out_json = false;		/* true == emit nmsgs as jsonl blobs */
+bool axa_out_file_append = false;	/* true == append to output file */
 
 
 /*
@@ -74,7 +75,9 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 	}
 
 	if (isfile) {
-		s = open(addr, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+		s = open(addr, axa_out_file_append ?
+				O_WRONLY | O_CREAT | O_APPEND :
+				O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if (s < 0) {
 			axa_pemsg(emsg, "open(%s): %s", addr, strerror(errno));
 			return (0);

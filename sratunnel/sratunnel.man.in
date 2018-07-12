@@ -20,7 +20,7 @@
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhOtVuz
+.Op Fl dhOptVuz
 .Fl c Ar channel
 .Fl o Ar out-addr
 .Fl s Ar SRA-server
@@ -85,6 +85,8 @@ the SRA server will send.
 specify location for AXA client configuration file.
 .It Fl O
 enable a spinning bar output indicator on stdout.
+.It Fl p
+append output to specified file (only valid for nmsg file-based outputs).
 .It Fl o Ar out-addr
 specifies the destination of the SIE data.
 It can be forwarded as NMSG messages to a UDP or TCP port

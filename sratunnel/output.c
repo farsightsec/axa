@@ -25,6 +25,7 @@ extern const char *out_addr;
 
 /* extern: axalib/open_nmsg_out.c */
 extern bool axa_nmsg_out_json;
+extern bool axa_out_file_append;
 
 /* global */
 nmsg_output_t out_nmsg_output;		/* NSMG output object */

@@ -20,7 +20,7 @@
 .Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhOtVz
+.Op Fl dhOptVz
 .Fl a Ar anomaly
 .Fl o Ar out-addr
 .Fl s Ar RAD-server
@@ -81,6 +81,8 @@ the RAD server will send.
 specify location for AXA client configuration file.
 .It Fl O
 enable a spinning bar output indicator on stdout.
+.It Fl p
+append output to specified file (only valid for nmsg file-based outputs).
 .It Fl o Ar out-addr
 specifies the destination of the SIE data.
 It can be forwarded as NMSG messages to a UDP or TCP port
