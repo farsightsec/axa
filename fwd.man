@@ -26,6 +26,14 @@ sends NMSG messages to the file named
 IP packets are converted to NMSG messages.
 .It Xo
 .Sm off
+.Cm nmsg:file_json:
+.Ar path
+.Sm on \*(CT
+.Xc
+sends NMSG json blobs to the file named 
+.Ar path .
+.It Xo
+.Sm off
 .Cm pcap
 .Op Cm -fifo :
 .Ar path
