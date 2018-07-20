@@ -93,7 +93,6 @@ usage(const char *msg, ...)
 		printf("-w watch\t\tset watch\n");
 	}
 	printf("\n[-A interval]\t\temit acct messages to stdout every interval seconds\n");
-	printf("[-b count]\t\tstop after processing count messages\n");
 	printf("[-C count]\t\tstop after processing count messages\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
