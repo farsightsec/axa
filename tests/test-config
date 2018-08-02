@@ -1,17 +1,17 @@
 # SRA apikey
-alias:sra-dev-apikey=apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1023
+alias:sra-dev-apikey=apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1011
 
 # SRA TLS
 alias:sra-dev-tls=tls:username@axa.dev.fsi.io,1021
 
 # RAD apikey
-alias:rad-dev-apikey=apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1024
+alias:rad-dev-apikey=apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1012
 
 # RAD TLS
 alias:rad-dev-tls=tls:username@axa.dev.fsi.io,1022
 
 # Parse failures
 alias:foo=foo:lalaapikey@foo,1021
-alias:test-ipv6=apikey:9339a6a4-8b59-4338-be4a-53b09cdbb6e1@2620:11c:f008::1250,1023
-alias:test-longhost=apikey:9339a6a4-8b59-4338-be4a-53b09cdbb6e1@fooooooooooooooooooooooooooooooooooolllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll,1023
-alias:test-long2=apikey:9339a6a4-8b59-4338-be4a-53b09cdbb6e1@abcdefghijklmnopqrs,1023
+alias:test-ipv6=apikey:9339a6a4-8b59-4338-be4a-53b09cdbb6e1@2620:11c:f008::1250,1011
+alias:test-longhost=apikey:9339a6a4-8b59-4338-be4a-53b09cdbb6e1@fooooooooooooooooooooooooooooooooooolllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll,1011
+alias:test-long2=apikey:9339a6a4-8b59-4338-be4a-53b09cdbb6e1@abcdefghijklmnopqrs,1011
