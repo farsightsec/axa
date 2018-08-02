@@ -30,9 +30,9 @@ START_TEST(test_load_client_config)
 	ck_assert(axa_load_client_config(&emsg, buf));
 
 	res = axa_client_config_alias_chk("sra-dev-apikey");
-	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1023");
+	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1011");
 	res = axa_client_config_alias_chk("rad-dev-apikey");
-	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1024");
+	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1012");
 	res = axa_client_config_alias_chk("sra-dev-tls");
 	ck_assert_str_eq(res, "tls:username@axa.dev.fsi.io,1021");
 	res = axa_client_config_alias_chk("rad-dev-tls");

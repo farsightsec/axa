@@ -125,7 +125,7 @@ The "dns=*." watch or pattern was matched by the "nflxso.net"
 domain in DNS NS rdata.
 .Bd -literal -offset 4n
 $ sratool 
-sra> connect apikey:<yourapikey>@axa.sie-remote.net,1023
+sra> connect apikey:<yourapikey>@axa.sie-remote.net,1011
 * HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
 * Using AXA protocol 2
 * OK USER mschiffm authorized
@@ -153,7 +153,7 @@ specify the SRA server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # SRA
-alias:sra-apikey=apikey:<elided>@axa.sie-remote.net,1023
+alias:sra-apikey=apikey:<elided>@axa.sie-remote.net,1011
 
 .Ed
 

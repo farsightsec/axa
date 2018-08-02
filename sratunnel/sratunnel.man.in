@@ -173,7 +173,7 @@ The following sends all new domain reports on channel 213
 seen by the SRA server at example.com
 to the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-$ sratunnel -s apikey:<yourapikey>@example.com,1023 -o nmsg:127.1,8000 \\
+$ sratunnel -s apikey:<yourapikey>@example.com,1011 -o nmsg:127.1,8000 \\
 	-c ch213 -w ch=ch213
 .Ed
 .Pp
@@ -194,7 +194,7 @@ specify the SRA server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # SRA
-alias:sra-apikey=apikey:<yourapikey>@example.com,1023
+alias:sra-apikey=apikey:<yourapikey>@example.com,1011
 
 .Ed
 If the user wanted to connect to SRA, she would only have to remember
