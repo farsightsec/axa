@@ -125,7 +125,7 @@ _config_entry_parse(const char *line0)
  * Read AXA client config file.
  */
 bool
-axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
+axa_load_client_config(axa_emsg_t *emsg, const char **config_file0)
 {
 	FILE *f;
 	char line_buf[1024], *p, *config_file;
@@ -140,8 +140,8 @@ axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
 	/*
 	 * Use a specified file, or default to $HOME/.axa/config,
 	 */
-	if (config_file0 != NULL && *config_file0 != '\0') {
-		config_file = axa_strdup(config_file0);
+	if (*config_file0 != NULL && **config_file0 != '\0') {
+		config_file = axa_strdup(*config_file0);
 		f = fopen(config_file, "r");
 	} else {
 		f = NULL;
@@ -159,6 +159,7 @@ axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
 		free(config_file);
 		return (false);
 	}
+	*config_file0 = strdup(config_file);
 
 	/* alias section */
 	if (regcomp(&alias_re, alias_re_s, REG_EXTENDED | REG_NOSUB) != 0) {
