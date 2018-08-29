@@ -217,17 +217,19 @@ main(int argc, char **argv)
 			error_msg("%s", emsg.c);
 	}
 	/* client config must not have group/other persmissions set */
-	if (stat(config_file, &stat_buf) == -1) {
-		error_msg("can't stat config file \"%s\": %s",
-				config_file, strerror(errno));
-		axa_unload_client_config();
-		exit(EXIT_FAILURE);
-	}
-	if (stat_buf.st_mode & (S_IRWXO | S_IRWXG)) {
-		error_msg("config file \"%s\" has persmissions set for group/other, please `chmod 600 %s`",
-				config_file, config_file);
-		axa_unload_client_config();
-		exit(EXIT_FAILURE);
+	else {
+		if (stat(config_file, &stat_buf) == -1) {
+			error_msg("can't stat config file \"%s\": %s",
+					config_file, strerror(errno));
+			axa_unload_client_config();
+			exit(EXIT_FAILURE);
+		}
+		if (stat_buf.st_mode & (S_IRWXO | S_IRWXG)) {
+			error_msg("config file \"%s\" has persmissions set for group/other, please `chmod 600 %s`",
+					config_file, config_file);
+			axa_unload_client_config();
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* Answer commands from the control file. */

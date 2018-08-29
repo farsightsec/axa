@@ -134,13 +134,16 @@ axa_load_client_config(axa_emsg_t *emsg, const char **config_file0)
 	const char *line0;
 	bool retval;
 
+	if (*config_file0 == NULL)
+		return (false);
+
 	retval = true;
 	axa_unload_client_config();
 
 	/*
 	 * Use a specified file, or default to $HOME/.axa/config,
 	 */
-	if (*config_file0 != NULL && **config_file0 != '\0') {
+	if (**config_file0 != '\0') {
 		config_file = axa_strdup(*config_file0);
 		f = fopen(config_file, "r");
 	} else {
