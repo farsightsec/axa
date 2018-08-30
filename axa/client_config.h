@@ -54,9 +54,11 @@ void axa_unload_client_config(void);
  *  Load client config.
  *
  *  \param[out] emsg error message if something went wrong
- *  \param[in,out] config_file0 pointer to canonical name of config file or null
- *  to let function try to find a suitable file, upon successful return, it will
- *  point to the filename of the currently in-use config file.
+ *  \param[in,out] config_file0 pointer to canonical name of config file or,
+ *  to let function try to find a suitable file, a pointer to an empty string
+ *  and upon successful return, it will point to the filename of the currently
+ *  in-use config file. In this case it will be caller's responsibility to free
+ *  it.
  *
  *  \retval true if file was successfully opened and parsed
  *  \retval false if there was an error, emsg will contain the reason

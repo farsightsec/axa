@@ -318,7 +318,7 @@ main(int argc, char **argv)
 			axa_error_msg("%s", emsg.c);
 	}
 	else {
-		/* client config must not have group/other persmissions set */
+		/* client config must not have group/other permissions set */
 		if (stat(config_file, &stat_buf) == -1) {
 			axa_error_msg("can't stat config file \"%s\": %s",
 					config_file, strerror(errno));

@@ -159,7 +159,8 @@ axa_load_client_config(axa_emsg_t *emsg, const char **config_file0)
 	if (f == NULL) {
 		axa_pemsg(emsg, "cannot open \"%s\": %s",
 			      config_file, strerror(errno));
-		free(config_file);
+		if (config_file != NULL)
+			free(config_file);
 		return (false);
 	}
 	*config_file0 = strdup(config_file);

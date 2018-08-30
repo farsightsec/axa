@@ -216,7 +216,7 @@ main(int argc, char **argv)
 		if (axa_debug != 0)
 			error_msg("%s", emsg.c);
 	}
-	/* client config must not have group/other persmissions set */
+	/* client config must not have group/other permissions set */
 	else {
 		if (stat(config_file, &stat_buf) == -1) {
 			error_msg("can't stat config file \"%s\": %s",
