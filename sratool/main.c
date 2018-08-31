@@ -225,7 +225,7 @@ main(int argc, char **argv)
 			exit(EXIT_FAILURE);
 		}
 		if (stat_buf.st_mode & (S_IRWXO | S_IRWXG)) {
-			error_msg("config file \"%s\" has persmissions set for group/other, please `chmod 600 %s`",
+			error_msg("config file \"%s\" has permissions set for group/other, please `chmod 600 %s`",
 					config_file, config_file);
 			axa_unload_client_config();
 			exit(EXIT_FAILURE);
