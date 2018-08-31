@@ -148,7 +148,11 @@ sra> connect rad-apikey
 .Pp
 This config file is shared for
 .Nm ,
-sratool, sratunnel, and radtunnel.
+sratool, sratunnel, and radtunnel. Because this file can contain sensitive
+information such as apikeys, it must not be readable or writeable to anybody
+other than "owner" or
+.Nm sratool
+will not load.
 .It Ar config
 is the
 .Xr ssh_config 5
