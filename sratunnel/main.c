@@ -99,6 +99,7 @@ usage(const char *msg, ...)
 	printf("[-h]\t\t\tdisplay this help and exit\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
+	printf("[-n file]\t\tspecify AXA config file\n");
 	printf("[-O]\t\t\tenable spinning bar on output\n");
 	printf("[-P file]\t\twrite PID to pidfile\n");
 	printf("[-p]\t\t\tappend to output file (only valid for file outputs)\n");
