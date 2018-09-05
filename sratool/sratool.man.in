@@ -23,6 +23,7 @@
 .Sh SYNOPSIS
 .Op Fl dhNV
 .Op Fl c Ar cfile
+.Op Fl n Ar config
 .Op Fl E Ar ciphers
 .Op Fl F Ar fields
 .Op Fl S Ar certs
