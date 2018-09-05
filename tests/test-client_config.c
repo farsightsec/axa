@@ -20,6 +20,7 @@ START_TEST(test_load_client_config)
 	const char *res;
 	axa_emsg_t emsg;
 	char buf[MAXPATHLEN * 2];
+	const char *buf_p;
 
 	p = getenv("top_srcdir");
 	ck_assert_ptr_ne(p, NULL);
@@ -27,7 +28,8 @@ START_TEST(test_load_client_config)
 	strlcpy(buf, p, sizeof (buf));
 	n = strlen(buf);
 	strlcpy(buf + n, "/tests/test-config", sizeof (buf) - n);
-	ck_assert(axa_load_client_config(&emsg, buf));
+	buf_p = buf;
+	ck_assert(axa_load_client_config(&emsg, &buf_p));
 
 	res = axa_client_config_alias_chk("sra-dev-apikey");
 	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1011");

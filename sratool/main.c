@@ -212,7 +212,7 @@ main(int argc, char **argv)
 	nmsg_pres = nmsg_output_open_pres(STDOUT_FILENO);
 
 	axa_load_fields(fields_file);
-	if (!axa_load_client_config(&emsg, &config_file)) {
+	if (!axa_load_client_config(&emsg, (char **)&config_file)) {
 		if (axa_debug != 0)
 			error_msg("%s", emsg.c);
 	}

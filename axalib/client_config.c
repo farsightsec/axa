@@ -125,7 +125,7 @@ _config_entry_parse(const char *line0)
  * Read AXA client config file.
  */
 bool
-axa_load_client_config(axa_emsg_t *emsg, const char **config_file0)
+axa_load_client_config(axa_emsg_t *emsg, char **config_file0)
 {
 	FILE *f;
 	char line_buf[1024], *p, *config_file;

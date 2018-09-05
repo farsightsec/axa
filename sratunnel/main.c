@@ -313,7 +313,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (!axa_load_client_config(&emsg, &config_file)) {
+	if (!axa_load_client_config(&emsg, (char **)&config_file)) {
 		if (axa_debug != 0)
 			axa_error_msg("%s", emsg.c);
 	}
