@@ -63,7 +63,7 @@ void axa_unload_client_config(void);
  *  \retval true if file was successfully opened and parsed
  *  \retval false if there was an error, emsg will contain the reason
  */
-bool axa_load_client_config(axa_emsg_t *emsg, char **config_file0);
+bool axa_load_client_config(axa_emsg_t *emsg, const char *config_file0);
 
 /**
  *  Check for a connection alias.

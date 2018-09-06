@@ -13,6 +13,8 @@
 #include <axa/wire.h>
 #include <check.h>
 
+extern bool axa_client_config_bad_perms;
+
 START_TEST(test_load_client_config)
 {
 	char *p;
@@ -20,7 +22,6 @@ START_TEST(test_load_client_config)
 	const char *res;
 	axa_emsg_t emsg;
 	char buf[MAXPATHLEN * 2];
-	const char *buf_p;
 
 	p = getenv("top_srcdir");
 	ck_assert_ptr_ne(p, NULL);
@@ -28,8 +29,7 @@ START_TEST(test_load_client_config)
 	strlcpy(buf, p, sizeof (buf));
 	n = strlen(buf);
 	strlcpy(buf + n, "/tests/test-config", sizeof (buf) - n);
-	buf_p = buf;
-	ck_assert(axa_load_client_config(&emsg, &buf_p));
+	ck_assert(axa_load_client_config(&emsg, buf) && axa_client_config_bad_perms == false);
 
 	res = axa_client_config_alias_chk("sra-dev-apikey");
 	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1011");
@@ -44,6 +44,25 @@ START_TEST(test_load_client_config)
 }
 END_TEST
 
+START_TEST(test_load_client_config_bad_perms)
+{
+	char *p;
+	size_t n;
+	axa_emsg_t emsg;
+	char buf[MAXPATHLEN * 2];
+
+	p = getenv("top_srcdir");
+	ck_assert_ptr_ne(p, NULL);
+
+	strlcpy(buf, p, sizeof (buf));
+	n = strlen(buf);
+	strlcpy(buf + n, "/tests/test-config-badperms", sizeof (buf) - n);
+	ck_assert(!axa_load_client_config(&emsg, buf) && axa_client_config_bad_perms == true);
+
+	axa_unload_client_config();
+}
+END_TEST
+
 int main(void) {
 	int number_failed;
 	Suite *s;
@@ -53,6 +72,7 @@ int main(void) {
 	s = suite_create("axa_client_config");
 	tc_core = tcase_create("core");
 	tcase_add_test(tc_core, test_load_client_config);
+	tcase_add_test(tc_core, test_load_client_config_bad_perms);
 	suite_add_tcase(s, tc_core);
 
 	sr = srunner_create(s);
