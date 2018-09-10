@@ -44,9 +44,6 @@ extern bool interrupted;		/* true when asynch-interrupted */
 extern bool out_on;
 extern char *out_addr;
 
-/* extern axalib/client_config.c */
-extern bool axa_client_config_bad_perms;
-
 /* global */
 axa_emsg_t emsg;			/* AXA error message blob */
 uint axa_debug;				/* debug level */
@@ -215,12 +212,8 @@ main(int argc, char **argv)
 
 	axa_load_fields(fields_file);
 	if (!axa_load_client_config(&emsg, config_file)) {
-		if (axa_client_config_bad_perms == true) {
-			axa_error_msg("%s", emsg.c);
-			exit(0);
-		}
-		if (axa_debug != 0)
-			error_msg("%s", emsg.c);
+			axa_error_msg("can't load config file: %s", emsg.c);
+			exit(EXIT_FAILURE);
 	}
 
 	/* Answer commands from the control file. */

@@ -32,9 +32,6 @@ extern axa_client_t client;
 extern int terminated;
 extern int give_status;
 
-/* extern axalib/client_config.c */
-extern bool axa_client_config_bad_perms;
-
 /* global */
 uint axa_debug;				/* debug level */
 int count;				/* limit to this many */
@@ -317,12 +314,8 @@ main(int argc, char **argv)
 	}
 
 	if (!axa_load_client_config(&emsg, config_file)) {
-		if (axa_client_config_bad_perms == true) {
-			axa_error_msg("%s", emsg.c);
-			exit(0);
-		}
-		if (axa_debug != 0)
-			axa_error_msg("%s", emsg.c);
+			axa_error_msg("can't load config file: %s", emsg.c);
+			exit(EXIT_FAILURE);
 	}
 
 	signal(SIGPIPE, SIG_IGN);

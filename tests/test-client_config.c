@@ -13,8 +13,6 @@
 #include <axa/wire.h>
 #include <check.h>
 
-extern bool axa_client_config_bad_perms;
-
 START_TEST(test_load_client_config)
 {
 	char *p;
@@ -29,7 +27,7 @@ START_TEST(test_load_client_config)
 	strlcpy(buf, p, sizeof (buf));
 	n = strlen(buf);
 	strlcpy(buf + n, "/tests/test-config", sizeof (buf) - n);
-	ck_assert(axa_load_client_config(&emsg, buf) && axa_client_config_bad_perms == false);
+	ck_assert(axa_load_client_config(&emsg, buf));
 
 	res = axa_client_config_alias_chk("sra-dev-apikey");
 	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1011");
@@ -57,7 +55,7 @@ START_TEST(test_load_client_config_bad_perms)
 	strlcpy(buf, p, sizeof (buf));
 	n = strlen(buf);
 	strlcpy(buf + n, "/tests/test-config-badperms", sizeof (buf) - n);
-	ck_assert(!axa_load_client_config(&emsg, buf) && axa_client_config_bad_perms == true);
+	ck_assert(!axa_load_client_config(&emsg, buf));
 
 	axa_unload_client_config();
 }

@@ -41,9 +41,6 @@ bool _alias_check(const char *line0);
 /* private global client config data */
 static axa_client_config_t axa_client_config;
 
-/* global */
-bool axa_client_config_bad_perms = false;		/* inform callers of axa_client_config_load() if they should quit */
-
 /* config entry regex */
 /* The format of an entry is 'type:foo=bar' where type, foo, and bar are
  * 1-63 alphanumeric characters. */
@@ -175,11 +172,6 @@ axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
 				config_file, strerror(errno));
 		if (config_file != NULL)
 			free(config_file);
-		/*
-		 * Err on the side of caution, if we can't stat the file
-		 * consider it bad.
-		 */
-		axa_client_config_bad_perms = true;
 		return (false);
 	}
 	if (stat_buf.st_mode & (S_IRWXO | S_IRWXG)) {
@@ -187,7 +179,6 @@ axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
 				config_file, config_file);
 		if (config_file != NULL)
 			free(config_file);
-		axa_client_config_bad_perms = true;
 		return (false);
 	}
 
@@ -212,7 +203,7 @@ axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
 		}
 
 		if (_config_entry_parse(line0) == false) {
-			axa_pemsg(emsg, "invalid \"%s\" in line %d of"
+			axa_pemsg(emsg, "invalid \"%s\" in line %d of "
 					"\"%s\"", line0, line_num,
 					config_file);
 			retval = false;
