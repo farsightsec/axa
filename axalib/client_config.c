@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <regex.h>
+#include <sys/stat.h>
 #ifdef __linux
 #include <bsd/string.h>                 /* for strlcpy() */
 #endif
@@ -37,7 +38,7 @@ bool _config_entry_parse(const char *line0);
 /* check an alias line */
 bool _alias_check(const char *line0);
 
-/* global client config data */
+/* private global client config data */
 static axa_client_config_t axa_client_config;
 
 /* config entry regex */
@@ -125,7 +126,7 @@ _config_entry_parse(const char *line0)
  * Read AXA client config file.
  */
 bool
-axa_load_client_config(axa_emsg_t *emsg, char **config_file0)
+axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
 {
 	FILE *f;
 	char line_buf[1024], *p, *config_file;
@@ -133,9 +134,7 @@ axa_load_client_config(axa_emsg_t *emsg, char **config_file0)
 	size_t line_buf_size;
 	const char *line0;
 	bool retval;
-
-	if (*config_file0 == NULL)
-		return (false);
+	struct stat stat_buf;
 
 	retval = true;
 	axa_unload_client_config();
@@ -143,8 +142,8 @@ axa_load_client_config(axa_emsg_t *emsg, char **config_file0)
 	/*
 	 * Use a specified file, or default to $HOME/.axa/config,
 	 */
-	if (**config_file0 != '\0') {
-		config_file = axa_strdup(*config_file0);
+	if (config_file0 != NULL && *config_file0 != '\0') {
+		config_file = axa_strdup(config_file0);
 		f = fopen(config_file, "r");
 	} else {
 		f = NULL;
@@ -163,7 +162,25 @@ axa_load_client_config(axa_emsg_t *emsg, char **config_file0)
 			free(config_file);
 		return (false);
 	}
-	*config_file0 = strdup(config_file);
+
+	/*
+	 * Because it can contain apikeys, this file must not have group/other
+	 * permissions set.
+	 */
+	if (stat(config_file, &stat_buf) == -1) {
+		axa_pemsg(emsg, "can't stat config file \"%s\": %s",
+				config_file, strerror(errno));
+		if (config_file != NULL)
+			free(config_file);
+		return (false);
+	}
+	if (stat_buf.st_mode & (S_IRWXO | S_IRWXG)) {
+		axa_pemsg(emsg, "config file \"%s\" has permissions set for group/other, please `chmod 600 %s`",
+				config_file, config_file);
+		if (config_file != NULL)
+			free(config_file);
+		return (false);
+	}
 
 	/* alias section */
 	if (regcomp(&alias_re, alias_re_s, REG_EXTENDED | REG_NOSUB) != 0) {
@@ -186,7 +203,7 @@ axa_load_client_config(axa_emsg_t *emsg, char **config_file0)
 		}
 
 		if (_config_entry_parse(line0) == false) {
-			axa_pemsg(emsg, "invalid \"%s\" in line %d of"
+			axa_pemsg(emsg, "invalid \"%s\" in line %d of "
 					"\"%s\"", line0, line_num,
 					config_file);
 			retval = false;

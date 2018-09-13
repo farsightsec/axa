@@ -98,7 +98,6 @@ main(int argc, char **argv)
 	int cmd_len;
 	bool version = false;
 	const char *cfile = NULL;
-	struct stat stat_buf;
 	size_t n;
 	nmsg_res res;
 	char *p;
@@ -212,24 +211,9 @@ main(int argc, char **argv)
 	nmsg_pres = nmsg_output_open_pres(STDOUT_FILENO);
 
 	axa_load_fields(fields_file);
-	if (!axa_load_client_config(&emsg, (char **)&config_file)) {
-		if (axa_debug != 0)
-			error_msg("%s", emsg.c);
-	}
-	/* client config must not have group/other permissions set */
-	else {
-		if (stat(config_file, &stat_buf) == -1) {
-			error_msg("can't stat config file \"%s\": %s",
-					config_file, strerror(errno));
-			axa_unload_client_config();
+	if (!axa_load_client_config(&emsg, config_file)) {
+			axa_error_msg("can't load config file: %s", emsg.c);
 			exit(EXIT_FAILURE);
-		}
-		if (stat_buf.st_mode & (S_IRWXO | S_IRWXG)) {
-			error_msg("config file \"%s\" has permissions set for group/other, please `chmod 600 %s`",
-					config_file, config_file);
-			axa_unload_client_config();
-			exit(EXIT_FAILURE);
-		}
 	}
 
 	/* Answer commands from the control file. */

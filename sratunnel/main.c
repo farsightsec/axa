@@ -118,7 +118,6 @@ main(int argc, char **argv)
 	const char *config_file = "";
 	arg_t *arg;
 	struct timeval now;
-	struct stat stat_buf;
 	time_t ms;
 	nmsg_res res;
 	axa_emsg_t emsg;
@@ -314,24 +313,9 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (!axa_load_client_config(&emsg, (char **)&config_file)) {
-		if (axa_debug != 0)
-			axa_error_msg("%s", emsg.c);
-	}
-	else {
-		/* client config must not have group/other permissions set */
-		if (stat(config_file, &stat_buf) == -1) {
-			axa_error_msg("can't stat config file \"%s\": %s",
-					config_file, strerror(errno));
-			axa_unload_client_config();
+	if (!axa_load_client_config(&emsg, config_file)) {
+			axa_error_msg("can't load config file: %s", emsg.c);
 			exit(EXIT_FAILURE);
-		}
-		if (stat_buf.st_mode & (S_IRWXO | S_IRWXG)) {
-			axa_error_msg("config file \"%s\" has permissions set for group/other, please `chmod 600 %s`",
-					config_file, config_file);
-			axa_unload_client_config();
-			exit(EXIT_FAILURE);
-		}
 	}
 
 	signal(SIGPIPE, SIG_IGN);
