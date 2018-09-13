@@ -316,7 +316,7 @@ You can connect as per the following:
    ~~~
 
 #### AXA Config File Connection Aliases
-AXA now reqiures a subscriber-side configuration file used as a convenience to
+AXA now requires a subscriber-side configuration file used as a convenience to
 specify session defaults. By default AXA will look for it `~/.axa/config`. Currently it is used to store "connection aliases" that provide a facility to create shortcut mnemonics to specify the AXA server connection string. This is especially useful for long connection strings associated with the apikey transport. It can also be used for the other transports. As it can contain
 sensitive information, the file must be readable/writable only by "owner" or AXA-based tools will refuse to load.
 
