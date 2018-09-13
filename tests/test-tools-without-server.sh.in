@@ -213,6 +213,21 @@ echo $after - $before = $delay
 # assume no other delay beyond a second on test system
 if [ $delay -gt 3 -o $delay -le 1 ] ; then exit 1 ; fi
 
+# tools require a subscriber-side configuration file
+echo 070200 using radtool with non-existing configuration file should fail
+echo "mode" | $RADTOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "can't load config file: cannot open"
+
+echo 070300 using sratool with non-existing configuration file should fail
+echo "mode" | $SRATOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "can't load config file: cannot open"
+
+# the tools' configuration file must not be group or world readable
+echo 070400 using radtool with configuration file of mode 640 should fail
+echo "mode" | $RADTOOL -n ${CONF}-badperms 2>&1 | grep "has permissions set for group/other"
+
+echo 070500 using sratool with configuration file of mode 640 should fail
+echo "mode" | $RADTOOL -n ${CONF}-badperms 2>&1 | grep "has permissions set for group/other"
+
+# 
 # These are also tested in the various above tests:
 # space in front of command
 # space after command

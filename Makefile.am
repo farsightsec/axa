@@ -291,6 +291,8 @@ spotless: distclean
 ##
 #
 
+EXTRA_DIST += tests/test-config tests/test-config-badperms
+
 if HAVE_YAJL
 TESTS += tests/test-json
 check_PROGRAMS += tests/test-json
@@ -306,9 +308,8 @@ tests_test_apikey_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS}
 tests_test_apikey_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS}
 
 TESTS += tests/test-client_config
-EXTRA_DIST += $(top_builddir)/tests/test-config
 check_PROGRAMS += tests/test-client_config
-tests_test_client_config_SOURCES = tests/test-client_config.c $(top_builddir)/tests/test-config
+tests_test_client_config_SOURCES = tests/test-client_config.c
 tests_test_client_config_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
 tests_test_client_config_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
 

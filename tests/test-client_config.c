@@ -21,7 +21,7 @@ START_TEST(test_load_client_config)
 	axa_emsg_t emsg;
 	char buf[MAXPATHLEN * 2];
 
-	p = getenv("top_srcdir");
+	p = getenv("top_builddir");
 	ck_assert_ptr_ne(p, NULL);
 
 	strlcpy(buf, p, sizeof (buf));
@@ -49,7 +49,7 @@ START_TEST(test_load_client_config_bad_perms)
 	axa_emsg_t emsg;
 	char buf[MAXPATHLEN * 2];
 
-	p = getenv("top_srcdir");
+	p = getenv("top_builddir");
 	ck_assert_ptr_ne(p, NULL);
 
 	strlcpy(buf, p, sizeof (buf));
