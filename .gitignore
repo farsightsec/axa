@@ -26,8 +26,10 @@ Doxyfile
 /html
 /latex
 tests/test-apikey
-tests/test-json
 tests/test-client_config
+tests/test-config
+tests/test-config-badperms
+tests/test-json
 tests/test-kill
 tests/test-stats
 tests/test-tools-without-server.sh
