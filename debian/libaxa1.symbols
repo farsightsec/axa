@@ -59,10 +59,12 @@ libaxa.so.1 libaxa1 #MINVER#
  axa_make_hdr@Base 2.0.0-1
  axa_malloc@Base 2.0.0-1
  axa_msg_fields@Base 2.0.0-1
+ axa_nmsg_out_json@Base 2.1.0-1
  axa_null_field@Base 2.0.0-1
  axa_op_to_str@Base 2.0.0-1
  axa_open_nmsg_out@Base 2.0.0-1
  axa_opt_to_str@Base 2.0.0-1
+ axa_out_file_append@Base 2.1.0-1
  axa_p_to_str@Base 2.0.0-1
  axa_parse_anom@Base 2.0.0-1
  axa_parse_ch@Base 2.0.0-1
