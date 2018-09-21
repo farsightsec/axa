@@ -1,8 +1,17 @@
+axa (2.1.0-1) debian-fsi; urgency=medium
+
+  * Add strict permissions requirement for config file
+  * Update documentation to reflect apikey and port number changes
+  * Add nmsg json support to sratunnel/radtunnel
+  * Add and amend tests for config file permissions
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Fri, 21 Sep 2018 15:29:07 -0400
+
 axa (2.0.1-1) debian-fsi; urgency=medium
 
   * Increase the size of the anomaly parameters buffer
   * Fix format warning
-  * Fix reporting of AXA protocol version used for startup 
+  * Fix reporting of AXA protocol version used for startup
 
  -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 12 Apr 2018 12:47:33 -0400
 
