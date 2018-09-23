@@ -25,6 +25,7 @@
 #include <axa/axa_endian.h>
 #include <axa/fields.h>
 #include <axa/open_nmsg_out.h>
+#include <axa/mdb.h>
 
 #include <nmsg.h>
 #include <nmsg/base/defs.h>
@@ -33,6 +34,7 @@
 #include <net/ethernet.h>
 #ifdef __linux
 #include <netinet/ether.h>
+#include <bsd/string.h>
 #endif
 #include <errno.h>
 #include <fcntl.h>
@@ -42,6 +44,8 @@
 #include <sysexits.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <lmdb.h>
 
 #define OUT_FLUSH_MS    10		/* flush output this often */
 

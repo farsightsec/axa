@@ -21,6 +21,7 @@
 /* extern: output.c */
 extern bool out_bar_on;
 extern bool nmsg_zlib;
+extern uint output_tsindex_write_interval;
 
 /* extern: axalib/open_nmsg_out.c */
 extern bool axa_out_file_append;
@@ -44,6 +45,7 @@ bool counting = false;			/* true == limiting packets to count */
 bool first_time;			/* true == first time connecting */
 nmsg_input_t nmsg_input;		/* NMSG input object */
 FILE *fp_pidfile = NULL;		/* PID file FILE pointer */
+FILE *fp_tsindex = NULL;		/* timestamp index file pointer */
 const char *pidfile;			/* PID file file name */
 const char *srvr_addr;			/* SRA/RAD server string */
 axa_mode_t mode;			/* SRA or RAD */
@@ -53,6 +55,9 @@ arg_t *watches = NULL;			/* watches */
 arg_t *anomalies = NULL;		/* anomalies */
 const char *out_addr;			/* output address */
 double sample = 0.0;			/* sampling rate */
+MDB_env *mdb_env;			/* timestamp index db environment */
+MDB_dbi mdb_dbi;			/* timestamp index db handle */
+MDB_txn *mdb_txn;			/* timestamp index transaction handle */
 
 /* private */
 static bool version;
@@ -61,6 +66,15 @@ static uint acct_interval;
 static struct timeval acct_timer;
 
 void print_status(void);
+
+static void
+lmdb_shutdown(void)
+{
+	/* try to commit any outstanding data before closing the db */
+	(void) mdb_txn_commit(mdb_txn);
+	(void) mdb_dbi_close(mdb_env, mdb_dbi);
+	(void) mdb_env_close(mdb_env);
+}
 
 static void AXA_NORETURN AXA_PF(1,2)
 usage(const char *msg, ...)
@@ -97,6 +111,7 @@ usage(const char *msg, ...)
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
 	printf("[-h]\t\t\tdisplay this help and exit\n");
+	printf("[-i interval]\t\twrite timestamp indexes every interval nmsgs\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
 	printf("[-n file]\t\tspecify AXA config file\n");
@@ -124,7 +139,9 @@ main(int argc, char **argv)
 	char *p;
 	const char *cp;
 	int i;
+	size_t n = 0;
 	bool output_buffering = true;
+	char out_filename[BUFSIZ], lmdb_filename[BUFSIZ];
 
 	axa_set_me(argv[0]);
 	AXA_ASSERT(axa_parse_log_opt(&emsg, "trace,off,stdout"));
@@ -140,7 +157,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "ha:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
+	while ((i = getopt(argc, argv, "hi:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -166,6 +183,10 @@ main(int argc, char **argv)
 
 		case 'h':
 			usage(NULL);
+			break;
+
+		case 'i':
+			output_tsindex_write_interval = atoi(optarg);
 			break;
 
 		case 't':
@@ -340,12 +361,101 @@ main(int argc, char **argv)
 	nmsg_input = nmsg_input_open_null();
 	AXA_ASSERT(nmsg_input != NULL);
 
-    if (pidfile) {
-        fp_pidfile = pidfile_open();
-        if (fp_pidfile == NULL)
-            exit(EX_SOFTWARE);
-        pidfile_write();
-    }
+	if (pidfile) {
+		fp_pidfile = pidfile_open();
+		if (fp_pidfile == NULL)
+			exit(EX_SOFTWARE);
+		pidfile_write();
+	}
+
+	if (output_tsindex_write_interval > 0) {
+		int rc = 0, pagesize = 0;
+
+		/* Timestamp indexing requires unbuffered filesystem writes. */
+		if (output_buffering == true) {
+			axa_error_msg("can't store timestamp indexes when buffering output (need `-u`)\n");
+			exit(EX_SOFTWARE);
+		}
+
+		n = strlcpy(lmdb_filename, strrchr(out_addr, ':') + 1,
+				sizeof (lmdb_filename));
+		strlcpy(lmdb_filename + n, ".mdb", sizeof (lmdb_filename) - n);
+
+		/* Timestamp indexing + appending requires a previously created
+		 * index file (which should correspond to the output file being
+		 * appended to -- the only way we can try to enforce that is
+		 * by checking the output filename).
+		 */
+		if (axa_out_file_append == true) {
+			if (access(lmdb_filename, F_OK) == -1) {
+				axa_error_msg("tsindex mode expected to find tsindex file \"%s\": %s\n",
+						lmdb_filename, strerror(errno));
+				exit(EX_SOFTWARE);
+			}
+			else if (axa_debug > 0)
+				axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
+		}
+		else {
+			/* An orphaned mdb file is clobbered lest we write to
+			 * it and end up mixing with timestamps and offsets
+			 * from a previous unrelated session.
+			 */
+			if (unlink(lmdb_filename) == -1) {
+				axa_error_msg("found orphan tsindex file \"%s\" but can't delete it: %s\n",
+						lmdb_filename, strerror(errno));
+				exit(EX_SOFTWARE);
+			}
+			else if (axa_debug > 0)
+				axa_trace_msg("found and deleted orphan tsindex file \"%s\"\n",
+						lmdb_filename);
+		}
+
+		rc = mdb_env_create(&mdb_env);
+		if (rc != 0) {
+			axa_error_msg("mdb_env_create(): %s", mdb_strerror(rc));
+			exit(EX_SOFTWARE);
+		}
+		pagesize = getpagesize();
+		/* lmdb is a memory mapped database. The mapsize should be a
+		 * multiple of the OS page size (usually 4,096 bytes). The
+		 * size of the memory map is also the maximum size of the
+		 * database. As such, we should periodically check to see if
+		 * we're close to running out of space and resize.
+		 */
+		rc = mdb_env_set_mapsize(mdb_env, pagesize * 2560);
+		if (rc != 0) {
+			axa_error_msg("mdb_env_set_mapsize(): %s",
+					mdb_strerror(rc));
+			exit(EX_SOFTWARE);
+		}
+
+		if (axa_debug != 0)
+			axa_trace_msg("writing timestamp offsets to %s every %u nmsgs\n",
+					lmdb_filename,
+					output_tsindex_write_interval);
+		rc = mdb_env_open(mdb_env, lmdb_filename,
+				MDB_NOSUBDIR, 0664);
+		if (rc != 0) {
+			axa_error_msg("mdb_env_open(): %s", mdb_strerror(rc));
+			exit(EX_SOFTWARE);
+		}
+		rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn);
+		if (rc != 0) {
+			axa_error_msg("mdb_txn_begin(): %s", mdb_strerror(rc));
+			exit(EX_SOFTWARE);
+		}
+		rc = mdb_dbi_open(mdb_txn, NULL, MDB_INTEGERKEY, &mdb_dbi);
+		if (rc != 0) {
+			axa_error_msg("mdb_dbi_open(): %s", mdb_strerror(rc));
+			exit(EX_SOFTWARE);
+		}
+		rc = mdb_set_compare(mdb_txn, mdb_dbi, axa_tsi_mdb_cmp);
+		if (rc != 0) {
+			axa_error_msg("mdb_set_compare(): %s", mdb_strerror(rc));
+			exit(EX_SOFTWARE);
+		}
+		atexit(lmdb_shutdown);
+	}
 
 	/*
 	 * Continually reconnect to the SRA or RAD server and forward SIE data.

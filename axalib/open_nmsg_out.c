@@ -26,6 +26,7 @@
 
 bool axa_nmsg_out_json = false;		/* true == emit nmsgs as jsonl blobs */
 bool axa_out_file_append = false;	/* true == append to output file */
+int axa_nmsg_output_fd = 0;		/* fd for nmsg file-based outputs */
 
 
 /*
@@ -110,6 +111,7 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 			return (0);
 		}
 	}
+	axa_nmsg_output_fd = s;
 
 	if (!isfile && *out_sock_type == SOCK_DGRAM) {
 		*out_nmsg_output = nmsg_output_open_sock(s, NMSG_WBUFSZ_ETHER);
