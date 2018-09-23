@@ -88,6 +88,7 @@ nobase_include_HEADERS = \
 	axa/fields.h \
 	axa/json.h \
 	axa/open_nmsg_out.h \
+	axa/mdb.h \
 	axa/protocol.h \
 	axa/socket.h \
 	axa/strbuf.h \
@@ -107,6 +108,7 @@ axa_libaxa_la_SOURCES = \
 	axa/axa_endian.h \
 	axa/fields.h \
 	axa/json.h \
+	axa/mdb.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/socket.h \
@@ -137,6 +139,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \
 	axalib/wire.c \
+	axalib/mdb.c \
 	libmy/b64_encode.c libmy/b64_encode.h libmy/my_alloc.h \
 	libmy/ubuf.h libmy/ubuf-pb.h libmy/vector.h
 
