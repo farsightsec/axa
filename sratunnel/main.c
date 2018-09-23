@@ -349,6 +349,20 @@ main(int argc, char **argv)
 #ifdef SIGINFO
         signal(SIGINFO, siginfo);
 #endif
+	/* When appending, demand that the output file exists. */
+	if (axa_out_file_append) {
+		n = strlcpy(out_filename, strrchr(out_addr, ':') + 1,
+				sizeof (out_filename));
+
+		if (access(out_filename, F_OK) == -1) {
+			axa_error_msg("append mode expected to find output file \"%s\": %s\n",
+					out_filename, strerror(errno));
+			exit(EX_SOFTWARE);
+		}
+		else if (axa_debug > 0)
+			axa_trace_msg("appending to nmsg file \"%s\"\n", out_filename);
+	}
+
 	if (!out_open(output_buffering))
 		exit(EX_IOERR);
 
