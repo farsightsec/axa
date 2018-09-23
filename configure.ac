@@ -100,6 +100,7 @@ PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
 AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
 AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
+AC_CHECK_LIB([lmdb], [mdb_env_open], [], [ AC_MSG_ERROR([required library not found]) ])
 
 AC_ARG_WITH([yajl], AS_HELP_STRING([--without-yajl], [Disable yajl support]))
 if test "x$with_yajl" != "xno"; then
