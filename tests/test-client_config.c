@@ -21,7 +21,7 @@ START_TEST(test_load_client_config)
 	axa_emsg_t emsg;
 	char buf[MAXPATHLEN * 2];
 
-	p = getenv("top_srcdir");
+	p = getenv("top_builddir");
 	ck_assert_ptr_ne(p, NULL);
 
 	strlcpy(buf, p, sizeof (buf));
@@ -30,13 +30,32 @@ START_TEST(test_load_client_config)
 	ck_assert(axa_load_client_config(&emsg, buf));
 
 	res = axa_client_config_alias_chk("sra-dev-apikey");
-	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1023");
+	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1011");
 	res = axa_client_config_alias_chk("rad-dev-apikey");
-	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1024");
+	ck_assert_str_eq(res, "apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1012");
 	res = axa_client_config_alias_chk("sra-dev-tls");
 	ck_assert_str_eq(res, "tls:username@axa.dev.fsi.io,1021");
 	res = axa_client_config_alias_chk("rad-dev-tls");
 	ck_assert_str_eq(res, "tls:username@axa.dev.fsi.io,1022");
+
+	axa_unload_client_config();
+}
+END_TEST
+
+START_TEST(test_load_client_config_bad_perms)
+{
+	char *p;
+	size_t n;
+	axa_emsg_t emsg;
+	char buf[MAXPATHLEN * 2];
+
+	p = getenv("top_builddir");
+	ck_assert_ptr_ne(p, NULL);
+
+	strlcpy(buf, p, sizeof (buf));
+	n = strlen(buf);
+	strlcpy(buf + n, "/tests/test-config-badperms", sizeof (buf) - n);
+	ck_assert(!axa_load_client_config(&emsg, buf));
 
 	axa_unload_client_config();
 }
@@ -51,6 +70,7 @@ int main(void) {
 	s = suite_create("axa_client_config");
 	tc_core = tcase_create("core");
 	tcase_add_test(tc_core, test_load_client_config);
+	tcase_add_test(tc_core, test_load_client_config_bad_perms);
 	suite_add_tcase(s, tc_core);
 
 	sr = srunner_create(s);

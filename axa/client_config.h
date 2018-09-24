@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) client config parsing
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -54,7 +54,10 @@ void axa_unload_client_config(void);
  *  Load client config.
  *
  *  \param[out] emsg error message if something went wrong
- *  \param[in] config_file0 canonical name of config file
+ *  \param[in] config_file0 pointer to canonical name of config file or NULL
+ *  to let the function try to find a suitable file. Because the config file
+ *  may contain sensitive information such as apikeys, for the function to
+ *  succeed, the file must not have permissions set for group/other.
  *
  *  \retval true if file was successfully opened and parsed
  *  \retval false if there was an error, emsg will contain the reason

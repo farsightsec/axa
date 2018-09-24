@@ -14,6 +14,12 @@ Additional
 turn on more messages.
 .It Fl E Ar ciphers
 specifies the TLS encryption ciphers to use with TLS connections.
+.It Fl n Ar config
+overrides the default location of the
+.Pa config
+file that contains AXA client configuration data. Details are below.
+The default is
+.Pa ~/.axa/config .
 .It Fl F Ar fields
 overrides the default location of the
 .Pa fields

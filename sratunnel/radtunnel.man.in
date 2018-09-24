@@ -20,7 +20,7 @@
 .Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhOtVz
+.Op Fl dhOptVz
 .Fl a Ar anomaly
 .Fl o Ar out-addr
 .Fl s Ar RAD-server
@@ -81,6 +81,8 @@ the RAD server will send.
 specify location for AXA client configuration file.
 .It Fl O
 enable a spinning bar output indicator on stdout.
+.It Fl p
+append output to specified file (only valid for nmsg file-based outputs).
 .It Fl o Ar out-addr
 specifies the destination of the SIE data.
 It can be forwarded as NMSG messages to a UDP or TCP port
@@ -166,7 +168,7 @@ The following connects to a RAD server at example.com, loads the Brand Sentry
 module looking for the brand "farsight", and sends all anomaly hit NMSGs to
 the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
-radtunnel -s apikey:<yourapikey>@example.com,1024 -o nmsg:127.1,8000 \\
+radtunnel -s apikey:<yourapikey>@example.com,1012 -o nmsg:127.1,8000 \\
 	-w dns=*. -a brand_sentry brand=farsight
 .Ed
 .Sh FILES
@@ -176,13 +178,13 @@ is the directory set with
 .Fl S
 that contains TLS certificate and key files.
 .It Ar ~/.axa/config
-contains AXA client configuration data. Currently supported are connection
+is a required file that contains AXA client configuration data. Currently supported are connection
 aliases that provide the user with a facility to create shortcut mnemonics to
 specify the RAD server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # RAD
-alias:rad-apikey=apikey:<yourapikey>@example.com,1024
+alias:rad-apikey=apikey:<yourapikey>@example.com,1012
 
 .Ed
 If the user wanted to connect to RAD, she would only have to remember
@@ -193,7 +195,11 @@ $ radtunnel -s rad-apikey ...
 .Pp
 This config file is shared for
 .Nm ,
-sratunnel, sratool, and sratunnel.
+sratunnel, radtool, and sratool. Because this file can contain sensitive
+information such as apikeys, it must not be readable or writeable to anybody
+other than "owner" or
+.Nm radtunnel
+will not load.
 .It Ar config
 is the
 .Xr ssh_config 5

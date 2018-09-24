@@ -14,13 +14,13 @@ START_TEST(test_apikey_parse)
 	axa_emsg_t emsg;
 	char *addr;
 	axa_p_user_t u;
-	const char *spec = "08459ef5-1417-448a-bc93-d61917d32f52@axa.dev.fsi.io,1023";
+	const char *spec = "08459ef5-1417-448a-bc93-d61917d32f52@axa.dev.fsi.io,1011";
 
 	addr = NULL;
 	res = axa_apikey_parse(&emsg, &addr, &u, spec);
 
 	ck_assert_int_eq(res, true);
-	ck_assert_str_eq(addr, "axa.dev.fsi.io,1023");
+	ck_assert_str_eq(addr, "axa.dev.fsi.io,1011");
 	ck_assert_str_eq(u.name, "08459ef5-1417-448a-bc93-d61917d32f52");
 }
 END_TEST

@@ -1,7 +1,7 @@
 /*
  * Open an output nmsg stream for output or forwarding by sratunnel or sratool.
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,6 +24,9 @@
 #include <string.h>
 #include <unistd.h>
 
+bool axa_nmsg_out_json = false;		/* true == emit nmsgs as jsonl blobs */
+bool axa_out_file_append = false;	/* true == append to output file */
+
 
 /*
  * Parse
@@ -41,7 +44,7 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 	const char *addr;
 	axa_socku_t su;
 	struct addrinfo *ai;
-	bool isfile;
+	bool isfile, json = false;
 	int s;
 
 	if (AXA_CLITCMP(addr0, "tcp:")) {
@@ -55,6 +58,11 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 	} else if (AXA_CLITCMP(addr0, "file:")) {
 		addr = strchr(addr0, ':')+1;
 		isfile = true;
+	} else if (AXA_CLITCMP(addr0, "file_json:")) {
+		addr = strchr(addr0, ':')+1;
+		isfile = true;
+		json = true;
+		axa_nmsg_out_json = true;
 	} else {
 		addr = addr0;
 		*out_sock_type = SOCK_DGRAM;
@@ -67,7 +75,9 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 	}
 
 	if (isfile) {
-		s = open(addr, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+		s = open(addr, axa_out_file_append ?
+				O_WRONLY | O_CREAT | O_APPEND :
+				O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if (s < 0) {
 			axa_pemsg(emsg, "open(%s): %s", addr, strerror(errno));
 			return (0);
@@ -110,7 +120,10 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 			return (0);
 		}
 	} else {
-		*out_nmsg_output = nmsg_output_open_file(s, NMSG_WBUFSZ_MAX);
+		if (json)
+			*out_nmsg_output = nmsg_output_open_json(s);
+		else
+			*out_nmsg_output = nmsg_output_open_file(s, NMSG_WBUFSZ_MAX);
 		if (out_nmsg_output == NULL) {
 			axa_pemsg(emsg, "nmsg_output_open_file(%s) failed",
 				  addr);

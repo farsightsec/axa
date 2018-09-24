@@ -121,10 +121,10 @@ Your Farsight Security account manager will provide you with an alphanumeric api
 
 The AXA apikey transport listens at the following URIs:
 
- * **SRA**: `apikey:<your_apikey_here>@axa.sie-remote.net,1023`
- * **RAD**: `apikey:<your_apikey_here>@axa.sie-remote.net,1024`
+ * **SRA**: `apikey:<your_apikey_here>@axa.sie-remote.net,1011`
+ * **RAD**: `apikey:<your_apikey_here>@axa.sie-remote.net,1012`
 
-SRA listens on `TCP/1023` and RAD listens on `TCP/1024` and both transit standard TLS data.
+SRA listens on `TCP/1011` and RAD listens on `TCP/1012` and both transit standard TLS data.
 
 You can connect as per the following:
 
@@ -132,7 +132,7 @@ You can connect as per the following:
 
   ~~~
   $ sratool
-  sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1023
+  sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1011
   * HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
   * Using AXA protocol 2
   * OK USER johndoe authorized
@@ -143,7 +143,7 @@ You can connect as per the following:
 
   ~~~
   $ radtool
-  rad> connect apikey:<your_apikey_here>@axa.sie-remote.net,1024
+  rad> connect apikey:<your_apikey_here>@axa.sie-remote.net,1012
   * HELLO radd v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
   * Using AXA protocol 2
   * OK USER johndoe authorized
@@ -153,14 +153,14 @@ You can connect as per the following:
 **Connecting via sratunnel**
 
   ~~~
-  $ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1023 ...
+  $ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1011 ...
   ...
   ~~~
 
 **Connecting via radtunnel**
 
   ~~~
-  $ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1024 ...
+  $ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1012 ...
   ...
   ~~~
 
@@ -316,8 +316,9 @@ You can connect as per the following:
    ~~~
 
 #### AXA Config File Connection Aliases
-AXA supports a subscriber-side configuration file used as a convenience to
-specify session defaults. By default AXA will look for it `~/.axa/config`. Currently it is used to store "connection aliases" that provide a facility to create shortcut mnemonics to specify the AXA server connection string. This is especially useful for long connection strings associated with the apikey transport. It can also be used for the other transports.
+AXA now requires a subscriber-side configuration file used as a convenience to
+specify session defaults. By default AXA will look for it `~/.axa/config`. Currently it is used to store "connection aliases" that provide a facility to create shortcut mnemonics to specify the AXA server connection string. This is especially useful for long connection strings associated with the apikey transport. It can also be used for the other transports. As it can contain
+sensitive information, the file must be readable/writable only by "owner" or AXA-based tools will refuse to load.
 
 For example:
 
@@ -326,14 +327,16 @@ $ cat >> ~/.axa/config < EOF
 # Aliases are of the form alias:<name>=<connection URI>
 
 # SRA apikey
-alias:sra-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1023
+alias:sra-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1011
 # RAD apikey
-alias:rad-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1024
+alias:rad-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1012
 # SRA TLS
 alias:sra-tls=tls:<your_username>@axa.sie-remote.net,1021
 # RAD TLS
 alias:rad-tls=tls:<your_username>@axa.sie-remote.net,1022
 EOF
+
+$ chmod 600 ~/.axa/config
 ~~~
 
 After creating the above aliases, you can replace the server connection URI with your shortcut name as per the following:

@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,6 +22,10 @@
 extern uint axa_debug;
 extern nmsg_input_t nmsg_input;
 extern const char *out_addr;
+
+/* extern: axalib/open_nmsg_out.c */
+extern bool axa_nmsg_out_json;
+extern bool axa_out_file_append;
 
 /* global */
 nmsg_output_t out_nmsg_output;		/* NSMG output object */
@@ -99,7 +103,7 @@ out_flush(void)
 		}
 	}
 
-	if (out_nmsg_output != NULL) {
+	if (out_nmsg_output != NULL && !axa_nmsg_out_json) {
 		res = nmsg_output_flush(out_nmsg_output);
 		if (res != nmsg_res_success
 		    &&  (out_sock_type != SOCK_DGRAM

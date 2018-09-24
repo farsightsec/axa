@@ -1,8 +1,8 @@
 AC_PREREQ(2.60)
 
 m4_define(axa_major_version, 2)
-m4_define(axa_minor_version, 0)
-m4_define(axa_patchlevel_version, 1)
+m4_define(axa_minor_version, 1)
+m4_define(axa_patchlevel_version, 0)
 m4_define(axa_version,
           axa_major_version.axa_minor_version.axa_patchlevel_version)
 
@@ -161,6 +161,12 @@ AC_CONFIG_FILES([cert_tools/axa_server_cert],
 
 AC_CONFIG_FILES([tests/test-tools-without-server.sh],
 		[chmod +x tests/test-tools-without-server.sh])
+
+AC_CONFIG_FILES([tests/test-config],
+		[chmod 600 tests/test-config])
+
+AC_CONFIG_FILES([tests/test-config-badperms],
+		[chmod 640 tests/test-config-badperms])
 
 AC_OUTPUT
 AC_MSG_RESULT([

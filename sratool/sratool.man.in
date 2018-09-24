@@ -23,6 +23,7 @@
 .Sh SYNOPSIS
 .Op Fl dhNV
 .Op Fl c Ar cfile
+.Op Fl n Ar config
 .Op Fl E Ar ciphers
 .Op Fl F Ar fields
 .Op Fl S Ar certs
@@ -125,7 +126,7 @@ The "dns=*." watch or pattern was matched by the "nflxso.net"
 domain in DNS NS rdata.
 .Bd -literal -offset 4n
 $ sratool 
-sra> connect apikey:<yourapikey>@axa.sie-remote.net,1023
+sra> connect apikey:<yourapikey>@axa.sie-remote.net,1011
 * HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
 * Using AXA protocol 2
 * OK USER mschiffm authorized
@@ -147,13 +148,13 @@ is the directory set with
 .Fl S
 that contains TLS certificate and key files.
 .It Ar ~/.axa/config
-contains AXA client configuration data. Currently supported are connection
+is a required file that contains AXA client configuration data. Currently supported are connection
 aliases that provide the user with a facility to create shortcut mnemonics to
 specify the SRA server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # SRA
-alias:sra-apikey=apikey:<elided>@axa.sie-remote.net,1023
+alias:sra-apikey=apikey:<elided>@axa.sie-remote.net,1011
 
 .Ed
 
@@ -166,7 +167,11 @@ sra> connect sra-apikey
 .Pp
 This config file is shared for
 .Nm ,
-radtool, sratunnel, and radtunnel.
+radtool, sratunnel, and radtunnel. Because this file can contain sensitive
+information such as apikeys, it must not be readable or writeable to anybody
+other than "owner" or
+.Nm sratool
+will not load.
 .It Ar ~/.ssh/config
 is the
 .Xr ssh_config 5

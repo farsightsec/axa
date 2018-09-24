@@ -212,8 +212,8 @@ main(int argc, char **argv)
 
 	axa_load_fields(fields_file);
 	if (!axa_load_client_config(&emsg, config_file)) {
-		if (axa_debug != 0)
-			error_msg("%s", emsg.c);
+			axa_error_msg("can't load config file: %s", emsg.c);
+			exit(EXIT_FAILURE);
 	}
 
 	/* Answer commands from the control file. */
