@@ -70,10 +70,16 @@ void print_status(void);
 static void
 lmdb_shutdown(void)
 {
-	/* try to commit any outstanding data before closing the db */
-	(void) mdb_txn_commit(mdb_txn);
-	(void) mdb_dbi_close(mdb_env, mdb_dbi);
-	(void) mdb_env_close(mdb_env);
+	int rc;
+
+	/* try to commit any outstanding data before closing the env */
+	rc = mdb_txn_commit(mdb_txn);
+	if (rc != 0)
+		fprintf(stderr, "lmdb_shutdown() couldn't perform final commit: mdb_txn_commit(): %s\n",
+				mdb_strerror(rc));
+
+	mdb_dbi_close(mdb_env, mdb_dbi);
+	mdb_env_close(mdb_env);
 }
 
 static void AXA_NORETURN AXA_PF(1,2)
