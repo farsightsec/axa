@@ -4,6 +4,7 @@ axa (2.1.0-1) debian-fsi; urgency=medium
   * Update documentation to reflect apikey and port number changes
   * Add nmsg json support to sratunnel/radtunnel
   * Add and amend tests for config file permissions
+  * Update nmsg-msg8-module-sie dependency to nmsg-msg9-module-sie
 
  -- Farsight Security, Inc. <software@farsightsecurity.com>  Fri, 21 Sep 2018 15:29:07 -0400
 
