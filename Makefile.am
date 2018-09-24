@@ -247,6 +247,11 @@ sratunnel_radtunnel_SOURCES = ${sratunnel_sratunnel_SOURCES}
 sratunnel_radtunnel_LDADD = ${sratunnel_sratunnel_LDADD}
 sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
 
+bin_PROGRAMS += tools/axa_tsindextool
+tools_axa_tsindextool_SOURCES = tools/axa_tsindextool.c
+tools_axa_tsindextool_LDADD = axa/libaxa.la
+tools_axa_tsindextool_CFLAGS = ${AM_CFLAGS}
+
 #
 ##
 ### scripts
