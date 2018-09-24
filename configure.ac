@@ -150,15 +150,15 @@ AC_CONFIG_FILES([Makefile axa/libaxa.pc axa/version.h])
 
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
 		sratunnel/sratunnel.man sratunnel/radtunnel.man
-                cert_tools/axa_link_certs.man cert_tools/axa_make_cert.man
-		cert_tools/axa_server_cert.man])
+                tools/axa_link_certs.man tools/axa_make_cert.man
+		tools/axa_server_cert.man])
 
-AC_CONFIG_FILES([cert_tools/axa_link_certs],
-		[chmod +x cert_tools/axa_link_certs])
-AC_CONFIG_FILES([cert_tools/axa_make_cert],
-		[chmod +x cert_tools/axa_make_cert])
-AC_CONFIG_FILES([cert_tools/axa_server_cert],
-		[chmod +x cert_tools/axa_server_cert])
+AC_CONFIG_FILES([tools/axa_link_certs],
+		[chmod +x tools/axa_link_certs])
+AC_CONFIG_FILES([tools/axa_make_cert],
+		[chmod +x tools/axa_make_cert])
+AC_CONFIG_FILES([tools/axa_server_cert],
+		[chmod +x tools/axa_server_cert])
 
 AC_CONFIG_FILES([tests/test-tools-without-server.sh],
 		[chmod +x tests/test-tools-without-server.sh])

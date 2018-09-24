@@ -63,9 +63,9 @@ man_MANS =  \
 	sratool/radtool.1 \
 	sratunnel/sratunnel.1 \
 	sratunnel/radtunnel.1 \
-	cert_tools/axa_link_certs.8 \
-	cert_tools/axa_make_cert.8 \
-	cert_tools/axa_server_cert.8
+	tools/axa_link_certs.8 \
+	tools/axa_make_cert.8 \
+	tools/axa_server_cert.8
 DISTCLEANFILES += $(man_MANS)
 
 #
@@ -247,6 +247,11 @@ sratunnel_radtunnel_SOURCES = ${sratunnel_sratunnel_SOURCES}
 sratunnel_radtunnel_LDADD = ${sratunnel_sratunnel_LDADD}
 sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
 
+bin_PROGRAMS += tools/axa_tsindextool
+tools_axa_tsindextool_SOURCES = tools/axa_tsindextool.c
+tools_axa_tsindextool_LDADD = axa/libaxa.la
+tools_axa_tsindextool_CFLAGS = ${AM_CFLAGS}
+
 #
 ##
 ### scripts
@@ -254,9 +259,9 @@ sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
 #
 
 bin_SCRIPTS = \
-	cert_tools/axa_link_certs \
-	cert_tools/axa_make_cert \
-	cert_tools/axa_server_cert
+	tools/axa_link_certs \
+	tools/axa_make_cert \
+	tools/axa_server_cert
 
 #
 ##
