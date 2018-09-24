@@ -63,9 +63,9 @@ man_MANS =  \
 	sratool/radtool.1 \
 	sratunnel/sratunnel.1 \
 	sratunnel/radtunnel.1 \
-	cert_tools/axa_link_certs.8 \
-	cert_tools/axa_make_cert.8 \
-	cert_tools/axa_server_cert.8
+	tools/axa_link_certs.8 \
+	tools/axa_make_cert.8 \
+	tools/axa_server_cert.8
 DISTCLEANFILES += $(man_MANS)
 
 #
@@ -254,9 +254,9 @@ sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
 #
 
 bin_SCRIPTS = \
-	cert_tools/axa_link_certs \
-	cert_tools/axa_make_cert \
-	cert_tools/axa_server_cert
+	tools/axa_link_certs \
+	tools/axa_make_cert \
+	tools/axa_server_cert
 
 #
 ##
