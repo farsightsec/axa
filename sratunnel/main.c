@@ -390,6 +390,7 @@ main(int argc, char **argv)
 
 	if (output_tsindex_write_interval > 0) {
 		int rc = 0, pagesize = 0;
+		bool idx_exists = false;
 
 		/* Timestamp indexing requires unbuffered filesystem writes. */
 		if (output_buffering == true) {
@@ -401,33 +402,46 @@ main(int argc, char **argv)
 				sizeof (lmdb_filename));
 		strlcpy(lmdb_filename + n, ".mdb", sizeof (lmdb_filename) - n);
 
+		/* Try to find a tsindex file that would correspond to the
+		 * name of the data file.
+		 */
+		rc = access(lmdb_filename, F_OK);
+		if (rc == 0)
+			idx_exists = true;
+		else if (rc == -1 && errno != ENOENT) {
+			axa_error_msg("can't access: \"%s\": %s\n",
+					lmdb_filename, strerror(errno));
+			exit(EX_SOFTWARE);
+		}
+
 		/* Timestamp indexing + appending requires a previously created
-		 * index file (which should correspond to the output file being
-		 * appended to -- the only way we can try to enforce that is
-		 * by checking the output filename).
+		 * tsindex file (which should correspond in name to the output
+		 * file being appended to).
 		 */
 		if (axa_out_file_append == true) {
-			if (access(lmdb_filename, F_OK) == -1) {
+			if (idx_exists == true && axa_debug > 0)
+				axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
+			else {
 				axa_error_msg("tsindex mode expected to find tsindex file \"%s\": %s\n",
-						lmdb_filename, strerror(errno));
+					lmdb_filename, strerror(errno));
 				exit(EX_SOFTWARE);
 			}
-			else if (axa_debug > 0)
-				axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
 		}
 		else {
-			/* An orphaned mdb file is clobbered lest we write to
-			 * it and end up mixing with timestamps and offsets
+			/* This orphaned tsindex file is clobbered lest we write
+			 * to it and end up mixing with timestamps and offsets
 			 * from a previous unrelated session.
 			 */
-			if (unlink(lmdb_filename) == -1) {
-				axa_error_msg("found orphan tsindex file \"%s\" but can't delete it: %s\n",
-						lmdb_filename, strerror(errno));
-				exit(EX_SOFTWARE);
+			if (idx_exists) {
+				if (unlink(lmdb_filename) == -1) {
+					axa_error_msg("found orphan tsindex file \"%s\" but can't delete it: %s\n",
+							lmdb_filename, strerror(errno));
+					exit(EX_SOFTWARE);
+				}
+				else if (axa_debug > 0)
+					axa_trace_msg("found and deleted orphan tsindex file \"%s\"\n",
+							lmdb_filename);
 			}
-			else if (axa_debug > 0)
-				axa_trace_msg("found and deleted orphan tsindex file \"%s\"\n",
-						lmdb_filename);
 		}
 
 		rc = mdb_env_create(&mdb_env);
