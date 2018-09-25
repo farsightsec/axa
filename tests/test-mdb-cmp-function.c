@@ -35,7 +35,7 @@ struct _data {
 	{2, 0, 4},
 	{2, 1, 5},
 	{2, 2, 6},
-	{3, 0, 7},
+	{3, 3, 7},
 	{4, 0, 8}
 };
 
@@ -45,7 +45,7 @@ int main() {
 	int pagesize = getpagesize();
 	A(mdb_env_set_mapsize(mdb_env, pagesize * 2560));
 
-	strlcpy(fn, "/tmp/jeff/mdbtXXXXXX", 128);
+	strlcpy(fn, "/tmp/mdbtXXXXXX", 128);
 	int fd = mkstemp(fn);
 	close(fd);
 
@@ -67,8 +67,6 @@ int main() {
                 int rc = mdb_put(mdb_txn, mdb_dbi, &mkey, &mdata, MDB_NOOVERWRITE);
 		if (VERBOSE) { fprintf(stderr, "insert of (%d, %d)->%d returned %d\n", ts.tv_sec, ts.tv_nsec, data[i].o, rc); }
 		assert(MDB_KEYEXIST == rc || 0 == rc);
-		//A(mdb_txn_commit(mdb_txn));
-	        //A(mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn));
 	}
 
 	/* given the formula in output.c: only store epochs, disallow dupes,
@@ -84,13 +82,24 @@ int main() {
 	A(mdb_cursor_open(mdb_txn, mdb_dbi, &cursor));
 	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_FIRST));
 
-	AEXP(*(long*)(mdata.mv_data), 0);
+	AEXP(*(long*)(mdata.mv_data), data[0].o);
+	AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[0].s);
+	AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[0].n);
+
 	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_NEXT));
-	AEXP(*(long*)(mdata.mv_data), 4);
+	AEXP(*(long*)(mdata.mv_data), data[4].o);
+	AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[4].s);
+	AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[4].n);
+
 	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_NEXT));
-	AEXP(*(long*)(mdata.mv_data), 7);
+	AEXP(*(long*)(mdata.mv_data), data[7].o);
+	AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[7].s);
+	AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[7].n);
+
 	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_NEXT));
-	AEXP(*(long*)(mdata.mv_data), 8);
+	AEXP(*(long*)(mdata.mv_data), data[8].o);
+	AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[8].s);
+	AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[8].n);
 
 	mdb_cursor_close(cursor);
 	shutdown();
