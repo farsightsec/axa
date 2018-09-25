@@ -18,8 +18,15 @@ MDB_txn *mdb_txn;            /* timestamp index transaction handle */
 char fn[128];
 
 #define VERBOSE 1
+
+#ifdef VERBOSE
+#define D(x) fprintf x
+#else
+#define D(x)
+#endif
+
 #define A(f) do { int rc = f; if (VERBOSE) fprintf(stderr, "%s rc %d\n", #f, rc);assert(rc == 0); } while(0)
-#define AEXP(got, expected) do { fprintf(stderr, "%s got:%d expected:%d\n", #got, got, expected); assert(got == expected); } while(0)
+#define AEXP(got, expected) do { fprintf(stderr, "   %s got:%d expected:%d\n", #got, got, expected); assert(got == expected); } while(0)
 
 void shutdown();
 
@@ -27,28 +34,30 @@ struct _data {
 	time_t s;
 	long n;
 	long o;
+	char expect;
 } data[] = {
-	{1, 0, 0},
-	{1, 1, 1},
-	{1, 2, 2},
-	{1, 3, 3},
-	{2, 0, 4},
-	{2, 1, 5},
-	{2, 2, 6},
-	{3, 3, 7},
-	{4, 0, 8}
+	{1, 0, 0, 1},
+	{1, 1, 1, 0},
+	{1, 3, 2, 0},
+	{2, 2, 3, 1}, // test out of order key w/our cmp func
+	{2, 0, 4, 0},
+	{1, 2, 5, 0},
+	{2, 1, 6, 0},
+	{3, 3, 7, 1},
+	{4, 0, 8, 1},
+	{0, 0, 0, -1}
 };
 
 int main() {
-	A(mdb_env_create(&mdb_env));
-
 	int pagesize = getpagesize();
-	A(mdb_env_set_mapsize(mdb_env, pagesize * 2560));
 
 	strlcpy(fn, "/tmp/mdbtXXXXXX", 128);
 	int fd = mkstemp(fn);
 	close(fd);
+	D((stderr, "db is %s\n", fn));
 
+	A(mdb_env_create(&mdb_env));
+	A(mdb_env_set_mapsize(mdb_env, pagesize * 2560));
 	A(mdb_env_open(mdb_env, fn, MDB_NOSUBDIR, 0664));
 	A(mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn));
 	A(mdb_dbi_open(mdb_txn, NULL, MDB_INTEGERKEY, &mdb_dbi));
@@ -56,7 +65,7 @@ int main() {
 
 	MDB_val mkey, mdata;
 
-	for(int i = 0 ; i < 9 ; i++) {
+	for(int i = 0 ; data[i].expect != -1 ; i++) {
 		struct timespec ts;
 		ts.tv_sec = data[i].s;
 		ts.tv_nsec = data[i].n;
@@ -65,14 +74,14 @@ int main() {
 		mdata.mv_size = sizeof(long);
 		mdata.mv_data = &data[i].o;
                 int rc = mdb_put(mdb_txn, mdb_dbi, &mkey, &mdata, MDB_NOOVERWRITE);
-		if (VERBOSE) { fprintf(stderr, "insert of (%d, %d)->%d returned %d\n", ts.tv_sec, ts.tv_nsec, data[i].o, rc); }
+		D((stderr, "insert of (%d, %d)->%d returned %d\n", ts.tv_sec, ts.tv_nsec, data[i].o, rc));
 		assert(MDB_KEYEXIST == rc || 0 == rc);
 	}
 
 	/* given the formula in output.c: only store epochs, disallow dupes,
 	 * the following can be asserted of the test data:
 	 * 1. only four entries will be stored
-	 * 2. offsets will be 0, 4, 7, and 8
+	 * 2. offsets will be 0, 6, 7, and 8 (expect == 1)
 	 */
 	MDB_stat stat;
 	A(mdb_stat(mdb_txn, mdb_dbi, &stat));
@@ -82,24 +91,16 @@ int main() {
 	A(mdb_cursor_open(mdb_txn, mdb_dbi, &cursor));
 	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_FIRST));
 
-	AEXP(*(long*)(mdata.mv_data), data[0].o);
-	AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[0].s);
-	AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[0].n);
-
-	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_NEXT));
-	AEXP(*(long*)(mdata.mv_data), data[4].o);
-	AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[4].s);
-	AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[4].n);
-
-	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_NEXT));
-	AEXP(*(long*)(mdata.mv_data), data[7].o);
-	AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[7].s);
-	AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[7].n);
-
-	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_NEXT));
-	AEXP(*(long*)(mdata.mv_data), data[8].o);
-	AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[8].s);
-	AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[8].n);
+	for(int i = 0 ; data[i].expect != -1 ; i++) {
+		D((stderr, "%s (%d, %d) -> %d\n", data[i].expect?"expect":"dontexpect", 
+					data[i].s, data[i].n, data[i].o));
+		if (data[i].expect == 1) {
+			if (i) A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_NEXT));
+			AEXP(((struct timespec *)(mkey.mv_data))->tv_sec, data[i].s);
+			AEXP(((struct timespec *)(mkey.mv_data))->tv_nsec, data[i].n);
+			AEXP(*(long*)(mdata.mv_data), data[i].o);
+		}
+	}
 
 	mdb_cursor_close(cursor);
 	shutdown();
@@ -110,7 +111,7 @@ void shutdown() {
 	mdb_txn_commit(mdb_txn);
 	mdb_dbi_close(mdb_env, mdb_dbi);
 	mdb_env_close(mdb_env);
-	A(unlink(fn));
+	//A(unlink(fn));
 }
 
 
