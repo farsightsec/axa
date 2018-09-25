@@ -534,7 +534,8 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 			 * of being able to quickly locate the first instance
 			 * of a key, not the last.
 			 */
-			rc = mdb_put(mdb_txn, mdb_dbi, &key, &data, MDB_NODUPDATA);
+			rc = mdb_put(mdb_txn, mdb_dbi, &key, &data,
+					MDB_NOOVERWRITE);
 			if (rc != MDB_KEYEXIST && rc != 0) {
 				out_error("cannot write timestamp index: %s\n",
 						mdb_strerror(rc));
