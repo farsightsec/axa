@@ -22,6 +22,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <nmsg.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <lmdb.h>
 #include <axa/mdb.h>
@@ -31,33 +35,57 @@ usage(const char *name)
 {
 	printf("AXA Timestamp Index Tool (tsindextool)\n");
 	printf("(c) 2018 Farsight Security, Inc.\n");
-	printf("Sample usage: %s -f foo.mdb -t 1537806295\n\n", name);
+	printf("Sample usage: %s -f foo.nmsg.mdb -r foo.nmsg -t 1537806295 -c 10\n\n", name);
 
-	printf("-f file\t\tspecify mdb file (required)\n");
-	printf("-t timestamp\t\ttimestamp of starting nmsg\n");
-	printf("-h\t\t\thelp\n");
+	printf("-f file\t\tspecify mdb file\n");
+	printf("-j file\t\tspecify json nmsg file\n");
+	printf("-r file\t\tspecify binary nmsg\n");
+	printf("-s timestamp\ttimestamp of starting nmsg\n");
+	printf("-e timestamp\ttimestamp of ending nmsg\n");
+	printf("-c n\t\tnumber of nmsgs to extract\n");
+	printf("-h\t\thelp\n");
 }
 
 int
 main(int argc, char *argv[])
 {
-	int c, rc;
-	uint32_t epoch = 0;
+	int c, rc, fd;
+	uint32_t ts_start = 0, ts_end = 0, count = 0;
 	MDB_env *env;
 	MDB_txn *txn;
 	MDB_dbi dbi;
 	MDB_val key, data;
 	struct timespec ts;
 	off_t *offset;
-	const char *lmdb_filename = NULL;
+	nmsg_input_t nmsg;
+	nmsg_res res;
+	nmsg_message_t msg;
+	char *json;
+	bool input_json = false, input_nmsg = false;
+	const char *lmdb_filename, *nmsg_filename;
 
-	while ((c = getopt(argc, argv, "f:t:h")) != EOF) {
+	lmdb_filename = nmsg_filename = NULL;
+	while ((c = getopt(argc, argv, "c:e:f:j:r:s:h")) != EOF) {
 		switch (c) {
-			case 't':
-				epoch = atoi(optarg);
+			case 'c':
+				count = atoi(optarg);
+				break;
+			case 'e':
+				ts_end = atoi(optarg);
 				break;
 			case 'f':
 				lmdb_filename = optarg;
+				break;
+			case 'j':
+				nmsg_filename = optarg;
+				input_json = true;
+				break;
+			case 'r':
+				nmsg_filename = optarg;
+				input_nmsg = true;
+				break;
+			case 's':
+				ts_start = atoi(optarg);
 				break;
 			case 'h':
 			default:
@@ -66,9 +94,51 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (epoch == 0 || lmdb_filename == NULL) {
+	if (ts_start == 0 || lmdb_filename == NULL ||
+			(input_json == false && input_nmsg == false)) {
 		usage(argv[0]);
 		return (EXIT_FAILURE);
+	}
+
+	if ((ts_end == 0 && count == 0) || (ts_end != 0 && count != 0)) {
+		usage(argv[0]);
+		return (EXIT_FAILURE);
+	}
+
+	if (input_json && input_nmsg) {
+		fprintf(stderr, "only -r or -j may be specified, not both\n");
+		return (EXIT_FAILURE);
+	}
+
+	res = nmsg_init();
+	if (res != nmsg_res_success) {
+		fprintf(stderr, "error initializing NMSG library: %s\n",
+				nmsg_res_lookup(res));
+		return (EXIT_FAILURE);
+	}
+
+	fd = open(nmsg_filename, O_RDONLY);
+	if (fd < 0) {
+		fprintf(stderr, "can't open nmsg input file \"%s\": %s\n",
+				nmsg_filename, strerror(errno));
+		return (EXIT_FAILURE);
+	}
+
+	if (input_json) {
+		nmsg = nmsg_input_open_json(fd);
+		if (nmsg == NULL) {
+			fprintf(stderr, "nmsg_input_open_json() failed\n");
+			close(fd);
+			return (EXIT_FAILURE);
+		}
+	}
+	else if (input_nmsg) {
+		nmsg = nmsg_input_open_file(fd);
+		if (nmsg == NULL) {
+			fprintf(stderr, "nmsg_input_open_file() failed\n");
+			close(fd);
+			return (EXIT_FAILURE);
+		}
 	}
 
 	rc = mdb_env_create(&env);
@@ -103,7 +173,7 @@ main(int argc, char *argv[])
 		return (EXIT_FAILURE);
 	}
 
-	ts.tv_sec = epoch;
+	ts.tv_sec = ts_start;
 	ts.tv_nsec = 0;
 
 	key.mv_size = sizeof (ts);
@@ -111,11 +181,34 @@ main(int argc, char *argv[])
 
 	rc = mdb_get(txn, dbi, &key, &data);
 	if (rc) {
-		fprintf(stderr, "mdb_get failed, error %d %s\n", rc, mdb_strerror(rc));
+		fprintf(stderr, "mdb_get(): %s\n", mdb_strerror(rc));
 		return (EXIT_FAILURE);
 	}
 
 	offset = (off_t *)data.mv_data;
-	fprintf(stderr, "offset of %u: %lx\n", epoch, (*offset));
+	fprintf(stderr, "found offset for %u: %lx\n", ts_start, (*offset));
+
+	if (lseek(fd, *offset, SEEK_SET) == sizeof (off_t) - 1) {
+		fprintf(stderr, "lseek(): %s\n", strerror(errno));
+		return (EXIT_FAILURE);
+	}
+
+	while (1) {
+		if (count-- <= 0)
+			break;
+		res = nmsg_input_read(nmsg, &msg);
+		if (res != nmsg_res_success) {
+			fprintf(stderr, "nmsg_input_read(): %s\n", nmsg_res_lookup(res));
+			return (EXIT_FAILURE);
+		}
+		res = nmsg_message_to_json(msg, &json);
+		if (res != nmsg_res_success) {
+			fprintf(stderr, "nmsg_message_to_pres(): %s\n", nmsg_res_lookup(res));
+			return (EXIT_FAILURE);
+		}
+		printf("%s\n", json);
+		free(json);
+	}
+
 	return (EXIT_SUCCESS);
 }
