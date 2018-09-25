@@ -29,8 +29,6 @@ char fn[128];
 #define A(f) do { int rc = f; if (VERBOSE) fprintf(stderr, "%s rc %d\n", #f, rc);assert(rc == 0); } while(0)
 #define AEXP(got, expected) do { if (VERBOSE) fprintf(stderr, "   %s got:%d expected:%d\n", #got, got, expected); assert(got == expected); } while(0)
 
-void shutdown();
-
 struct _data {
 	time_t s;
 	long n;
