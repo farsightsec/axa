@@ -18,6 +18,7 @@ MDB_txn *mdb_txn;            /* timestamp index transaction handle */
 char fn[128];
 
 #define VERBOSE 1
+#define CLEAN_UP_DBFILE_AT_EXIT 1
 
 #ifdef VERBOSE
 #define D(x) fprintf x
@@ -26,7 +27,7 @@ char fn[128];
 #endif
 
 #define A(f) do { int rc = f; if (VERBOSE) fprintf(stderr, "%s rc %d\n", #f, rc);assert(rc == 0); } while(0)
-#define AEXP(got, expected) do { fprintf(stderr, "   %s got:%d expected:%d\n", #got, got, expected); assert(got == expected); } while(0)
+#define AEXP(got, expected) do { if (VERBOSE) fprintf(stderr, "   %s got:%d expected:%d\n", #got, got, expected); assert(got == expected); } while(0)
 
 void shutdown();
 
@@ -103,15 +104,15 @@ int main() {
 	}
 
 	mdb_cursor_close(cursor);
-	shutdown();
-	exit(0);
-}
-
-void shutdown() {
 	mdb_txn_commit(mdb_txn);
 	mdb_dbi_close(mdb_env, mdb_dbi);
 	mdb_env_close(mdb_env);
-	//A(unlink(fn));
+#ifdef CLEAN_UP_DBFILE_AT_EXIT 
+	A(unlink(fn));
+#endif	
+	D((stderr, "test succeeded.\n"));
+	exit(0);
 }
+
 
 
