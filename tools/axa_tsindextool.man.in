@@ -17,7 +17,7 @@
 .Os " "
 .Sh NAME
 .Nm axa_tsindextool
-.Nd Extract nmsgs from a previously created timestamp index (tsindex) file 
+.Nd Extract nmsgs from a previously created nmsg file / timestamp index (tsindex) file pair
 .Sh SYNOPSIS
 .Nm
 .Op Fl c Ar count
