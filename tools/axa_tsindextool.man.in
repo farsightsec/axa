@@ -1,0 +1,140 @@
+.\" Copyright (c) 2018 by Farsight Security, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"  http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.Dd current-date via make
+.Dt axa_tsindextool 8 AXA
+.Os " "
+.Sh NAME
+.Nm axa_tsindextool
+.Nd Extract nmsgs from a previously created timestamp index (tsindex) file 
+.Sh SYNOPSIS
+.Nm
+.Op Fl c Ar count
+.Op Fl e Ar timestamp
+.Op Fl f Ar file
+.Op Fl h
+.Op Fl j Ar file
+.Op Fl r Ar file
+.Op Fl s Ar timestamp
+.Op Fl v
+.Op Fl x
+.Sh DESCRIPTION
+.Nm axa_tsindextool
+looks for a given epoch timestamp/file offset in the tsindex file
+.Pa foo.mdb ,
+and extracts from the corresponding nmsg file
+.Pa foo.nmsg
+either a specified number of nmsgs (via
+.Fl c )
+or until it hits an ending timestamp (via
+.Fl e ) 
+or the end of file is reached. It writes extracted nmsgs to a new file
+.Pa foo-tsindex.pid.nmsg
+(which will be the same format as the input nmsg file -- json or binary).
+.Nm
+supports either binary nmsg input files (via
+.Fl r )
+or json nmsg input files (via
+.Fl j ) .
+Only one input file specifier may be used (
+.Fl r )
+or (
+.Fl j )
+and only one ending specifier may be used
+.Fl c )
+or (
+.Fl e ) .
+If the
+.Fl x
+option is specified,
+.Nm
+will look for an exact match for the starting timestamp and exit on error if it
+cannot find it. Without this option,
+.Nm
+will still prefer an exact match, but if
+unavailable, it will return the offset of the next larger timestamp (if
+available).
+
+To generate a tsindex file, sratunnel or radtunnel must be run using the
+.Fl i
+option.
+.Ss OPTIONS
+.Bl -tag -width 3n
+.It Fl c Ar count
+extract
+.Ar count
+nmsgs from the input file (or EOF).
+.It Fl e Ar timestamp
+extract nmsgs until an nmsg with
+.Ar timestamp
+is found (or EOF).
+.It Fl f Ar file
+specify the tsindex file. This file is created by either sratunnel or radtunnel
+with the
+.Fl i
+option.
+.It Fl h
+display options summary.
+.It Fl j Ar file
+specify a json nmsg input file. This file should have been generated at the
+same time as the tsindex file specified via
+.Fl f .
+.It Fl r Ar file
+specify a binary nmsg input file. This file should have been generated at the
+same time as the tsindex file specified via
+.Fl f .
+.It Fl s Ar timestamp
+specify the starting timestamp. This value should be an epoch timestamp value
+of the first nmsg you wish to extract, i.e. "1537989435". Nmsg nanosecond
+resolution timestamps not yet supported.
+.It Fl v
+increment verbosity. Specify more v's to be more verbose.
+.It Fl x
+specify exact match mode. In this mode, the timestamp specified via
+.Fl s
+must have an exact match in the tsindex file or an error is returned. If this
+mode is not specified,
+.Nm
+will return the offset of the next larger timestamp if available.
+.El
+.Sh EXAMPLES
+The following uses sratunnel to create a tsindex file and a json nmsg file,
+then nmsgtool and jq to extract the first 10 unique epoch timestamps, then
+.Nm
+to extract two nmsgs from the middle of the file:
+.Bd -literal -offset 4n
+$ sratunnel -s sra-server -c204 -wch=204 -onmsg:file_json:foo.json -i1 -u -C 1000000
+$ nmsgtool -j foo.json -J - | jq .time | cut -f1 -d. | tr -d "\\"" | date -f - +%s | sort -u | head
+1537983067
+1537983068
+1537983069
+1537983070
+1537983071
+1537983072
+1537983073
+1537983074
+1537983075
+1537983076
+$ axa_tsindextool -s 1537983070 -f foo.json.mdb -j foo.json -c 2 -vv
+Found 1537983070 at offset 0x12b0e9c.
+{"time":"2018-09-26 17:31:10.000212788","vname":"SIE","mname":"dnsdedupe","message":{"type":"EXPIRATION","count":1,"time_first":"2018-09-26 09:39:23","time_last":"2018-09-26 09:39:23","bailiwick":"125.178.in-addr.arpa.","rrname":"166.140.125.178.in-addr.arpa.","rrclass":"IN","rrtype":"PTR","rrttl":21600,"rdata":["mm-166-140-125-178.mfilial.dynamic.pppoe.byfly.by."]}}
+{"time":"2018-09-26 17:31:10.000216899","vname":"SIE","mname":"dnsdedupe","message":{"type":"EXPIRATION","count":1,"time_first":"2018-09-26 09:39:57","time_last":"2018-09-26 09:39:57","bailiwick":"eu.","rrname":"82sfi0pl3mga2vclecbglu2iahd0ku5i.eu.","rrclass":"IN","rrtype":"RRSIG","rrttl":600,"rdata":["NSEC3 8 2 600 1538478902 1537870502 59289 eu. C1ZcCcIzXNioLqW1MLYtyNzd2rPrms4RBFND+9XwBZryIpPos3QH2YKG v0VsVPs8Loug7dhhggvj9GwSIDf52BR1AARaV74Me4CuA/pp+ZEyucqe 2Scg2Bf9k3sAhd+nth2D+y2TUI72wNyI/Z1+22DyEjifpbBZa+VShkjd w/0="]}}
+Wrote 2 nmsgs to foo.json-tsindex.28529.json.
+
+.Sh SEE ALSO
+.Xr radtunnel 1 ,
+.Xr sratunnel 1 ,
+.Xr nmsgtool 1 ,
+and
+.Xr lmdb 3 .

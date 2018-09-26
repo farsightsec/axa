@@ -65,7 +65,8 @@ man_MANS =  \
 	sratunnel/radtunnel.1 \
 	tools/axa_link_certs.8 \
 	tools/axa_make_cert.8 \
-	tools/axa_server_cert.8
+	tools/axa_server_cert.8 \
+	tools/axa_tsindextool.8
 DISTCLEANFILES += $(man_MANS)
 
 #
