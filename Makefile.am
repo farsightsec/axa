@@ -250,7 +250,7 @@ sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
 
 bin_PROGRAMS += tools/axa_tsindextool
 tools_axa_tsindextool_SOURCES = tools/axa_tsindextool.c
-tools_axa_tsindextool_LDADD = axa/libaxa.la ${libnmsg_LIBS}
+tools_axa_tsindextool_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${strlcpy_LIBS}
 tools_axa_tsindextool_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS}
 
 #
