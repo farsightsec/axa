@@ -270,29 +270,34 @@ main(int argc, char *argv[])
 			goto done;
 		}
 
-		res = nmsg_message_to_json(msg, &json);
-		if (res != nmsg_res_success) {
-			fprintf(stderr, "nmsg_message_to_pres(): %s\n", nmsg_res_lookup(res));
-			goto done;
-		}
-
 		if (is_counting == false) {
 			nmsg_message_get_time(msg, &msg_ts);
-			if (msg_ts.tv_sec >= ts_end)
+			if (msg_ts.tv_sec >= ts_end) {
+				nmsg_message_destroy(&msg);
 				break;
+			}
 		}
-
-		if (verbosity > 1)
-			printf("%s\n", json);
 
 		res = nmsg_output_write(nmsg_out, msg);
 		if (res != nmsg_res_success) {
 			fprintf(stderr, "nmsg_output_write(): %s\n", nmsg_res_lookup(res));
+			nmsg_message_destroy(&msg);
 			goto done;
 		}
-		nmsg_cnt++;
 
-		free(json);
+		if (verbosity > 1) {
+			res = nmsg_message_to_json(msg, &json);
+			if (res != nmsg_res_success) {
+				fprintf(stderr, "nmsg_message_to_pres(): %s\n", nmsg_res_lookup(res));
+				nmsg_message_destroy(&msg);
+				goto done;
+			}
+
+			printf("%s\n", json);
+			free(json);
+		}
+		nmsg_cnt++;
+		nmsg_message_destroy(&msg);
 	}
 
 	ec = EXIT_SUCCESS;
@@ -302,6 +307,12 @@ done:
 		close(fd_in);
 	if (fd_out != -1)
 		close(fd_out);
+	if (nmsg_in != NULL)
+		nmsg_input_close(&nmsg_in);
+	if (nmsg_out != NULL)
+		nmsg_output_close(&nmsg_out);
+	if (txn != NULL)
+		mdb_txn_abort(txn);
 	if (env != NULL)
 		mdb_env_close(env);
 
