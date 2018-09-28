@@ -596,6 +596,7 @@ stop(int s)
 		free(arg);
 	}
 
+	axa_unload_client_config();
 	axa_io_cleanup();
 
 	if (pidfile)
