@@ -17,6 +17,7 @@
  */
 
 #include <axa/mdb.h>
+#include <time.h>
 
 int
 axa_tsi_mdb_cmp(const MDB_val *a, const MDB_val *b)
