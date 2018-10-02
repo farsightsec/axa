@@ -247,7 +247,7 @@ main(int argc, char *argv[])
 
 	offset = (off_t *)data.mv_data;
 	if (verbosity > 0)
-		printf("Found %u at offset 0x%lx.\n", ts_start, (*offset));
+		printf("Found %u at offset 0x%"PRIu64".\n", ts_start, *offset);
 
 	if (lseek(fd_in, *offset, SEEK_SET) == sizeof (off_t) - 1) {
 		fprintf(stderr, "lseek(): %s\n", strerror(errno));
