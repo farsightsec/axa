@@ -65,6 +65,7 @@ The AXA suite has the following external dependencies:
  * [libbsd](http://libbsd.freedesktop.org/wiki/) (should already be installed on BSDish systems)
  * [libssl](http://openssl.org/) (recommended >= 1.0.2i)
  * [yajl](https://lloyd.github.io/yajl/) (be sure to use >= 2.1.0)
+ * [liblmdb](lmdb.tech)
 
 Optional dependencies:
 
