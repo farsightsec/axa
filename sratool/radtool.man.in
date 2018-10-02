@@ -154,7 +154,7 @@ information such as apikeys, it must not be readable or writeable to anybody
 other than "owner" or
 .Nm sratool
 will not load.
-.It Ar config
+.It Ar ~/.ssh/config
 is the
 .Xr ssh_config 5
 configuration file used with
