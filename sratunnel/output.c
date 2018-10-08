@@ -525,7 +525,6 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 			key.mv_data = &ts_idx;
 
 			data.mv_size = sizeof (off_t);
-			offset = offset;
 			data.mv_data = &offset;
 
 			/* Add a key/data pair. Duplicate keys (timestamps) are
