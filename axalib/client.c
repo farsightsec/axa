@@ -445,7 +445,6 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 	}
 	axa_p_to_str(emsg->c, sizeof(emsg->c), true,
 		     &hdr, (axa_p_body_t *)&client->io.user);
-	axa_io_pvers_set(&client->io, pvers_save);
 	return (AXA_CONNECT_NOP);
 }
 
