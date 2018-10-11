@@ -16,6 +16,9 @@
  *  limitations under the License.
  */
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
