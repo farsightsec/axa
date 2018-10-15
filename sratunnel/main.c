@@ -419,9 +419,10 @@ main(int argc, char **argv)
 		 * file being appended to).
 		 */
 		if (axa_out_file_append == true) {
-			if (idx_exists == true && axa_debug > 0)
-				axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
-			else {
+			if (idx_exists == true) { 
+                                if (axa_debug > 0)
+				        axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
+			} else {
 				axa_error_msg("tsindex mode expected to find tsindex file \"%s\": %s\n",
 					lmdb_filename, strerror(errno));
 				exit(EX_SOFTWARE);
