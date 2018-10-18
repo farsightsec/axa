@@ -101,7 +101,8 @@ unbuffered mode (
 a previously created nmsg file which must also have a corresponding previously
 created timestamp index mdb file.
 
-It will always write an index for the first nmsg and every
+.Nm
+will always write an index for the first nmsg and every
 .Ar interval
 nmsgs thereafter.
 
@@ -145,7 +146,7 @@ enable a spinning bar output indicator on stdout.
 append output to specified file (only valid for nmsg file-based outputs).
 .It Fl o Ar out-addr
 specifies the destination of the SIE data.
-It can be forwarded as NMSG messages to a UDP or TCP port
+It can be forwarded as nmsg messages to a UDP or TCP port
 or as raw IP packets to a file, FIFO, or network interface.
 .ds CT
 .so fwd.man
@@ -232,11 +233,11 @@ and
 dns
 watches to indicate addresses or domains that are not used exclusively.
 .It Fl z
-enable NMSG zlib container compression.
+enable nmsg zlib container compression.
 .El
 .Sh EXAMPLES
 The following connects to a RAD server at example.com, loads the Brand Sentry
-module looking for the brand "farsight", and sends all anomaly hit NMSGs to
+module looking for the brand "farsight", and sends all anomaly hit nmsgs to
 the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
 radtunnel -s apikey:<yourapikey>@example.com,1012 -o nmsg:127.1,8000 \\

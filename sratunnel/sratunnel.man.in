@@ -66,12 +66,12 @@ or (with
 specified)
 close the current output and reopen a new output after
 .Ar count
-SIE messages and raw IP packets.
+payloads have been processed.
 .It Fl c Ar channel
 There must be at least one
 .Fl c
 argument naming an SIE channel that server will watch for interesting
-NMSG messages or IP packets.
+nmsg messages or IP packets.
 .Pp
 Channels are specified as
 .Cm ch Ns Ar XX
@@ -149,7 +149,7 @@ enable a spinning bar output indicator on stdout.
 append output to specified file (only valid for nmsg file-based outputs).
 .It Fl o Ar out-addr
 specifies the destination of the SIE data.
-It can be forwarded as NMSG messages to a UDP or TCP port
+It can be forwarded as nmsg messages to a UDP or TCP port
 or as raw IP packets to a file, FIFO, or network interface.
 .ds CT
 .so fwd.man
@@ -235,9 +235,9 @@ and
 dns
 watches to indicate addresses or domains that are not used exclusively.
 .It Fl u
-disable NMSG output buffering.
+disable nmsg output buffering.
 .It Fl z
-enable NMSG zlib container compression.
+enable nmsg zlib container compression.
 .El
 .Sh EXAMPLES
 The following sends all new domain reports on channel 213
