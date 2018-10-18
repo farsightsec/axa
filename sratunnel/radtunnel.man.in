@@ -30,11 +30,13 @@
 .Op Fl C Ar count
 .Op Fl E Ar ciphers
 .Op Fl i Ar interval
+.Op Fl k Ar cmd
 .Fl m Ar sampling-rate
 .Op Fl n Ar config-file
 .Op Fl P Ar pidfile
 .Op Fl r Ar rate-limit
 .Op Fl S Ar certs
+.Op Fl T Ar secs
 .br
 .Sh DESCRIPTION
 .Nm Radtunnel
@@ -65,9 +67,12 @@ in RAD mode.
 .It Fl C Ar count
 stops
 .Nm
-after
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output after
 .Ar count
-SIE messages and raw IP packets.
+payloads have been processed.
 .It Fl d
 enable debugging reports or increase them after the first
 .Fl d .
@@ -99,6 +104,36 @@ created timestamp index mdb file.
 It will always write an index for the first nmsg and every
 .Ar interval
 nmsgs thereafter.
+
+If
+.Nm
+finds a previously created tsindex file and is not in append mode, it will
+clobber the file.
+.It Fl k Ar cmd
+enables
+.Cm kicker
+mode and makes
+.Fl C
+or
+.Fl T
+continuous. In this mode output file names are suffixed with a timestamp and
+.Nm
+runs continuously, rotating output files as payload counts or time intervals expire.
+.Ar cmd
+specifies the command to run on output files after rotation. If
+.Ar cmd
+is set to the empty string
+.Cm '' ,
+then no command is executed and only file rotation is performed.
+
+This option must be combined with either
+.Fl C
+or
+.Fl T
+but may not be used with
+.Fl i .
+Only nmsg file-based outputs are supported.
+
 .It Fl m Ar sampling-rate
 specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
 the RAD server will send.
@@ -162,6 +197,17 @@ If not absolute, the files are in the
 .Fl S Ar certs
 directory.
 .El
+.It Fl T Ar secs
+stops
+.Nm
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output on a time interval modulo the
+.Ar secs
+parameter. For example,
+.Ar -t 3600
+means "on the hour".
 .It Fl t
 enable tracing reports on the server or increase them after the first
 .Fl t .

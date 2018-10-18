@@ -88,6 +88,7 @@ nobase_include_HEADERS = \
 	axa/axa_endian.h \
 	axa/fields.h \
 	axa/json.h \
+	axa/kickfile.h \
 	axa/open_nmsg_out.h \
 	axa/mdb.h \
 	axa/protocol.h \
@@ -109,6 +110,7 @@ axa_libaxa_la_SOURCES = \
 	axa/axa_endian.h \
 	axa/fields.h \
 	axa/json.h \
+	axa/kickfile.h \
 	axa/mdb.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
@@ -128,6 +130,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/get_field_name.c \
 	axalib/hash_divisor.c \
 	axalib/json.c \
+	axalib/kickfile.c \
 	axalib/open_nmsg_out.c \
 	axalib/parse_ch.c \
 	axalib/socket.c \

@@ -338,7 +338,7 @@ out_open(bool output_buffering)
 	}
 
 	if (0 >= axa_open_nmsg_out(&emsg, &out_nmsg_output, &out_sock_type,
-				   strchr(out_addr, ':')+1, output_buffering)) {
+				strchr(out_addr, ':')+1, output_buffering)) {
 		axa_error_msg("%s", emsg.c);
 		return (false);
 	}
