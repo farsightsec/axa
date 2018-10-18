@@ -38,7 +38,7 @@ and extracts from the corresponding nmsg file
 either a specified number of nmsgs (via
 .Fl c )
 or until it hits an ending timestamp (via
-.Fl e ) 
+.Fl e )
 or the end of file is reached. It writes extracted nmsgs to a new file
 .Pa foo-tsindex.pid.nmsg
 (which will be the same format as the input nmsg file -- json or binary).
