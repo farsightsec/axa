@@ -25,6 +25,8 @@ extern uint output_tsindex_write_interval;
 
 /* extern: axalib/open_nmsg_out.c */
 extern bool axa_out_file_append;
+extern bool axa_kickfile;
+extern struct axa_kickfile *axa_kf;
 
 /* extern: server.c */
 extern axa_client_t client;
@@ -35,14 +37,17 @@ extern int give_status;
 
 /* global */
 uint axa_debug;				/* debug level */
-int count;				/* limit to this many */
 unsigned long count_messages_sent = 0;  /* how many messages we have sent */
 unsigned long count_messages_rcvd = 0;  /* how many messages we have received */
 unsigned long count_hits = 0;           /* how many hits received */
 int trace = 0;				/* server-side trace level */
+int count;				/* stop or reopen after this many pkts */
 int initial_count;			/* initial count */
 bool counting = false;			/* true == limiting packets to count */
 bool first_time;			/* true == first time connecting */
+bool output_buffering = true;		/* true == buffer nmsg output */
+unsigned long interval;			/* stop or reopen after this many secs */
+unsigned long interval_prev;		/* the previous interval */
 nmsg_input_t nmsg_input;		/* NMSG input object */
 FILE *fp_pidfile = NULL;		/* PID file FILE pointer */
 FILE *fp_tsindex = NULL;		/* timestamp index file pointer */
@@ -66,6 +71,13 @@ static uint acct_interval;
 static struct timeval acct_timer;
 
 void print_status(void);
+
+static void
+kickfile_finish(void)
+{
+	axa_kickfile_exec(axa_kf);
+	axa_kickfile_destroy(&axa_kf);
+}
 
 static void
 lmdb_shutdown(void)
@@ -113,11 +125,12 @@ usage(const char *msg, ...)
 		printf("-w watch\t\tset watch\n");
 	}
 	printf("\n[-A interval]\t\temit acct messages to stdout every interval seconds\n");
-	printf("[-C count]\t\tstop after processing count messages\n");
+	printf("[-C count]\t\tstop or reopen after count packets are received\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
 	printf("[-h]\t\t\tdisplay this help and exit\n");
 	printf("[-i interval]\t\twrite timestamp indexes every interval nmsgs\n");
+	printf("[-k cmd]\t\tmake -C or -T continuous; run cmd on new files\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
 	printf("[-n file]\t\tspecify AXA config file\n");
@@ -127,6 +140,7 @@ usage(const char *msg, ...)
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
 	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
+	printf("[-T secs]\t\tstop or reopen after secs have elapsed\n");
 	printf("[-u]\t\t\tunbuffer nmsg container output\n");
 	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
@@ -146,7 +160,6 @@ main(int argc, char **argv)
 	const char *cp;
 	int i;
 	size_t n = 0;
-	bool output_buffering = true;
 	char out_filename[BUFSIZ], lmdb_filename[BUFSIZ];
 
 	axa_set_me(argv[0]);
@@ -163,7 +176,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "hi:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
+	while ((i = getopt(argc, argv, "T:k:hi:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -193,6 +206,12 @@ main(int argc, char **argv)
 
 		case 'i':
 			output_tsindex_write_interval = atoi(optarg);
+			break;
+
+		case 'k':
+			axa_kickfile = true;
+			axa_kf = axa_zalloc(sizeof (*axa_kf));
+			axa_kf->cmd = optarg;
 			break;
 
 		case 't':
@@ -232,6 +251,18 @@ main(int argc, char **argv)
 			}
 			initial_count = count;
 			counting = true;
+			break;
+
+		case 'T':
+			interval = strtoul(optarg, &p, 10);
+			if (*optarg == '\0'
+			    || *p != '\0'
+			    || interval < 1) {
+				axa_error_msg("invalid \"-T %s\"", optarg);
+				exit(EX_USAGE);
+			}
+			gettimeofday(&now, NULL);
+			interval_prev = now.tv_sec - (now.tv_sec % interval);
 			break;
 
 		case 'r':
@@ -310,6 +341,8 @@ main(int argc, char **argv)
 		    && anomalies == NULL)
 			exit(0);
 	}
+	if (count != 0 && interval != 0)
+		usage("can't specify \"-C\" and \"-T\"");
 	if (srvr_addr == NULL)
 		usage("server not specified with -s");
 	if (out_addr == NULL)
@@ -338,6 +371,12 @@ main(int argc, char **argv)
 			}
 			exit(0);
 		}
+	}
+	if (axa_kickfile == true) {
+		if (output_tsindex_write_interval > 0)
+			usage("\"-k\" not allowed with \"-i\"");
+		if (count == 0 && interval == 0)
+			usage("\"-k\" needs \"-C\" or \"-T\"");
 	}
 
 	if (!axa_load_client_config(&emsg, config_file)) {
@@ -491,6 +530,8 @@ main(int argc, char **argv)
 		}
 		atexit(lmdb_shutdown);
 	}
+	if (axa_kickfile)
+		atexit(kickfile_finish);
 
 	/*
 	 * Continually reconnect to the SRA or RAD server and forward SIE data.
@@ -541,6 +582,7 @@ main(int argc, char **argv)
 				acct_timer.tv_sec = now.tv_sec;
 			}
 		}
+
 		switch (axa_io_wait(&emsg, &client.io, OUT_FLUSH_MS,
 				    true, true)) {
 		case AXA_IO_ERR:

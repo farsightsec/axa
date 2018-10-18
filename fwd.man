@@ -10,7 +10,7 @@
 .Ar host,port
 .Sm on \*(CT
 .Xc
-sends NMSG messages to the UDP or optional TCP
+sends nmsg messages to the UDP or optional TCP
 host name and port number
 .Ar host,port .
 UDP is the default.
@@ -21,17 +21,20 @@ IP packets are converted to NMSG messages.
 .Ar path
 .Sm on \*(CT
 .Xc
-sends NMSG messages to the file named 
+sends binary nmsg messages to the file named
 .Ar path .
-IP packets are converted to NMSG messages.
+IP packets are converted to nmsg messages.
 .It Xo
 .Sm off
 .Cm nmsg:file_json:
 .Ar path
 .Sm on \*(CT
 .Xc
-sends NMSG json blobs to the file named 
+sends nmsg newline-delimited json blobs to the file named
 .Ar path .
+Note that newline-delimited json outputs can incur a slight performance penalty versus binary nmsg outputs for
+"high-velocity" outputs. This is because the underlying nmsg json output object is unbuffered and results a filesystem write
+for every forwarded nmsg.
 .It Xo
 .Sm off
 .Cm pcap
@@ -45,7 +48,7 @@ for examination with
 .Xr tcpdump 1
 or another packet tracing tool.
 An ordinary file is the default.
-Only IP packets but not NMSG messages are sent.
+Only IP packets but not nmsg messages are sent.
 .It Xo
 .Sm off
 .Cm pcap-if:
@@ -64,6 +67,6 @@ than all 0:0:0:0:0:0 default.
 This output usually requires that
 .Nm
 be run by root.
-Only IP packets but not NMSG messages are sent.
+Only IP packets but not nmsg messages are sent.
 .El
 .\" end of fwd.man

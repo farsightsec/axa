@@ -30,11 +30,13 @@
 .Op Fl E Ar ciphers
 .Op Fl C Ar count
 .Op Fl i Ar interval
+.Op Fl k Ar cmd
 .Op Fl m Ar sampling-rate
 .Op Fl n Ar config-file
 .Op Fl P Ar pidfile
 .Op Fl r Ar rate-limit
 .Op Fl S Ar certs
+.Op Fl T Ar secs
 .Sh DESCRIPTION
 .Nm Sratunnel
 transfers selected Security Information Exchange (SIE) data
@@ -59,14 +61,17 @@ at the command line.
 .It Fl C Ar count
 stops
 .Nm
-after
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output after
 .Ar count
-SIE messages and raw IP packets.
+payloads have been processed.
 .It Fl c Ar channel
 There must be at least one
 .Fl c
 argument naming an SIE channel that server will watch for interesting
-NMSG messages or IP packets.
+nmsg messages or IP packets.
 .Pp
 Channels are specified as
 .Cm ch Ns Ar XX
@@ -109,6 +114,30 @@ If
 .Nm
 finds a previously created tsindex file and is not in append mode, it will
 clobber the file.
+.It Fl k Ar cmd
+enables
+.Cm kicker
+mode and makes
+.Fl C
+or
+.Fl T
+continuous. In this mode output file names are suffixed with a timestamp and
+.Nm
+runs continuously, rotating output files as payload counts or time intervals expire.
+.Ar cmd
+specifies the command to run on output files after rotation. If
+.Ar cmd
+is set to the empty string
+.Cm '' ,
+then no command is executed and only file rotation is performed.
+
+This option must be combined with either
+.Fl C
+or
+.Fl T
+but may not be used with
+.Fl i .
+Only nmsg file-based outputs are supported.
 .It Fl m Ar sampling-rate
 specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
 the SRA server will send.
@@ -120,7 +149,7 @@ enable a spinning bar output indicator on stdout.
 append output to specified file (only valid for nmsg file-based outputs).
 .It Fl o Ar out-addr
 specifies the destination of the SIE data.
-It can be forwarded as NMSG messages to a UDP or TCP port
+It can be forwarded as nmsg messages to a UDP or TCP port
 or as raw IP packets to a file, FIFO, or network interface.
 .ds CT
 .so fwd.man
@@ -172,6 +201,17 @@ If not absolute, the files are in the
 .Fl S Ar certs
 directory.
 .El
+.It Fl T Ar secs
+stops
+.Nm
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output on a time interval modulo the
+.Ar secs
+parameter. For example,
+.Ar -t 3600
+means "on the hour".
 .It Fl t
 enable tracing reports on the server or increase them after the first
 .Fl t .
@@ -195,9 +235,9 @@ and
 dns
 watches to indicate addresses or domains that are not used exclusively.
 .It Fl u
-disable NMSG output buffering.
+disable nmsg output buffering.
 .It Fl z
-enable NMSG zlib container compression.
+enable nmsg zlib container compression.
 .El
 .Sh EXAMPLES
 The following sends all new domain reports on channel 213

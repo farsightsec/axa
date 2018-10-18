@@ -265,6 +265,9 @@ srvr_connect(void)
 		break;
 	}
 
+	if (axa_debug != 0)
+		axa_trace_msg("connected to %s", srvr_addr);
+
 	/* Immediately start server tracing to log the tunnel commands. */
 	if (trace != 0) {
 		memset(&opt, 0, sizeof(opt));

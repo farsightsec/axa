@@ -26,6 +26,7 @@
 #include <axa/fields.h>
 #include <axa/open_nmsg_out.h>
 #include <axa/mdb.h>
+#include <axa/kickfile.h>
 
 #include <nmsg.h>
 #include <nmsg/base/defs.h>
