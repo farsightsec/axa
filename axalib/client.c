@@ -413,7 +413,6 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 				     (axa_p_body_t *)&client->io.user);
 			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_USER);
-			break;
 		case AXA_IO_ERR:
 			axa_client_backoff_max(client);
 			axa_io_pvers_set(&client->io, pvers_save);
@@ -426,7 +425,6 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 		case AXA_IO_KEEPALIVE:
 			AXA_FAIL("impossible axa_apikey_start() result");
 		}
-		break;
 
 	case AXA_IO_TYPE_UNKN:
 	default:

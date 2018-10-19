@@ -426,7 +426,7 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 	off_t offset;
 	MDB_val key, data;
 	static uint output_tsindex_write_cnt = 0;
-	static struct timespec ts_idx_prev = {0};
+	static struct timespec ts_idx_prev = {0,0};
 
 	switch ((axa_p_whit_enum_t)whit->hdr.type) {
 	case AXA_P_WHIT_NMSG:

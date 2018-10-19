@@ -150,7 +150,6 @@ main(int argc, char **argv)
 
 		case 'h':
 			usage();
-			break;
 		case 'd':
 			++axa_debug;
 			break;
