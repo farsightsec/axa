@@ -1608,8 +1608,5 @@ print_kill(_axa_p_kill_t *kill, size_t len AXA_UNUSED)
 		case AXA_P_KILL_R_FAIL_UNK:
 			printf("    failed, unknown reason\n");
 			break;
-		default:
-			printf("    unknown result code\n");
-			break;
 	}
 }

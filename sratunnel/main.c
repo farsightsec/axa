@@ -202,7 +202,6 @@ main(int argc, char **argv)
 
 		case 'h':
 			usage(NULL);
-			break;
 
 		case 'i':
 			output_tsindex_write_interval = atoi(optarg);
