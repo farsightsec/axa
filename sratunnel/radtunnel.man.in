@@ -29,6 +29,7 @@
 .Op Fl A Ar interval
 .Op Fl C Ar count
 .Op Fl E Ar ciphers
+.Op Fl i Ar interval
 .Fl m Ar sampling-rate
 .Op Fl n Ar config-file
 .Op Fl P Ar pidfile
@@ -74,6 +75,30 @@ enable debugging reports or increase them after the first
 specifies a list ciphers for TLS connections.
 .It Fl h
 display options summary.
+.It Fl i Ar interval
+enables timestamp indexing every
+.Ar interval
+nmsgs. This mode writes to a pre-existing (or creates an) lmdb-backed key-value
+store of nmsg timestamp/file offset pairs. The keys are the epoch portion of the
+nmsg timestamp for which the offsets refer back to. It is intended to be used
+as a hints file to speed subsequent cherry-picking of nmsgs from the nmsg data
+file it backs. It is most useful when the corresponding nmsg data file is
+anticipated to grow large.
+
+This mode may only be used with nmsg file-based outputs and, because
+.Nm
+needs to know when filesystem writes have occurred, it must be run in
+unbuffered mode (
+.Fl u
+). If you specify the append option (
+.Fl p
+), it is assumed you are continuing a previous session so you must also specify
+a previously created nmsg file which must also have a corresponding previously
+created timestamp index mdb file.
+
+It will always write an index for the first nmsg and every
+.Ar interval
+nmsgs thereafter.
 .It Fl m Ar sampling-rate
 specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
 the RAD server will send.
@@ -200,13 +225,18 @@ information such as apikeys, it must not be readable or writeable to anybody
 other than "owner" or
 .Nm radtunnel
 will not load.
-.It Ar config
+.It Ar ~/.ssh/config
 is the
 .Xr ssh_config 5
 configuration file used with
 .Ar connect\ ssh:...
 connections.
 "Host" stanzas in the file can simplify connections to AXA servers.
+.It Ar foo.mdb
+is an lmdb key-value store containing nmsg timestamp/file offset pairs (a
+"tsindex" file). See the
+.Fl i
+option for details.
 .El
 .Sh ENVIRONMENT VARIABLES
 If set, AXACONF specifies the AXA configuration directory instead of the

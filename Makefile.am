@@ -63,9 +63,10 @@ man_MANS =  \
 	sratool/radtool.1 \
 	sratunnel/sratunnel.1 \
 	sratunnel/radtunnel.1 \
-	cert_tools/axa_link_certs.8 \
-	cert_tools/axa_make_cert.8 \
-	cert_tools/axa_server_cert.8
+	tools/axa_link_certs.8 \
+	tools/axa_make_cert.8 \
+	tools/axa_server_cert.8 \
+	tools/axa_tsindextool.8
 DISTCLEANFILES += $(man_MANS)
 
 #
@@ -74,9 +75,9 @@ DISTCLEANFILES += $(man_MANS)
 ##
 #
 
-LIBAXA_CURRENT=1
+LIBAXA_CURRENT=2
 LIBAXA_REVISION=0
-LIBAXA_AGE=0
+LIBAXA_AGE=1
 
 nobase_include_HEADERS = \
 	axa/axa.h \
@@ -88,6 +89,7 @@ nobase_include_HEADERS = \
 	axa/fields.h \
 	axa/json.h \
 	axa/open_nmsg_out.h \
+	axa/mdb.h \
 	axa/protocol.h \
 	axa/socket.h \
 	axa/strbuf.h \
@@ -107,6 +109,7 @@ axa_libaxa_la_SOURCES = \
 	axa/axa_endian.h \
 	axa/fields.h \
 	axa/json.h \
+	axa/mdb.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/socket.h \
@@ -137,6 +140,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \
 	axalib/wire.c \
+	axalib/mdb.c \
 	libmy/b64_encode.c libmy/b64_encode.h libmy/my_alloc.h \
 	libmy/ubuf.h libmy/ubuf-pb.h libmy/vector.h
 
@@ -244,6 +248,11 @@ sratunnel_radtunnel_SOURCES = ${sratunnel_sratunnel_SOURCES}
 sratunnel_radtunnel_LDADD = ${sratunnel_sratunnel_LDADD}
 sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
 
+bin_PROGRAMS += tools/axa_tsindextool
+tools_axa_tsindextool_SOURCES = tools/axa_tsindextool.c
+tools_axa_tsindextool_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${strlcpy_LIBS}
+tools_axa_tsindextool_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS}
+
 #
 ##
 ### scripts
@@ -251,9 +260,9 @@ sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
 #
 
 bin_SCRIPTS = \
-	cert_tools/axa_link_certs \
-	cert_tools/axa_make_cert \
-	cert_tools/axa_server_cert
+	tools/axa_link_certs \
+	tools/axa_make_cert \
+	tools/axa_server_cert
 
 #
 ##

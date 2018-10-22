@@ -1,7 +1,7 @@
 AC_PREREQ(2.60)
 
 m4_define(axa_major_version, 2)
-m4_define(axa_minor_version, 1)
+m4_define(axa_minor_version, 2)
 m4_define(axa_patchlevel_version, 0)
 m4_define(axa_version,
           axa_major_version.axa_minor_version.axa_patchlevel_version)
@@ -100,6 +100,7 @@ PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
 AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
 AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
+AC_CHECK_LIB([lmdb], [mdb_env_open], [], [ AC_MSG_ERROR([required library not found]) ])
 
 AC_ARG_WITH([yajl], AS_HELP_STRING([--without-yajl], [Disable yajl support]))
 if test "x$with_yajl" != "xno"; then
@@ -149,15 +150,15 @@ AC_CONFIG_FILES([Makefile axa/libaxa.pc axa/version.h])
 
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
 		sratunnel/sratunnel.man sratunnel/radtunnel.man
-                cert_tools/axa_link_certs.man cert_tools/axa_make_cert.man
-		cert_tools/axa_server_cert.man])
+                tools/axa_link_certs.man tools/axa_make_cert.man
+		tools/axa_server_cert.man tools/axa_tsindextool.man])
 
-AC_CONFIG_FILES([cert_tools/axa_link_certs],
-		[chmod +x cert_tools/axa_link_certs])
-AC_CONFIG_FILES([cert_tools/axa_make_cert],
-		[chmod +x cert_tools/axa_make_cert])
-AC_CONFIG_FILES([cert_tools/axa_server_cert],
-		[chmod +x cert_tools/axa_server_cert])
+AC_CONFIG_FILES([tools/axa_link_certs],
+		[chmod +x tools/axa_link_certs])
+AC_CONFIG_FILES([tools/axa_make_cert],
+		[chmod +x tools/axa_make_cert])
+AC_CONFIG_FILES([tools/axa_server_cert],
+		[chmod +x tools/axa_server_cert])
 
 AC_CONFIG_FILES([tests/test-tools-without-server.sh],
 		[chmod +x tests/test-tools-without-server.sh])
