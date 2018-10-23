@@ -214,11 +214,11 @@ echo $after - $before = $delay
 if [ $delay -gt 3 -o $delay -le 1 ] ; then exit 1 ; fi
 
 # tools require a subscriber-side configuration file
-echo 070200 using radtool with non-existing configuration file should fail
-echo "mode" | $RADTOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "can't load config file: cannot open"
+echo 070200 using radtool with non-existing configuration file should not fail
+echo "mode" | $RADTOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "RAD mode"
 
 echo 070300 using sratool with non-existing configuration file should fail
-echo "mode" | $SRATOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "can't load config file: cannot open"
+echo "mode" | $SRATOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "SRA mode"
 
 # the tools' configuration file must not be group or world readable
 echo 070400 using radtool with configuration file of mode 640 should fail

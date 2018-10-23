@@ -44,6 +44,9 @@ extern bool interrupted;		/* true when asynch-interrupted */
 extern bool out_on;
 extern char *out_addr;
 
+/* extern: axalib/client_config.c */
+extern bool axa_config_file_found;
+
 /* global */
 axa_emsg_t emsg;			/* AXA error message blob */
 uint axa_debug;				/* debug level */
@@ -211,8 +214,14 @@ main(int argc, char **argv)
 
 	axa_load_fields(fields_file);
 	if (!axa_load_client_config(&emsg, config_file)) {
+		if (axa_config_file_found == false) {
+			if (axa_debug != 0)
+				axa_error_msg("can't load config file: %s", emsg.c);
+		}
+		else {
 			axa_error_msg("can't load config file: %s", emsg.c);
 			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* Answer commands from the control file. */
