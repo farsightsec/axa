@@ -31,6 +31,11 @@
 #include <bsd/string.h>                 /* for strlcpy() */
 #endif
 
+/* global */
+/* To preserve ABI/API but give the ability to know when the config file isn't
+ * present, we add this global variable. */
+bool axa_config_file_found = false;		/* true == we found the config file */
+
 /* add an alias to the global alias array */
 void _alias_add(char *alias, char *connect);
 /* parse a config entry */
@@ -162,6 +167,7 @@ axa_load_client_config(axa_emsg_t *emsg, const char *config_file0)
 			free(config_file);
 		return (false);
 	}
+	axa_config_file_found = true;
 
 	/*
 	 * Because it can contain apikeys, this file must not have group/other
