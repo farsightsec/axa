@@ -148,7 +148,7 @@ is the directory set with
 .Fl S
 that contains TLS certificate and key files.
 .It Ar ~/.axa/config
-is a required file that contains AXA client configuration data. Currently supported are connection
+contains AXA client configuration data. Currently supported are connection
 aliases that provide the user with a facility to create shortcut mnemonics to
 specify the SRA server connection string. For example:
 .Bd -literal -offset 4n
