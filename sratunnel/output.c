@@ -490,7 +490,7 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 	}
 
 	if (output_tsindex_write_interval > 0)
-		 offset = lseek(axa_nmsg_output_fd, 0, SEEK_CUR);
+		 offset = lseek(axa_nmsg_output_fd, 0, SEEK_END);
 
 	res = nmsg_output_write(out_nmsg_output, msg);
 
