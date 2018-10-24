@@ -425,6 +425,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 		case AXA_IO_KEEPALIVE:
 			AXA_FAIL("impossible axa_apikey_start() result");
 		}
+		break;
 
 	case AXA_IO_TYPE_UNKN:
 	default:

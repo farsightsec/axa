@@ -621,7 +621,7 @@ typedef struct _PK {
 /** Request the output sampling ratio */
 #define	AXA_P_OPT_SAMPLE_SCALE	10000
 /** maximum scaled output sampling ratio */
-#define	AXA_P_OPT_SAMPLE_MAX	(AXA_P_OPT_SAMPLE_SCALE*100)
+#define	AXA_P_OPT_SAMPLE_MAX	(AXA_P_OPT_SAMPLE_SCALE*100.0)
 
 /** Request the TCP buffer size ratio */
 #define	AXA_P_OPT_SNDBUF_REQ	0

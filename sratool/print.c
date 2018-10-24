@@ -61,7 +61,7 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 	wdns_rr_t *q;
 	const char *rcode, *class, *rtype;
 	char wdns_resbuf[AXA_WDNS_RES_STRLEN];
-	char class_buf[10], rtype_buf[10], rcode_buf[6];
+	char class_buf[18], rtype_buf[10], rcode_buf[12];
 	char qname[NS_MAXDNAME];
 	char *msg_str, *p;
 	bool eol;
@@ -1215,9 +1215,9 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 	}
 	else {
 		printf("    server load     : %.2f %.2f %.2f\n",
-				(float)AXA_P2H32(sys->load[0]) * .0001,
-				(float)AXA_P2H32(sys->load[1]) * .0001,
-				(float)AXA_P2H32(sys->load[2]) * .0001);
+				AXA_P2H32(sys->load[0]) * .0001,
+				AXA_P2H32(sys->load[1]) * .0001,
+				AXA_P2H32(sys->load[2]) * .0001);
 	}
 
 	server_type = sys->server_type == _AXA_STATS_SRVR_TYPE_SRA
@@ -1228,7 +1228,7 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 	}
 	else {
 		printf("      CPU usage     : %.2f%%\n",
-				(float)AXA_P2H32(sys->cpu_usage) * .0001);
+				AXA_P2H32(sys->cpu_usage) * .0001);
 	}
 	if (sys->starttime == UINT32_MAX) {
 		printf("      uptime        : unavailable\n");
@@ -1354,7 +1354,7 @@ static void
 print_stats_user_an(_axa_p_stats_user_rad_an_t *an_obj)
 {
 	int j, ch_cnt;
-	char ru_buf[sizeof("unlimited") + 1];
+	char ru_buf[sizeof("unlimited") + 4];
 
 	printf("        anomaly     : %s\n", an_obj->name);
 	printf("        options     : %s\n", an_obj->opt);
@@ -1494,7 +1494,7 @@ print_stats_user(_axa_p_stats_user_t *user)
 	else
 		printf("%"PRIu64"\n", AXA_P2H64(user->ratelimit));
 	printf("      sampling      : %.2f%%\n",
-			(float)AXA_P2H64(user->sample) * .0001);
+			AXA_P2H64(user->sample) * .0001);
 
 	if (mode == RAD && user->srvr.rad.an_obj_cnt > 0) {
 		if (user->srvr.rad.an_obj_cnt >
