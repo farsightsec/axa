@@ -669,7 +669,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 					add_yajl_string(g, "requested");
 				} else {
 					axa_strbuf_reset(sb_tmp);
-					axa_strbuf_append(sb_tmp, "%0.6f", ((double)AXA_P2H64(body->opt.u.sample)) / AXA_P_OPT_SAMPLE_MAX);
+					axa_strbuf_append(sb_tmp, "%0.6f", AXA_P2H64(body->opt.u.sample) / AXA_P_OPT_SAMPLE_MAX);
 					add_yajl_number_sb(g, sb_tmp);
 				}
 				break;
@@ -957,7 +957,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 				add_yajl_string(g, "sample");
 				axa_strbuf_reset(sb_tmp);
 				axa_strbuf_append(sb_tmp, "%0.2f",
-					((double)AXA_P2H64(user_obj->sample)));
+					AXA_P2H64(user_obj->sample));
 				add_yajl_number_sb(g, sb_tmp);
 				add_yajl_string(g, "last_count_update");
 				t = AXA_P2H32(user_obj->last_cnt_update.tv_sec);
