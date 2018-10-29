@@ -71,7 +71,7 @@ If you need help with any of the following, please reach out to Farsight Securit
  * [pkg-config](https://wiki.freedesktop.org/www/Software/pkg-config/): Provides a unified interface for querying installed libraries for the purpose of compiling software from its source code
 
 
-The AXA suite has the following external library dependencies that must be installed in the order they appear:
+The AXA suite has the following external library dependencies that must be installed in the order they appear. Please note that, while in most cases the latest version of a depedency is preferred, sometimes an older version is required.
 
  * [libpcap](http://www.tcpdump.org/): Used for low-level packet capture.
 
@@ -95,11 +95,37 @@ $ make
 $ sudo make install
 ~~~
 
- * [protobuf](https://github.com/protocolbuffers/protobuf): Used by libnmsg for low-level data serialization.
+* [googletest](https://github.com/google/googletest): Used by protobuf for test mocking.
+
+~~~
+$ git clone https://github.com/google/googletest
+$ cd googletest
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ sudo make install
+~~~
+
+ * [protobuf](https://github.com/protocolbuffers/protobuf): Used by libprotobuf-c for low-level data serialization. Currently nmsg protobufs support protocol buffers version 2 so you'll need to install 2.7.0. Also, because gmock is no longer a standalone
+pacakge and is installed with gooletest, you may need to first edit the `autogen.sh` script and comment out the following stanza:
+
+~~~
+# Check that gmock is present.  Usually it is already there since the
+# directory is set up as an SVN external.
+if test  -e gmock; then
+  echo "Google Mock not present.  Fetching gmock-1.7.0 from the web..."
+  curl $curlopts -O https://googlemock.googlecode.com/files/gmock-1.7.0.zip
+  unzip -q gmock-1.7.0.zip
+  rm gmock-1.7.0.zip
+  mv gmock-1.7.0 gmock
+fi
+~~~
 
 ~~~
 $ git clone https://github.com/protocolbuffers/protobuf
 $ cd protobuf
+$ git checkout 2.7.0
 $ ./autogen.sh
 $ ./configure
 $ make
