@@ -31,6 +31,9 @@ extern struct axa_kickfile *axa_kf;
 /* extern: server.c */
 extern axa_client_t client;
 
+/* extern: axalib/client_config.c */
+extern bool axa_config_file_found;
+
 /* extern signal.c */
 extern int terminated;
 extern int give_status;
@@ -379,8 +382,14 @@ main(int argc, char **argv)
 	}
 
 	if (!axa_load_client_config(&emsg, config_file)) {
-			axa_error_msg("can't load config file: %s", emsg.c);
-			exit(EXIT_FAILURE);
+	        if (axa_config_file_found == false) {
+	                if (axa_debug != 0)
+	                        axa_error_msg("can't load config file: %s", emsg.c);
+	        }
+	        else {
+	                axa_error_msg("can't load config file: %s", emsg.c);
+	                exit(EXIT_FAILURE);
+	        }
 	}
 
 	signal(SIGPIPE, SIG_IGN);
