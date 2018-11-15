@@ -132,6 +132,7 @@ usage(const char *msg, ...)
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
 	printf("[-h]\t\t\tdisplay this help and exit\n");
+	printf("[-I maxsize]\t\tset max timestamp index to %d*maxsize (default 2560)\n", getpagesize());
 	printf("[-i interval]\t\twrite timestamp indexes every interval nmsgs\n");
 	printf("[-k cmd]\t\tmake -C or -T continuous; run cmd on new files\n");
 	printf("[-V]\t\t\tprint version and quit\n");
