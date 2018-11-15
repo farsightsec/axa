@@ -223,7 +223,7 @@ main(int argc, char **argv)
 		case 'm':
 			sample = atof(optarg);
 			if (sample <= 0.0 || sample > 100.0) {
-				axa_error_msg("invalid \"-a %s\"", optarg);
+				axa_error_msg("invalid \"-m %s\"", optarg);
 				exit(EX_USAGE);
 			}
 			break;
