@@ -162,7 +162,7 @@ main(int argc, char **argv)
 	char *p;
 	const char *cp;
 	int i;
-	size_t n = 0;
+	size_t n = 0, tsindex_map_size = 2560;
 	char out_filename[BUFSIZ], lmdb_filename[BUFSIZ];
 
 	axa_set_me(argv[0]);
@@ -209,6 +209,14 @@ main(int argc, char **argv)
 		case 'i':
 			output_tsindex_write_interval = atoi(optarg);
 			break;
+
+                case 'I':
+                        tsindex_map_size = atoi(optarg);
+                        if (tsindex_map_size <= 0) {
+                                axa_error_msg("invalid \"-I %s\"", optarg);
+                                exit(EX_USAGE);
+                        }
+                        break;
 
 		case 'k':
 			axa_kickfile = true;
@@ -504,7 +512,7 @@ main(int argc, char **argv)
 		 * database. As such, we should periodically check to see if
 		 * we're close to running out of space and resize.
 		 */
-		rc = mdb_env_set_mapsize(mdb_env, pagesize * 2560);
+		rc = mdb_env_set_mapsize(mdb_env, pagesize * tsindex_map_size);
 		if (rc != 0) {
 			axa_error_msg("mdb_env_set_mapsize(): %s",
 					mdb_strerror(rc));
