@@ -84,6 +84,14 @@ enable debugging reports or increase them after the first
 specifies a list ciphers for TLS connections.
 .It Fl h
 display options summary.
+.It Fl I Ar size
+sets the maximum index size (in multiples of the system pagesize) for the timestamp 
+index. The default for this setting is 2560, which given a 4096 pagesize,  
+results in the maximum index being 10MB. 
+There is no specific correlation between the amount of data generated
+and the size of the index needed. The recommendation is to set the 
+maximum size to "as large as possible". The disk space will not automatically
+be allocated, this parameter will only constrain the maximum amount that can be used.
 .It Fl i Ar interval
 enables timestamp indexing every
 .Ar interval
