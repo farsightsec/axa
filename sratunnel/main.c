@@ -132,6 +132,7 @@ usage(const char *msg, ...)
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
 	printf("[-h]\t\t\tdisplay this help and exit\n");
+	printf("[-I maxsize]\t\tset max timestamp index to %d*maxsize (default 2560)\n", getpagesize());
 	printf("[-i interval]\t\twrite timestamp indexes every interval nmsgs\n");
 	printf("[-k cmd]\t\tmake -C or -T continuous; run cmd on new files\n");
 	printf("[-V]\t\t\tprint version and quit\n");
@@ -162,7 +163,7 @@ main(int argc, char **argv)
 	char *p;
 	const char *cp;
 	int i;
-	size_t n = 0;
+	size_t n = 0, tsindex_map_size = 2560;
 	char out_filename[BUFSIZ], lmdb_filename[BUFSIZ];
 
 	axa_set_me(argv[0]);
@@ -210,6 +211,14 @@ main(int argc, char **argv)
 			output_tsindex_write_interval = atoi(optarg);
 			break;
 
+                case 'I':
+                        tsindex_map_size = atoi(optarg);
+                        if (tsindex_map_size <= 0) {
+                                axa_error_msg("invalid \"-I %s\"", optarg);
+                                exit(EX_USAGE);
+                        }
+                        break;
+
 		case 'k':
 			axa_kickfile = true;
 			axa_kf = axa_zalloc(sizeof (*axa_kf));
@@ -223,7 +232,7 @@ main(int argc, char **argv)
 		case 'm':
 			sample = atof(optarg);
 			if (sample <= 0.0 || sample > 100.0) {
-				axa_error_msg("invalid \"-a %s\"", optarg);
+				axa_error_msg("invalid \"-m %s\"", optarg);
 				exit(EX_USAGE);
 			}
 			break;
@@ -504,7 +513,7 @@ main(int argc, char **argv)
 		 * database. As such, we should periodically check to see if
 		 * we're close to running out of space and resize.
 		 */
-		rc = mdb_env_set_mapsize(mdb_env, pagesize * 2560);
+		rc = mdb_env_set_mapsize(mdb_env, pagesize * tsindex_map_size);
 		if (rc != 0) {
 			axa_error_msg("mdb_env_set_mapsize(): %s",
 					mdb_strerror(rc));
