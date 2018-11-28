@@ -91,7 +91,7 @@ int main() {
 	A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_FIRST));
 
 	for(int i = 0 ; data[i].expect != -1 ; i++) {
-		D((stderr, "%s (%d, %d) -> %d\n", data[i].expect?"expect":"dontexpect", 
+		D((stderr, "%s (%d, %d) -> %d\n", data[i].expect?"expect":"dontexpect",
 					data[i].s, data[i].n, data[i].o));
 		if (data[i].expect == 1) {
 			if (i) A(mdb_cursor_get(cursor, &mkey, &mdata, MDB_NEXT));
@@ -105,7 +105,7 @@ int main() {
 	mdb_txn_commit(mdb_txn);
 	mdb_dbi_close(mdb_env, mdb_dbi);
 	mdb_env_close(mdb_env);
-#ifdef CLEAN_UP_DBFILE_AT_EXIT 
+#ifdef CLEAN_UP_DBFILE_AT_EXIT
 	A(unlink(fn));
 #endif	
 	D((stderr, "test succeeded.\n"));
