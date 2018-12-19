@@ -1,3 +1,10 @@
+axa (2.2.0-1) debian-fsi; urgency=medium
+
+  * Add timestamp indexing
+  * Fix negotiation of AXA protocol version upon successful connection
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 18 Oct 2018 16:50:58 -0400
+
 axa (2.1.0-1) debian-fsi; urgency=medium
 
   * Add strict permissions requirement for config file

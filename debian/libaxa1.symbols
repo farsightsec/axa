@@ -60,6 +60,7 @@ libaxa.so.1 libaxa1 #MINVER#
  axa_malloc@Base 2.0.0
  axa_msg_fields@Base 2.0.0
  axa_nmsg_out_json@Base 2.1.0
+ axa_nmsg_output_fd@Base 2.2.0
  axa_null_field@Base 2.0.0
  axa_op_to_str@Base 2.0.0
  axa_open_nmsg_out@Base 2.0.0
@@ -115,6 +116,7 @@ libaxa.so.1 libaxa1 #MINVER#
  axa_trie_to_watch@Base 2.0.0
  axa_trie_watch_add@Base 2.0.0
  axa_tries_free@Base 2.0.0
+ axa_tsi_mdb_cmp@Base 2.2.0
  axa_tv_diff2ms@Base 2.0.0
  axa_tval_add@Base 2.0.0
  axa_tval_delete@Base 2.0.0

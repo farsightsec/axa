@@ -475,7 +475,7 @@ main(int argc, char **argv)
 		 * file being appended to).
 		 */
 		if (axa_out_file_append == true) {
-			if (idx_exists == true) { 
+			if (idx_exists == true) {
                                 if (axa_debug > 0)
 				        axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
 			} else {
