@@ -51,6 +51,7 @@ bool first_time;			/* true == first time connecting */
 bool output_buffering = true;		/* true == buffer nmsg output */
 unsigned long interval;			/* stop or reopen after this many secs */
 unsigned long interval_prev;		/* the previous interval */
+off_t max_file_size;			/* stop or reopen after output file is this large */
 nmsg_input_t nmsg_input;		/* NMSG input object */
 FILE *fp_pidfile = NULL;		/* PID file FILE pointer */
 FILE *fp_tsindex = NULL;		/* timestamp index file pointer */
@@ -146,6 +147,7 @@ usage(const char *msg, ...)
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	printf("[-T secs]\t\tstop or reopen after secs have elapsed\n");
 	printf("[-u]\t\t\tunbuffer nmsg container output\n");
+	printf("[-Z size]\t\tstop or reopen when output file grows past size\n");
 	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
 	exit(EX_USAGE);
@@ -180,7 +182,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
+	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uzZ:"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -325,6 +327,16 @@ main(int argc, char **argv)
 			output_buffering = false;
 			break;
 
+		case 'Z':
+			max_file_size = strtoul(optarg, &p, 10);
+			if (*optarg == '\0'
+			    || *p != '\0'
+			    || max_file_size < 1) {
+				axa_error_msg("invalid \"-Z %s\"", optarg);
+				exit(EX_USAGE);
+			}
+			break;
+
 		case 'z':
 			nmsg_zlib = true;
 			break;
@@ -352,17 +364,18 @@ main(int argc, char **argv)
 		    && anomalies == NULL)
 			exit(0);
 	}
-	if (count != 0 && interval != 0)
-		usage("can't specify \"-C\" and \"-T\"");
+	if ((count != 0 && (interval != 0 || max_file_size != 0)) ||
+			(interval != 0 && (count != 0 || max_file_size !=0)))
+		usage("can't specify \"-C\" and \"-T\" and/or \"-Z\"");
 	if (srvr_addr == NULL)
-		usage("server not specified with -s");
+		usage("server not specified with \"-s\"");
 	if (out_addr == NULL)
-		usage("output not specified with -o");
+		usage("output not specified with \"-o\"");
 	if (watches == NULL)
-		usage("no watches specified with -w");
+		usage("no watches specified with \"-w\"");
 	if (mode == RAD) {
 		if (anomalies == NULL)
-			usage("anomalies specified with -a");
+			usage("anomalies specified with \"-a\"");
 		if (chs != NULL) {
 			axa_error_msg("\"-c %s\" not allowed in RAD mode",
 					chs->c);
@@ -386,8 +399,8 @@ main(int argc, char **argv)
 	if (axa_kickfile == true) {
 		if (output_tsindex_write_interval > 0)
 			usage("\"-k\" not allowed with \"-i\"");
-		if (count == 0 && interval == 0)
-			usage("\"-k\" needs \"-C\" or \"-T\"");
+		if (count == 0 && interval == 0 && max_file_size == 0)
+			usage("\"-k\" needs \"-C\" or \"-T\" or \"-Z\"");
 	}
 
 	if (!axa_load_client_config(&emsg, config_file)) {

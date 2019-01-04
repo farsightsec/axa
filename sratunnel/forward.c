@@ -28,6 +28,8 @@ extern uint axa_debug;
 extern int initial_count;
 extern unsigned long interval;
 extern unsigned long interval_prev;
+extern off_t max_file_size;
+extern const char *out_addr;
 
 /* extern: output.c */
 extern nmsg_output_t out_nmsg_output;
@@ -69,6 +71,7 @@ do_kickfile(void)
 static void
 forward_hit(axa_p_whit_t *whit, size_t whit_len)
 {
+	struct stat stat_buf = {0};
 	struct timeval now;
 	time_t ms;
 
@@ -94,7 +97,8 @@ forward_hit(axa_p_whit_t *whit, size_t whit_len)
 		if (axa_kickfile) {
 			if (axa_debug > 1)
 				axa_trace_msg("forwarded %d messages, rotating %s and running %s",
-						initial_count, axa_kf->curname, axa_kf->cmd);
+						initial_count, axa_kf->curname,
+						axa_kf->cmd[0] != '\0' ? axa_kf->cmd : "<no command>");
 			do_kickfile();
 			count = initial_count;
 			return;
@@ -109,7 +113,8 @@ forward_hit(axa_p_whit_t *whit, size_t whit_len)
 		if (axa_kickfile) {
 			if (axa_debug > 1)
 				axa_trace_msg("stopped at %s, rotating kickfile and running %s",
-						ctime((time_t *)&now.tv_sec), axa_kf->cmd);
+						ctime((time_t *)&now.tv_sec),
+						axa_kf->cmd[0] != '\0' ? axa_kf->cmd : "<no command>");
 			do_kickfile();
 			interval_prev = now.tv_sec - (now.tv_sec % interval);
 			return;
@@ -118,6 +123,34 @@ forward_hit(axa_p_whit_t *whit, size_t whit_len)
 			axa_trace_msg("stopped at %s",
 					ctime((time_t *)&now.tv_sec));
 		stop(0);
+	}
+	if (max_file_size > 0) {
+		const char *fname = NULL;
+
+		if (axa_kickfile)
+			fname = axa_kf->tmpname;
+		else
+			fname = strrchr(out_addr, ':') + 1;
+
+		if (stat(fname, &stat_buf) == -1) {
+			axa_error_msg("can't stat output file \"%s\": %s", fname, strerror(errno));
+			stop(0);
+		}
+
+		if (stat_buf.st_size >= max_file_size) {
+			if (axa_kickfile) {
+				if (axa_debug > 1)
+					axa_trace_msg("output file is %"PRIu64" bytes, rotating kickfile and running %s",
+							stat_buf.st_size,
+							axa_kf->cmd[0] != '\0' ? axa_kf->cmd : "<no command>");
+				do_kickfile();
+				return;
+			}
+			if (axa_debug != 0)
+				axa_trace_msg("output file is %"PRIu64" bytes",
+						stat_buf.st_size);
+			stop(0);
+		}
 	}
 }
 
