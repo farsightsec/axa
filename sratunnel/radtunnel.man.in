@@ -37,6 +37,7 @@
 .Op Fl r Ar rate-limit
 .Op Fl S Ar certs
 .Op Fl T Ar secs
+.Op Fl Z Ar size
 .br
 .Sh DESCRIPTION
 .Nm Radtunnel
@@ -65,7 +66,7 @@ There must be at least one
 .Fl a
 in RAD mode.
 .It Fl C Ar count
-stops
+stop
 .Nm
 or (with
 .Fl k
@@ -123,11 +124,14 @@ enables
 .Cm kicker
 mode and makes
 .Fl C
-or
+,
 .Fl T
+or
+.Fl Z
 continuous. In this mode output file names are suffixed with a timestamp and
 .Nm
-runs continuously, rotating output files as payload counts or time intervals expire.
+runs continuously, rotating output files as payload counts or the output file size
+exceeds a threshold or time intervals expire.
 .Ar cmd
 specifies the command to run on output files after rotation. If
 .Ar cmd
@@ -137,8 +141,10 @@ then no command is executed and only file rotation is performed.
 
 This option must be combined with either
 .Fl C
-or
+,
 .Fl T
+or
+.Fl Z
 but may not be used with
 .Fl i .
 Only nmsg file-based outputs are supported.
@@ -207,7 +213,7 @@ If not absolute, the files are in the
 directory.
 .El
 .It Fl T Ar secs
-stops
+stop
 .Nm
 or (with
 .Fl k
@@ -242,6 +248,21 @@ dns
 watches to indicate addresses or domains that are not used exclusively.
 .It Fl z
 enable nmsg zlib container compression.
+.It Fl Z Ar size
+stop
+.Nm
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output after the output file meets
+or exceeds
+.Ar size .
+This mode may only be used with file-based outputs. Additionally,
+because nmsg-based file outputs are by default buffered, it is
+recommended when writing to one that this option be used in
+unbuffered mode (
+.Fl u
+).
 .El
 .Sh EXAMPLES
 The following connects to a RAD server at example.com, loads the Brand Sentry
