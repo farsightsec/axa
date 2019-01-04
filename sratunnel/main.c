@@ -114,7 +114,7 @@ usage(const char *msg, ...)
 	}
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2014-2018 Farsight Security, Inc.\n");
+	printf("(c) 2014-2019 Farsight Security, Inc.\n");
 	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
