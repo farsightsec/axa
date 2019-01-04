@@ -225,7 +225,7 @@ echo 070400 using radtool with configuration file of mode 640 should fail
 echo "mode" | $RADTOOL -n ${CONF}-badperms 2>&1 | grep "has permissions set for group/other"
 
 echo 070500 using sratool with configuration file of mode 640 should fail
-echo "mode" | $RADTOOL -n ${CONF}-badperms 2>&1 | grep "has permissions set for group/other"
+echo "mode" | $SRATOOL -n ${CONF}-badperms 2>&1 | grep "has permissions set for group/other"
 
 # 
 # These are also tested in the various above tests:
