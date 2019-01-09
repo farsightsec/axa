@@ -547,14 +547,15 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 			 */
 			if (ts_idx_prev.tv_sec == 0 ||
 					ts_idx_prev.tv_sec < ts_idx.tv_sec) {
-				rc = mdb_txn_commit(mdb_txn);
-				if (rc != 0) {
+				if ((rc = mdb_txn_commit(mdb_txn)) != 0) {
 					out_error("cannot commit lmdb txn: %s\n",
 							mdb_strerror(rc));
 					goto done;
 				}
-				rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn);
-				if (rc != 0) {
+				else if (axa_debug > 1)
+					axa_trace_msg("wrote timestamp %ld (%lx) to offset 0x%lx",
+							ts_idx.tv_sec, ts_idx.tv_sec, offset);
+				if ((rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn)) != 0) {
 					axa_error_msg("mdb_txn_begin(): %s",
 							mdb_strerror(rc));
 					exit(EX_SOFTWARE);

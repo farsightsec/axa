@@ -21,14 +21,18 @@
 
 struct axa_kickfile {
 	char *cmd;
-	char *curname;
-	char *axa_basename;
-	char *tmpname;
-	char *suffix;
+
+	char *file_curname;
+	char *file_basename;
+	char *file_tmpname;
+	char *file_suffix;
+
+	void (*cb)(void *);
 };
 
-void axa_kickfile_destroy(struct axa_kickfile **);
-void axa_kickfile_exec(struct axa_kickfile *);
-void axa_kickfile_rotate(struct axa_kickfile *);
+void axa_kickfile_destroy(struct axa_kickfile **kf);
+void axa_kickfile_exec(struct axa_kickfile *kf);
+void axa_kickfile_rotate(struct axa_kickfile *kf);
+void axa_kickfile_register_cb(struct axa_kickfile *kf, void (*cb)(void *));
 
 #endif /* AXA_KICKFILE_H */

@@ -61,7 +61,7 @@ do_kickfile(void)
 		stop(0);
 	}
 	axa_kickfile_exec(axa_kf);
-	axa_kickfile_rotate(axa_kf);
+	/* file is rotated in out_open() --> axa_open_nmsg_out() */
 	if (!out_open(output_buffering)) {
 		axa_error_msg("can't reopen output");
 		stop(0);
@@ -97,7 +97,7 @@ forward_hit(axa_p_whit_t *whit, size_t whit_len)
 		if (axa_kickfile) {
 			if (axa_debug > 1)
 				axa_trace_msg("forwarded %d messages, rotating %s and running %s",
-						initial_count, axa_kf->curname,
+						initial_count, axa_kf->file_curname,
 						axa_kf->cmd[0] != '\0' ? axa_kf->cmd : "<no command>");
 			do_kickfile();
 			count = initial_count;
@@ -128,7 +128,7 @@ forward_hit(axa_p_whit_t *whit, size_t whit_len)
 		const char *fname = NULL;
 
 		if (axa_kickfile)
-			fname = axa_kf->tmpname;
+			fname = axa_kf->file_tmpname;
 		else
 			fname = strrchr(out_addr, ':') + 1;
 
