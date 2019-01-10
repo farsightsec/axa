@@ -157,26 +157,19 @@ kickfile_finish(void)
 static void
 lmdb_kickfile_finish(void)
 {
-#if 0
+
 	size_t n;
-	const char *s;
 	char lmdb_lock_filename[BUFSIZ];
-#endif
+
 
 	axa_kickfile_exec(lmdb_kf);
-	//axa_kickfile_rotate(lmdb_kf);
-
-#if 0
 
 	n = strlcpy(lmdb_lock_filename, lmdb_kf->file_tmpname, sizeof (lmdb_lock_filename));
 	strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
-	s = strrchr(lmdb_lock_filename, '.' + 1);
-	if (s == NULL || (rename(lmdb_lock_filename, s) != 0))
+	if ((unlink(lmdb_lock_filename)) != 0)
 		fprintf(stderr,
-			"%s(): can't rename lmdb lock file \"%s\": %s\n",
-			__func__, lmdb_lock_filename,
-			s == NULL ? "expected lock filename not found" : strerror(errno));
-#endif
+			"%s(): can't unlink lmdb lock file \"%s\": %s\n",
+			__func__, lmdb_lock_filename, strerror(errno));
 
 	axa_kickfile_destroy(&lmdb_kf);
 }
