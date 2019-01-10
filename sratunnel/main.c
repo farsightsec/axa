@@ -185,15 +185,23 @@ static void
 lmdb_shutdown(void)
 {
 	int rc;
+	size_t n;
+	char lmdb_lock_filename[BUFSIZ];
 
 	/* try to commit any outstanding data before closing the env */
-	rc = mdb_txn_commit(mdb_txn);
-	if (rc != 0)
+	if ((rc = mdb_txn_commit(mdb_txn)) != 0)
 		fprintf(stderr, "lmdb_shutdown() couldn't perform final commit: mdb_txn_commit(): %s\n",
 				mdb_strerror(rc));
 
 	mdb_dbi_close(mdb_env, mdb_dbi);
 	mdb_env_close(mdb_env);
+	if (!lmdb_kickfile) {
+		n = strlcpy(lmdb_lock_filename, lmdb_filename, sizeof (lmdb_lock_filename));
+		strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
+		if (unlink(lmdb_lock_filename) != 0)
+			fprintf(stderr, "%s(): can't unlink lmdb lock file \"%s\": %s\n",
+					__func__, lmdb_lock_filename, strerror(errno));
+	}
 }
 
 static void AXA_NORETURN AXA_PF(1,2)
