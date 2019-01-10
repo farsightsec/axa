@@ -527,26 +527,25 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 			data.mv_size = sizeof (off_t);
 			data.mv_data = &offset;
 
-			/* Add a key/data pair. Duplicate keys (timestamps) are
-			 * ignored, we only save the first observed
-			 * timestamp/offset. This provides the desired behavior
-			 * of being able to quickly locate the first instance
-			 * of a key, not the last.
-			 */
-			rc = mdb_put(mdb_txn, mdb_dbi, &key, &data,
-					MDB_NOOVERWRITE);
-			if (rc != MDB_KEYEXIST && rc != 0) {
-				out_error("cannot write timestamp index: %s\n",
-						mdb_strerror(rc));
-				goto done;
-			}
-
-			/* Always commit the first transaction; commit
+			/* Always put/commit the first transaction; put/commit
 			 * subsequent transactions to disk no more than once
 			 * per second.
 			 */
 			if (ts_idx_prev.tv_sec == 0 ||
 					ts_idx_prev.tv_sec < ts_idx.tv_sec) {
+				/* Add a key/data pair. Duplicate keys (timestamps) are
+				 * ignored, we only save the first observed
+				 * timestamp/offset. This provides the desired behavior
+				 * of being able to quickly locate the first instance
+				 * of a key, not the last.
+				 */
+				rc = mdb_put(mdb_txn, mdb_dbi, &key, &data,
+						MDB_NOOVERWRITE);
+				if (rc != MDB_KEYEXIST && rc != 0) {
+					out_error("cannot write timestamp index: %s\n",
+							mdb_strerror(rc));
+					goto done;
+				}
 				if ((rc = mdb_txn_commit(mdb_txn)) != 0) {
 					out_error("cannot commit lmdb txn: %s\n",
 							mdb_strerror(rc));
