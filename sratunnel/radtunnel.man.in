@@ -113,12 +113,29 @@ created timestamp index mdb file.
 .Nm
 will always write an index for the first nmsg and every
 .Ar interval
-nmsgs thereafter.
+nmsgs thereafter. Note that because currently only the epoch portion of
+the timestamp is significant,
+.Nm
+will only write entries at most, once per second. So for sentry modules where
+anomaly hits can show up many times per second, a low
+.Ar interval
+value may not be honored and indexes would instead only be written once per
+second. To achieve this desired balance between index coverage and channel
+velocity, some experimentation with different
+.Ar interval
+values may be required.
 
 If
 .Nm
 finds a previously created tsindex file and is not in append mode, it will
 clobber the file.
+
+Note that in an effort to keep the file-system clean,
+.Nm
+will remove the lmdb-generated lock files after execution (or when using
+.Fl k ,
+after rotation).
+
 .It Fl k Ar cmd
 enables
 .Cm kicker
