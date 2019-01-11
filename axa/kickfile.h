@@ -32,7 +32,7 @@ struct axa_kickfile {
 
 void axa_kickfile_destroy(struct axa_kickfile **kf);
 void axa_kickfile_exec(struct axa_kickfile *kf);
-void axa_kickfile_rotate(struct axa_kickfile *kf);
+void axa_kickfile_rotate(struct axa_kickfile *kf, const char *name);
 void axa_kickfile_register_cb(struct axa_kickfile *kf, void (*cb)(void *));
 
 #endif /* AXA_KICKFILE_H */
