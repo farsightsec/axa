@@ -124,7 +124,7 @@ lmdb_init(void)
 }
 
 static void
-do_lmdb_kickfile(void __attribute__((__unused__)) *blob)
+do_lmdb_kickfile(void AXA_UNUSED *blob)
 {
 	int rc;
 	size_t n;
