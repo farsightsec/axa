@@ -96,7 +96,7 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 			axa_kf->file_suffix = strdup(json == true ? ".jsonl" : ".nmsg");
 			kickfile_first_time = false;
 		}
-		axa_kickfile_rotate(axa_kf);
+		axa_kickfile_rotate(axa_kf, NULL);
 	}
 
 	if (isfile) {
