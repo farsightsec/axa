@@ -129,7 +129,6 @@ do_lmdb_kickfile(void AXA_UNUSED *blob)
 	int rc;
 	size_t n;
 	char lmdb_lock_filename[BUFSIZ];
-	char *tmp_filename_copy = NULL, *nmsg_filename_timestamp = NULL;
 
 	if ((rc = mdb_txn_commit(mdb_txn)) != 0)
 		fprintf(stderr, "lmdb_shutdown() couldn't perform final commit: mdb_txn_commit(): %s\n",
@@ -144,11 +143,7 @@ do_lmdb_kickfile(void AXA_UNUSED *blob)
 		axa_error_msg("%s(): can't unlink lmdb lock file \"%s\": %s\n",
 				__func__, lmdb_lock_filename, strerror(errno));
 	axa_kickfile_exec(lmdb_kf);
-	tmp_filename_copy = strdup(axa_kf->file_tmpname);
-	nmsg_filename_timestamp = strstr(tmp_filename_copy, "nmsg.");
-	nmsg_filename_timestamp = strchr(nmsg_filename_timestamp, '.') + 1;
-	axa_kickfile_rotate(lmdb_kf, (const char *)nmsg_filename_timestamp);
-	free(tmp_filename_copy);
+	axa_kickfile_rotate(lmdb_kf, axa_kickfile_get_kt(axa_kf));
 
 	lmdb_init();
 }
@@ -617,19 +612,13 @@ main(int argc, char **argv)
 		}
 
 		if (axa_kickfile) {
-			char *tmp_filename_copy = NULL, *nmsg_filename_timestamp = NULL;
-
 			lmdb_kickfile = true;
 			lmdb_kf = axa_zalloc(sizeof (*axa_kf));
 			axa_kickfile_register_cb(axa_kf, do_lmdb_kickfile);
 			lmdb_kf->file_basename = strdup(lmdb_filename);
 			lmdb_kf->file_suffix = strdup(".mdb");
 
-			tmp_filename_copy = strdup(axa_kf->file_tmpname);
-			nmsg_filename_timestamp = strstr(tmp_filename_copy, "nmsg.");
-			nmsg_filename_timestamp = strchr(nmsg_filename_timestamp, '.') + 1;
-			axa_kickfile_rotate(lmdb_kf, (const char *)nmsg_filename_timestamp);
-			free(tmp_filename_copy);
+			axa_kickfile_rotate(lmdb_kf, axa_kickfile_get_kt(axa_kf));
 		}
 
 		if (!lmdb_init())

@@ -54,6 +54,8 @@ axa_kickfile_destroy(struct axa_kickfile **kf)
 	free((*kf)->file_curname);
 	free((*kf)->file_tmpname);
 	free((*kf)->file_suffix);
+	if ((*kf)->file_kt)
+		free((*kf)->file_kt);
 	free((*kf));
 	*kf = NULL;
 }
@@ -99,8 +101,12 @@ axa_kickfile_rotate(struct axa_kickfile *kf, const char *name)
 	axa_asprintf(&kf->file_tmpname, "%s/.%s.%s.part", s_dirname, s_basename, kt);
 	axa_asprintf(&kf->file_curname, "%s/%s.%s%s", s_dirname, s_basename, kt,
 		      kf->file_suffix != NULL ? kf->file_suffix : "");
-	if (name == NULL)
+	if (name == NULL) {
+		if (kf->file_kt != NULL)
+			free(kf->file_kt);
+		kf->file_kt = strdup(kt);
 		free(kt);
+	}
 	free(dup_for_basename);
 	free(dup_for_dirname);
 
@@ -114,4 +120,11 @@ axa_kickfile_register_cb(struct axa_kickfile *kf, void (*cb)(void *))
 	AXA_ASSERT(kf != NULL);
 
 	kf->cb = cb;
+}
+
+const char *
+axa_kickfile_get_kt(struct axa_kickfile *kf)
+{
+	AXA_ASSERT(kf != NULL);
+	return ((const char *)kf->file_kt);
 }
