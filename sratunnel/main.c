@@ -132,7 +132,8 @@ do_lmdb_kickfile(void AXA_UNUSED *blob)
 	char lmdb_lock_filename[BUFSIZ];
 
 	if ((rc = mdb_txn_commit(mdb_txn)) != 0)
-		fprintf(stderr, "lmdb_shutdown() couldn't perform final commit: mdb_txn_commit(): %s\n",
+		fprintf(stderr, "%s() couldn't perform final commit: mdb_txn_commit(): %s\n",
+				__func__,
 				mdb_strerror(rc));
 
 	mdb_dbi_close(mdb_env, mdb_dbi);
@@ -159,10 +160,8 @@ kickfile_finish(void)
 static void
 lmdb_kickfile_finish(void)
 {
-
 	size_t n;
 	char lmdb_lock_filename[BUFSIZ];
-
 
 	axa_kickfile_exec(lmdb_kf);
 
