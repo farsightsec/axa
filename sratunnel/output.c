@@ -520,8 +520,6 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 		ts_idx.tv_nsec = whit->nmsg.hdr.ts.tv_nsec;
 		if (offset == 0 || ((output_tsindex_write_cnt % output_tsindex_write_interval == 0) &&
 					(ts_idx_prev.tv_sec == 0 || ts_idx_prev.tv_sec < ts_idx.tv_sec))) {
-			fprintf(stderr, "offset: %u output_tsindex_write_cnt: %u output_tsindex_write_interval: %u ts_idx_prev.tv_sec: %u ts_idx.tv_sec: %u\n", 
-					offset, output_tsindex_write_cnt, output_tsindex_write_interval, ts_idx_prev.tv_sec, ts_idx.tv_sec);
 
 			key.mv_size = sizeof (ts_idx);
 			key.mv_data = &ts_idx;
