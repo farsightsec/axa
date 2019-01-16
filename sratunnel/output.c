@@ -25,6 +25,7 @@ extern const char *out_addr;
 extern MDB_env *mdb_env;
 extern MDB_txn *mdb_txn;
 extern MDB_dbi mdb_dbi;
+extern bool lmdb_call_exit_handler;
 
 /* extern: axalib/open_nmsg_out.c */
 extern bool axa_nmsg_out_json;
@@ -538,7 +539,12 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 			if (rc != MDB_KEYEXIST && rc != 0) {
 				out_error("cannot write timestamp index: %s\n",
 						mdb_strerror(rc));
-				goto done;
+				if (rc == -30792) {
+					/* use fprintf here because of out_error() rate limiting */
+					fprintf(stderr, "you are seeing this error because lmdb ran out of memory, try running again with a larger value for \"-I\"\n");
+					lmdb_call_exit_handler = false;
+				}
+				exit(EX_SOFTWARE);
 			}
 			if ((rc = mdb_txn_commit(mdb_txn)) != 0) {
 				out_error("cannot commit lmdb txn: %s\n",

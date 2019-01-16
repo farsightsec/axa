@@ -67,6 +67,7 @@ double sample = 0.0;			/* sampling rate */
 MDB_env *mdb_env;			/* timestamp index db environment */
 MDB_dbi mdb_dbi;			/* timestamp index db handle */
 MDB_txn *mdb_txn;			/* timestamp index transaction handle */
+bool lmdb_call_exit_handler = true;	/* is false when a fatal lmdb is encountered */
 
 /* private */
 static bool version;
@@ -181,6 +182,9 @@ lmdb_shutdown(void)
 	int rc;
 	size_t n;
 	char lmdb_lock_filename[BUFSIZ];
+
+	if (lmdb_call_exit_handler == false)
+		return;
 
 	/* try to commit any outstanding data before closing the env */
 	if ((rc = mdb_txn_commit(mdb_txn)) != 0)
