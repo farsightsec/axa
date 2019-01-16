@@ -147,7 +147,10 @@ do_lmdb_kickfile(void AXA_UNUSED *blob)
 	axa_kickfile_exec(lmdb_kf);
 	axa_kickfile_rotate(lmdb_kf, axa_kickfile_get_kt(axa_kf));
 
-	lmdb_init();
+	if (lmdb_init() == false) {
+		axa_error_msg("can't (re)initialize lmdb\n");
+		exit(EX_SOFTWARE);
+	}
 }
 
 static void
