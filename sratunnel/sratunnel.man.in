@@ -37,6 +37,7 @@
 .Op Fl r Ar rate-limit
 .Op Fl S Ar certs
 .Op Fl T Ar secs
+.Op Fl Z Ar size
 .Sh DESCRIPTION
 .Nm Sratunnel
 transfers selected Security Information Exchange (SIE) data
@@ -59,7 +60,7 @@ emitted to stdout. When specifying this mode, you also need to specify
 .Fl d
 at the command line.
 .It Fl C Ar count
-stops
+stop
 .Nm
 or (with
 .Fl k
@@ -116,22 +117,42 @@ created tsindex file.
 .Nm
 will always write an entry for the first nmsg and every
 .Ar interval
-nmsgs thereafter.
+nmsgs thereafter. Note however that because currently only the epoch portion of
+the timestamp is significant,
+.Nm
+will only write entries at most, once per second. So for fast channels where
+watch hits can show up many times per second, a low
+.Ar interval
+value may not be honored and indexes would instead only be written once per
+second. To achieve the desired balance between index coverage and channel
+velocity, some experimentation with different
+.Ar interval
+values may be required.
 
 If
 .Nm
 finds a previously created tsindex file and is not in append mode, it will
 clobber the file.
+
+Note that in an effort to keep the file-system clean,
+.Nm
+will remove the lmdb-generated lock files after execution (or when using
+.Fl k ,
+after rotation).
+
 .It Fl k Ar cmd
 enables
 .Cm kicker
 mode and makes
 .Fl C
-or
+,
 .Fl T
+or
+.Fl Z
 continuous. In this mode output file names are suffixed with a timestamp and
 .Nm
-runs continuously, rotating output files as payload counts or time intervals expire.
+runs continuously, rotating output files as payload counts or the output file size
+exceeds a threshold or time intervals expire.
 .Ar cmd
 specifies the command to run on output files after rotation. If
 .Ar cmd
@@ -141,8 +162,10 @@ then no command is executed and only file rotation is performed.
 
 This option must be combined with either
 .Fl C
-or
+,
 .Fl T
+or
+.Fl Z
 but may not be used with
 .Fl i .
 Only nmsg file-based outputs are supported.
@@ -210,7 +233,7 @@ If not absolute, the files are in the
 directory.
 .El
 .It Fl T Ar secs
-stops
+stop
 .Nm
 or (with
 .Fl k
@@ -246,6 +269,21 @@ watches to indicate addresses or domains that are not used exclusively.
 disable nmsg output buffering.
 .It Fl z
 enable nmsg zlib container compression.
+.It Fl Z Ar size
+stop
+.Nm
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output after the output file meets
+or exceeds
+.Ar size .
+This mode may only be used with file-based outputs. Additionally,
+because nmsg-based file outputs are by default buffered, it is
+recommended when writing to one that this option be used in
+unbuffered mode (
+.Fl u
+).
 .El
 .Sh EXAMPLES
 The following sends all new domain reports on channel 213

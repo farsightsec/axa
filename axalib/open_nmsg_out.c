@@ -92,15 +92,15 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 		}
 
 		if (kickfile_first_time) {
-			axa_kf->axa_basename = strdup(addr);
-			axa_kf->suffix = strdup(json == true ? ".jsonl" : ".nmsg");
+			axa_kf->file_basename = strdup(addr);
+			axa_kf->file_suffix = strdup(json == true ? ".jsonl" : ".nmsg");
 			kickfile_first_time = false;
 		}
-		axa_kickfile_rotate(axa_kf);
+		axa_kickfile_rotate(axa_kf, NULL);
 	}
 
 	if (isfile) {
-		s = open(axa_kickfile ? axa_kf->tmpname : addr,
+		s = open(axa_kickfile ? axa_kf->file_tmpname : addr,
 				axa_out_file_append ?
 				O_WRONLY | O_CREAT | O_APPEND :
 				O_WRONLY | O_CREAT | O_TRUNC, 0666);

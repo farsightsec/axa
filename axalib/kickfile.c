@@ -20,7 +20,6 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <unistd.h>
 
 #include <axa/axa.h>
@@ -51,10 +50,12 @@ kickfile_time(void)
 void
 axa_kickfile_destroy(struct axa_kickfile **kf)
 {
-	free((*kf)->axa_basename);
-	free((*kf)->curname);
-	free((*kf)->tmpname);
-	free((*kf)->suffix);
+	free((*kf)->file_basename);
+	free((*kf)->file_curname);
+	free((*kf)->file_tmpname);
+	free((*kf)->file_suffix);
+	if ((*kf)->file_kt)
+		free((*kf)->file_kt);
 	free((*kf));
 	*kf = NULL;
 }
@@ -64,14 +65,14 @@ axa_kickfile_exec(struct axa_kickfile *kf)
 {
 	char *cmd;
 
-	if (kf != NULL && kf->tmpname != NULL && kf->curname != NULL) {
-		if (rename(kf->tmpname, kf->curname) < 0) {
+	if (kf != NULL && kf->file_tmpname != NULL && kf->file_curname != NULL) {
+		if (rename(kf->file_tmpname, kf->file_curname) < 0) {
 			perror("rename");
-			unlink(kf->tmpname);
+			unlink(kf->file_tmpname);
 		} else if (kf->cmd != NULL && *kf->cmd != '\0') {
 			int rc;
 
-			axa_asprintf(&cmd, "%s %s &", kf->cmd, kf->curname);
+			axa_asprintf(&cmd, "%s %s &", kf->cmd, kf->file_curname);
 			rc = system(cmd);
 			if (rc != 0)
 				fprintf(stderr, "WARNING: system() failed\n");
@@ -81,26 +82,49 @@ axa_kickfile_exec(struct axa_kickfile *kf)
 }
 
 void
-axa_kickfile_rotate(struct axa_kickfile *kf)
+axa_kickfile_rotate(struct axa_kickfile *kf, const char *name)
 {
 	char *kt;
 	char *dup_for_basename, *s_basename;
 	char *dup_for_dirname, *s_dirname;
 
-	kt = kickfile_time();
-	dup_for_basename = strdup(kf->axa_basename);
-	dup_for_dirname = strdup(kf->axa_basename);
+	kt = name != NULL ? (char *)name : kickfile_time();
+	dup_for_basename = strdup(kf->file_basename);
+	dup_for_dirname = strdup(kf->file_basename);
 	s_basename = basename(dup_for_basename);
 	s_dirname = dirname(dup_for_dirname);
-	assert(s_basename != NULL);
-	assert(s_dirname != NULL);
+	AXA_ASSERT(s_basename != NULL);
+	AXA_ASSERT(s_dirname != NULL);
 
-	free(kf->tmpname);
-	free(kf->curname);
-	axa_asprintf(&kf->tmpname, "%s/.%s.%s.part", s_dirname, s_basename, kt);
-	axa_asprintf(&kf->curname, "%s/%s.%s%s", s_dirname, s_basename, kt,
-		      kf->suffix != NULL ? kf->suffix : "");
-	free(kt);
+	free(kf->file_tmpname);
+	free(kf->file_curname);
+	axa_asprintf(&kf->file_tmpname, "%s/.%s.%s.part", s_dirname, s_basename, kt);
+	axa_asprintf(&kf->file_curname, "%s/%s.%s%s", s_dirname, s_basename, kt,
+		      kf->file_suffix != NULL ? kf->file_suffix : "");
+	if (name == NULL) {
+		if (kf->file_kt != NULL)
+			free(kf->file_kt);
+		kf->file_kt = strdup(kt);
+		free(kt);
+	}
 	free(dup_for_basename);
 	free(dup_for_dirname);
+
+	if (kf->cb != NULL)
+		kf->cb((void *)"rumi");
+}
+
+void
+axa_kickfile_register_cb(struct axa_kickfile *kf, void (*cb)(void *))
+{
+	AXA_ASSERT(kf != NULL);
+
+	kf->cb = cb;
+}
+
+const char *
+axa_kickfile_get_kt(struct axa_kickfile *kf)
+{
+	AXA_ASSERT(kf != NULL);
+	return ((const char *)kf->file_kt);
 }

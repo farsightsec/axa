@@ -51,6 +51,7 @@ bool first_time;			/* true == first time connecting */
 bool output_buffering = true;		/* true == buffer nmsg output */
 unsigned long interval;			/* stop or reopen after this many secs */
 unsigned long interval_prev;		/* the previous interval */
+off_t max_file_size;			/* stop or reopen after output file is this large */
 nmsg_input_t nmsg_input;		/* NMSG input object */
 FILE *fp_pidfile = NULL;		/* PID file FILE pointer */
 FILE *fp_tsindex = NULL;		/* timestamp index file pointer */
@@ -66,14 +67,91 @@ double sample = 0.0;			/* sampling rate */
 MDB_env *mdb_env;			/* timestamp index db environment */
 MDB_dbi mdb_dbi;			/* timestamp index db handle */
 MDB_txn *mdb_txn;			/* timestamp index transaction handle */
+bool lmdb_call_exit_handler = true;	/* is false when a fatal lmdb is encountered */
 
 /* private */
 static bool version;
 static struct timeval time_out_flush;
 static uint acct_interval;
 static struct timeval acct_timer;
+static struct axa_kickfile *lmdb_kf;
+static bool lmdb_kickfile = false;
+static char lmdb_filename[BUFSIZ];
+static size_t tsindex_map_size = 2560;
 
 void print_status(void);
+
+static bool
+lmdb_init(void)
+{
+	int rc;
+	const char *filename;
+
+	filename = lmdb_kickfile ? lmdb_kf->file_tmpname : lmdb_filename;
+
+	if ((rc = mdb_env_create(&mdb_env)) != 0) {
+		axa_error_msg("mdb_env_create(): %s", mdb_strerror(rc));
+		return (false);
+	}
+
+	/* lmdb is a memory mapped database. The mapsize should be a
+	 * multiple of the OS page size (usually 4,096 bytes). The
+	 * size of the memory map is also the maximum size of the
+	 * database. As such, we should periodically check to see if
+	 * we're close to running out of space and resize.
+	 */
+	if ((rc = mdb_env_set_mapsize(mdb_env, getpagesize() * tsindex_map_size)) !=0 ) {
+		axa_error_msg("mdb_env_set_mapsize(): %s", mdb_strerror(rc));
+		return (false);
+	}
+	if ((rc = mdb_env_open(mdb_env, filename, MDB_NOSUBDIR, 0664)) != 0) {
+		axa_error_msg("mdb_env_open(): %s", mdb_strerror(rc));
+		return (false);
+	}
+	if ((rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn)) != 0) {
+		axa_error_msg("mdb_txn_begin(): %s", mdb_strerror(rc));
+		return (false);
+	}
+	if ((rc = mdb_dbi_open(mdb_txn, NULL, MDB_INTEGERKEY, &mdb_dbi)) != 0) {
+		axa_error_msg("mdb_dbi_open(): %s", mdb_strerror(rc));
+		return (false);
+	}
+	if ((rc = mdb_set_compare(mdb_txn, mdb_dbi, axa_tsi_mdb_cmp)) != 0) {
+		axa_error_msg("mdb_set_compare(): %s", mdb_strerror(rc));
+		return (false);
+	}
+
+	return (true);
+}
+
+static void
+do_lmdb_kickfile(void AXA_UNUSED *blob)
+{
+	int rc;
+	size_t n;
+	char lmdb_lock_filename[BUFSIZ];
+
+	if ((rc = mdb_txn_commit(mdb_txn)) != 0)
+		fprintf(stderr, "%s() couldn't perform final commit: mdb_txn_commit(): %s\n",
+				__func__,
+				mdb_strerror(rc));
+
+	mdb_dbi_close(mdb_env, mdb_dbi);
+	mdb_env_close(mdb_env);
+
+	n = strlcpy(lmdb_lock_filename, lmdb_kf->file_tmpname, sizeof (lmdb_lock_filename));
+	strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
+	if (unlink(lmdb_lock_filename) != 0)
+		axa_error_msg("%s(): can't unlink lmdb lock file \"%s\": %s\n",
+				__func__, lmdb_lock_filename, strerror(errno));
+	axa_kickfile_exec(lmdb_kf);
+	axa_kickfile_rotate(lmdb_kf, axa_kickfile_get_kt(axa_kf));
+
+	if (lmdb_init() == false) {
+		axa_error_msg("can't (re)initialize lmdb\n");
+		exit(EX_SOFTWARE);
+	}
+}
 
 static void
 kickfile_finish(void)
@@ -83,18 +161,47 @@ kickfile_finish(void)
 }
 
 static void
+lmdb_kickfile_finish(void)
+{
+	size_t n;
+	char lmdb_lock_filename[BUFSIZ];
+
+	axa_kickfile_exec(lmdb_kf);
+
+	n = strlcpy(lmdb_lock_filename, lmdb_kf->file_tmpname, sizeof (lmdb_lock_filename));
+	strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
+	if ((unlink(lmdb_lock_filename)) != 0)
+		fprintf(stderr,
+			"%s(): can't unlink lmdb lock file \"%s\": %s\n",
+			__func__, lmdb_lock_filename, strerror(errno));
+
+	axa_kickfile_destroy(&lmdb_kf);
+}
+
+static void
 lmdb_shutdown(void)
 {
 	int rc;
+	size_t n;
+	char lmdb_lock_filename[BUFSIZ];
+
+	if (lmdb_call_exit_handler == false)
+		return;
 
 	/* try to commit any outstanding data before closing the env */
-	rc = mdb_txn_commit(mdb_txn);
-	if (rc != 0)
+	if ((rc = mdb_txn_commit(mdb_txn)) != 0)
 		fprintf(stderr, "lmdb_shutdown() couldn't perform final commit: mdb_txn_commit(): %s\n",
 				mdb_strerror(rc));
 
 	mdb_dbi_close(mdb_env, mdb_dbi);
 	mdb_env_close(mdb_env);
+	if (!lmdb_kickfile) {
+		n = strlcpy(lmdb_lock_filename, lmdb_filename, sizeof (lmdb_lock_filename));
+		strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
+		if (unlink(lmdb_lock_filename) != 0)
+			fprintf(stderr, "%s(): can't unlink lmdb lock file \"%s\": %s\n",
+					__func__, lmdb_lock_filename, strerror(errno));
+	}
 }
 
 static void AXA_NORETURN AXA_PF(1,2)
@@ -113,7 +220,7 @@ usage(const char *msg, ...)
 	}
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2014-2018 Farsight Security, Inc.\n");
+	printf("(c) 2014-2019 Farsight Security, Inc.\n");
 	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
@@ -146,6 +253,7 @@ usage(const char *msg, ...)
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	printf("[-T secs]\t\tstop or reopen after secs have elapsed\n");
 	printf("[-u]\t\t\tunbuffer nmsg container output\n");
+	printf("[-Z size]\t\tstop or reopen when output file grows past size\n");
 	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
 	exit(EX_USAGE);
@@ -163,8 +271,8 @@ main(int argc, char **argv)
 	char *p;
 	const char *cp;
 	int i;
-	size_t n = 0, tsindex_map_size = 2560;
-	char out_filename[BUFSIZ], lmdb_filename[BUFSIZ];
+	size_t n = 0;
+	char out_filename[BUFSIZ];
 
 	axa_set_me(argv[0]);
 	AXA_ASSERT(axa_parse_log_opt(&emsg, "trace,off,stdout"));
@@ -180,7 +288,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
+	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uzZ:"))
 			!= -1) {
 		switch (i) {
 		case 'A':
@@ -325,6 +433,16 @@ main(int argc, char **argv)
 			output_buffering = false;
 			break;
 
+		case 'Z':
+			max_file_size = strtoul(optarg, &p, 10);
+			if (*optarg == '\0'
+			    || *p != '\0'
+			    || max_file_size < 1) {
+				axa_error_msg("invalid \"-Z %s\"", optarg);
+				exit(EX_USAGE);
+			}
+			break;
+
 		case 'z':
 			nmsg_zlib = true;
 			break;
@@ -352,17 +470,18 @@ main(int argc, char **argv)
 		    && anomalies == NULL)
 			exit(0);
 	}
-	if (count != 0 && interval != 0)
-		usage("can't specify \"-C\" and \"-T\"");
+	if ((count != 0 && (interval != 0 || max_file_size != 0)) ||
+			(interval != 0 && (count != 0 || max_file_size !=0)))
+		usage("can't specify \"-C\" and \"-T\" and/or \"-Z\"");
 	if (srvr_addr == NULL)
-		usage("server not specified with -s");
+		usage("server not specified with \"-s\"");
 	if (out_addr == NULL)
-		usage("output not specified with -o");
+		usage("output not specified with \"-o\"");
 	if (watches == NULL)
-		usage("no watches specified with -w");
+		usage("no watches specified with \"-w\"");
 	if (mode == RAD) {
 		if (anomalies == NULL)
-			usage("anomalies specified with -a");
+			usage("anomalies specified with \"-a\"");
 		if (chs != NULL) {
 			axa_error_msg("\"-c %s\" not allowed in RAD mode",
 					chs->c);
@@ -383,12 +502,9 @@ main(int argc, char **argv)
 			exit(0);
 		}
 	}
-	if (axa_kickfile == true) {
-		if (output_tsindex_write_interval > 0)
-			usage("\"-k\" not allowed with \"-i\"");
-		if (count == 0 && interval == 0)
-			usage("\"-k\" needs \"-C\" or \"-T\"");
-	}
+	if (axa_kickfile == true)
+		if (count == 0 && interval == 0 && max_file_size == 0)
+			usage("\"-k\" needs \"-C\" or \"-T\" or \"-Z\"");
 
 	if (!axa_load_client_config(&emsg, config_file)) {
 	        if (axa_config_file_found == false) {
@@ -445,7 +561,7 @@ main(int argc, char **argv)
 	}
 
 	if (output_tsindex_write_interval > 0) {
-		int rc = 0, pagesize = 0;
+		int rc = 0;
 		bool idx_exists = false;
 
 		/* Timestamp indexing requires unbuffered filesystem writes. */
@@ -501,54 +617,32 @@ main(int argc, char **argv)
 			}
 		}
 
-		rc = mdb_env_create(&mdb_env);
-		if (rc != 0) {
-			axa_error_msg("mdb_env_create(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
+		if (axa_kickfile) {
+			lmdb_kickfile = true;
+			lmdb_kf = axa_zalloc(sizeof (*axa_kf));
+			axa_kickfile_register_cb(axa_kf, do_lmdb_kickfile);
+			lmdb_kf->file_basename = strdup(lmdb_filename);
+			lmdb_kf->file_suffix = strdup(".mdb");
+
+			axa_kickfile_rotate(lmdb_kf, axa_kickfile_get_kt(axa_kf));
 		}
-		pagesize = getpagesize();
-		/* lmdb is a memory mapped database. The mapsize should be a
-		 * multiple of the OS page size (usually 4,096 bytes). The
-		 * size of the memory map is also the maximum size of the
-		 * database. As such, we should periodically check to see if
-		 * we're close to running out of space and resize.
-		 */
-		rc = mdb_env_set_mapsize(mdb_env, pagesize * tsindex_map_size);
-		if (rc != 0) {
-			axa_error_msg("mdb_env_set_mapsize(): %s",
-					mdb_strerror(rc));
+
+		if (!lmdb_init())
 			exit(EX_SOFTWARE);
-		}
 
 		if (axa_debug != 0)
 			axa_trace_msg("writing timestamp offsets to %s every %u nmsgs\n",
 					lmdb_filename,
 					output_tsindex_write_interval);
-		rc = mdb_env_open(mdb_env, lmdb_filename,
-				MDB_NOSUBDIR, 0664);
-		if (rc != 0) {
-			axa_error_msg("mdb_env_open(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-		rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn);
-		if (rc != 0) {
-			axa_error_msg("mdb_txn_begin(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-		rc = mdb_dbi_open(mdb_txn, NULL, MDB_INTEGERKEY, &mdb_dbi);
-		if (rc != 0) {
-			axa_error_msg("mdb_dbi_open(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-		rc = mdb_set_compare(mdb_txn, mdb_dbi, axa_tsi_mdb_cmp);
-		if (rc != 0) {
-			axa_error_msg("mdb_set_compare(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
+
 		atexit(lmdb_shutdown);
 	}
-	if (axa_kickfile)
+
+	if (axa_kickfile) {
 		atexit(kickfile_finish);
+		if (lmdb_kickfile)
+			atexit(lmdb_kickfile_finish);
+	}
 
 	/*
 	 * Continually reconnect to the SRA or RAD server and forward SIE data.

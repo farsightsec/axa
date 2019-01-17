@@ -25,6 +25,7 @@ extern const char *out_addr;
 extern MDB_env *mdb_env;
 extern MDB_txn *mdb_txn;
 extern MDB_dbi mdb_dbi;
+extern bool lmdb_call_exit_handler;
 
 /* extern: axalib/open_nmsg_out.c */
 extern bool axa_nmsg_out_json;
@@ -512,16 +513,16 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 	 * JSON).
 	 */
 	if (output_tsindex_write_interval > 0) {
-		/* Always write an index for the first one and every
-		 * output_tsindex_write_interval cnt writes thereafter.
+		/* Always write an index for the first nmsg in a file and every
+		 * output_tsindex_write_interval cnt writes thereafter but clamp
+		 * to no more than one per second.
 		 */
-		if (output_tsindex_write_cnt == 0 ||
-				(output_tsindex_write_cnt %
-				output_tsindex_write_interval) == 0) {
+		ts_idx.tv_sec = whit->nmsg.hdr.ts.tv_sec;
+		ts_idx.tv_nsec = whit->nmsg.hdr.ts.tv_nsec;
+		if (offset == 0 || ((output_tsindex_write_cnt % output_tsindex_write_interval == 0) &&
+					(ts_idx_prev.tv_sec == 0 || ts_idx_prev.tv_sec < ts_idx.tv_sec))) {
 
 			key.mv_size = sizeof (ts_idx);
-			ts_idx.tv_sec = whit->nmsg.hdr.ts.tv_sec;
-			ts_idx.tv_nsec = whit->nmsg.hdr.ts.tv_nsec;
 			key.mv_data = &ts_idx;
 
 			data.mv_size = sizeof (off_t);
@@ -538,29 +539,27 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 			if (rc != MDB_KEYEXIST && rc != 0) {
 				out_error("cannot write timestamp index: %s\n",
 						mdb_strerror(rc));
+				if (rc == -30792) {
+					/* use fprintf here because of out_error() rate limiting */
+					fprintf(stderr, "you are seeing this error because lmdb ran out of memory, try running again with a larger value for \"-I\"\n");
+					lmdb_call_exit_handler = false;
+				}
+				exit(EX_SOFTWARE);
+			}
+			if ((rc = mdb_txn_commit(mdb_txn)) != 0) {
+				out_error("cannot commit lmdb txn: %s\n",
+						mdb_strerror(rc));
 				goto done;
 			}
-
-			/* Always commit the first transaction; commit
-			 * subsequent transactions to disk no more than once
-			 * per second.
-			 */
-			if (ts_idx_prev.tv_sec == 0 ||
-					ts_idx_prev.tv_sec < ts_idx.tv_sec) {
-				rc = mdb_txn_commit(mdb_txn);
-				if (rc != 0) {
-					out_error("cannot commit lmdb txn: %s\n",
-							mdb_strerror(rc));
-					goto done;
-				}
-				rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn);
-				if (rc != 0) {
-					axa_error_msg("mdb_txn_begin(): %s",
-							mdb_strerror(rc));
-					exit(EX_SOFTWARE);
-				}
-				ts_idx_prev.tv_sec = ts_idx.tv_sec;
+			else if (axa_debug > 1)
+				axa_trace_msg("wrote timestamp %ld (%lx) to offset 0x%lx",
+						ts_idx.tv_sec, ts_idx.tv_sec, offset);
+			if ((rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn)) != 0) {
+				axa_error_msg("mdb_txn_begin(): %s",
+						mdb_strerror(rc));
+				exit(EX_SOFTWARE);
 			}
+			ts_idx_prev.tv_sec = ts_idx.tv_sec;
 		}
 		output_tsindex_write_cnt++;
 	}
