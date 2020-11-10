@@ -583,7 +583,7 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 	    && dnsdedupe->n_rdata >= 1 && dnsdedupe->has_rrtype) {
                 /* handle strange case of null rdata contents */
                 if (dnsdedupe->rdata->len == 0
-                    || dnsdedupe->rdata->data == NULL) 
+                    || dnsdedupe->rdata->data == NULL)
                     printf(NMSG_LEADER"rdata=");
                 else
                     printf(NMSG_LEADER"rdata=%s",
@@ -1190,6 +1190,7 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 	const char *server_type;
 	uint32_t user_cnt;
 	char time_buf[30];
+	axa_ch_mask_t mask;
 
 	if (sys->type != _AXA_P_STATS_TYPE_SYS) {
 		printf("expected system/server stats, got type \"%d\"\n",
@@ -1333,9 +1334,10 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 			AXA_P2H32(sys->srvr.sra.watches.ch_cnt) +
 			AXA_P2H32(sys->srvr.sra.watches.err_cnt));
 		printf("    channels        : ");
+		mask = sys->srvr.sra.ch_mask;
 		for (j = ch_cnt = 0; j <= AXA_NMSG_CH_MAX; j++) {
 			if (axa_get_bitwords(
-				sys->srvr.sra.ch_mask.m, j)) {
+				mask.m, j)) {
 					printf("%u ", j);
 					ch_cnt++;
 			}
@@ -1355,6 +1357,7 @@ print_stats_user_an(_axa_p_stats_user_rad_an_t *an_obj)
 {
 	int j, ch_cnt;
 	char ru_buf[sizeof("unlimited") + 4];
+	axa_ch_mask_t mask;
 
 	printf("        anomaly     : %s\n", an_obj->name);
 	printf("        options     : %s\n", an_obj->opt);
@@ -1375,8 +1378,9 @@ print_stats_user_an(_axa_p_stats_user_rad_an_t *an_obj)
 	printf("        RU (cur)    : %s\n", ru_buf);
 	printf("        RU (cost)   : %d\n", AXA_P2H32(an_obj->ru_cost));
 	printf("        channels    : ");
+	mask = an_obj->ch_mask;
 	for (j = ch_cnt = 0; j <= AXA_NMSG_CH_MAX; j++) {
-		if (axa_get_bitwords(an_obj->ch_mask.m, j)) {
+		if (axa_get_bitwords(mask.m, j)) {
 				printf("%d ", j);
 				ch_cnt++;
 		}
@@ -1397,6 +1401,7 @@ print_stats_user(_axa_p_stats_user_t *user)
 	const char *io_type;
 	char time_buf[30];
 	char addr_str[INET6_ADDRSTRLEN];
+	axa_ch_mask_t mask;
 
 	if (user->type != _AXA_P_STATS_TYPE_USER) {
 		printf("expected user object, got type \"%d\"\n", user->type);
@@ -1455,9 +1460,10 @@ print_stats_user(_axa_p_stats_user_t *user)
 	switch (mode) {
 		case SRA:
 			printf("      channels      : ");
+			mask = user->srvr.sra.ch_mask;
 			for (j = ch_cnt = 0; j <= AXA_NMSG_CH_MAX; j++) {
 				if (axa_get_bitwords(
-					user->srvr.sra.ch_mask.m, j)) {
+					mask.m, j)) {
 						printf("%d ", j);
 						ch_cnt++;
 				}

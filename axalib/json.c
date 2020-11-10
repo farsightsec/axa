@@ -293,7 +293,7 @@ add_whit(axa_emsg_t *emsg, yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t 
 		case AF_INET6: {
 			struct ip6_hdr *ip6_hdr;
 			char addr_str[INET6_ADDRSTRLEN];
-			
+
 			add_yajl_string(g, "IPv6");
 
 			if (dg.network != NULL && dg.len_network >= sizeof(ip6_hdr)) {
@@ -410,6 +410,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	runits_t ru;
 	_axa_p_stats_user_t *user_obj;
 	_axa_p_stats_user_rad_an_t *an_obj;
+	axa_ch_mask_t mask;
 
 	switch(AXA_P2H16(hdr->op)) {
 	case AXA_P_OP_MISSED_RAD:
@@ -840,8 +841,9 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 					add_yajl_string(g, "sra_channels");
 					add_yajl_array(g);
+					mask = sys->srvr.sra.ch_mask;
 					for (int j = 0; j <= AXA_NMSG_CH_MAX; j++) {
-						if (axa_get_bitwords(sys->srvr.sra.ch_mask.m, j)) {
+						if (axa_get_bitwords(mask.m, j)) {
 							axa_strbuf_reset(sb_tmp);
 							axa_strbuf_append(sb_tmp, "ch%d", (j));
 							add_yajl_string(g, (const char*)sb_tmp->data);
@@ -1003,8 +1005,9 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 						add_yajl_string(g, "channels");
 						add_yajl_array(g);
+						mask = user_obj->srvr.sra.ch_mask;
 						for (int j = 0; j <= AXA_NMSG_CH_MAX; j++) {
-							if (axa_get_bitwords(user_obj->srvr.sra.ch_mask.m, j)) {
+							if (axa_get_bitwords(mask.m, j)) {
 								axa_strbuf_reset(sb_tmp);
 								axa_strbuf_append(sb_tmp, "ch%d", (j));
 								add_yajl_string(g, (const char*)sb_tmp->data);
@@ -1063,8 +1066,9 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 								add_yajl_string(g,
 									"channels");
 								add_yajl_array(g);
+								mask = an_obj->ch_mask;
 								for (int j = 0; j <= AXA_NMSG_CH_MAX; j++) {
-									if (axa_get_bitwords(an_obj->ch_mask.m, j)) {
+									if (axa_get_bitwords(mask.m, j)) {
 										axa_strbuf_reset(sb_tmp);
 										axa_strbuf_append(sb_tmp, "ch%d", (j));
 										add_yajl_string(g, (const char*)sb_tmp->data);
