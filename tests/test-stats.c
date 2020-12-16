@@ -24,6 +24,8 @@ START_TEST(test_stats_sra)
 	_axa_p_stats_rsp_t stats_rsp;
 	_axa_p_stats_sys_t stats_sys;
 	_axa_p_stats_user_t stats_user;
+        axa_ch_mask_t sys_mask = { 0 };
+        axa_ch_mask_t users_mask = { 0 };
 
 	pvers = 1;
 	tag = 1;
@@ -70,7 +72,10 @@ START_TEST(test_stats_sra)
 	stats_sys.srvr.sra.watches.dns_cnt = 300;
 	stats_sys.srvr.sra.watches.ch_cnt = 1;
 	stats_sys.srvr.sra.watches.err_cnt = 3;
-	res = axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 255);
+
+	res = axa_set_bitwords(sys_mask.m, 255);
+	stats_sys.srvr.sra.ch_mask = sys_mask;
+
 	ck_assert_int_eq(res, 0);
 
 	strlcpy(stats_user.user.name, "rumi", sizeof (stats_user.user.name));
@@ -95,7 +100,10 @@ START_TEST(test_stats_sra)
 	stats_user.srvr.sra.watches.dns_cnt = 300;
 	stats_user.srvr.sra.watches.ch_cnt = 1;
 	stats_user.srvr.sra.watches.err_cnt = 0;
-	res = axa_set_bitwords(stats_user.srvr.sra.ch_mask.m, 255);
+
+	res = axa_set_bitwords(users_mask.m, 255);
+	stats_user.srvr.sra.ch_mask = users_mask;
+
 	stats_user.srvr.sra.flags = 0;
 	ck_assert_int_eq(res, 0);
 

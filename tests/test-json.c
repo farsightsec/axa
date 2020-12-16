@@ -1048,6 +1048,8 @@ START_TEST(test_stats_rsp_sra_one_user)
 	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
+	axa_ch_mask_t sys_mask = { 0 };
+	axa_ch_mask_t users_mask = { 0 };
 
 	memset(&hdr, 0, sizeof (hdr));
 	memset(&stats_rsp, 0, sizeof (stats_rsp));
@@ -1087,8 +1089,9 @@ START_TEST(test_stats_rsp_sra_one_user)
 	stats_sys.srvr.sra.watches.dns_cnt = 0;
 	stats_sys.srvr.sra.watches.ch_cnt = 0;
 	stats_sys.srvr.sra.watches.err_cnt = 0;
-	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 213);
-	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 255);
+	axa_set_bitwords(sys_mask.m, 213);
+	axa_set_bitwords(sys_mask.m, 255);
+	stats_sys.srvr.sra.ch_mask = sys_mask;
 
 	stats_users[0].type = _AXA_P_STATS_TYPE_USER;
 	stats_users[0].server_type = _AXA_STATS_SRVR_TYPE_SRA;
@@ -1108,7 +1111,10 @@ START_TEST(test_stats_rsp_sra_one_user)
 	stats_users[0].sent = 0;
 	stats_users[0].rlimit = 0;
 	stats_users[0].congested = 0;
-	axa_set_bitwords(stats_users[0].srvr.sra.ch_mask.m, 255);
+
+	axa_set_bitwords(users_mask.m, 255);
+	stats_users[0].srvr.sra.ch_mask = users_mask;
+
 	stats_users[0].srvr.sra.watches.ipv4_cnt = 0;
 	stats_users[0].srvr.sra.watches.ipv6_cnt = 0;
 	stats_users[0].srvr.sra.watches.dns_cnt = 0;
@@ -1223,6 +1229,7 @@ START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
+	axa_ch_mask_t channel_mask = { 0 };
 
 	memset(&hdr, 0, sizeof (hdr));
 	memset(&stats_rsp, 0, sizeof (stats_rsp));
@@ -1280,7 +1287,8 @@ START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 	an_obj.ru_original = INT_MAX;
 	an_obj.ru_current = INT_MAX;
 	an_obj.ru_cost = 0;
-	axa_set_bitwords(an_obj.ch_mask.m, 204);
+	axa_set_bitwords(channel_mask.m, 204);
+	an_obj.ch_mask = channel_mask;
 
 	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
 	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,
@@ -1309,6 +1317,7 @@ START_TEST(test_stats_rsp_sra_no_users)
 	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
+	axa_ch_mask_t sys_mask = { 0 };
 
 	memset(&hdr, 0, sizeof (hdr));
 	memset(&stats_rsp, 0, sizeof (stats_rsp));
@@ -1347,8 +1356,9 @@ START_TEST(test_stats_rsp_sra_no_users)
 	stats_sys.srvr.sra.watches.dns_cnt = 0;
 	stats_sys.srvr.sra.watches.ch_cnt = 0;
 	stats_sys.srvr.sra.watches.err_cnt = 0;
-	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 213);
-	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 255);
+	axa_set_bitwords(sys_mask.m, 213);
+	axa_set_bitwords(sys_mask.m, 255);
+	stats_sys.srvr.sra.ch_mask = sys_mask;
 
 	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
 	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,
