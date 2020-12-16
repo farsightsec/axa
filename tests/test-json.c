@@ -29,6 +29,27 @@ nmsg_input_t nmsg_input;
 	case AXA_P_OP_STOP: \
 		hdr.tag = AXA_H2P_TAG(1); \
 		break; \
+	case AXA_P_OP_ACCT: \
+	case AXA_P_OP_AGET: \
+	case AXA_P_OP_ALIST: \
+	case AXA_P_OP_ALL_STOP: \
+	case AXA_P_OP_CGET: \
+	case AXA_P_OP_CHANNEL: \
+	case AXA_P_OP_CLIST: \
+	case AXA_P_OP_ERROR: \
+	case AXA_P_OP_GO: \
+	case AXA_P_OP_HELLO: \
+	case AXA_P_OP_JOIN: \
+	case AXA_P_OP_MISSED: \
+	case AXA_P_OP_MISSED_RAD: \
+	case AXA_P_OP_NOP: \
+	case AXA_P_OP_OK: \
+	case AXA_P_OP_OPT: \
+	case AXA_P_OP_PAUSE: \
+	case AXA_P_OP_RADU: \
+	case AXA_P_OP_USER: \
+	case AXA_P_OP_WGET: \
+		break; \
 	default: \
 		break; \
 	} \
@@ -55,6 +76,27 @@ nmsg_input_t nmsg_input;
 	case AXA_P_OP_ANOM: \
 	case AXA_P_OP_STOP: \
 		hdr.tag = AXA_H2P_TAG(1); \
+		break; \
+        case AXA_P_OP_ACCT: \
+        case AXA_P_OP_AGET: \
+        case AXA_P_OP_ALIST: \
+        case AXA_P_OP_ALL_STOP: \
+        case AXA_P_OP_CGET: \
+        case AXA_P_OP_CHANNEL: \
+        case AXA_P_OP_CLIST: \
+        case AXA_P_OP_ERROR: \
+        case AXA_P_OP_GO: \
+        case AXA_P_OP_HELLO: \
+        case AXA_P_OP_JOIN: \
+        case AXA_P_OP_MISSED: \
+        case AXA_P_OP_MISSED_RAD: \
+        case AXA_P_OP_NOP: \
+        case AXA_P_OP_OK: \
+        case AXA_P_OP_OPT: \
+        case AXA_P_OP_PAUSE: \
+        case AXA_P_OP_RADU: \
+        case AXA_P_OP_USER: \
+        case AXA_P_OP_WGET: \
 		break; \
 	default: \
 		break; \
