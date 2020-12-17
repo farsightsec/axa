@@ -23,7 +23,7 @@ dist_config_DATA = etc/fields
 
 #
 ##
-### documentation 
+### documentation
 ##
 #
 
@@ -173,7 +173,7 @@ pkgconfig_DATA = axa/libaxa.pc
 
 #
 ##
-### programs 
+### programs
 ##
 #
 
@@ -269,7 +269,7 @@ bin_SCRIPTS = \
 
 #
 ##
-### documentation 
+### documentation
 ##
 #
 
@@ -337,6 +337,13 @@ tests_test_kill_SOURCES = tests/test-kill.c
 tests_test_kill_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
 tests_test_kill_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
 
+TESTS += tests/test-kickfile
+check_PROGRAMS += tests/test-kickfile
+tests_test_kickfile_SOURCES = tests/test-kickfile.c
+tests_test_kickfile_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_kickfile_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+
+EXTRA_DIST += tests/tool-tests-data/001000-single-command \
 EXTRA_DIST += tests/tool-tests-data/001000-single-command \
 tests/tool-tests-data/002210-valid-before-and-after-unrecognized-command \
 tests/tool-tests-data/002000-multiple-commands \

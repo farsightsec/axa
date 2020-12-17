@@ -2,7 +2,7 @@
  * {rad,sra}tunnel kickfile functions. Much of this code copied from
  * nmsgtool.
  *
- * Copyright (c) 2018 by Farsight Security, Inc.
+ * Copyright (c) 2020-2018 by Farsight Security, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,8 +54,11 @@ axa_kickfile_destroy(struct axa_kickfile **kf)
 	free((*kf)->file_curname);
 	free((*kf)->file_tmpname);
 	free((*kf)->file_suffix);
-	if ((*kf)->file_kt)
+
+	if ((*kf)->file_kt) {
 		free((*kf)->file_kt);
+	}
+
 	free((*kf));
 	*kf = NULL;
 }
@@ -65,17 +68,22 @@ axa_kickfile_exec(struct axa_kickfile *kf)
 {
 	char *cmd;
 
-	if (kf != NULL && kf->file_tmpname != NULL && kf->file_curname != NULL) {
+	if (kf != NULL && kf->file_tmpname != NULL &&
+	    kf->file_curname != NULL) {
 		if (rename(kf->file_tmpname, kf->file_curname) < 0) {
 			perror("rename");
 			unlink(kf->file_tmpname);
 		} else if (kf->cmd != NULL && *kf->cmd != '\0') {
 			int rc;
 
-			axa_asprintf(&cmd, "%s %s &", kf->cmd, kf->file_curname);
+			axa_asprintf(&cmd, "%s %s &", kf->cmd,
+			    kf->file_curname);
+
 			rc = system(cmd);
-			if (rc != 0)
+			if (rc != 0) {
 				fprintf(stderr, "WARNING: system() failed\n");
+			}
+
 			free(cmd);
 		}
 	}
@@ -93,25 +101,32 @@ axa_kickfile_rotate(struct axa_kickfile *kf, const char *name)
 	dup_for_dirname = strdup(kf->file_basename);
 	s_basename = basename(dup_for_basename);
 	s_dirname = dirname(dup_for_dirname);
+
 	AXA_ASSERT(s_basename != NULL);
 	AXA_ASSERT(s_dirname != NULL);
 
 	free(kf->file_tmpname);
 	free(kf->file_curname);
-	axa_asprintf(&kf->file_tmpname, "%s/.%s.%s.part", s_dirname, s_basename, kt);
+
+	axa_asprintf(&kf->file_tmpname, "%s/.%s.%s.part", s_dirname,
+	    s_basename, kt);
 	axa_asprintf(&kf->file_curname, "%s/%s.%s%s", s_dirname, s_basename, kt,
-		      kf->file_suffix != NULL ? kf->file_suffix : "");
+	    kf->file_suffix != NULL ? kf->file_suffix : "");
+
 	if (name == NULL) {
-		if (kf->file_kt != NULL)
+		if (kf->file_kt != NULL) {
 			free(kf->file_kt);
+		}
 		kf->file_kt = strdup(kt);
 		free(kt);
 	}
+
 	free(dup_for_basename);
 	free(dup_for_dirname);
 
-	if (kf->cb != NULL)
+	if (kf->cb != NULL) {
 		kf->cb((void *)"rumi");
+	}
 }
 
 void
