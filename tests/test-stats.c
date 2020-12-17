@@ -24,8 +24,8 @@ START_TEST(test_stats_sra)
 	_axa_p_stats_rsp_t stats_rsp;
 	_axa_p_stats_sys_t stats_sys;
 	_axa_p_stats_user_t stats_user;
-        axa_ch_mask_t sys_mask = { 0 };
-        axa_ch_mask_t users_mask = { 0 };
+	axa_ch_mask_t sys_mask = { 0 };
+	axa_ch_mask_t users_mask = { 0 };
 
 	pvers = 1;
 	tag = 1;
