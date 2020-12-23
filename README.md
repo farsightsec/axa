@@ -4,10 +4,7 @@ This is the Advanced Exchange Access (AXA) toolkit. It contains tools and a C li
 AXA-based solutions are often preferable over procuring a direct, physical connection to the SIE, usually via a co-located blade.
 
 ## SRA and RAD
-AXA enables subscribers to connect to Farsight's subscription-based SRA
-(SIE Remote Access) and RAD (Real-time Anomaly Detector) servers. These servers provide access to data and services built from Farsight's SIE.
-
-SRA streams real-time SIE data while RAD streams real-time anomaly detection data (from services such as [Brand Sentry](https://www.farsightsecurity.com/solutions/incident-response-team/brand-sentry/) and [Domain Sentry](https://www.farsightsecurity.com/solutions/incident-response-team/domain-sentry/)).
+AXA enables subscribers to connect to Farsight's subscription-based SRA (SIE Remote Access) and RAD (Real-time Anomaly Detector) servers.  These servers provide access to data and services built from Farsight's SIE.  SRA streams real-time SIE data while RAD streams real-time anomaly detection data.
 
 ## Contents
 The axa-tools distribution contains the following:
