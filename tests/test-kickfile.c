@@ -64,7 +64,6 @@ START_TEST(test_kickfile_rotate)
 	char tmpname[] = "/tmp/test_kickfile_rotate_tmp";
 	char curname[] = "/tmp/test_kickfile_rotate_cur";
 	char basename[] = "/tmp/test_kickfile_rotate_basename";
-	int tmpfd, curfd, ret;
 
 	kf = axa_zalloc(sizeof (*kf));
 	kf->file_tmpname = strdup(tmpname);
