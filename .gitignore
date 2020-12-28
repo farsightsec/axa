@@ -31,6 +31,7 @@ tests/test-client_config
 tests/test-config
 tests/test-config-badperms
 tests/test-json
+tests/test-kickfile
 tests/test-kill
 tests/test-stats
 tests/test-tools-without-server.sh
@@ -44,3 +45,5 @@ tools/axa_tsindextool
 tools/axa_tsindextool.man
 *.log
 *.trs
+cscope*
+tags

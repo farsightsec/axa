@@ -38,6 +38,7 @@
 .Op Fl S Ar certs
 .Op Fl T Ar secs
 .Op Fl Z Ar size
+.Op Fl I Ar size
 .br
 .Sh DESCRIPTION
 .Nm Radtunnel
@@ -239,7 +240,7 @@ close the current output and reopen a new output on a time interval modulo the
 .Ar secs
 parameter. For example,
 .Ar -t 3600
-means "on the hour".
+means an hour after started or reopened.
 .It Fl t
 enable tracing reports on the server or increase them after the first
 .Fl t .
