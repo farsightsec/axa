@@ -7,10 +7,7 @@ AXA-based solutions are often preferable over procuring a direct, physical conne
 In order to use the tools and C library to access Farsight Security's data, you must have a previously provisioned account. If are you not yet a customer, but are interested, please reach out to [Farsight Security Sales](sales@farsightsecurity.com) for more information.
 
 ## SRA and RAD
-AXA enables subscribers to connect to Farsight's subscription-based SRA
-(SIE Remote Access) and RAD (Real-time Anomaly Detector) servers. These servers provide access to data and services built from Farsight's SIE.
-
-SRA streams real-time SIE data while RAD streams real-time anomaly detection data (from services such as [Brand Sentry](https://www.farsightsecurity.com/solutions/incident-response-team/brand-sentry/) and [Domain Sentry](https://www.farsightsecurity.com/solutions/incident-response-team/domain-sentry/)).
+AXA enables subscribers to connect to Farsight's subscription-based SRA (SIE Remote Access) and RAD (Real-time Anomaly Detector) servers.  These servers provide access to data and services built from Farsight's SIE.  SRA streams real-time SIE data while RAD streams real-time anomaly detection data.
 
 ## Contents
 The axa-tools distribution contains the following:
