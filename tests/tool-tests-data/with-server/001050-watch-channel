@@ -1,0 +1,7 @@
+connect tcp:valid-user@127.0.0.1,9999
+1 watch ch=221
+1 count 3
+channel 221 on
+sleep 1
+channel 221 off
+quit

@@ -1,0 +1,42 @@
+#!/bin/sh -e
+
+SVCDIR=/etc/init.d
+RADTOOL=@builddir@/sratool/radtool
+DATADIR=@abs_top_srcdir@/tests/tool-tests-data/with-server
+
+#
+# This test requires that a local SRA server be up, listening for new
+# connections on port 9999 and configured with acces to a pre-defined
+# test user.
+#
+pgrep srad &> /dev/null
+if [ $? -ne 0 ]; then
+	echo "SRA server doesn't seem to be running, skipping tests.."
+	exit 0
+fi
+
+#
+# Exit on failure
+#
+set -o errexit
+
+echo 001000 test a successful connection to the SRA server
+$SRATOOL -c $DATADIR/001000-connect | grep "OK USER valid"
+
+echo 001010 test an unsuccessful connection to the SRA server
+$SRATOOL -c $DATADIR/001010-invalid-username | grep "ERROR USER invalid"
+
+echo 001020 test channel listing
+$SRATOOL -c $DATADIR/001020-list | grep "ch"
+
+echo 001030 test setting a channel watch
+$SRATOOL -c $DATADIR/001030-set-watch| grep "OK WATCH"
+
+echo 001040 test setting a watch on an invalid channel
+$SRATOOL -c $DATADIR/001040-watch-invalid-channel | grep "ERROR WATCH unknown"
+
+echo 001050 test watching a channel
+$SRATOOL -c $DATADIR/001050-watch-channel | egrep "OK CHANNEL ON|packet count limit exceeded"
+
+echo 001060 test watching a DNS tag
+$SRATOOL -c $DATADIR/001060-watch-dns | grep "OK CHANNEL ON|packet count limit exceeded"
