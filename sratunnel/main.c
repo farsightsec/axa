@@ -42,7 +42,7 @@ extern int give_status;
 uint axa_debug;				/* debug level */
 unsigned long count_messages_sent = 0;  /* how many messages we have sent */
 unsigned long count_messages_rcvd = 0;  /* how many messages we have received */
-unsigned long count_hits = 0;           /* how many hits received */
+unsigned long count_hits = 0;		/* how many hits received */
 int trace = 0;				/* server-side trace level */
 int count;				/* stop or reopen after this many pkts */
 int initial_count;			/* initial count */
@@ -132,19 +132,20 @@ do_lmdb_kickfile(void AXA_UNUSED *blob)
 	size_t n;
 	char lmdb_lock_filename[BUFSIZ];
 
-	if ((rc = mdb_txn_commit(mdb_txn)) != 0)
-		fprintf(stderr, "%s() couldn't perform final commit: mdb_txn_commit(): %s\n",
-				__func__,
-				mdb_strerror(rc));
+	if ((rc = mdb_txn_commit(mdb_txn)) != 0) {
+		fprintf(stderr, "%s() couldn't perform final commit: "
+		    "mdb_txn_commit(): %s\n", __func__, mdb_strerror(rc));
+	}
 
 	mdb_dbi_close(mdb_env, mdb_dbi);
 	mdb_env_close(mdb_env);
 
 	n = strlcpy(lmdb_lock_filename, lmdb_kf->file_tmpname, sizeof (lmdb_lock_filename));
 	strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
-	if (unlink(lmdb_lock_filename) != 0)
+	if (unlink(lmdb_lock_filename) != 0) {
 		axa_error_msg("%s(): can't unlink lmdb lock file \"%s\": %s\n",
-				__func__, lmdb_lock_filename, strerror(errno));
+			__func__, lmdb_lock_filename, strerror(errno));
+	}
 	axa_kickfile_exec(lmdb_kf);
 	axa_kickfile_rotate(lmdb_kf, axa_kickfile_get_kt(axa_kf));
 
@@ -320,14 +321,14 @@ main(int argc, char **argv)
 			output_tsindex_write_interval = atoi(optarg);
 			break;
 
-                case 'I':
-                        tsindex_map_size = atoi(optarg);
-                        if (tsindex_map_size <= 0) {
-                                axa_error_msg("invalid \"-I %s\"", optarg);
-                                exit(EX_USAGE);
-                        }
+		case 'I':
+			tsindex_map_size = atoi(optarg);
+			if (tsindex_map_size <= 0) {
+				axa_error_msg("invalid \"-I %s\"", optarg);
+				exit(EX_USAGE);
+			}
 			tsindex_set = true;
-                        break;
+			break;
 
 		case 'k':
 			axa_kickfile = true;
@@ -516,14 +517,14 @@ main(int argc, char **argv)
 			usage("\"-k\" needs \"-C\" or \"-T\" or \"-Z\"");
 
 	if (!axa_load_client_config(&emsg, config_file)) {
-	        if (axa_config_file_found == false) {
-	                if (axa_debug != 0)
-	                        axa_error_msg("can't load config file: %s", emsg.c);
-	        }
-	        else {
-	                axa_error_msg("can't load config file: %s", emsg.c);
-	                exit(EXIT_FAILURE);
-	        }
+		if (axa_config_file_found == false) {
+			if (axa_debug != 0)
+				axa_error_msg("can't load config file: %s", emsg.c);
+		}
+		else {
+			axa_error_msg("can't load config file: %s", emsg.c);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	signal(SIGPIPE, SIG_IGN);
@@ -534,7 +535,7 @@ main(int argc, char **argv)
 	signal(SIGXFSZ, SIG_IGN);
 #endif
 #ifdef SIGINFO
-        signal(SIGINFO, siginfo);
+	signal(SIGINFO, siginfo);
 #endif
 	/* When appending, demand that the output file exists. */
 	if (axa_out_file_append) {
@@ -601,8 +602,8 @@ main(int argc, char **argv)
 		 */
 		if (axa_out_file_append == true) {
 			if (idx_exists == true) {
-                                if (axa_debug > 0)
-				        axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
+				if (axa_debug > 0)
+					axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
 			} else {
 				axa_error_msg("tsindex mode expected to find tsindex file \"%s\": %s\n",
 					lmdb_filename, strerror(errno));
@@ -660,10 +661,10 @@ main(int argc, char **argv)
 	for (;;) {
 		if (terminated != 0)
 			stop(terminated);
-                if (give_status != 0) {
-                        give_status = 0;
-                        print_status();
-                }
+		if (give_status != 0) {
+			give_status = 0;
+			print_status();
+		}
 
 		/* (Re)connect to the server if it is time. */
 		if (!AXA_CLIENT_CONNECTED(&client)) {
@@ -771,16 +772,16 @@ stop(int s)
 
 void print_status(void)
 {
-        printf("%s ", mode == SRA ? "sra" : "rad");
-        if (!AXA_CLIENT_CONNECTED(&client))
-                printf("NOT-");
-        printf("connected, ");
+	printf("%s ", mode == SRA ? "sra" : "rad");
+	if (!AXA_CLIENT_CONNECTED(&client))
+		printf("NOT-");
+	printf("connected, ");
 
-        /* print with the proper pluralization */
-        printf("sent %lu message%s, received %lu message%s, %lu hit%s\n",
-               count_messages_sent, count_messages_sent != 1 ? "s" : "",
-               count_messages_rcvd, count_messages_rcvd != 1 ? "s" : "",
-               count_hits, count_hits != 1 ? "s" : "");
+	/* print with the proper pluralization */
+	printf("sent %lu message%s, received %lu message%s, %lu hit%s\n",
+	       count_messages_sent, count_messages_sent != 1 ? "s" : "",
+	       count_messages_rcvd, count_messages_rcvd != 1 ? "s" : "",
+	       count_hits, count_hits != 1 ? "s" : "");
 }
 
 
