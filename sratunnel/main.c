@@ -78,6 +78,7 @@ static struct axa_kickfile *lmdb_kf;
 static bool lmdb_kickfile = false;
 static char lmdb_filename[BUFSIZ];
 static size_t tsindex_map_size = 2560;
+static bool tsindex_set = false;
 
 void print_status(void);
 
@@ -239,8 +240,8 @@ usage(const char *msg, ...)
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
 	printf("[-h]\t\t\tdisplay this help and exit\n");
-	printf("[-I maxsize]\t\tset max timestamp index to %d*maxsize (default 2560)\n", getpagesize());
 	printf("[-i interval]\t\twrite timestamp indexes every interval nmsgs\n");
+	printf("[-I maxsize]\t\tset max timestamp index to %d*maxsize (default 2560)\n", getpagesize());
 	printf("[-k cmd]\t\tmake -C or -T continuous; run cmd on new files\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
@@ -325,6 +326,7 @@ main(int argc, char **argv)
                                 axa_error_msg("invalid \"-I %s\"", optarg);
                                 exit(EX_USAGE);
                         }
+			tsindex_set = true;
                         break;
 
 		case 'k':
@@ -471,14 +473,21 @@ main(int argc, char **argv)
 			exit(0);
 	}
 	if ((count != 0 && (interval != 0 || max_file_size != 0)) ||
-			(interval != 0 && (count != 0 || max_file_size !=0)))
+	    (interval != 0 && (count != 0 || max_file_size != 0))) {
 		usage("can't specify \"-C\" and \"-T\" and/or \"-Z\"");
-	if (srvr_addr == NULL)
+	}
+	if (srvr_addr == NULL) {
 		usage("server not specified with \"-s\"");
-	if (out_addr == NULL)
+	}
+	if (out_addr == NULL) {
 		usage("output not specified with \"-o\"");
-	if (watches == NULL)
+	}
+	if (watches == NULL) {
 		usage("no watches specified with \"-w\"");
+	}
+	if (tsindex_set && !output_tsindex_write_interval) {
+		usage("\"-I\" needs \"-i\"");
+	}
 	if (mode == RAD) {
 		if (anomalies == NULL)
 			usage("anomalies specified with \"-a\"");
