@@ -338,11 +338,6 @@ extern void axa_syslog_init(void);
  */
 #define AXA_DEBUG_TRACE		3
 /**
- *  also generate trace syslog messages about routine AXA messages
- *  and transport related messages such as from `ssh`
- */
-#define AXA_DEBUG_MORE_TRACE	4
-/**
  *  also generate trace syslog messages from libnmsg and client-to-server
  *  rate limiting or congestion
  */

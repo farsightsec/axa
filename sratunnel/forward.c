@@ -168,7 +168,6 @@ forward(void)
 		return;
 	case AXA_IO_BUSY:
 		return;			/* wait for the rest */
-	case AXA_IO_TUNERR:
 	case AXA_IO_KEEPALIVE:
 		AXA_FAIL("impossible axa_recv_buf() result");
 	}

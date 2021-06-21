@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014-2018 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2018, 2021 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -24,19 +24,17 @@
 .Op Fl dhNV
 .Op Fl c Ar cfile
 .Op Fl n Ar config
-.Op Fl E Ar ciphers
 .Op Fl F Ar fields
-.Op Fl S Ar certs
 .Op commands
 .Sh DESCRIPTION
-.Nm Radtool
+.Nm radtool
 connects and sends Advanced Exchange Access (AXA) protocol messages
 to Realtime Anomaly Detector (RAD) servers
 and displays the responses.
 It can also tunnel SIE data like
 .Xr radtunnel 1 .
 .Pp
-.Nm Radtool
+.Nm radtool
 is a programming example for the Advanced Exchange Access (AXA)
 applications programming interface to \*(SR servers, the AXA protocol.
 It also demonstrates the use of the AXA helper library,
@@ -154,17 +152,6 @@ information such as apikeys, it must not be readable or writeable to anybody
 other than "owner" or
 .Nm sratool
 will not load.
-.It Ar ~/.ssh/config
-is the
-.Xr ssh_config 5
-configuration file used with
-.Ar connect\ ssh:...
-connections.
-The usual
-.Xr ssh 1
-sequence is used, starting with
-.Pa ~/.ssh/config .
-"Host" stanzas in the file can simplify connections to \*(SR servers.
 .It Ar ~/.sratool_history
 contains the command history from previous
 .Nm radtool

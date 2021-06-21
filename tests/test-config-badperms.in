@@ -1,14 +1,8 @@
 # SRA apikey
 alias:sra-dev-apikey=apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1011
 
-# SRA TLS
-alias:sra-dev-tls=tls:username@axa.dev.fsi.io,1021
-
 # RAD apikey
 alias:rad-dev-apikey=apikey:b46ce912-7122-4245-8053-9b3adb81b822@axa.dev.fsi.io,1012
-
-# RAD TLS
-alias:rad-dev-tls=tls:username@axa.dev.fsi.io,1022
 
 # Parse failures
 alias:foo=foo:lalaapikey@foo,1021
