@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2016 Farsight Security, Inc.
+# Copyright 2016-2021 Farsight Security, Inc.
 #
 
 #!/bin/sh
@@ -10,7 +10,7 @@ DATADIR=@abs_top_srcdir@/tests/tool-tests-data/with-server
 
 #
 # This test requires that a local SRA server be up, listening for new
-# connections on port 9999 and configured with acces to a pre-defined
+# connections on port 9999 and configured with access to a pre-defined
 # test user.
 #
 pgrep srad &> /dev/null
