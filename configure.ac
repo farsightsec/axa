@@ -165,6 +165,9 @@ AC_CONFIG_FILES([tools/axa_server_cert],
 AC_CONFIG_FILES([tests/test-tools-without-server.sh],
 		[chmod +x tests/test-tools-without-server.sh])
 
+AC_CONFIG_FILES([tests/test-tools-with-server.sh],
+		[chmod +x tests/test-tools-with-server.sh])
+
 AC_CONFIG_FILES([tests/test-config],
 		[chmod 600 tests/test-config])
 

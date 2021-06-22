@@ -348,5 +348,9 @@ tests/tool-tests-data/002210-valid-before-and-after-unrecognized-command \
 tests/tool-tests-data/002000-multiple-commands \
 tests/tool-tests-data/002200-valid-then-unrecognized-command \
 tests/tool-tests-data/002100-unrecognized-command \
-tests/tool-tests-data/001010-multiple-commands-on-single-line
-TESTS += tests/test-tools-without-server.sh
+tests/tool-tests-data/001010-multiple-commands-on-single-line \
+tests/tool-tests-data/with-server/001000-connect \
+tests/tool-tests-data/with-server/001010-invalid-username
+
+TESTS += tests/test-tools-without-server.sh \
+	 tests/test-tools-with-server.sh
