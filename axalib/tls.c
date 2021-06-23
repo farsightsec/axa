@@ -31,7 +31,7 @@
 
 static char *certs_dir = NULL;
 
-static char cipher_list0[] = "ALL";
+static char cipher_list0[] = "ECDHE-RSA-AES256-GCM-SHA384";
 static char *cipher_list = cipher_list0;
 
 static bool apikey_initialized = false;
