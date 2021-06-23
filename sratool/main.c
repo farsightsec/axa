@@ -150,38 +150,30 @@ main(int argc, char **argv)
 		case 'V':
 			version = true;
 			break;
-
-		case 'h':
-			usage();
 		case 'd':
 			++axa_debug;
 			break;
-
 		case 'N':
 			no_prompt = true;
 			break;
-
 		case 'F':
 			fields_file = optarg;
 			break;
-
 		case 'E':
-			if (axa_tls_cipher_list(&emsg, optarg) == NULL)
+			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
 				error_msg("%s", emsg.c);
 			break;
-
 		case 'S':
-			if (!axa_tls_certs_dir(&emsg, optarg))
+			if (!axa_apikey_certs_dir(&emsg, optarg))
 				error_msg("%s", emsg.c);
 			break;
-
 		case 'c':
 			if (cfile != NULL)
 				error_msg("only one -c allowed;"
 					  " ignoring all but the last");
 			cfile = optarg;
 			break;
-
+		case 'h':
 		default:
 			usage();
 		}

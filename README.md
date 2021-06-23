@@ -216,7 +216,7 @@ $ git clone https://anongit.freedesktop.org/git/libbsd.git
 $ cd libbsd
 $ ./autogen.sh
 $ ./configure
-$ make 
+$ make
 $ sudo make install
 ~~~
 
@@ -236,7 +236,7 @@ $ sudo make install
 ~~~
 $ git clone https://github.com/LMDB/lmdb
 $ cd lmdb/libraries/liblmdb
-$ make 
+$ make
 $ sudo make install
 ~~~
 
@@ -323,21 +323,13 @@ To install AXA development files (if you wish to use the libaxa C API):
 Once axa-tools is installed, you'll need to work with your Farsight account manager to obtain your access credentials. In most cases, this will be an apikey.
 
 ## The AXA Transport Layer
-AXA offers three encrypted transports for setting up sessions and tunneling data:
+AXA offers an encrypted transport for setting up sessions and tunneling data:
 
  1. **Apikey**: Subscriber identifies and authenticates via a previously
     (Farsight) provided alphanumeric "apikey". Session is encrypted via TLS using the `ECDHE-RSA-AES256-GCM-SHA384` suite offering "currently infeasible to break" encryption and
     [perfect forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
- 2. **TLS**: Subscriber identifies and authenticates via a previously
-    subscriber-generated TLS keypair. Session is encrypted via TLS using the `ECDHE-RSA-AES256-GCM-SHA384` suite offering "currently infeasible to break" encryption and
-    [perfect forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
- 3. **SSH**: Subscriber identifies and authenticates via a previously
-    subscriber-generated SSH keypair.
 
-In order to use AXA, one of the above is required. While all three offer
-commensurate security, Farsight strongly recommends using the apikey transport due to its ease of setup and use (unless you have prohibitive egress filtering that would prevent unfettered outbound access to `TCP/1011` and `TCP/1012`).
-
-AXA compresses all [nmsgs](https://www.github.com/farsightsec/nmsg) before transmission across the network using nmsg's built-in compression capability (currently [zlib](http://www.zlib.net/)). IP packets are not compressed.
+AXA compresses all [nmsgs](https://www.github.com/farsightsec/nmsg) before transmission across the network using nmsg's built-in compression capability. IP packets are not compressed.
 
 ### Setting up and using AXA Apikey
 Your Farsight Security account manager will provide you with an alphanumeric apikey string. This apikey is used to both identify you and authenticate your session to the AXA servers.
@@ -356,7 +348,7 @@ You can connect as per the following:
   ~~~
   $ sratool
   sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1011
-  * HELLO srad v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+  * HELLO srad v3.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
   * Using AXA protocol 2
   * OK USER johndoe authorized
   ...
@@ -367,7 +359,7 @@ You can connect as per the following:
   ~~~
   $ radtool
   rad> connect apikey:<your_apikey_here>@axa.sie-remote.net,1012
-  * HELLO radd v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+  * HELLO radd v3.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
   * Using AXA protocol 2
   * OK USER johndoe authorized
   ...
@@ -387,161 +379,9 @@ You can connect as per the following:
   ...
   ~~~
 
-
-### Setting up and using AXA TLS
-The AXA TLS transport listens at the following URIs:
-
- * **SRA**: `tls:user_name@sra.sie-remote.net,1021`
- * **RAD**: `tls:user_name@rad.sie-remote.net,1022`
-
-SRA listens on TCP/1021 and RAD listens on TCP/1022 and both transit standard TLS data.
-
-To setup TLS access for SRA and/or RAD, you need to do the following:
-
- 1. Install axa-tools (as per above). Installed alongside the AXA tools are three TLS helper scripts:
-   * `axa_make_cert`: Generate AXA certificate and private key files
-   * `axa_server_cert`: Retrieve the AXA server certificate fingerprint
-   * `axa_link_certs`: Create AXA certificate links
- 2. Generate and install the AXA TLS certificates. This needs to be done
-    as root because the install script copies the files to the AXA certs
-    directory:
-
-	~~~
-	# axa_make_cert -u username
-	Create /usr/local/etc/axa/certs? y
-	Generating a 2048 bit RSA private key
-	............+++
-	.............+++
-	writing new private key to 'username.key'
-	~~~
-
- 3. Chown the private key to the user who will be running the AXA tools:
-
-	~~~
-	# chown user. /usr/local/etc/axa/certs/username.key
-	~~~
-
- 4. Retrieve and install the AXA server certificate. This is the equivalent of when you SSH to a new host for the first time and receive the "Are you sure you want to continue connecting (yes/no)?" message. This can be done by connecting to either SRA or RAD since they both share the same TLS certificate:
-
-	~~~
-	# axa_server_cert -s axa.sie-remote.net,1021
-	Obtained certificate for "farsight" with
-	SHA1 Fingerprint=2D:0C:92:23:B9:6F:70:E7:F3:E3:7A:2B:D6:F5:D4:CA:1F:F8:CE:71
-	Install it in /usr/local/etc/axa/certs/farsight.pem? yes
-	~~~
-
- 5. Email your public certificate (`username.pem`) to your Farsight Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`username.key`). This is the private half of your generate key pair that you should keep safe. As soon as your account is provisioned you will receive notification from Farsight Security.
-
-You can connect as per the following:
-
-**Connecting via sratool**
-
-   ~~~
-   $ sratool
-   sra> connect tls:user_name@sra.sie-remote.net,1021
-   * HELLO srad v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
-   * Using AXA protocol 2
-   * OK USER johndoe authorized
-   ...
-   ~~~
-
- **Connecting via radtool**
-
-   ~~~
-   $ radtool
-   rad> connect tls:user_name@rad.sie-remote.net,1022
-   * HELLO radd v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
-   * Using AXA protocol 2
-   * OK USER johndoe authorized
-   ...
-   ~~~
-
- **Connecting via sratunnel**
-
-   ~~~
-   $ sratunnel -s tls:user_name@sra.sie-remote.net,1021 ...
-   ...
-   ~~~
-
- **Connecting via radtunnel**
-
-   ~~~
-   $ radtunnel -s tls:user_name@rad.sie-remote.net,1022 ...
-   ...
-   ~~~
-
-### Setting up and using AXA SSH
-The AXA SSH transport listens at the following URIs:
-
- * **SRA**: `sra-service@sra.sie-remote.net`
- * **RAD**: `rad-service@rad.sie-remote.net`
-
-Both services listen on TCP/22 for standard SSH traffic.
-
-To setup SSH access for SRA and/or RAD, you need to do the following:
-
- 1. Generate a new SSH authentication key pair with `ssh-keygen`:
-
-	$ ssh-keygen -t rsa -b 4096 -f ~/.ssh/farsight-axa-id_rsa
-	Generating public/private rsa key pair.
-	Enter passphrase (empty for no passphrase):
-	Enter same passphrase again:
-	Your identification has been saved in /home/user/.ssh/farsight-axa-id_rsa.
-	Your public key has been saved in /home/user/.ssh/farsight-axa-id_rsa.pub.
-	The key fingerprint is:
-	SHA256...
-
- 2. You will need to create or edit your `~/.ssh/config` file to specify the private half of the SSH key pair for the SRA and RAD servers:
-
-	~~~
-	Host sra.sie-remote.net rad.sie-remote.net
-	    IdentityFile ~/.ssh/farsight-axa-id_rsa
-	~~~
-
- 3. Email your public key (`~/.ssh/farsight-axa-id_rsa.pub`) to your Farsight Security account manager. DO NOT EVER SHARE YOUR PRIVATE KEY (`~/.ssh/farsight-axa-id_rsa`). This is the private half of your generated key pair that you should keep safe. As soon as your account is provisioned you will receive notification from Farsight Security.
-
-You can connect as per the following:
-
-**Connecting via sratool**
-
-   ~~~
-   $ sratool
-   sra> connect ssh:sra-service@sra.sie-remote.net
-   * HELLO srad v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
-   * Using AXA protocol 2
-   * OK USER johndoe authorized
-   ...
-   ~~~
-
-**Connecting via radtool**
-
-   ~~~
-   $ radtool
-   rad> connect ssh:rad-service@rad.sie-remote.net
-   * HELLO radd v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
-   * Using AXA protocol 2
-   * OK USER johndoe authorized
-   ...
-   ~~~
-
-**Connecting via sratunnel**
-
-   ~~~
-   $ sratunnel -s 'ssh:sra-service@sra.sie-remote.net' ...
-   ...
-   ~~~
-
-**Connecting via radtunnel**
-
-   ~~~
-   $ radtunnel -s 'ssh:rad-service@rad.sie-remote.net' ...
-   ...
-   ~~~
-
 #### AXA Config File Connection Aliases
 AXA supports a subscriber-side configuration file used as a convenience to
-specify session defaults. By default AXA will look for it `~/.axa/config`. Currently it is used to store "connection aliases" that provide a facility to create shortcut mnemonics to specify the AXA server connection string. This is especially useful for long connection strings associated with the apikey transport. It can also be used for the other transports. As it can contain
-sensitive information, if it exists, the file must be readable/writable only by "owner" or AXA-based tools will refuse to load.
+specify session defaults. By default AXA will look for it `~/.axa/config`. Currently it is used to store "connection aliases" that provide a facility to create shortcut mnemonics to specify the AXA server connection string. This is especially useful for long connection strings associated with the apikey transport. As it can contain sensitive information, if it exists, the file must be readable/writable only by "owner" or AXA-based tools will refuse to load.
 
 For example:
 
@@ -553,10 +393,6 @@ $ cat >> ~/.axa/config < EOF
 alias:sra-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1011
 # RAD apikey
 alias:rad-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1012
-# SRA TLS
-alias:sra-tls=tls:<your_username>@axa.sie-remote.net,1021
-# RAD TLS
-alias:rad-tls=tls:<your_username>@axa.sie-remote.net,1022
 EOF
 
 $ chmod 600 ~/.axa/config
@@ -567,14 +403,14 @@ After creating the above aliases, you can replace the server connection URI with
 ~~~
 $ sratool
 sra> connect sra-apikey
-* HELLO srad v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+* HELLO srad v3.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
 * Using AXA protocol 2
 * OK USER johndoe authorized
 ...
 sra> disconnect
 sra> mode rad
 rad> connect rad-apikey
-* HELLO radd v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+* HELLO radd v3.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
 * Using AXA protocol 2
 * OK USER johndoe authorized
 ...
@@ -593,7 +429,7 @@ Here's a simple example using `sratool` to stream five nmsgs seen on the
 ~~~
 $ sratool
 sra> connect sra-apikey
-* HELLO srad v2.2.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+* HELLO srad v3.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
 * Using AXA protocol 2
 * OK USER johndoe authorized
 sra> count 5
@@ -702,7 +538,7 @@ fācebook.com.
  5. `$ idn -u xn--fcebook-s3a.com.`: We use the [GNU libidn idn](https://www.gnu.org/software/libidn/manual/html_node/Invoking-idn.html) command line tool to convert the punycode encoded domain into its Unicode representation.
 
 ### 4. Create Your Own Local SIE Node
-With `sratunnel` and `nmsgtool`, you can create your own local "SIE node". This can be useful if you want cobble together your own local SIE cloud with the channels you're subscribed to. First, invoke `sratunnel` as per the following:
+With `sratunnel` and `nmsgtool`, you can create your own local "SIE node". This can be useful if you want to cobble together your own local SIE cloud with the channels you're subscribed to. First, invoke `sratunnel` as per the following:
 
 ~~~
 $ sratunnel -s sra-apikey -c 204 -w ch=204 -o nmsg:127.0.0.1,8000 &
@@ -730,7 +566,7 @@ Finally, we use `nmsgtool` to receive and decapsulate the data. Here we invoke i
 
 ~~~
 $ nmsgtool  -l 127.0.0.1/8000 -c 3
-[76] [2018-04-03 22:35:21.747374163] [2:1 SIE dnsdedupe] [a1ba02cf] [] [] 
+[76] [2018-04-03 22:35:21.747374163] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
 type: INSERTION
 count: 1
 time_first: 2018-04-03 22:34:03
@@ -743,7 +579,7 @@ rrtype: A (1)
 rrttl: 3600
 rdata: 216.86.147.31
 
-[138] [2018-04-03 22:35:21.747378349] [2:1 SIE dnsdedupe] [a1ba02cf] [] [] 
+[138] [2018-04-03 22:35:21.747378349] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
 type: INSERTION
 count: 1
 time_first: 2018-04-03 22:34:03
@@ -759,7 +595,7 @@ rdata: ns2.afraid.org.
 rdata: ns3.afraid.org.
 rdata: ns4.afraid.org.
 
-[141] [2018-04-03 22:35:21.747385912] [2:1 SIE dnsdedupe] [a1ba02cf] [] [] 
+[141] [2018-04-03 22:35:21.747385912] [2:1 SIE dnsdedupe] [a1ba02cf] [] []
 type: EXPIRATION
 count: 1
 time_first: 2018-04-03 20:09:54
@@ -800,9 +636,9 @@ From the differences in the timestamps, we see sratunnel took ~7.5 minutes to co
 
 ~~~
 $ ls -l 204.jsonl*
--rw-r--r-- 1 mschiffm mschiffm 3912958424 Oct 24 21:12 204.jsonl
--rw-r--r-- 1 mschiffm mschiffm      57344 Oct 24 21:12 204.jsonl.mdb
--rw-r--r-- 1 mschiffm mschiffm       8192 Oct 24 21:11 204.jsonl.mdb-lock
+-rw-r--r-- 1 username username 3912958424 Oct 24 21:12 204.jsonl
+-rw-r--r-- 1 username username      57344 Oct 24 21:12 204.jsonl.mdb
+-rw-r--r-- 1 username username       8192 Oct 24 21:11 204.jsonl.mdb-lock
 ~~~
 
 The 3.7G file `204.jsonl` contains the output from the session, the `204.jsonl.mdb` file contains its indexed timestamps while `204.jsonl.mdb-lock` is a lock file used to mediate access to the timestamp index database file. To quickly access a select range of nmsgs from this rather
@@ -849,11 +685,9 @@ forwarded 100 messages, rotating ./213.jsonl.20181028.2036.1540787799.000129702.
 
 The AXA protocol consists of a pair of streams of messages between a subscriber's client (such as `sratool`) and an AXA server (such as SRA), one stream in each direction, currently over a single TCP connection.
 
-AXA must sit on top of a reliable stream protocol such as TCP and so has no provisions to detect or recover from duplicate, out-of-order, lost, or partially lost data. Note that SIE data *can* be lost *before*
-encapsulation into AXA protocol messages due to issues such as network
-congestion, CPU overload, etc.
+AXA must sit on top of a reliable stream protocol such as TCP and so has no provisions to detect or recover from duplicate, out-of-order, lost, or partially lost data. Note that SIE data *can* be lost *before* encapsulation into AXA protocol messages due to issues such as network congestion, CPU overload, etc.
 
-As mentioned above, protocols such as TLS or SSH are used below the AXA layer and above TCP to provide authentication, confidentiality, and integrity as shown below.
+AXA relies on the TLS and TCP protocols to provide authentication, confidentiality, and integrity as shown below.
 
 ~~~
 [AXA] - SIE message encapsulation
@@ -868,9 +702,7 @@ Values that originate in SRA or RAD servers such as message lengths use little e
 
 The stream protocols below the AXA protocol are responsible for authentication and authorization. An AXA client and server pair on a computer can use unadorned TCP through the loop-back interface or use a UNIX domain socket. The AXA protocol assumes this is safe.
 
-Between separate computers, the AXA protocol can use UNIX pipes to the `stdin` and `stdout` streams provided by the `ssh` command or the functions of an SSH library such as `libssh2` (SSH must identify and authenticate the client and server to each other) or the TLS library.
-
-The AXA client starts by waiting for an `AXA_P_OP_HELLO` message from the server. Over a local stream, the client then sends an `AXA_P_OP_USER` message to tell the server which parameters to use. When SSH is used, the user name is provided through the SSH protocol.
+The AXA client starts by waiting for an `AXA_P_OP_HELLO` message from the server. Over a local stream, the client then sends an `AXA_P_OP_USER` message to tell the server which parameters to use.
 
 ### AXA message header
 
