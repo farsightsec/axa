@@ -60,7 +60,7 @@ extern bool terminated;
 extern axa_client_t client;
 
 /* global */
-bool eclose = false;            	/* disconnect on error */
+bool eclose = false;	    	/* disconnect on error */
 History *el_history;			/* command history */
 HistEvent el_event;			/* command history event */
 char *history_savefile = NULL;		/* fq path to history savefile */
@@ -82,7 +82,7 @@ static struct timeval connect_time;
 static struct {
 	struct ether_addr   dst;
 	struct ether_addr   src;
-	uint16_t            etype;
+	uint16_t	    etype;
 } out_mac;
 
 /* commands */
@@ -183,8 +183,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Show the current connection"
     " or connect with 'tcp:user@host,port',"
     " 'unix:[user@]/socket'] through a UNIX domain socket,"
-    " 'ssh:[user@]host' via SSH"
-    " or with 'tls:user@host,port."
+    " 'apikey@hostname,port' via apikey/tls"
 },
 {"count",		count_cmd,		BOTH, MB, NO,
     "count [#packets | off]",
@@ -372,9 +371,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"user",		user_cmd,		BOTH, YES, YES,
     "user name",
     "Send the user name required by the server on a TCP/IP connection or"
-    " a UNIX domain socket.\n"
-    " TLS/SSH connections do not use this command but use the"
-    " name negotiated with the tls or ssh protocol."
+    " a UNIX domain socket."
 },
 {"verbose",		verbose_cmd,		BOTH, MB, NO,
     "verbose [on | off | N]",
@@ -387,7 +384,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 },
 {"window",		sndbuf_cmd,		BOTH, MB, YES,
     "window [bytes]",
-    "Ask the server to report its current TCP output buffer size on TLS and"
+    "Ask the server to report its current TCP output buffer size on"
     " TCP connections or to set its output buffer size."
 },
 {"zlib",		nmsg_zlib_cmd,		BOTH, NO, NO,
@@ -396,7 +393,6 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     " effect, output mode must be enabled in nmsg file or socket mode."
 },
 };
-
 
 const char *
 el_prompt(EditLine *e AXA_UNUSED)
@@ -1107,8 +1103,8 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
 			       client.io.addr, client.io.pvers);
 			printf("    connected for: %s\n",
 				convert_timeval(&connect_time));
-			if (client.io.tls_info != NULL)
-				printf("    %s\n", client.io.tls_info);
+			if (client.io.openssl_info != NULL)
+				printf("    %s\n", client.io.openssl_info);
 			count_print(false);
 			if (mode == RAD)
 				return (srvr_send(tag, AXA_P_OP_RADU, NULL, 0));
@@ -1125,7 +1121,6 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
 
 	axa_client_backoff_reset(&client);
 	switch (axa_client_open(&emsg, &client, arg, mode == RAD,
-				axa_debug > AXA_DEBUG_TRACE,
 				256*1024, true)) {
 	case AXA_CONNECT_ERR:
 	case AXA_CONNECT_TEMP:
@@ -1346,17 +1341,17 @@ ciphers_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	const char *cipher;
 
 	if (arg[0] == '\0') {
-		cipher = axa_tls_cipher_list(&emsg, NULL);
+		cipher = axa_apikey_cipher_list(&emsg, NULL);
 		if (cipher == NULL || *cipher == '\0')
 			printf("next TLS cipher: \"\"\n");
 		else
 			printf("next TLS cipher: %s\n",
 			       cipher);
-		if (client.io.tls_info != NULL)
+		if (client.io.openssl_info != NULL)
 			printf("    current: %s\n",
-			       client.io.tls_info);
+			       client.io.openssl_info);
 
-	} else if (axa_tls_cipher_list(&emsg, arg) == NULL) {
+	} else if (axa_apikey_cipher_list(&emsg, arg) == NULL) {
 		error_msg("%s", emsg.c);
 		return (0);
 	}
@@ -1379,16 +1374,16 @@ mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	setting = arg;
 	if (setting[0] != '\0') {
 		if (word_cmp(&setting, "sra")) {
-            if (mode == RAD && AXA_CLIENT_CONNECTED(&client)) {
-                printf("  can't change mode while connected to server\n");
-                return (-1);
-            }
+	    if (mode == RAD && AXA_CLIENT_CONNECTED(&client)) {
+		printf("  can't change mode while connected to server\n");
+		return (-1);
+	    }
 			mode = SRA;
 		} else if (word_cmp(&setting, "rad")) {
-            if (mode == SRA && AXA_CLIENT_CONNECTED(&client)) {
-                printf("  can't change mode while connected to server\n");
-                return (-1);
-            }
+	    if (mode == SRA && AXA_CLIENT_CONNECTED(&client)) {
+		printf("  can't change mode while connected to server\n");
+		return (-1);
+	    }
 			mode = RAD;
 		} else {
 			return (-1);
@@ -1703,8 +1698,7 @@ sndbuf_cmd(axa_tag_t tag, const char *arg,
 	memset(&opt, 0, sizeof(opt));
 	opt.type = AXA_P_OPT_SNDBUF;
 
-	if (client.io.type != AXA_IO_TYPE_TCP
-	    && client.io.type != AXA_IO_TYPE_TLS) {
+	if (client.io.type != AXA_IO_TYPE_TCP) {
 		error_msg("cannot change the buffer size on %s connections",
 			  axa_io_type_to_str(client.io.type));
 		return (0);

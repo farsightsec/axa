@@ -44,8 +44,7 @@ io_wait(bool cmds_ok,			/* false=waiting for connect */
 	int poll_ms, ms;		/* poll() wants an int */
 	struct pollfd pollfds[4];
 	bool data_ok;
-	const char *cp;
-	int cmd_nfd, i_nfd, o_nfd, tun_nfd, nfds, i;
+	int cmd_nfd, i_nfd, o_nfd, nfds, i;
 
 	gettimeofday(&start, NULL);
 	do {
@@ -53,7 +52,6 @@ io_wait(bool cmds_ok,			/* false=waiting for connect */
 		cmd_nfd = -1;
 		i_nfd = -1;
 		o_nfd = -1;
-		tun_nfd = -1;
 
 		gettimeofday(&now, NULL);
 		poll_ms = wait_ms - axa_elapsed_ms(&now, &start);
@@ -143,13 +141,6 @@ io_wait(bool cmds_ok,			/* false=waiting for connect */
 					pollfds[nfds].events=client.io.o_events;
 					o_nfd = nfds++;
 				}
-
-				/* Watch stderr from ssh. */
-				if (client.io.tun_fd >= 0) {
-					pollfds[nfds].fd = client.io.tun_fd;
-					pollfds[nfds].events = AXA_POLL_IN;
-					tun_nfd = nfds++;
-				}
 			}
 
 			/* Flush the forwarding buffer
@@ -183,17 +174,6 @@ io_wait(bool cmds_ok,			/* false=waiting for connect */
 		/* Listen to the user before the server except when
 		 * reading from a command file. */
 		if (in_file_cur > 0) {
-			/* Repeat anything the ssh process says */
-			if (tun_nfd >= 0 && pollfds[tun_nfd].revents != 0) {
-				pollfds[tun_nfd].revents = 0;
-				for (;;) {
-					cp = axa_io_tunerr(&client.io);
-					if (cp == NULL)
-					    break;
-					error_msg("%s", cp);
-				}
-			}
-
 			/* Process messages from the server,
 			 * including TCP SYN-ACK and TLS handshaking. */
 			if (i_nfd >= 0 && pollfds[i_nfd].revents != 0) {
@@ -215,16 +195,6 @@ io_wait(bool cmds_ok,			/* false=waiting for connect */
 			if (in_file_cur < 0)
 				stop(EX_OK);
 			break;
-		}
-
-		/* Repeat anything the ssh process says */
-		if (tun_nfd >= 0 && pollfds[tun_nfd].revents != 0) {
-			for (;;) {
-				cp = axa_io_tunerr(&client.io);
-				if (cp == NULL)
-					break;
-				error_msg("%s", cp);
-			}
 		}
 
 		/* Process messages or TCP syn-ack from the server. */

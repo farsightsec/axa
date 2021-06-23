@@ -1,7 +1,7 @@
 /*
  * AXA protocol utilities
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018, 2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@
 #define __FAVOR_BSD			/* for Debian tcp.h and udp.h */
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
-#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef __linux
@@ -39,7 +38,6 @@
 #include <time.h>			/* for localtime() and strftime() */
 #endif
 #include <sys/uio.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
 
@@ -1630,7 +1628,6 @@ axa_io_type_parse(const char **addrp)
 {
 	axa_io_type_t result;
 	const char *addr;
-	int i;
 
 	addr = *addrp;
 	addr += strspn(addr, AXA_WHITESPACE);
@@ -1642,21 +1639,6 @@ axa_io_type_parse(const char **addrp)
 	} else if (AXA_CLITCMP(addr, AXA_IO_TYPE_TCP_STR":")) {
 		addr += sizeof(AXA_IO_TYPE_TCP_STR":")-1;
 		result = AXA_IO_TYPE_TCP;
-
-	} else if (AXA_CLITCMP(addr, AXA_IO_TYPE_TLS_STR":")) {
-		addr += sizeof(AXA_IO_TYPE_TLS_STR":")-1;
-		result = AXA_IO_TYPE_TLS;
-
-	} else if (AXA_CLITCMP(addr, AXA_IO_TYPE_SSH_STR":")) {
-		addr += sizeof(AXA_IO_TYPE_SSH_STR":")-1;
-		result = AXA_IO_TYPE_SSH;
-
-	} else if (AXA_CLITCMP(addr, AXA_IO_TYPE_SSH_STR)
-		   && 0 != (i = strspn(addr+sizeof(AXA_IO_TYPE_SSH_STR)-1,
-				       AXA_WHITESPACE))) {
-		/* allow "ssh " for upward compatibility with old sratool */
-		addr += sizeof(AXA_IO_TYPE_SSH_STR)-1 + i;
-		result = AXA_IO_TYPE_SSH;
 
 	} else if (AXA_CLITCMP(addr, AXA_IO_TYPE_APIKEY_STR":")) {
 		addr += sizeof(AXA_IO_TYPE_APIKEY_STR":")-1;
@@ -1682,10 +1664,6 @@ axa_io_type_to_str(axa_io_type_t type)
 		return (AXA_IO_TYPE_UNIX_STR);
 	case AXA_IO_TYPE_TCP:
 		return (AXA_IO_TYPE_TCP_STR);
-	case AXA_IO_TYPE_SSH:
-		return (AXA_IO_TYPE_SSH_STR);
-	case AXA_IO_TYPE_TLS:
-		return (AXA_IO_TYPE_TLS_STR);
 	case AXA_IO_TYPE_APIKEY:
 		return (AXA_IO_TYPE_APIKEY_STR);
 	}
@@ -1698,8 +1676,6 @@ axa_io_init(axa_io_t *io)
 	io->su.sa.sa_family = -1;
 	io->i_fd = -1;
 	io->o_fd = -1;
-	io->tun_fd = -1;
-	io->tun_pid = -1;
 	io->pvers = AXA_P_PVERS;
 }
 
@@ -1739,18 +1715,12 @@ ck_close(int fd, const char *label)
 void
 axa_io_close(axa_io_t *io)
 {
-	int wstatus;
-
 	switch (io->type) {
 		case AXA_IO_TYPE_APIKEY:
 			axa_apikey_stop(io);
 			break;
-		case AXA_IO_TYPE_TLS:
-			axa_tls_stop(io);
-			break;
 		case AXA_IO_TYPE_UNIX:
 		case AXA_IO_TYPE_UNKN:
-		case AXA_IO_TYPE_SSH:
 		case AXA_IO_TYPE_TCP:
 		default:
 			break;
@@ -1761,20 +1731,9 @@ axa_io_close(axa_io_t *io)
 	if (io->o_fd >= 0)
 		ck_close(io->o_fd, "io->o_fd");
 
-	if (io->tun_fd >= 0)
-		ck_close(io->tun_fd, "io->tun_fd");
-
-	if (io->tun_pid != -1) {
-		kill(io->tun_pid, SIGKILL);
-		waitpid(io->tun_pid, &wstatus, 0);
-	}
-
 	axa_recv_flush(io);
 	if (io->recv_buf != NULL)
 		free(io->recv_buf);
-
-	if (io->tun_buf != NULL)
-		free(io->tun_buf);
 
 	if (io->send_buf != NULL)
 		free(io->send_buf);
@@ -1784,12 +1743,8 @@ axa_io_close(axa_io_t *io)
 	if (io->label != NULL)
 		free(io->label);
 
-	if (io->cert_file != NULL)
-		free(io->cert_file);
-	if (io->key_file != NULL)
-		free(io->key_file);
-	if (io->tls_info != NULL)
-		free(io->tls_info);
+	if (io->openssl_info != NULL)
+		free(io->openssl_info);
 
 	/* Clear the FDs, PID, buffer pointers, etc. */
 	axa_io_init(io);
@@ -1810,38 +1765,6 @@ which_direction(const axa_io_t *io, bool send)
 	}
 
 	return (result);
-}
-
-/* Make an error message for a bad AXA message header that looks like
- * an SSH message of the day.. */
-static void
-motd_hdr(axa_emsg_t *emsg, axa_io_t *io)
-{
-	ssize_t i;
-
-	if (io->type != AXA_IO_TYPE_SSH)
-		return;
-
-	/* Did we receive the header in a single read? */
-	if (io->recv_start != &io->recv_buf[sizeof(axa_p_hdr_t)]) {
-		/* No, so do not disturb the existing error message. */
-		return;
-	}
-
-	/* Yes, so find the first non-ASCII byte. */
-	for (i = 0; i < io->recv_bytes; ++i) {
-		if (io->recv_start[i] < ' '
-		    || io->recv_start[i] > '~')
-			break;
-	}
-
-	/* Assume it is a message of the day via SSH if
-	 * there is a bunch of ASCII ending with '\n' or '\r'. */
-	if (i == io->recv_bytes
-	    && (io->recv_start[i] == '\n'
-		|| io->recv_start[i] != '\r'))
-		axa_pemsg(emsg, "unexpected text \"%.*s\" from %s",
-			  (int)i, io->recv_buf, io->label);
 }
 
 axa_io_result_t
@@ -1879,7 +1802,6 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 			if (len == 0
 			    && !axa_ck_hdr(emsg, &io->recv_hdr, io->label,
 				       which_direction(io, false))) {
-				motd_hdr(emsg, io);
 				return (AXA_IO_ERR);
 			}
 
@@ -1905,9 +1827,8 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 		/* Read more data into the hidden buffer when we run out. */
 		if (io->recv_bytes == 0) {
 			io->recv_start = io->recv_buf;
-			if (io->type == AXA_IO_TYPE_TLS ||
-					io->type == AXA_IO_TYPE_APIKEY) {
-				io_result = axa_tls_read(emsg, io);
+			if (io->type == AXA_IO_TYPE_APIKEY) {
+				io_result = axa_openssl_read(emsg, io);
 				if (io_result != AXA_IO_OK)
 					return (io_result);
 			} else {
@@ -1950,12 +1871,12 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 /* Wait for something to to happen */
 axa_io_result_t
 axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
-	    time_t wait_ms, bool keepalive, bool tun)
+	    time_t wait_ms, bool keepalive)
 {
 	struct timeval now;
 	time_t ms;
 	struct pollfd pollfds[3];
-	int nfds, i_nfd, o_nfd, tun_nfd;
+	int nfds, i_nfd, o_nfd;
 	int i;
 
 	/* Stop waiting when it is time for a keepalive. */
@@ -1971,7 +1892,6 @@ axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
 	memset(pollfds, 0, sizeof(pollfds));
 	i_nfd = -1;
 	o_nfd = -1;
-	tun_nfd = -1;
 	nfds = 0;
 
 	if (io->i_fd >= 0 && io->i_events != 0) {
@@ -1986,13 +1906,6 @@ axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
 		o_nfd = nfds++;
 	}
 
-	/* Watch the stderr pipe from a tunnel such as ssh. */
-	if (tun && io->tun_fd >= 0) {
-		pollfds[nfds].fd = io->tun_fd;
-		pollfds[nfds].events = AXA_POLL_IN;
-		tun_nfd = nfds++;
-	}
-
 	i = poll(pollfds, nfds, wait_ms);
 	if (i < 0 && errno != EINTR) {
 		axa_pemsg(emsg, "poll(): %s", strerror(errno));
@@ -2000,9 +1913,6 @@ axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
 	}
 	if (i <= 0)
 		return (AXA_IO_BUSY);
-
-	if (tun_nfd >= 0 && pollfds[tun_nfd].revents != 0)
-		return (AXA_IO_TUNERR);
 
 	if ((i_nfd >= 0 && pollfds[i_nfd].revents != 0)
 	    || (o_nfd >= 0 && pollfds[o_nfd].revents != 0))
@@ -2037,12 +1947,11 @@ axa_input(axa_emsg_t *emsg, axa_io_t *io, time_t wait_ms)
 		/* Read more from the peer when needed. */
 		if (io->recv_buf == NULL || io->recv_bytes == 0) {
 			result = axa_io_wait(emsg, io, wait_ms,
-					     AXA_IO_CONNECTED(io), true);
+					     AXA_IO_CONNECTED(io));
 			switch (result) {
 			case AXA_IO_OK:
 				break;
 			case AXA_IO_ERR:
-			case AXA_IO_TUNERR:
 			case AXA_IO_KEEPALIVE:
 			case AXA_IO_BUSY:
 				return (result);
@@ -2056,7 +1965,6 @@ axa_input(axa_emsg_t *emsg, axa_io_t *io, time_t wait_ms)
 			return (result);
 		case AXA_IO_BUSY:
 			continue;	/* wait for the rest */
-		case AXA_IO_TUNERR:	/* impossible */
 		case AXA_IO_KEEPALIVE:	/* impossible */
 			AXA_FAIL("impossible axa_recv_buf() result");
 		}
@@ -2106,7 +2014,7 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	if (total == 0)
 		return (AXA_IO_ERR);
 
-	if (io->type == AXA_IO_TYPE_TLS || io->type == AXA_IO_TYPE_APIKEY) {
+	if (io->type == AXA_IO_TYPE_APIKEY) {
 		/*
 		 * For TLS, save all 3 parts in the overflow output buffer
 		 * so that the AXA message can be sent as a single TLS
@@ -2114,7 +2022,7 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 		 * the cost of TLS encryption.
 		 */
 		axa_send_save(io, 0, hdr, b1, b1_len, b2, b2_len);
-		return (axa_tls_flush(emsg, io));
+		return (axa_openssl_write(emsg, io));
 	}
 
 	for (;;) {
@@ -2234,8 +2142,8 @@ axa_send_flush(axa_emsg_t *emsg, axa_io_t *io)
 {
 	ssize_t done;
 
-	if (io->type == AXA_IO_TYPE_TLS || io->type == AXA_IO_TYPE_APIKEY)
-		return (axa_tls_flush(emsg, io));
+	if (io->type == AXA_IO_TYPE_APIKEY)
+		return (axa_openssl_write(emsg, io));
 
 	/* Repeat other transports until nothing flows. */
 	for (;;) {
@@ -2264,90 +2172,9 @@ axa_send_flush(axa_emsg_t *emsg, axa_io_t *io)
 	}
 }
 
-/* Capture anything that the tunnel (eg. ssh) process says. */
-const char *				/* NULL or \'0' terminated string */
-axa_io_tunerr(axa_io_t *io)
-{
-	int i;
-	char *p;
-
-	/* Create the buffer the first time */
-	if (io->tun_buf == NULL || io->tun_buf_size == 0) {
-		AXA_ASSERT(io->tun_buf == NULL && io->tun_buf_size == 0);
-		io->tun_buf_size = 120;
-		io->tun_buf = axa_malloc(io->tun_buf_size);
-	}
-
-	for (;;) {
-		/* Discard the previously returned line. */
-		if (io->tun_buf_bol != 0) {
-			i = io->tun_buf_len - io->tun_buf_bol;
-			if (i > 0)
-				memmove(io->tun_buf,
-					&io->tun_buf[io->tun_buf_bol],
-					i);
-			io->tun_buf_len -= io->tun_buf_bol;
-			io->tun_buf_bol = 0;
-		}
-
-		/* Hope to return the next line in the buffer. */
-		if (io->tun_buf_len > 0) {
-			i = min(io->tun_buf_len, io->tun_buf_size);
-			p = memchr(io->tun_buf, '\n', i);
-			if (p != NULL) {
-				*p = '\0';
-				io->tun_buf_bol = p+1 - io->tun_buf;
-
-				/* trim '\r' */
-				while (p > io->tun_buf && *--p == '\r')
-					*p = '\0';
-				/* Discard blank lines. */
-				if (p == io->tun_buf)
-					continue;
-				return (io->tun_buf);
-			}
-		}
-
-		/* Get more data, possibly completing a partial line. */
-		i = io->tun_buf_size-1 - io->tun_buf_len;
-		if (i > 0 && io->tun_fd >= 0) {
-			i = read(io->tun_fd,
-				 &io->tun_buf[io->tun_buf_len],
-				 i);
-
-			/* Return the 1st line in the new buffer load */
-			if (i > 0) {
-				io->tun_buf_len += i;
-				io->tun_buf[io->tun_buf_len] = '\0';
-				continue;
-			}
-
-			if (i < 0
-			    && errno != EWOULDBLOCK && errno != EAGAIN) {
-				/* Return error message at errors. */
-				snprintf(io->tun_buf, io->tun_buf_size,
-					 "read(tunerr): %s",
-					 strerror(errno));
-				io->tun_buf_len = strlen(io->tun_buf)+1;
-				close(io->tun_fd);
-				io->tun_fd = -1;
-
-			} else if (i == 0) {
-				close(io->tun_fd);
-				io->tun_fd = -1;
-			}
-		}
-
-		/* Return whatever we have. */
-		io->tun_buf_bol = io->tun_buf_len;
-		return ((io->tun_buf_len > 0) ? io->tun_buf : NULL);
-	}
-}
-
 /* Clean up AXA I/O functions including freeing TLS data */
 void
 axa_io_cleanup(void)
 {
-	axa_tls_cleanup();
 	axa_apikey_cleanup();
 }

@@ -13,7 +13,7 @@ Additional
 .Fl d
 turn on more messages.
 .It Fl E Ar ciphers
-specifies the TLS encryption ciphers to use with TLS connections.
+specifies the TLS encryption ciphers to use with apikey connections.
 .It Fl n Ar config
 overrides the default location of the
 .Pa config

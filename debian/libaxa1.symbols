@@ -4,8 +4,8 @@ libaxa.so.1 libaxa1 #MINVER#
  axa_apikey_load_and_check_key@Base 2.0.0
  axa_apikey_parse@Base 2.0.0
  axa_apikey_parse_srvr@Base 2.0.0
- axa_apikey_start@Base 2.0.0
- axa_apikey_stop@Base 2.0.0
+ axa_apikey_start@Base 3.0.0
+ axa_apikey_stop@Base 3.0.0
  axa_asprintf@Base 2.0.0
  axa_bits_to_mask@Base 2.0.0
  axa_body_to_json@Base 2.0.0
@@ -24,8 +24,9 @@ libaxa.so.1 libaxa1 #MINVER#
  axa_client_get_hello_string@Base 2.0.0
  axa_client_hello@Base 2.0.0
  axa_client_init@Base 2.0.0
- axa_client_open@Base 2.0.0
+ axa_client_open@Base 3.0.0
  axa_client_send@Base 2.0.0
+ axa_config_file_found@Base 3.0.0
  axa_data_to_su@Base 2.0.0
  axa_domain_to_str@Base 2.0.0
  axa_elapsed_ms@Base 2.0.0
@@ -41,20 +42,26 @@ libaxa.so.1 libaxa1 #MINVER#
  axa_get_version_number@Base 2.0.0
  axa_hash_divisor@Base 2.0.0
  axa_hitlist_append@Base 2.0.0
- axa_input@Base 2.0.0
+ axa_input@Base 3.0.0
  axa_io_cleanup@Base 2.0.0
- axa_io_close@Base 2.0.0
+ axa_io_close@Base 3.0.0
  axa_io_error@Base 2.0.0
- axa_io_init@Base 2.0.0
- axa_io_pvers_get@Base 2.0.0
- axa_io_pvers_set@Base 2.0.0
- axa_io_tunerr@Base 2.0.0
- axa_io_type_parse@Base 2.0.0
+ axa_io_init@Base 3.0.0
+ axa_io_pvers_get@Base 3.0.0
+ axa_io_pvers_set@Base 3.0.0
+ axa_io_type_parse@Base 3.0.0
  axa_io_type_to_str@Base 2.0.0
- axa_io_wait@Base 2.0.0
+ axa_io_wait@Base 3.0.0
  axa_ip_to_su@Base 2.0.0
  axa_ipdg_parse@Base 2.0.0
- axa_load_client_config@Base 2.0.0
+ axa_kf@Base 3.0.0
+ axa_kickfile@Base 3.0.0
+ axa_kickfile_destroy@Base 3.0.0
+ axa_kickfile_exec@Base 3.0.0
+ axa_kickfile_get_kt@Base 3.0.0
+ axa_kickfile_register_cb@Base 3.0.0
+ axa_kickfile_rotate@Base 3.0.0
+ axa_load_client_config@Base 3.0.0
  axa_load_fields@Base 2.0.0
  axa_make_hdr@Base 2.0.0
  axa_malloc@Base 2.0.0
@@ -74,12 +81,12 @@ libaxa.so.1 libaxa1 #MINVER#
  axa_parse_watch@Base 2.0.0
  axa_pemsg@Base 2.0.0
  axa_prog_name@Base 2.0.0
- axa_recv_buf@Base 2.0.0
- axa_recv_flush@Base 2.0.0
+ axa_recv_buf@Base 3.0.0
+ axa_recv_flush@Base 3.0.0
  axa_rtype_to_str@Base 2.0.0
- axa_send@Base 2.0.0
- axa_send_flush@Base 2.0.0
- axa_send_save@Base 2.0.0
+ axa_send@Base 3.0.0
+ axa_send_flush@Base 3.0.0
+ axa_send_save@Base 3.0.0
  axa_set_core@Base 2.0.0
  axa_set_me@Base 2.0.0
  axa_set_sock@Base 2.0.0
@@ -99,15 +106,8 @@ libaxa.so.1 libaxa1 #MINVER#
  axa_syslog_init@Base 2.0.0
  axa_tag_op_to_str@Base 2.0.0
  axa_tag_to_str@Base 2.0.0
- axa_tls_certs_dir@Base 2.0.0
- axa_tls_cipher_list@Base 2.0.0
- axa_tls_cleanup@Base 2.0.0
- axa_tls_flush@Base 2.0.0
- axa_tls_init@Base 2.0.0
- axa_tls_parse@Base 2.0.0
- axa_tls_read@Base 2.0.0
- axa_tls_start@Base 2.0.0
- axa_tls_stop@Base 2.0.0
+ axa_openssl_read@Base 3.0.0
+ axa_openssl_write@Base 3.0.0
  axa_trace_msg@Base 2.0.0
  axa_trie_node_delete@Base 2.0.0
  axa_trie_node_free@Base 2.0.0

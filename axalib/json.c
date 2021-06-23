@@ -906,14 +906,6 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 						add_yajl_string(g,
 							AXA_IO_TYPE_TCP_STR);
 						break;
-					case AXA_IO_TYPE_SSH:
-						add_yajl_string(g,
-							AXA_IO_TYPE_SSH_STR);
-						break;
-					case AXA_IO_TYPE_TLS:
-						add_yajl_string(g,
-							AXA_IO_TYPE_TLS_STR);
-						break;
 					case AXA_IO_TYPE_APIKEY:
 						add_yajl_string(g,
 							AXA_IO_TYPE_APIKEY_STR);

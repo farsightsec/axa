@@ -240,7 +240,6 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
  *  network details and the user's whim, AXA may use:
  *      - Unix domain (unix:/foo/bar)
  *      - TCP  (tcp:10.0.0.1,123)
- *      - SSH  (ssh:10.0.0.1,123)
  *      - UDP  (udp:10.0.0.1,123)
  *      - NMSG over TCP (nmsg:tcp:10.0.0.1,123)
  *      - NMSG over UDP (nmsg:udp:10.0.0.1,123)

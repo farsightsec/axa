@@ -1,4 +1,4 @@
-.\" Copyright (c) 2014-2018 by Farsight Security, Inc.
+.\" Copyright (c) 2014-2018, 2021 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -35,18 +35,17 @@
 .Op Fl n Ar config-file
 .Op Fl P Ar pidfile
 .Op Fl r Ar rate-limit
-.Op Fl S Ar certs
 .Op Fl T Ar secs
 .Op Fl Z Ar size
 .Op Fl I Ar size
 .Sh DESCRIPTION
-.Nm Sratunnel
+.Nm sratunnel
 transfers selected Security Information Exchange (SIE) data
 from remote servers to the local network.
 The connection to the server is created and restored after problems
 with binary exponential delays between retries.
 .Pp
-.Nm Sratunnel
+.Nm sratunnel
 is a tool for tunneling SIE data using the Advanced Exchange Access (AXA)
 protocol. It also demonstrates the use of the AXA helper library,
 .Pa libaxa.a .
@@ -205,33 +204,18 @@ The server can be specified with any of the following:
 Connect to a server using an alias shortcut mnemonic (see FILES section for
 more information).
 .It Sm off Ar apikey: Ar <users_apikey>@ Ar host,port Sm on
-Identify and authenticate the user via a Farsight Security provided apikey.
-The connection will be encrypted using the same TLS semantics as the tls
-transport below.
-.It Sm off Ar ssh: Oo Ar user@ Oc Ar host Sm on
-The server will be contacted using the ssh protocol.
-These connections usually use default ssh
-.Xr ssh_config 1
-files to specify the required public keys
-and optionally the fully qualified host name and user names associated
-with the public key.
-Use
-.Fl dddd
-to diagnose ssh connection problems.
+Identify and authenticate the user via a Farsight Security provided apikey. The connection will be encrypted using the TLS protocol with the certificate in the
+.Ar cert
+file and the private key in the
+.Ar key
+file. If not absolute, the files are in the
+.Fl S Ar certs
+directory.
 .It Sm off Ar tcp: Ar user@ Ar host,port Sm on
 The connection will be made with the host name or IP address and port number
 using clear text over TCP/IP.
 .It Sm off Ar unix: Ar user@ Ar /ud/socket Sm on
 This connection uses a UNIX domain socket connected to a local server.
-.It Ar tls:cert,key@host,port
-Use the TLS protocol with the certificate in the
-.Ar cert
-file and the private key in the
-.Ar key
-file.
-If not absolute, the files are in the
-.Fl S Ar certs
-directory.
 .El
 .It Fl T Ar secs
 stop
@@ -328,13 +312,6 @@ information such as apikeys, it must not be readable or writeable to anybody
 other than "owner" or
 .Nm sratunnel
 will not load.
-.It Ar ~/.ssh/config
-is the
-.Xr ssh_config 5
-configuration file used with
-.Ar connect\ ssh:...
-connections.
-"Host" stanzas in the file can simplify connections to AXA servers.
 .It Ar foo.mdb
 is an lmdb key-value store containing nmsg timestamp/file offset pairs (a
 "tsindex" file). See the

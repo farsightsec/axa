@@ -1031,17 +1031,6 @@ typedef union {
 	uint8_t		b[1];		/**< ... */
 } axa_p_body_t;
 
-/**< @cond */
-/* Handshake from the program run by sshd, axaproxy, to srad or radd. */
-typedef struct {			/**< not packed because it is local */
-	char		magic[16];
-#	 define AXA_PROXY_SSH_MAGIC "PROXY_SSH_0"
-	axa_socku_t	su;
-	char		peer[INET6_ADDRSTRLEN];
-	axa_p_user_t	user;
-} axa_proxy_ssh_t;
-/**< @endcond */
-
 /**@}*/
 
 #undef _PK

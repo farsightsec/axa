@@ -41,7 +41,6 @@
 /* obsolete but retained for upward compatibility */
 #define	AXA_CLIENT_TYPE_UNIX_STR    AXA_IO_TYPE_UNIX_STR
 #define AXA_CLIENT_TYPE_TCP_STR	    AXA_IO_TYPE_TCP_STR
-#define AXA_CLIENT_TYPE_SSH_STR	    AXA_IO_TYPE_SSH_STR
 /** @endcond */
 
 /** AXA client state */
@@ -162,7 +161,6 @@ typedef enum {
  *  \param[in] client address of a client context
  *  \param[in] is_rad true if server is radd instead of srad
  *  \param[in] addr connect to this AXA server specification
- *  \param[in] tun_debug true to turn on ssh tunnel debugging
  *  \param[in] bufsize 0 or desired socket buffer sizes
  *  \param[in] nonblock true to start the connection without blocking and
  *	to make the connection non-blocking
@@ -172,7 +170,6 @@ typedef enum {
 extern axa_connect_result_t axa_client_open(axa_emsg_t *emsg,
 					    axa_client_t *client,
 					    const char *addr, bool is_rad,
-					    bool tun_debug,
 					    int bufsize, bool nonblock);
 
 /**

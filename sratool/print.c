@@ -1442,12 +1442,6 @@ print_stats_user(_axa_p_stats_user_t *user)
 		case AXA_IO_TYPE_TCP:
 			io_type = AXA_IO_TYPE_TCP_STR;
 			break;
-		case AXA_IO_TYPE_SSH:
-			io_type = AXA_IO_TYPE_SSH_STR;
-			break;
-		case AXA_IO_TYPE_TLS:
-			io_type = AXA_IO_TYPE_TLS_STR;
-			break;
 		case AXA_IO_TYPE_APIKEY:
 			io_type = AXA_IO_TYPE_APIKEY_STR;
 			break;

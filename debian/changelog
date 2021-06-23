@@ -1,3 +1,9 @@
+axa-servers (3.0.0-1) debian-fsi; urgency=medium
+
+  * Drop tls and ssh authentication options
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Tue, 15 Jun 2021 17:16:00 -0800
+
 axa (2.2.0-1) debian-fsi; urgency=medium
 
   * Add timestamp indexing

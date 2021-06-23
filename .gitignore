@@ -35,6 +35,7 @@ tests/test-kickfile
 tests/test-kill
 tests/test-stats
 tests/test-tools-without-server.sh
+tests/test-tools-with-server.sh
 tools/axa_link_certs
 tools/axa_link_certs.man
 tools/axa_make_cert

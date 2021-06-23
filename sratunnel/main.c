@@ -222,7 +222,7 @@ usage(const char *msg, ...)
 	}
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2014-2019 Farsight Security, Inc.\n");
+	printf("(c) 2014-2021 Farsight Security, Inc.\n");
 	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
@@ -271,7 +271,6 @@ main(int argc, char **argv)
 	nmsg_res res;
 	axa_emsg_t emsg;
 	char *p;
-	const char *cp;
 	int i;
 	size_t n = 0;
 	char out_filename[BUFSIZ];
@@ -290,8 +289,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uzZ:"))
-			!= -1) {
+	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uzZ:")) != -1) {
 		switch (i) {
 		case 'A':
 			acct_interval = atoi(optarg);
@@ -313,9 +311,6 @@ main(int argc, char **argv)
 		case 'd':
 			++axa_debug;
 			break;
-
-		case 'h':
-			usage(NULL);
 
 		case 'i':
 			output_tsindex_write_interval = atoi(optarg);
@@ -398,12 +393,12 @@ main(int argc, char **argv)
 			break;
 
 		case 'E':
-			if (axa_tls_cipher_list(&emsg, optarg) == NULL)
+			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
 				axa_error_msg("%s", emsg.c);
 			break;
 
 		case 'S':
-			if (!axa_tls_certs_dir(&emsg, optarg))
+			if (!axa_apikey_certs_dir(&emsg, optarg))
 				axa_error_msg("%s", emsg.c);
 			break;
 
@@ -449,6 +444,8 @@ main(int argc, char **argv)
 		case 'z':
 			nmsg_zlib = true;
 			break;
+
+		case 'h':
 		default:
 			usage(NULL);
 		}
@@ -704,18 +701,9 @@ main(int argc, char **argv)
 			}
 		}
 
-		switch (axa_io_wait(&emsg, &client.io, OUT_FLUSH_MS,
-				    true, true)) {
+		switch (axa_io_wait(&emsg, &client.io, OUT_FLUSH_MS, true)) {
 		case AXA_IO_ERR:
 			disconnect(true, "%s", emsg.c);
-			break;
-		case AXA_IO_TUNERR:
-			for (;;) {
-				cp = axa_io_tunerr(&client.io);
-				if (cp == NULL)
-					break;
-				axa_error_msg("%s", cp);
-			}
 			break;
 		case AXA_IO_BUSY:
 			break;
