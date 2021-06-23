@@ -400,7 +400,7 @@ axa_apikey_init(axa_emsg_t *emsg, bool srvr, bool threaded)
 		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
 	}
-	if (!DSA_generate_parameters_ex(dsa, 1024, NULL, 0, NULL, NULL, NULL)) {
+	if (!DSA_generate_parameters_ex(dsa, 2048, NULL, 0, NULL, NULL, NULL)) {
 		q_pemsg(emsg, "DSA_generate_parameters_ex()");
 		AXA_ASSERT(__sync_sub_and_fetch(&init_critical, 1) == 0);
 		return (false);
