@@ -499,7 +499,7 @@ $ nmsgtool -c 1 -r 213.nmsg -J - -- | jq .
  2. `$ nmsgtool -c 1 -r 213.nmsg -J - -- | jq .`: The `nmsgtool` program is run to read a single nmsg from the output file and pipeline to the jq program to pretty print it.
 
 ### 3. Watch for Anomalies with radtool
-Next, `radtool` is used to load the Brand Sentry anomaly module to watch for
+Next, `radtool` is used to load the Brand anomaly module to watch for
 suspected brand infringement in the Internationalized Domain Names (IDN) namespace for four
 well-known brands.
 
@@ -511,9 +511,9 @@ rad> connect rad-apikey
 rad> verbose on
 rad> 1 watch dns=*.
 1 OK WATCH saved
-rad> 1 anomaly brand_sentry brand=facebook,apple,amazon,netflix,google matcher=idnhomograph whitelist=*.facebook.com,*.apple.com,*.netflix.com,*.google.com
+rad> 1 anomaly brand brand=facebook,apple,amazon,netflix,google matcher=idnhomograph whitelist=*.facebook.com,*.apple.com,*.netflix.com,*.google.com
 1 OK ANOMALY anomaly detector started
-1 brand_sentry ch204  SIE dnsdedupe bailiwick=xn--fcebook-s3a.com
+1 brand ch204  SIE dnsdedupe bailiwick=xn--fcebook-s3a.com
   type: INSERTION
   count: 1
   time_first: 2018-04-03 22:25:09
@@ -533,8 +533,8 @@ fācebook.com.
 
  1. `rad> connect rad-apikey`: We connected to RAD over the apikey transport using the "rad-apikey" alias. The `HELLO` response from the remote end tells us its version number and the protocol level.
  2. `rad> verbose on`: We turn on verbose mode to get more information about each hit.
- 3. `rad> 1 watch dns=*.`: We set a DNS wildcard "all-watch". This will match all dns hostnames which is what we want for Brand Sentry -- we want to look at the entire DNS namespace (except for four level domains, as per below).
- 4. `rad> 1 anomaly brand_sentry brand=facebook,apple,netflix,google matcher=idn_homoglyph whitelist=*.facebook.com,*.apple.com,*.netflix.com,*.google.com`: We switched on the anomaly detector. This command enables the brand_sentry anomaly module looking for Internationalized Domain Names (IDNs) "suspiciously close" to "facebook, google, apple", or "netflix". Hostnames in the `*.facebook.com`, `*.apple.com`, `*.netflix.com`, and `*.google.com` are considered safe and are ignored.
+ 3. `rad> 1 watch dns=*.`: We set a DNS wildcard "all-watch". This will match all dns hostnames which is what we want for the Brand module -- we want to look at the entire DNS namespace (except for four level domains, as per below).
+ 4. `rad> 1 anomaly brand brand=facebook,apple,netflix,google matcher=idn_homoglyph whitelist=*.facebook.com,*.apple.com,*.netflix.com,*.google.com`: We switched on the anomaly detector. This command enables the brand anomaly module looking for Internationalized Domain Names (IDNs) "suspiciously close" to "facebook, google, apple", or "netflix". Hostnames in the `*.facebook.com`, `*.apple.com`, `*.netflix.com`, and `*.google.com` are considered safe and are ignored.
  5. `$ idn -u xn--fcebook-s3a.com.`: We use the [GNU libidn idn](https://www.gnu.org/software/libidn/manual/html_node/Invoking-idn.html) command line tool to convert the punycode encoded domain into its Unicode representation.
 
 ### 4. Create Your Own Local SIE Node

@@ -1217,7 +1217,7 @@ END_TEST
 
 START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 {
-	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"version\":1,\"result\":\"success\",\"load\":[6300,6200,7100],\"cpu_usage\":0,\"uptime\":19449048,\"starttime\":19373104,\"vmsize\":91680768,\"vmrss\":4968448,\"thread_cnt\":2,\"user_cnt\":1,\"server_type\":\"rad\",\"rad_anomaly_cnt\":1,\"users\":[\"user_obj\",{\"server_type\":\"rad\",\"user\":\"mschiffm\",\"is_admin\":true,\"io_type\":\"apikey\",\"address\":\"73.170.71.223\",\"sn\":2,\"connected_since\":\"2018-01-05T20:40:31Z\",\"ratelimit\":0,\"sample\":100.00,\"last_count_update\":\"2018-01-05T20:40:31Z\",\"filtered\":0,\"missed\":0,\"collected\":0,\"sent\":0,\"rlimit\":0,\"congested\":0,\"anomaly_count_in_flight\":1,\"anomaly_count_total\":1,\"anomalies\":[\"an_obj\",{\"name\":\"brand_sentry\",\"options\":\"b=farsight,fsi;m=hgl,lit\",\"ru_original\":\"unlimited\",\"ru_current\":\"unlimited\",\"ru_cost\":0,\"channels\":[\"ch204\"]}]}]}";
+	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"version\":1,\"result\":\"success\",\"load\":[6300,6200,7100],\"cpu_usage\":0,\"uptime\":19449048,\"starttime\":19373104,\"vmsize\":91680768,\"vmrss\":4968448,\"thread_cnt\":2,\"user_cnt\":1,\"server_type\":\"rad\",\"rad_anomaly_cnt\":1,\"users\":[\"user_obj\",{\"server_type\":\"rad\",\"user\":\"mschiffm\",\"is_admin\":true,\"io_type\":\"apikey\",\"address\":\"73.170.71.223\",\"sn\":2,\"connected_since\":\"2018-01-05T20:40:31Z\",\"ratelimit\":0,\"sample\":100.00,\"last_count_update\":\"2018-01-05T20:40:31Z\",\"filtered\":0,\"missed\":0,\"collected\":0,\"sent\":0,\"rlimit\":0,\"congested\":0,\"anomaly_count_in_flight\":1,\"anomaly_count_total\":1,\"anomalies\":[\"an_obj\",{\"name\":\"brand\",\"options\":\"b=farsight,fsi;m=hgl,lit\",\"ru_original\":\"unlimited\",\"ru_current\":\"unlimited\",\"ru_cost\":0,\"channels\":[\"ch204\"]}]}]}";
 	axa_emsg_t emsg;
 	axa_p_hdr_t hdr;
 	_axa_p_stats_rsp_t stats_rsp;
@@ -1282,7 +1282,7 @@ START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 	stats_users[0].srvr.rad.an_obj_cnt = 1;
 	stats_users[0].srvr.rad.an_obj_cnt_total = 1;
 
-	strcpy(an_obj.name, "brand_sentry");
+	strcpy(an_obj.name, "brand");
 	strcpy(an_obj.opt, "b=farsight,fsi;m=hgl,lit");
 	an_obj.ru_original = INT_MAX;
 	an_obj.ru_current = INT_MAX;

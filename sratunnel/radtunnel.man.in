@@ -117,7 +117,7 @@ will always write an index for the first nmsg and every
 nmsgs thereafter. Note that because currently only the epoch portion of
 the timestamp is significant,
 .Nm
-will only write entries at most, once per second. So for sentry modules where
+will only write entries at most, once per second. So for modules where
 anomaly hits can show up many times per second, a low
 .Ar interval
 value may not be honored and indexes would instead only be written once per
@@ -268,12 +268,12 @@ unbuffered mode (
 ).
 .El
 .Sh EXAMPLES
-The following connects to a RAD server at example.com, loads the Brand Sentry
+The following connects to a RAD server at example.com, loads the Brand
 module looking for the brand "farsight", and sends all anomaly hit nmsgs to
 the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
 radtunnel -s apikey:<yourapikey>@example.com,1012 -o nmsg:127.1,8000 \\
-	-w dns=*. -a brand_sentry brand=farsight
+	-w dns=*. -a brand brand=farsight
 .Ed
 .Sh FILES
 .Bl -tag -width config
