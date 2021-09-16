@@ -68,10 +68,6 @@ $SRATUNNEL -s $SRA_SERVER -w ch=221 -c 221 -o $NMSG_FILE -dd -u -i 1 -C 100 | gr
 test -e $OUT_FILE.mdb
 rm $OUT_FILE $OUT_FILE.mdb
 
-printf "\n002040 test the -I (max index size) option in sratunnel(1) without -i\n"
-$SRATUNNEL -s $SRA_SERVER -w ch=221 -c 221 -o $NMSG_FILE -dd -C3 -I 1
-rm $OUT_FILE
-
 set +o errexit
 
 printf "\n002050 test passing an invalid value to the -I (max index size) option in sratunnel(1)\n"
