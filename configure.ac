@@ -1,7 +1,7 @@
 AC_PREREQ(2.60)
 
-m4_define(axa_major_version, 2)
-m4_define(axa_minor_version, 2)
+m4_define(axa_major_version, 3)
+m4_define(axa_minor_version, 0)
 m4_define(axa_patchlevel_version, 0)
 m4_define(axa_version,
           axa_major_version.axa_minor_version.axa_patchlevel_version)
@@ -80,7 +80,7 @@ PKG_CHECK_MODULES([libedit], [libedit], [], [MY_CHECK_LIBEDIT])
 
 save_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$libedit_CFLAGS"
-AC_MSG_CHECKING(libedit has unicode) 
+AC_MSG_CHECKING(libedit has unicode)
 AC_CHECK_TYPES([el_rfunc_t],
 		AC_DEFINE([LIBEDIT_IS_UNICODE], [1],
 			[Define if libedit has unicode support.]),
