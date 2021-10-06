@@ -1,4 +1,4 @@
-axa-servers (3.0.0-1) debian-fsi; urgency=medium
+axa (3.0.0-1) debian-fsi; urgency=medium
 
   * Drop tls and ssh authentication options
 
