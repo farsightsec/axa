@@ -345,6 +345,7 @@ typedef struct axa_io {
 	size_t		send_bytes;	/**< number of unsent bytes */
 
 	struct timeval	alive;		/**< AXA protocol keepalive timer */
+	bool		insecure_conn;	/**< do not use TLS */
 } axa_io_t;
 
 /**
