@@ -1816,9 +1816,11 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 			}
 
 			/* Allocate the body only when needed. */
-			if (io->recv_body == NULL)
+			if (io->recv_body == NULL) {
 				io->recv_body = axa_malloc(hdr_len
-							- sizeof(io->recv_hdr));
+					- sizeof(io->recv_hdr));
+			}
+
 			len = hdr_len - io->recv_body_len;
 			tgt = ((uint8_t *)io->recv_body
 			       + io->recv_body_len - sizeof(io->recv_hdr));
@@ -1827,10 +1829,18 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 		/* Read more data into the hidden buffer when we run out. */
 		if (io->recv_bytes == 0) {
 			io->recv_start = io->recv_buf;
-			if (io->type == AXA_IO_TYPE_APIKEY) {
+
+			/*
+			 * Expect/use a TLS transfer if we're an apikey based
+			 * client or a server that wasn't started with the
+			 * insecure option.
+			 */
+			if (io->type == AXA_IO_TYPE_APIKEY &&
+				(io->is_client || !io->insecure_conn)) {
 				io_result = axa_openssl_read(emsg, io);
-				if (io_result != AXA_IO_OK)
+				if (io_result != AXA_IO_OK) {
 					return (io_result);
+				}
 			} else {
 				for (;;) {
 					i = read(io->i_fd, io->recv_buf,
@@ -2007,14 +2017,23 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	int iovcnt;
 	ssize_t total, done;
 
-	if (hdr == NULL)
+	if (hdr == NULL) {
 		hdr = &hdr0;
-	total = axa_make_hdr(emsg, hdr, io->pvers, tag, op,
-			     b1_len, b2_len, which_direction(io, true));
-	if (total == 0)
-		return (AXA_IO_ERR);
+	}
 
-	if (io->type == AXA_IO_TYPE_APIKEY) {
+	total = axa_make_hdr(emsg, hdr, io->pvers, tag, op,
+	     b1_len, b2_len, which_direction(io, true));
+
+	if (total == 0) {
+		return (AXA_IO_ERR);
+	}
+
+	/*
+	 * Expect/use a TLS transfer if we're an apikey based client or a
+	 * server that wasn't started with the insecure option.
+	 */
+	if (io->type == AXA_IO_TYPE_APIKEY &&
+		(io->is_client || !io->insecure_conn)) {
 		/*
 		 * For TLS, save all 3 parts in the overflow output buffer
 		 * so that the AXA message can be sent as a single TLS
