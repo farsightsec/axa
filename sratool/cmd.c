@@ -154,9 +154,9 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "List available connection aliases."
 },
 {"anomaly",		anom_cmd,		RAD, YES, YES,
-    "tag anomaly name [parameters]",
+    "<tag> anomaly name [parameters]",
     "Start the named anomaly detector module.\n"
-    " \"Tag\" is the number labeling the module."
+    " <tag> is the number labeling the module."
 },
 {"buffering",		buffer_cmd,		BOTH, NO, NO,
     "nmsg output buffering",
@@ -352,17 +352,17 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Stop watches or anomalies."
 },
 {"watch",		rad_watch_cmd,		RAD, MB, YES,
-    "tag watch {ip=IP[/n] | dns=[*.]dom}",
+    "<tag> watch {ip=IP[/n] | dns=[*.]dom}",
     "Tell the RAD server about address and domains of interest."
 },
 {"watch",		sra_watch_cmd,		SRA, MB, YES,
-    "tag watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
+    "<tag> watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
     " from, or contain the specified IP addresses,"
     " that contain the specified domain name,"
     " that arrived at the server on the specified SIE channel,"
     " or are SIE messages that could not be decoded."
-    " The \"tag\" is the integer labeling the watch."
+    " <tag> is the integer labeling the watch."
 },
 {"trace",		trace_cmd,		BOTH, YES, YES,
     "trace N",
