@@ -631,9 +631,14 @@ run_cmd(axa_tag_t tag, const char *op, const char *arg,
 	if (i > 0)
 		return (true);
 
-	if (i < 0)
-		error_help_cmd(tag, op);
-	else
+	if (i < 0) {
+		if (i == -1) {
+			error_close(true);
+			printf("Arguments provided seemed to be invalid for command \"%s\"\n",
+				ce->cmd);
+		} else
+			error_help_cmd(tag, op);
+	} else
 		error_close(true);
 	return (false);
 }
