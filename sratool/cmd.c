@@ -159,9 +159,9 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     " <tag> is the number labeling the module."
 },
 {"buffering",		buffer_cmd,		BOTH, NO, NO,
-    "nmsg output buffering",
+    "buffering",
     "Toggle nmsg container buffering.\nFor this option to have any"
-    " effect, output mode must be enabled in nmsg socket mode. "
+    " effect, forwarding mode must be enabled in nmsg socket mode. "
     "When enabled, (by default) nmsg containers will fill with payloads"
     " before being emitted. When disabled, nmsg payloads will be emitted as"
     " rapidly as possible.\n"
@@ -390,7 +390,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"zlib",		nmsg_zlib_cmd,		BOTH, NO, NO,
     "zlib",
     "Toggle nmsg container compression.\nFor this option to have any"
-    " effect, output mode must be enabled in nmsg file or socket mode."
+    " effect, forwarding mode must be enabled in nmsg file or socket mode."
 },
 };
 
@@ -1798,11 +1798,11 @@ nmsg_zlib_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	if (out_on == false) {
-	printf("    output mode not enabled\n");
+	printf("    forwarding mode not enabled\n");
 		return (0);
 	}
 	if (out_on_nmsg == false) {
-		printf("    output mode not emitting nmsgs\n");
+		printf("    forwarding mode not emitting nmsgs\n");
 		return (0);
 	}
 	if (nmsg_zlib == false) {
@@ -2003,11 +2003,11 @@ buffer_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	if (out_on == false) {
-		printf("    output mode not enabled\n");
+		printf("    forwarding mode not enabled\n");
 		return (0);
 	}
 	if (out_on_nmsg == false) {
-		printf("    output mode not emitting nmsgs\n");
+		printf("    forwarding mode not emitting nmsgs\n");
 		return (0);
 	}
 	if (output_buffering == false) {
