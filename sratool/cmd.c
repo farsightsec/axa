@@ -108,7 +108,7 @@ static cmd_t list_cmd;
 static cmd_t delete_cmd;
 static cmd_t channel_cmd;
 static cmd_t anom_cmd;
-static cmd_t rlimits_cmd;
+static cmd_t rlimit_cmd;
 static cmd_t sample_cmd;
 static cmd_t sndbuf_cmd;
 static cmd_t acct_cmd;
@@ -317,10 +317,10 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "radd",
     "Change to RAD mode (must not be connected to a server)."
 },
-{"rate limits",		rlimits_cmd,		BOTH, MB, YES,
-    "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
-    "Ask the server to report its rate limits"
-    " or to set rate limits and the interval between rate limit reports."
+{"rate limit",		rlimit_cmd,		BOTH, MB, YES,
+    "rate limit [-|MAX|per-sec] [-|NEVER|report-secs]",
+    "Ask the server to report its rate limit"
+    " or to set rate limit and the minimum interval between rate limit reports."
 },
 {"runits",		radunit_cmd,		RAD, NO, YES,
     "runits",
@@ -1628,7 +1628,7 @@ get_rlimit(axa_cnt_t *rlimit, const char *word)
 }
 
 static int
-rlimits_cmd(axa_tag_t tag, const char *arg,
+rlimit_cmd(axa_tag_t tag, const char *arg,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	char sec_buf[32];

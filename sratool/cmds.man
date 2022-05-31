@@ -95,8 +95,8 @@ Tell the \*(SR server to stop sending data.
 .Op Ar -|MAX|per-sec
 .Op Ar -|NEVER|report-secs
 .Oc
-Tell the \*(SR server to report its rate limits
-or set rate limits and the interval between rate limit reports.
+Tell the \*(SR server to report its per-second packet rate limit
+or set the rate limit and the minimum interval between rate limit reports.
 Hits in excess of the rate limit are discarded by the server.
 .It Ic radd
 Change to RAD mode.
