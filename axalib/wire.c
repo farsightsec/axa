@@ -35,7 +35,7 @@
 #include <string.h>
 #ifdef __linux
 #include <bsd/string.h>			/* for strlcpy() */
-#include <time.h>			/* for localtime() and strftime() */
+#include <time.h>			/* for gmtime() and strftime() */
 #endif
 #include <sys/uio.h>
 #include <unistd.h>
@@ -589,7 +589,7 @@ missed_add_str(char **bufp, size_t *buf_lenp,
 
 	epoch = AXA_P2H32(missed->last_report);
 	strftime(time_buf, sizeof(time_buf), "%Y/%m/%d %T",
-		 localtime(&epoch));
+		 gmtime(&epoch));
 
 	axa_buf_print(bufp, buf_lenp,
 		      "%s"
@@ -615,7 +615,7 @@ missed_rad_add_str(char **bufp, size_t *buf_lenp,
 
 	epoch = AXA_P2H32(missed->last_report);
 	strftime(time_buf, sizeof(time_buf), "%Y/%m/%d %T",
-		 localtime(&epoch));
+		 gmtime(&epoch));
 
 	axa_buf_print(bufp, buf_lenp,
 		      "%s"
