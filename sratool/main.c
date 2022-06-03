@@ -142,8 +142,11 @@ main(int argc, char **argv)
 		el_set(el_e, EL_GETCFN, getcfn);
 	}
 
-	while ((i = getopt(argc, argv, "hVdNF:E:c:n:")) != -1) {
+	while ((i = getopt(argc, argv, "hIVdNF:E:c:n:")) != -1) {
 		switch (i) {
+		case 'I':
+			client.io.insecure_conn = true;
+			break;
 		case 'n':
 			config_file = optarg;
 			break;

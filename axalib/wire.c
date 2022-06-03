@@ -1672,11 +1672,15 @@ axa_io_type_to_str(axa_io_type_t type)
 void
 axa_io_init(axa_io_t *io)
 {
+	/* This flag should persist if set. */
+	bool insecure = io->insecure_conn;
+
 	memset(io, 0, sizeof(*io));
 	io->su.sa.sa_family = -1;
 	io->i_fd = -1;
 	io->o_fd = -1;
 	io->pvers = AXA_P_PVERS;
+	io->insecure_conn = insecure;
 }
 
 void
@@ -1832,11 +1836,9 @@ axa_recv_buf(axa_emsg_t *emsg, axa_io_t *io)
 
 			/*
 			 * Expect/use a TLS transfer if we're an apikey based
-			 * client or a server that wasn't started with the
-			 * insecure option.
+			 * client/server, and not in insecure mode.
 			 */
-			if (io->type == AXA_IO_TYPE_APIKEY &&
-				(io->is_client || !io->insecure_conn)) {
+			if (io->type == AXA_IO_TYPE_APIKEY && !io->insecure_conn) {
 				io_result = axa_openssl_read(emsg, io);
 				if (io_result != AXA_IO_OK) {
 					return (io_result);
@@ -2029,11 +2031,10 @@ axa_send(axa_emsg_t *emsg, axa_io_t *io,
 	}
 
 	/*
-	 * Expect/use a TLS transfer if we're an apikey based client or a
-	 * server that wasn't started with the insecure option.
+	 * Expect/use a TLS transfer if we're an apikey based client or
+	 * server, and weren't started with the insecure option.
 	 */
-	if (io->type == AXA_IO_TYPE_APIKEY &&
-		(io->is_client || !io->insecure_conn)) {
+	if (io->type == AXA_IO_TYPE_APIKEY && !io->insecure_conn) {
 		/*
 		 * For TLS, save all 3 parts in the overflow output buffer
 		 * so that the AXA message can be sent as a single TLS
