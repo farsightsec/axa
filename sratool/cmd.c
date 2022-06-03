@@ -181,9 +181,9 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"connect",		connect_cmd,		BOTH, MB, NO,
     "connect [server]",
     "Show the current connection"
-    " or connect with 'tcp:user@host,port',"
+    " or connect with 'tcp:[user@]host,port',"
     " 'unix:[user@]/socket'] through a UNIX domain socket,"
-    " 'apikey@hostname,port' via apikey/tls"
+    " 'apikey:apikey@hostname,port' via apikey/tls"
 },
 {"count",		count_cmd,		BOTH, MB, NO,
     "count [#packets | off]",
