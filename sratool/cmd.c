@@ -2134,7 +2134,6 @@ usage(void)
 	printf("[-F file]\t\tspecify AXA fields file\n");
 	printf("[-n file]\t\tspecify AXA config file\n");
 	printf("[-N]\t\t\tdisable command-line prompt\n");
-	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[commands]\t\tquoted string of commands to execute\n");
 	exit(EX_USAGE);

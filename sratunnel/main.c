@@ -251,7 +251,6 @@ usage(const char *msg, ...)
 	printf("[-P file]\t\twrite PID to pidfile\n");
 	printf("[-p]\t\t\tappend to output file (only valid for file outputs)\n");
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
-	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	printf("[-T secs]\t\tstop or reopen after secs have elapsed\n");
 	printf("[-u]\t\t\tunbuffer nmsg container output\n");
