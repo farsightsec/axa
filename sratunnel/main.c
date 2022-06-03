@@ -289,7 +289,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uzZ:")) != -1) {
+	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:o:s:c:w:m:n:uzZ:")) != -1) {
 		switch (i) {
 		case 'A':
 			acct_interval = atoi(optarg);
@@ -394,11 +394,6 @@ main(int argc, char **argv)
 
 		case 'E':
 			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
-				axa_error_msg("%s", emsg.c);
-			break;
-
-		case 'S':
-			if (!axa_apikey_certs_dir(&emsg, optarg))
 				axa_error_msg("%s", emsg.c);
 			break;
 

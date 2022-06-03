@@ -142,7 +142,7 @@ main(int argc, char **argv)
 		el_set(el_e, EL_GETCFN, getcfn);
 	}
 
-	while ((i = getopt(argc, argv, "hVdNF:E:S:c:n:")) != -1) {
+	while ((i = getopt(argc, argv, "hVdNF:E:c:n:")) != -1) {
 		switch (i) {
 		case 'n':
 			config_file = optarg;
@@ -161,10 +161,6 @@ main(int argc, char **argv)
 			break;
 		case 'E':
 			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
-				error_msg("%s", emsg.c);
-			break;
-		case 'S':
-			if (!axa_apikey_certs_dir(&emsg, optarg))
 				error_msg("%s", emsg.c);
 			break;
 		case 'c':

@@ -35,7 +35,6 @@
 .Op Fl n Ar config-file
 .Op Fl P Ar pidfile
 .Op Fl r Ar rate-limit
-.Op Fl S Ar certs
 .Op Fl T Ar secs
 .Op Fl Z Ar size
 .Op Fl I Ar size
@@ -190,10 +189,6 @@ The file will be deleted upon program exit.
 tells the server to send at most
 .Ar rate-limit
 SIE messages and raw IP packets per second.
-.It Fl S Ar certs
-overrides the default directory containing SSL certificates and keys.
-Its default is
-.Pa @CONFDIR@/certs .
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
@@ -202,13 +197,7 @@ The server can be specified with any of the following:
 Connect to a server using an alias shortcut mnemonic (see FILES section for
 more information).
 .It Sm off Ar apikey: Ar <users_apikey>@ Ar host,port Sm on
-Identify and authenticate the user via a Farsight Security provided apikey. The connection will be encrypted using the TLS protocol with the certificate in the
-.Ar cert
-file and the private key in the
-.Ar key
-file. If not absolute, the files are in the
-.Fl S Ar certs
-directory.
+Identify and authenticate the user via a Farsight Security provided apikey. The connection will be encrypted using the TLS protocol.
 .It Sm off Ar tcp: Ar user@ Ar host,port Sm on
 The connection will be made with the host name or IP address and port number
 using clear text over TCP/IP.
@@ -277,10 +266,6 @@ radtunnel -s apikey:<yourapikey>@example.com,1012 -o nmsg:127.1,8000 \\
 .Ed
 .Sh FILES
 .Bl -tag -width config
-.It Ar certs
-is the directory set with
-.Fl S
-that contains TLS certificate and key files.
 .It Ar ~/.axa/config
 contains AXA client configuration data. Currently supported are connection
 aliases that provide the user with a facility to create shortcut mnemonics to
