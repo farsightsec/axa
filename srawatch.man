@@ -9,5 +9,9 @@ or all channels.
 .It \&
 .It errors
 selects SIE messages or IP packets that could not be decoded.
+Errors can also include nmsg processing/field decoding errors,
+malformed or excessively long DNS names,
+errors encountered at the datalink level,
+and unexpected address family types.
 .\"
 .\" end of srawatch.man
