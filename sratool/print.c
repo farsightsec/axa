@@ -358,98 +358,18 @@ typedef struct {
 	const char	*rdata_name;
 } rdata_ctxt_t;
 
-static void
-rdata_error(void *ctxt0, const char *p, va_list args)
-{
-	rdata_ctxt_t *ctxt = ctxt0;
-
-	vsnprintf(ctxt->buf0, ctxt->buf0_len, p, args);
-	ctxt->buf_len = 0;
-}
-
-static bool
-rdata_buf_alloc(rdata_ctxt_t *ctxt)
-{
-	size_t len;
-
-	len = strlen(ctxt->buf);
-	ctxt->buf += len;
-	ctxt->buf_len -= len;
-	return (ctxt->buf_len > 0);
-}
-
-static bool
-rdata_buf_cat(rdata_ctxt_t *ctxt, const char *str)
-{
-	strlcpy(ctxt->buf, str, ctxt->buf_len);
-	return (rdata_buf_alloc(ctxt));
-}
-
-static bool
-rdata_ip_to_buf(void *ctxt0, const uint8_t *ip, size_t ip_len,
-		const char *str AXA_UNUSED)
-{
-	rdata_ctxt_t *ctxt = ctxt0;
-	axa_socku_t su;
-
-	if (!rdata_buf_cat(ctxt, " "))
-		return (false);
-
-	if (!axa_data_to_su(&su, ip, ip_len)) {
-		snprintf(ctxt->buf0, ctxt->buf0_len, "%s IP length=%zd",
-			 ctxt->rdata_name, ip_len);
-		ctxt->buf_len = 0;
-		return (false);
-	}
-	axa_su_to_str(ctxt->buf, ctxt->buf_len, '.', &su);
-	return (rdata_buf_alloc(ctxt));
-}
-
-static bool
-rdata_domain_to_buf(void *ctxt0, const uint8_t *name, size_t name_len,
-		    axa_walk_dom_t dtype AXA_UNUSED,
-		    uint rtype AXA_UNUSED,
-		    const char *str AXA_UNUSED)
-{
-	rdata_ctxt_t *ctxt = ctxt0;
-	char wname[NS_MAXDNAME];
-
-	if (!rdata_buf_cat(ctxt, " "))
-		return (false);
-
-	axa_domain_to_str(name, name_len, wname, sizeof(wname));
-	strlcpy(ctxt->buf, wname, ctxt->buf_len);
-	return (rdata_buf_alloc(ctxt));
-}
-
-static axa_walk_ops_t rdata_ops = {
-	.error = rdata_error,
-	.ip = rdata_ip_to_buf,
-	.domain = rdata_domain_to_buf,
-};
-
 #define RDATA_BUF_LEN (32+NS_MAXDNAME+1+NS_MAXDNAME)
 static const char *
-rdata_to_buf(char *buf, size_t buf_len,
-	     const char *rdata_name, uint32_t rtype,
+rdata_to_buf(char *buf, size_t buf_len, uint32_t rtype,
 	     uint8_t *rdata, size_t rdata_len)
 {
-	rdata_ctxt_t ctxt;
+	char *rdstr;
 
-	ctxt.buf0 = buf;
-	ctxt.buf0_len = buf_len;
-	ctxt.buf = buf;
-	ctxt.buf_len = buf_len;
-	ctxt.rdata_name = rdata_name;
-
-	axa_rtype_to_str(ctxt.buf, ctxt.buf_len, rtype);
-	if (!rdata_buf_alloc(&ctxt))
-		return (buf);
-
-	axa_walk_rdata(&ctxt, &rdata_ops, NULL, 0, NULL, rdata+rdata_len,
-		       rdata, rdata_len, rtype, "");
-
-	return (buf);
+	rdstr = wdns_rdata_to_str(rdata, rdata_len, rtype, WDNS_CLASS_IN);
+	strncpy(buf, rdstr, buf_len);
+	buf[buf_len - 1] = 0;
+	free(rdstr);
+	return buf;
 }
 
 /* Get a string for rdata specified by
@@ -475,7 +395,7 @@ rdata_nmsg_to_buf(char *buf, size_t buf_len, const nmsg_message_t msg,
 				   buf, buf_len))
 		return (buf);
 
-	return (rdata_to_buf(buf, buf_len, field->name, rtype, data, data_len));
+	return (rdata_to_buf(buf, buf_len, rtype, data, data_len));
 }
 
 static void
@@ -588,7 +508,7 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
                 else
                     printf(NMSG_LEADER"rdata=%s",
 		       rdata_to_buf(rdata_buf, sizeof(rdata_buf),
-				    "rdata", dnsdedupe->rrtype,
+				    dnsdedupe->rrtype,
 				    dnsdedupe->rdata->data,
 				    dnsdedupe->rdata->len));
 		need_nl = true;
@@ -928,10 +848,11 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	char tag_buf[AXA_TAG_STRLEN];
 	const axa_nmsg_field_t *field;
 	char vendor_buf[12], mname_buf[12], field_buf[RDATA_BUF_LEN];
-	const char *vendor, *mname, *nm, *eq, *val;
+	const char *vendor, *mname, *nm, *eq, *val, *cp;
 	char group[40];
-	const char *cp;
+	char *jstr;
 	nmsg_message_t msg;
+	nmsg_res res;
 	uint n;
 
 	if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
@@ -943,6 +864,16 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	}
 	if (msg == NULL)
 		return;
+
+	res = nmsg_message_to_json(msg, &jstr);
+	if (res != nmsg_res_success) {
+		fprintf(stderr, "Error serializing nmsg data as json output: %s\n",
+			nmsg_res_lookup(res));
+	} else {
+		printf("%s\n", jstr);
+		free(jstr);
+		return;
+	}
 
 	/* Convert binary vendor ID, message type, and field index to
 	 * vendor name, message type string, field name, and field value. */
