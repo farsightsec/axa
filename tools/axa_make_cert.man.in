@@ -17,7 +17,7 @@
 .Os " "
 .Sh NAME
 .Nm axa_make_cert
-.Nd Make AXA an Certificate
+.Nd Make an AXA Certificate
 .Sh SYNOPSIS
 .Nm
 .Op Fl x
