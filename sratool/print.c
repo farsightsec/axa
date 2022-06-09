@@ -62,7 +62,7 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 	const char *rcode, *class, *rtype;
 	char wdns_resbuf[AXA_WDNS_RES_STRLEN];
 	char class_buf[18], rtype_buf[10], rcode_buf[12];
-	char qname[NS_MAXDNAME];
+	char qname[WDNS_PRESLEN_NAME];
 	char *msg_str, *p;
 	bool eol;
 	wdns_res wres;
@@ -358,7 +358,7 @@ typedef struct {
 	const char	*rdata_name;
 } rdata_ctxt_t;
 
-#define RDATA_BUF_LEN (32+NS_MAXDNAME+1+NS_MAXDNAME)
+#define RDATA_BUF_LEN (32+WDNS_PRESLEN_NAME+1+WDNS_PRESLEN_NAME)
 static const char *
 rdata_to_buf(char *buf, size_t buf_len, uint32_t rtype,
 	     uint8_t *rdata, size_t rdata_len)
@@ -461,7 +461,7 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 	char ebuf[80];
 	char response_ip_buf[INET6_ADDRSTRLEN];
 	char rdata_buf[RDATA_BUF_LEN];
-	char rrname_buf[NS_MAXDNAME];
+	char rrname_buf[WDNS_PRESLEN_NAME];
 	bool need_nl;
 
 	if (verbose != 0) {
@@ -538,8 +538,8 @@ print_sie_newdomain(const nmsg_message_t msg,
 		    const char *eq, const char *val)
 {
 	const Nmsg__Sie__NewDomain *newdomain;
-	char rrname_buf[NS_MAXDNAME];
-	char domain_buf[NS_MAXDNAME];
+	char rrname_buf[WDNS_PRESLEN_NAME];
+	char domain_buf[WDNS_PRESLEN_NAME];
 	char rtype_buf[10];
 
 	if (verbose != 0) {
@@ -564,7 +564,7 @@ static void
 print_nmsg_base_http(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 		     const char *eq, const char *val)
 {
-	char buf[NS_MAXDNAME];
+	char buf[WDNS_PRESLEN_NAME];
 	bool need_nl;
 
 	if (verbose != 0) {

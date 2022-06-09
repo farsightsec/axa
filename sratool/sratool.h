@@ -37,7 +37,6 @@
 #include <nmsg/sie/newdomain.pb-c.h>
 #include <nmsg/base/packet.pb-c.h>
 
-#include <arpa/nameser.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <net/ethernet.h>
