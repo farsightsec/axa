@@ -118,8 +118,7 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 		}
 		rtype = axa_rtype_to_str(rtype_buf, sizeof(rtype_buf),
 					 q->rrtype);
-		axa_domain_to_str(q->name.data, q->name.len,
-				  qname, sizeof(qname));
+		wdns_domain_to_str(q->name.data, q->name.len, qname);
 	}
 
 	printf(" %s %s %s"
@@ -519,8 +518,7 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 	if (!dnsdedupe->has_response
 	    && (field == NULL || strcmp(field->name, "rrname") != 0)
 	    && dnsdedupe->has_rrname) {
-		axa_domain_to_str(dnsdedupe->rrname.data, dnsdedupe->rrname.len,
-				  rrname_buf, sizeof(rrname_buf));
+		wdns_domain_to_str(dnsdedupe->rrname.data, dnsdedupe->rrname.len, rrname_buf);
 		printf(NMSG_LEADER"rrname=%s", rrname_buf);
 		need_nl = true;
 	}
@@ -549,12 +547,10 @@ print_sie_newdomain(const nmsg_message_t msg,
 
 	newdomain = (Nmsg__Sie__NewDomain *)nmsg_message_get_payload(msg);
 
-	axa_domain_to_str(newdomain->rrname.data, newdomain->rrname.len,
-			  rrname_buf, sizeof(rrname_buf));
+	wdns_domain_to_str(newdomain->rrname.data, newdomain->rrname.len, rrname_buf);
 	axa_rtype_to_str(rtype_buf, sizeof(rtype_buf), newdomain->rrtype);
 	if (newdomain->domain.data)
-		axa_domain_to_str(newdomain->domain.data, newdomain->domain.len,
-				domain_buf, sizeof(domain_buf));
+		wdns_domain_to_str(newdomain->domain.data, newdomain->domain.len, domain_buf);
 	printf("%s%s\n %s/%s: %s\n",
 	       eq, val, rrname_buf, rtype_buf,
            newdomain->domain.data ? domain_buf : rrname_buf);
@@ -768,7 +764,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		if (get_nmsg_field_by_idx(msg, field_idx,
 					   AXA_P2H_IDX(whit->nmsg.hdr.val_idx),
 					   &data, &data_len, buf, buf_len))
-			axa_domain_to_str(data, data_len, buf, buf_len);
+			wdns_domain_to_str(data, data_len, buf);
 		*val = buf;
 		break;
 
