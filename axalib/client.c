@@ -22,8 +22,6 @@
 #include <axa/json.h>
 #include <axa/yajl_shortcuts.h>
 
-#include <libmy/ubuf-pb.h>		/* query protobuf version */
-
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -505,8 +503,6 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin,
 	add_yajl_integer(g, yajl_version());
 	add_yajl_string(g, "OpenSSL");
 	add_yajl_string(g, SSLeay_version(SSLEAY_VERSION));
-	add_yajl_string(g, "libprotobuf-c");
-	add_yajl_string(g, PROTOBUF_C_VERSION);
 
 	add_yajl_string(g, "AXA protocol");
 	add_yajl_integer(g, client->io.pvers);

@@ -65,8 +65,6 @@ LT_LIB_M
 
 MY_CHECK_LIBPCAP
 
-MY_CHECK_LIBPROTOBUF_C
-
 save_LIBS="$LIBS"
 AC_SEARCH_LIBS([strlcpy],
                [bsd],
@@ -100,8 +98,6 @@ PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
 AC_CHECK_HEADERS([libgen.h])
 
-AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
-AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
 AC_CHECK_LIB([lmdb], [mdb_env_open], [], [ AC_MSG_ERROR([required library not found]) ])
 
 AC_ARG_WITH([yajl], AS_HELP_STRING([--without-yajl], [Disable yajl support]))

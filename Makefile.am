@@ -144,8 +144,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/whit2nmsg.c \
 	axalib/wire.c \
 	axalib/mdb.c \
-	libmy/b64_encode.c libmy/b64_encode.h libmy/my_alloc.h \
-	libmy/ubuf.h libmy/ubuf-pb.h libmy/vector.h
+	libmy/b64_encode.c libmy/b64_encode.h
 
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBAXA_CURRENT):$(LIBAXA_REVISION):$(LIBAXA_AGE) \

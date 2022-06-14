@@ -4,10 +4,9 @@ Maintainer: Farsight Security, Inc. <software@farsightsecurity.com>
 Priority: optional
 Build-Depends:
  dpkg-dev (>= 0.16.0~), debhelper (>= 9~), dh-autoreconf (>= 5~),
- pkg-config, libpcap0.8-dev, zlib1g-dev, libedit-dev,
- libprotobuf-c-dev, protobuf-c-compiler, libwdns-dev (>= 0.6.0),
- libnmsg-dev (>= 1.0.0), nmsg-msg-module-sie-dev (>= 1.0.0), libssl-dev,
- libbsd-dev, libyajl-dev (>= 2.1.0), check, liblmdb-dev
+ pkg-config, libpcap0.8-dev, libedit-dev, libwdns-dev (>= 0.6.0),
+ libnmsg-dev (>= 1.0.0), nmsg-msg-module-sie-dev (>= 1.0.0),
+ libssl-dev, libbsd-dev, libyajl-dev (>= 2.1.0), check, liblmdb-dev
 
 Package: libaxa1
 Section: libs
