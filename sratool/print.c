@@ -60,7 +60,6 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 	wdns_message_t m;
 	wdns_rr_t *q;
 	const char *rcode, *class, *rtype;
-	char wdns_resbuf[AXA_WDNS_RES_STRLEN];
 	char class_buf[18], rtype_buf[10], rcode_buf[12];
 	char qname[WDNS_PRESLEN_NAME];
 	char *msg_str, *p;
@@ -72,7 +71,7 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 	wres = wdns_parse_message(&m, data, data_len);
 	if (wres != wdns_res_success) {
 		printf("  wdns_parse_message(%s): %s\n", str,
-		       axa_wdns_res(wres, wdns_resbuf, sizeof(wdns_resbuf)));
+		       wdns_res_to_str(wres));
 		return (false);
 	}
 
