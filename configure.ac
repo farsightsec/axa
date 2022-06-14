@@ -139,7 +139,7 @@ else
 fi
 
 save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$libnmsg_CFLAGS $libprotobuf_c_CFLAGS"
+CPPFLAGS="$libnmsg_CFLAGS"
 AC_CHECK_HEADERS([nmsg/base/dnsqr.pb-c.h nmsg/base/encode.pb-c.h nmsg/base/packet.pb-c.h nmsg/sie/newdomain.pb-c.h],
                  [],
                  [AC_MSG_ERROR([required header file not found])])

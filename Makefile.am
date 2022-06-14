@@ -163,7 +163,6 @@ axa_libaxa_la_CFLAGS = \
 	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
 	${libwdns_CFLAGS} \
-	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${strlcpy_CFLAGS} \
 	${yajl_CFLAGS}
@@ -195,7 +194,6 @@ sratool_sratool_LDADD = \
 	${libssl_LIBS} \
 	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
-	${libprotobuf_c_LIBS} \
 	${libnmsg_LIBS} \
 	${libz_LIBS} \
 	${libwdns_LIBS} \
@@ -208,7 +206,6 @@ sratool_sratool_CFLAGS = \
 	${libssl_CFLAGS} \
 	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
-	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${libz_CFLAGS} \
 	${libwdns_CFLAGS} \
@@ -240,7 +237,6 @@ sratunnel_sratunnel_LDADD = \
 
 sratunnel_sratunnel_CFLAGS = \
 	${AM_CFLAGS} \
-	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${libssl_CFLAGS} \
 	${libcrypto_CFLAGS} \
