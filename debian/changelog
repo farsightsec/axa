@@ -1,3 +1,10 @@
+axa (2.2.1-1) debian-fsi; urgency=medium
+
+  * To work with higher SSL/TLS security levels, increase the length of
+    the Digital Signature Algorithm (DSA) primes from 1024 to 2048 bits.
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Wed, 13 Jul 2022 09:25:21 -0400
+
 axa (2.2.0-2) debian-fsi; urgency=medium
 
   * Depend on newer libnmsg.
