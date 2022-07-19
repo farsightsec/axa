@@ -39,7 +39,7 @@ extern bool packet_counting;
 extern int out_fd;
 extern pcap_t *out_pcap;
 extern int out_pcap_datalink;
-extern int8_t *out_buf;
+extern uint8_t out_buf[AXA_P_WHIT_IP_MAX*4];
 extern size_t out_buf_base;
 extern int output_count;
 extern int output_count_total;
