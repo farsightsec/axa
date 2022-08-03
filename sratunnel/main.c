@@ -251,7 +251,6 @@ usage(const char *msg, ...)
 	printf("[-P file]\t\twrite PID to pidfile\n");
 	printf("[-p]\t\t\tappend to output file (only valid for file outputs)\n");
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
-	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	printf("[-T secs]\t\tstop or reopen after secs have elapsed\n");
 	printf("[-u]\t\t\tunbuffer nmsg container output\n");
@@ -289,7 +288,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uzZ:")) != -1) {
+	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:o:s:c:w:m:n:uzZ:")) != -1) {
 		switch (i) {
 		case 'A':
 			acct_interval = atoi(optarg);
@@ -394,11 +393,6 @@ main(int argc, char **argv)
 
 		case 'E':
 			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
-				axa_error_msg("%s", emsg.c);
-			break;
-
-		case 'S':
-			if (!axa_apikey_certs_dir(&emsg, optarg))
 				axa_error_msg("%s", emsg.c);
 			break;
 

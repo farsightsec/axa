@@ -36,17 +36,6 @@ display options summary.
 instructs
 .Nm
 to not display a command line prompt.
-.It Fl S Ar certs
-specifies the directory containing SSL certificates and keys.
-If
-.Fl S
-is not used,
-.Nm
-uses the first directory among
-.Pa $AXACONF/certs ,
-.Pa ~/.axa/certs ,
-and
-.Pa @CONFDIR@/certs .
 .It Fl V
 displays the version of
 .Nm

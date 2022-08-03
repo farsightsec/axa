@@ -39,7 +39,7 @@ extern bool packet_counting;
 extern int out_fd;
 extern pcap_t *out_pcap;
 extern int out_pcap_datalink;
-extern int8_t *out_buf;
+extern uint8_t out_buf[AXA_P_WHIT_IP_MAX*4];
 extern size_t out_buf_base;
 extern int output_count;
 extern int output_count_total;
@@ -108,7 +108,7 @@ static cmd_t list_cmd;
 static cmd_t delete_cmd;
 static cmd_t channel_cmd;
 static cmd_t anom_cmd;
-static cmd_t rlimits_cmd;
+static cmd_t rlimit_cmd;
 static cmd_t sample_cmd;
 static cmd_t sndbuf_cmd;
 static cmd_t acct_cmd;
@@ -154,14 +154,14 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "List available connection aliases."
 },
 {"anomaly",		anom_cmd,		RAD, YES, YES,
-    "tag anomaly name [parameters]",
+    "<tag> anomaly name [parameters]",
     "Start the named anomaly detector module.\n"
-    " \"Tag\" is the number labeling the module."
+    " <tag> is the number labeling the module."
 },
 {"buffering",		buffer_cmd,		BOTH, NO, NO,
-    "nmsg output buffering",
+    "buffering",
     "Toggle nmsg container buffering.\nFor this option to have any"
-    " effect, output mode must be enabled in nmsg socket mode. "
+    " effect, forwarding mode must be enabled in nmsg socket mode. "
     "When enabled, (by default) nmsg containers will fill with payloads"
     " before being emitted. When disabled, nmsg payloads will be emitted as"
     " rapidly as possible.\n"
@@ -181,9 +181,9 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"connect",		connect_cmd,		BOTH, MB, NO,
     "connect [server]",
     "Show the current connection"
-    " or connect with 'tcp:user@host,port',"
+    " or connect with 'tcp:[user@]host,port',"
     " 'unix:[user@]/socket'] through a UNIX domain socket,"
-    " 'apikey@hostname,port' via apikey/tls"
+    " 'apikey:apikey@hostname,port' via apikey/tls"
 },
 {"count",		count_cmd,		BOTH, MB, NO,
     "count [#packets | off]",
@@ -317,10 +317,10 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "radd",
     "Change to RAD mode (must not be connected to a server)."
 },
-{"rate limits",		rlimits_cmd,		BOTH, MB, YES,
-    "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
-    "Ask the server to report its rate limits"
-    " or to set rate limits and the interval between rate limit reports."
+{"rate limit",		rlimit_cmd,		BOTH, MB, YES,
+    "rate limit [-|MAX|per-sec] [-|NEVER|report-secs]",
+    "Ask the server to report its rate limit"
+    " or to set rate limit and the minimum interval between rate limit reports."
 },
 {"runits",		radunit_cmd,		RAD, NO, YES,
     "runits",
@@ -352,17 +352,17 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Stop watches or anomalies."
 },
 {"watch",		rad_watch_cmd,		RAD, MB, YES,
-    "tag watch {ip=IP[/n] | dns=[*.]dom}",
+    "<tag> watch {ip=IP[/n] | dns=[*.]dom}",
     "Tell the RAD server about address and domains of interest."
 },
 {"watch",		sra_watch_cmd,		SRA, MB, YES,
-    "tag watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
+    "<tag> watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
     " from, or contain the specified IP addresses,"
     " that contain the specified domain name,"
     " that arrived at the server on the specified SIE channel,"
     " or are SIE messages that could not be decoded."
-    " The \"tag\" is the integer labeling the watch."
+    " <tag> is the integer labeling the watch."
 },
 {"trace",		trace_cmd,		BOTH, YES, YES,
     "trace N",
@@ -390,7 +390,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"zlib",		nmsg_zlib_cmd,		BOTH, NO, NO,
     "zlib",
     "Toggle nmsg container compression.\nFor this option to have any"
-    " effect, output mode must be enabled in nmsg file or socket mode."
+    " effect, forwarding mode must be enabled in nmsg file or socket mode."
 },
 };
 
@@ -631,9 +631,14 @@ run_cmd(axa_tag_t tag, const char *op, const char *arg,
 	if (i > 0)
 		return (true);
 
-	if (i < 0)
-		error_help_cmd(tag, op);
-	else
+	if (i < 0) {
+		if (i == -1) {
+			error_close(true);
+			printf("Arguments provided seemed to be invalid for command \"%s\"\n",
+				ce->cmd);
+		} else
+			error_help_cmd(tag, op);
+	} else
 		error_close(true);
 	return (false);
 }
@@ -1623,7 +1628,7 @@ get_rlimit(axa_cnt_t *rlimit, const char *word)
 }
 
 static int
-rlimits_cmd(axa_tag_t tag, const char *arg,
+rlimit_cmd(axa_tag_t tag, const char *arg,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	char sec_buf[32];
@@ -1793,11 +1798,11 @@ nmsg_zlib_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	if (out_on == false) {
-	printf("    output mode not enabled\n");
+	printf("    forwarding mode not enabled\n");
 		return (0);
 	}
 	if (out_on_nmsg == false) {
-		printf("    output mode not emitting nmsgs\n");
+		printf("    forwarding mode not emitting nmsgs\n");
 		return (0);
 	}
 	if (nmsg_zlib == false) {
@@ -1998,11 +2003,11 @@ buffer_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	if (out_on == false) {
-		printf("    output mode not enabled\n");
+		printf("    forwarding mode not enabled\n");
 		return (0);
 	}
 	if (out_on_nmsg == false) {
-		printf("    output mode not emitting nmsgs\n");
+		printf("    forwarding mode not emitting nmsgs\n");
 		return (0);
 	}
 	if (output_buffering == false) {
@@ -2129,7 +2134,6 @@ usage(void)
 	printf("[-F file]\t\tspecify AXA fields file\n");
 	printf("[-n file]\t\tspecify AXA config file\n");
 	printf("[-N]\t\t\tdisable command-line prompt\n");
-	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[commands]\t\tquoted string of commands to execute\n");
 	exit(EX_USAGE);

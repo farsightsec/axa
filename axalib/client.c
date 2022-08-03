@@ -209,9 +209,8 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 	axa_io_pvers_get(&client->io, &pvers_save);
 	axa_io_pvers_set(&client->io, AXA_P_PVERS1);
 
-	switch (client->io.type) {
-	case AXA_IO_TYPE_UNIX:
-	case AXA_IO_TYPE_TCP:
+	if (client->io.type == AXA_IO_TYPE_UNIX || client->io.type == AXA_IO_TYPE_TCP ||
+			(client->io.type == AXA_IO_TYPE_APIKEY && client->io.insecure_conn)) {
 		connect_result = socket_connect(emsg, client);
 		if (connect_result != AXA_CONNECT_DONE) {
 			axa_io_pvers_set(&client->io, pvers_save);
@@ -235,9 +234,8 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_USER);
 		}
-		break;
 
-	case AXA_IO_TYPE_APIKEY:
+	} else if (client->io.type == AXA_IO_TYPE_APIKEY) {
 		connect_result = socket_connect(emsg, client);
 		if (connect_result != AXA_CONNECT_DONE) {
 			axa_io_pvers_set(&client->io, pvers_save);
@@ -270,10 +268,8 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 		case AXA_IO_KEEPALIVE:
 			AXA_FAIL("impossible axa_apikey_start() result");
 		}
-		break;
 
-	case AXA_IO_TYPE_UNKN:
-	default:
+	} else  {
 		axa_pemsg(emsg, "impossible client type");
 		axa_client_backoff_max(client);
 		axa_io_pvers_set(&client->io, pvers_save);

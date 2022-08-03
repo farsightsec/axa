@@ -24,6 +24,7 @@
 .Op Fl dhNV
 .Op Fl c Ar cfile
 .Op Fl n Ar config
+.Op Fl E Ar ciphers
 .Op Fl F Ar fields
 .Op commands
 .Sh DESCRIPTION
@@ -123,10 +124,6 @@ Ask the server to report user's current RAD Units balances.
 .It Ar fields
 defines relationships among and meanings of SIE message fields.
 Its contents should rarely if ever need to be changed.
-.It Ar certs
-is the directory set with
-.Fl S
-that contains TLS certificate and key files.
 .It Ar ~/.axa/config
 contains AXA client configuration data. Currently supported are connection
 aliases that provide the user with a facility to create shortcut mnemonics to

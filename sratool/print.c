@@ -1110,12 +1110,9 @@ static void
 print_stats_sys(_axa_p_stats_sys_t *sys)
 {
 	int j, ch_cnt;
-	time_t t;
 	struct timeval tv;
-	struct tm *tm_info;
 	const char *server_type;
 	uint32_t user_cnt;
-	char time_buf[30];
 	axa_ch_mask_t mask;
 
 	if (sys->type != _AXA_P_STATS_TYPE_SYS) {
@@ -1131,9 +1128,6 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 	else {
 		gettimeofday(&tv, NULL);
 		tv.tv_sec -= AXA_P2H32(sys->uptime);
-		tm_info = gmtime(&t);
-		strftime(time_buf, sizeof (time_buf),
-				"%Y-%m-%dT%H:%M:%SZ", tm_info);
 		printf("    server uptime   : %s\n", convert_timeval(&tv));
 	}
 	if (sys->load[0] == UINT32_MAX && sys->load[1] == UINT32_MAX &&
@@ -1164,9 +1158,6 @@ print_stats_sys(_axa_p_stats_sys_t *sys)
 		gettimeofday(&tv, NULL);
 		tv.tv_sec -= (AXA_P2H32(sys->uptime) -
 				AXA_P2H32(sys->starttime));
-		tm_info = gmtime(&t);
-		strftime(time_buf, sizeof (time_buf),
-				"%Y-%m-%dT%H:%M:%SZ", tm_info);
 		printf("      uptime        : %s\n", convert_timeval(&tv));
 	}
 	if (sys->vmsize == UINT64_MAX) {

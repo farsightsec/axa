@@ -26,7 +26,6 @@
 .Op Fl n Ar config
 .Op Fl E Ar ciphers
 .Op Fl F Ar fields
-.Op Fl S Ar certs
 .Op commands
 .Sh DESCRIPTION
 .Nm sratool
@@ -143,10 +142,6 @@ sra> exit
 .Ed
 .Sh FILES
 .Bl -tag -width config
-.It Ar certs
-is the directory set with
-.Fl S
-that contains TLS certificate and key files.
 .It Ar ~/.axa/config
 contains AXA client configuration data. Currently supported are connection
 aliases that provide the user with a facility to create shortcut mnemonics to

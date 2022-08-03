@@ -34,14 +34,12 @@ use a connection alias specified in the AXA config file (see FILES).
 .Pp
 .Ic apikey:
 identify and authenticate the user via a Farsight Security provided apikey.
-The connection will be encrypted using the same TLS semantics as the tls
-transport below.
 .Pp
 .Ic tcp:
-unused.
+identify the user for clear text communication via the TCP/IP host,port pair.
 .Pp
 .Ic unix:
-unused.
+identify the user for communication over a local UNIX domain socket.
 .Pp
 .It Ic count Op N | off
 sets terminal output to stop displaying packets after a
@@ -95,8 +93,8 @@ Tell the \*(SR server to stop sending data.
 .Op Ar -|MAX|per-sec
 .Op Ar -|NEVER|report-secs
 .Oc
-Tell the \*(SR server to report its rate limits
-or set rate limits and the interval between rate limit reports.
+Tell the \*(SR server to report its per-second packet rate limit
+or set the rate limit and the minimum interval between rate limit reports.
 Hits in excess of the rate limit are discarded by the server.
 .It Ic radd
 Change to RAD mode.
