@@ -522,7 +522,7 @@ history_get_savefile(void)
 	int n;
 	struct passwd *pw;
 	const char *histfile_name  = ".sratool_history";
-	static char buf[MAXPATHLEN + 1];
+	static char buf[PATH_MAX + 1];
 
 	pw = getpwuid(getuid());
 	if (pw == NULL)

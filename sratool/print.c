@@ -60,9 +60,8 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 	wdns_message_t m;
 	wdns_rr_t *q;
 	const char *rcode, *class, *rtype;
-	char wdns_resbuf[AXA_WDNS_RES_STRLEN];
 	char class_buf[18], rtype_buf[10], rcode_buf[12];
-	char qname[NS_MAXDNAME];
+	char qname[WDNS_PRESLEN_NAME];
 	char *msg_str, *p;
 	bool eol;
 	wdns_res wres;
@@ -72,7 +71,7 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 	wres = wdns_parse_message(&m, data, data_len);
 	if (wres != wdns_res_success) {
 		printf("  wdns_parse_message(%s): %s\n", str,
-		       axa_wdns_res(wres, wdns_resbuf, sizeof(wdns_resbuf)));
+		       wdns_res_to_str(wres));
 		return (false);
 	}
 
@@ -118,8 +117,7 @@ print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
 		}
 		rtype = axa_rtype_to_str(rtype_buf, sizeof(rtype_buf),
 					 q->rrtype);
-		axa_domain_to_str(q->name.data, q->name.len,
-				  qname, sizeof(qname));
+		wdns_domain_to_str(q->name.data, q->name.len, qname);
 	}
 
 	printf(" %s %s %s"
@@ -358,98 +356,18 @@ typedef struct {
 	const char	*rdata_name;
 } rdata_ctxt_t;
 
-static void
-rdata_error(void *ctxt0, const char *p, va_list args)
-{
-	rdata_ctxt_t *ctxt = ctxt0;
-
-	vsnprintf(ctxt->buf0, ctxt->buf0_len, p, args);
-	ctxt->buf_len = 0;
-}
-
-static bool
-rdata_buf_alloc(rdata_ctxt_t *ctxt)
-{
-	size_t len;
-
-	len = strlen(ctxt->buf);
-	ctxt->buf += len;
-	ctxt->buf_len -= len;
-	return (ctxt->buf_len > 0);
-}
-
-static bool
-rdata_buf_cat(rdata_ctxt_t *ctxt, const char *str)
-{
-	strlcpy(ctxt->buf, str, ctxt->buf_len);
-	return (rdata_buf_alloc(ctxt));
-}
-
-static bool
-rdata_ip_to_buf(void *ctxt0, const uint8_t *ip, size_t ip_len,
-		const char *str AXA_UNUSED)
-{
-	rdata_ctxt_t *ctxt = ctxt0;
-	axa_socku_t su;
-
-	if (!rdata_buf_cat(ctxt, " "))
-		return (false);
-
-	if (!axa_data_to_su(&su, ip, ip_len)) {
-		snprintf(ctxt->buf0, ctxt->buf0_len, "%s IP length=%zd",
-			 ctxt->rdata_name, ip_len);
-		ctxt->buf_len = 0;
-		return (false);
-	}
-	axa_su_to_str(ctxt->buf, ctxt->buf_len, '.', &su);
-	return (rdata_buf_alloc(ctxt));
-}
-
-static bool
-rdata_domain_to_buf(void *ctxt0, const uint8_t *name, size_t name_len,
-		    axa_walk_dom_t dtype AXA_UNUSED,
-		    uint rtype AXA_UNUSED,
-		    const char *str AXA_UNUSED)
-{
-	rdata_ctxt_t *ctxt = ctxt0;
-	char wname[NS_MAXDNAME];
-
-	if (!rdata_buf_cat(ctxt, " "))
-		return (false);
-
-	axa_domain_to_str(name, name_len, wname, sizeof(wname));
-	strlcpy(ctxt->buf, wname, ctxt->buf_len);
-	return (rdata_buf_alloc(ctxt));
-}
-
-static axa_walk_ops_t rdata_ops = {
-	.error = rdata_error,
-	.ip = rdata_ip_to_buf,
-	.domain = rdata_domain_to_buf,
-};
-
-#define RDATA_BUF_LEN (32+NS_MAXDNAME+1+NS_MAXDNAME)
+#define RDATA_BUF_LEN (32+WDNS_PRESLEN_NAME+1+WDNS_PRESLEN_NAME)
 static const char *
-rdata_to_buf(char *buf, size_t buf_len,
-	     const char *rdata_name, uint32_t rtype,
+rdata_to_buf(char *buf, size_t buf_len, uint32_t rtype,
 	     uint8_t *rdata, size_t rdata_len)
 {
-	rdata_ctxt_t ctxt;
+	char *rdstr;
 
-	ctxt.buf0 = buf;
-	ctxt.buf0_len = buf_len;
-	ctxt.buf = buf;
-	ctxt.buf_len = buf_len;
-	ctxt.rdata_name = rdata_name;
-
-	axa_rtype_to_str(ctxt.buf, ctxt.buf_len, rtype);
-	if (!rdata_buf_alloc(&ctxt))
-		return (buf);
-
-	axa_walk_rdata(&ctxt, &rdata_ops, NULL, 0, NULL, rdata+rdata_len,
-		       rdata, rdata_len, rtype, "");
-
-	return (buf);
+	rdstr = wdns_rdata_to_str(rdata, rdata_len, rtype, WDNS_CLASS_IN);
+	strncpy(buf, rdstr, buf_len);
+	buf[buf_len - 1] = 0;
+	free(rdstr);
+	return buf;
 }
 
 /* Get a string for rdata specified by
@@ -475,7 +393,7 @@ rdata_nmsg_to_buf(char *buf, size_t buf_len, const nmsg_message_t msg,
 				   buf, buf_len))
 		return (buf);
 
-	return (rdata_to_buf(buf, buf_len, field->name, rtype, data, data_len));
+	return (rdata_to_buf(buf, buf_len, rtype, data, data_len));
 }
 
 static void
@@ -541,7 +459,7 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 	char ebuf[80];
 	char response_ip_buf[INET6_ADDRSTRLEN];
 	char rdata_buf[RDATA_BUF_LEN];
-	char rrname_buf[NS_MAXDNAME];
+	char rrname_buf[WDNS_PRESLEN_NAME];
 	bool need_nl;
 
 	if (verbose != 0) {
@@ -588,7 +506,7 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
                 else
                     printf(NMSG_LEADER"rdata=%s",
 		       rdata_to_buf(rdata_buf, sizeof(rdata_buf),
-				    "rdata", dnsdedupe->rrtype,
+				    dnsdedupe->rrtype,
 				    dnsdedupe->rdata->data,
 				    dnsdedupe->rdata->len));
 		need_nl = true;
@@ -599,8 +517,7 @@ print_sie_dnsdedupe(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 	if (!dnsdedupe->has_response
 	    && (field == NULL || strcmp(field->name, "rrname") != 0)
 	    && dnsdedupe->has_rrname) {
-		axa_domain_to_str(dnsdedupe->rrname.data, dnsdedupe->rrname.len,
-				  rrname_buf, sizeof(rrname_buf));
+		wdns_domain_to_str(dnsdedupe->rrname.data, dnsdedupe->rrname.len, rrname_buf);
 		printf(NMSG_LEADER"rrname=%s", rrname_buf);
 		need_nl = true;
 	}
@@ -618,8 +535,8 @@ print_sie_newdomain(const nmsg_message_t msg,
 		    const char *eq, const char *val)
 {
 	const Nmsg__Sie__NewDomain *newdomain;
-	char rrname_buf[NS_MAXDNAME];
-	char domain_buf[NS_MAXDNAME];
+	char rrname_buf[WDNS_PRESLEN_NAME];
+	char domain_buf[WDNS_PRESLEN_NAME];
 	char rtype_buf[10];
 
 	if (verbose != 0) {
@@ -629,12 +546,10 @@ print_sie_newdomain(const nmsg_message_t msg,
 
 	newdomain = (Nmsg__Sie__NewDomain *)nmsg_message_get_payload(msg);
 
-	axa_domain_to_str(newdomain->rrname.data, newdomain->rrname.len,
-			  rrname_buf, sizeof(rrname_buf));
+	wdns_domain_to_str(newdomain->rrname.data, newdomain->rrname.len, rrname_buf);
 	axa_rtype_to_str(rtype_buf, sizeof(rtype_buf), newdomain->rrtype);
 	if (newdomain->domain.data)
-		axa_domain_to_str(newdomain->domain.data, newdomain->domain.len,
-				domain_buf, sizeof(domain_buf));
+		wdns_domain_to_str(newdomain->domain.data, newdomain->domain.len, domain_buf);
 	printf("%s%s\n %s/%s: %s\n",
 	       eq, val, rrname_buf, rtype_buf,
            newdomain->domain.data ? domain_buf : rrname_buf);
@@ -644,7 +559,7 @@ static void
 print_nmsg_base_http(const nmsg_message_t msg, const axa_nmsg_field_t *field,
 		     const char *eq, const char *val)
 {
-	char buf[NS_MAXDNAME];
+	char buf[WDNS_PRESLEN_NAME];
 	bool need_nl;
 
 	if (verbose != 0) {
@@ -848,7 +763,7 @@ get_nm_eq_val(const nmsg_message_t msg, const axa_p_whit_t *whit,
 		if (get_nmsg_field_by_idx(msg, field_idx,
 					   AXA_P2H_IDX(whit->nmsg.hdr.val_idx),
 					   &data, &data_len, buf, buf_len))
-			axa_domain_to_str(data, data_len, buf, buf_len);
+			wdns_domain_to_str(data, data_len, buf);
 		*val = buf;
 		break;
 
@@ -928,10 +843,11 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	char tag_buf[AXA_TAG_STRLEN];
 	const axa_nmsg_field_t *field;
 	char vendor_buf[12], mname_buf[12], field_buf[RDATA_BUF_LEN];
-	const char *vendor, *mname, *nm, *eq, *val;
+	const char *vendor, *mname, *nm, *eq, *val, *cp;
 	char group[40];
-	const char *cp;
+	char *jstr;
 	nmsg_message_t msg;
+	nmsg_res res;
 	uint n;
 
 	if (whit2nmsg(&msg, whit, whit_len) == AXA_W2N_RES_FRAGMENT) {
@@ -943,6 +859,16 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	}
 	if (msg == NULL)
 		return;
+
+	res = nmsg_message_to_json(msg, &jstr);
+	if (res != nmsg_res_success) {
+		fprintf(stderr, "Error serializing nmsg data as json output: %s\n",
+			nmsg_res_lookup(res));
+	} else {
+		printf("%s\n", jstr);
+		free(jstr);
+		return;
+	}
 
 	/* Convert binary vendor ID, message type, and field index to
 	 * vendor name, message type string, field name, and field value. */

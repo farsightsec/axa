@@ -92,67 +92,6 @@ $ make
 $ sudo make install
 ~~~
 
-* [googletest](https://github.com/google/googletest): Used by protobuf for test mocking.
-
-~~~
-$ git clone https://github.com/google/googletest
-$ cd googletest
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
-$ sudo make install
-~~~
-
- * [protobuf](https://github.com/protocolbuffers/protobuf): Used by libprotobuf-c for low-level data serialization. Currently nmsg protobufs support protocol buffers version 2 so you'll need to install 2.7.0. Also, because gmock is no longer a standalone
-pacakge and is installed with gooletest, you may need to first edit the `autogen.sh` script and comment out the following stanza:
-
-~~~
-# Check that gmock is present.  Usually it is already there since the
-# directory is set up as an SVN external.
-if test  -e gmock; then
-  echo "Google Mock not present.  Fetching gmock-1.7.0 from the web..."
-  curl $curlopts -O https://googlemock.googlecode.com/files/gmock-1.7.0.zip
-  unzip -q gmock-1.7.0.zip
-  rm gmock-1.7.0.zip
-  mv gmock-1.7.0 gmock
-fi
-~~~
-
-~~~
-$ git clone https://github.com/protocolbuffers/protobuf
-$ cd protobuf
-$ git checkout 2.7.0
-$ ./autogen.sh
-$ ./configure
-$ make
-$ # go get a cup of coffee (this one takes a while)
-$ sudo make install
-$ sudo ldconfig
-~~~
-
- * [protobuf-c](https://github.com/protobuf-c/protobuf-c): Used by libnmsg for low-level data serialization.
-
-~~~
-$ git clone https://www.github.com/protobuf-c/protobuf-c
-$ cd protobuf-c
-$ ./autogen.sh
-$ ./configure
-$ make
-$ sudo make install
-~~~
-
- * [zlib](http://www.zlib.net/): Used for nmsg compression.
-
-~~~
-$ wget http://zlib.net/zlib-1.2.11.tar.gz
-$ tar xf zlib-1.2.11.tar.gz
-$ cd http://zlib.net/zlib-1.2.11
-$ ./configure
-$ make
-$ sudo make install
-~~~
-
  * [yajl](https://lloyd.github.io/yajl/): Used to serialize and deserialize json objects.
 
 ~~~

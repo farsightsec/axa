@@ -479,7 +479,7 @@ END_TEST
 
 START_TEST(test_watch_dns)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io\"}";
+	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io.\"}";
 	axa_emsg_t emsg;
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, 0, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
@@ -496,7 +496,7 @@ END_TEST
 
 START_TEST(test_watch_dns_wildcard)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=*.fsi.io\"}";
+	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=*.fsi.io.\"}";
 	axa_emsg_t emsg;
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, AXA_P_WATCH_FG_WILD, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
@@ -528,7 +528,7 @@ END_TEST
 
 START_TEST(test_watch_dns_shared)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io(shared)\"}";
+	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io.(shared)\"}";
 	axa_emsg_t emsg;
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, AXA_P_WATCH_FG_SHARED, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;

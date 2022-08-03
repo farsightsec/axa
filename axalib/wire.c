@@ -23,7 +23,6 @@
 #include <wdns.h>
 
 #include <arpa/inet.h>
-#include <arpa/nameser.h>
 #include <errno.h>
 #include <limits.h>
 #include <netinet/ip.h>
@@ -447,7 +446,7 @@ char *
 axa_watch_to_str(char *buf, size_t buf_len,
 		 const axa_p_watch_t *watch, size_t watch_len)
 {
-	char domain[NS_MAXDNAME];
+	char domain[WDNS_PRESLEN_NAME];
 	const char *star;
 	ssize_t pat_len;
 
@@ -463,8 +462,7 @@ axa_watch_to_str(char *buf, size_t buf_len,
 				&watch->pat.addr6, pat_len, watch->prefix);
 		break;
 	case AXA_P_WATCH_DNS:
-		axa_domain_to_str(watch->pat.dns, pat_len,
-				  domain, sizeof(domain));
+		wdns_domain_to_str(watch->pat.dns, pat_len, domain);
 		if ((watch->flags & AXA_P_WATCH_FG_WILD) == 0) {
 			star = "";
 		} else if (domain[0] == '.') {
