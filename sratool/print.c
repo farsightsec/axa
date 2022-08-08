@@ -54,97 +54,7 @@ static const char *out_bar_strs[] = {
 };
 #define PROGRESS_MS (1000/AXA_DIM(out_bar_strs)) /* 2 revolutions/second */
 
-bool					/* false=failed to print it */
-print_dns_pkt(const uint8_t *data, size_t data_len, const char *str)
-{
-	wdns_message_t m;
-	wdns_rr_t *q;
-	const char *rcode, *class, *rtype;
-	char class_buf[18], rtype_buf[10], rcode_buf[12];
-	char qname[WDNS_PRESLEN_NAME];
-	char *msg_str, *p;
-	bool eol;
-	wdns_res wres;
-
-	fputs(NMSG_LEADER"DNS:", stdout);
-
-	wres = wdns_parse_message(&m, data, data_len);
-	if (wres != wdns_res_success) {
-		printf("  wdns_parse_message(%s): %s\n", str,
-		       wdns_res_to_str(wres));
-		return (false);
-	}
-
-	if (verbose != 0) {
-		msg_str = wdns_message_to_str(&m);
-		if (msg_str == NULL) {
-			printf("  wdns_message_to_str(%s) failed\n", str);
-		} else {
-			fputs("\n", stdout);
-			for (eol = true, p = msg_str; *p != '\0'; ++p) {
-				if (eol) {
-					eol = false;
-					fputs(NMSG_LEADER2, stdout);
-				}
-				fputc(*p, stdout);
-				if (*p == '\n')
-					eol = true;
-			}
-			free(msg_str);
-		}
-		wdns_clear_message(&m);
-		return (true);
-	}
-
-	rcode = wdns_rcode_to_str(WDNS_FLAGS_RCODE(m));
-	if (rcode == NULL) {
-		snprintf(rcode_buf, sizeof(rcode_buf),
-			 "%d ", WDNS_FLAGS_RCODE(m));
-		rcode = rcode_buf;
-	}
-
-	q = m.sections[0].rrs;
-	if (q == NULL) {
-		rtype = "?";
-		class = "?";
-		strlcpy(qname, "(empty QUESTION section)", sizeof(qname));
-	} else {
-		class = wdns_rrclass_to_str(q->rrclass);
-		if (class == NULL) {
-			snprintf(class_buf, sizeof(class_buf),
-				 "CLASS %d", q->rrclass);
-			class = class_buf;
-		}
-		rtype = axa_rtype_to_str(rtype_buf, sizeof(rtype_buf),
-					 q->rrtype);
-		wdns_domain_to_str(q->name.data, q->name.len, qname);
-	}
-
-	printf(" %s %s %s"
-	       "  %s%s%s%s%s%s%s",
-	       qname, class, rtype,
-	       WDNS_FLAGS_QR(m) ? " qr" : "",
-	       WDNS_FLAGS_AA(m) ? " aa" : "",
-	       WDNS_FLAGS_TC(m) ? " tc" : "",
-	       WDNS_FLAGS_RD(m) ? " rd" : "",
-	       WDNS_FLAGS_RA(m) ? " ra" : "",
-	       WDNS_FLAGS_AD(m) ? " ad" : "",
-	       WDNS_FLAGS_CD(m) ? " cd" : "");
-
-	if (WDNS_FLAGS_QR(m))
-		printf("  %s"
-		       "  %d ans, %d auth, %d add RRs",
-		       rcode,
-		       m.sections[1].n_rrs,
-		       m.sections[2].n_rrs,
-		       m.sections[3].n_rrs);
-	fputc('\n', stdout);
-
-	wdns_clear_message(&m);
-	return (true);
-}
-
-void
+static void
 print_raw(const uint8_t *pkt, size_t pkt_len)
 {
 	char info_buf[64], *info;
@@ -186,7 +96,7 @@ print_raw(const uint8_t *pkt, size_t pkt_len)
 		printf("%-57s  %s\n", info_buf, chars_buf);
 }
 
-void
+static void
 print_raw_ip(const uint8_t *pkt_data, size_t caplen, axa_p_ch_t ch)
 {
 	axa_socku_t dst_su, src_su;
