@@ -143,7 +143,7 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	   const char *title_sep, const char *title)
 {
 	char tag_buf[AXA_TAG_STRLEN];
-	char *jstr;
+	char *disp;
 	nmsg_message_t msg;
 	nmsg_res res;
 
@@ -157,18 +157,41 @@ print_nmsg(axa_p_whit_t *whit, size_t whit_len,
 	if (msg == NULL)
 		return;
 
-	res = nmsg_message_to_json(msg, &jstr);
-	if (res != nmsg_res_success) {
-		fprintf(stderr, "Error serializing nmsg data as json output: %s\n",
-			nmsg_res_lookup(res));
+	if (verbose != 0) {
+		char sep[sizeof(NMSG_LEADER) + 2] = {0};
+
+		sep[0] = '\n';
+		memcpy(&sep[1], NMSG_LEADER, sizeof(NMSG_LEADER));
+
+		res = nmsg_message_to_pres(msg, &disp, sep);
+		if (res != nmsg_res_success) {
+			printf(NMSG_LEADER"<UNKNOWN NMSG %u:%u>\n",
+			       nmsg_message_get_vid(msg),
+			       nmsg_message_get_msgtype(msg));
+			goto out;
+		}
 	} else {
-		printf("%s "AXA_OP_CH_PREFIX"%d %s%s %s\n",
-			axa_tag_to_str(tag_buf, sizeof(tag_buf),
-				AXA_P2H_TAG(client.io.recv_hdr.tag)),
-			AXA_P2H_CH(whit->hdr.ch), title_sep, title, jstr);
-		free(jstr);
+		res = nmsg_message_to_json(msg, &disp);
+		if (res != nmsg_res_success) {
+			fprintf(stderr, "Error serializing nmsg data as json: %s\n",
+				nmsg_res_lookup(res));
+			goto out;
+		}
 	}
 
+	printf("%s "AXA_OP_CH_PREFIX"%d %s%s",
+		axa_tag_to_str(tag_buf, sizeof(tag_buf),
+			AXA_P2H_TAG(client.io.recv_hdr.tag)),
+		AXA_P2H_CH(whit->hdr.ch), title_sep, title);
+
+	if (verbose != 0)
+		printf("\n%s%s\n", NMSG_LEADER, disp);
+	else
+		printf(" %s\n", disp);
+
+	free(disp);
+
+out:
 	nmsg_message_destroy(&msg);
 }
 
