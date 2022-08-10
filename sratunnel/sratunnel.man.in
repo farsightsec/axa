@@ -20,7 +20,7 @@
 .Nd SIE Remote Access (SRA) Tunnel
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhOptVuz
+.Op Fl dhIOptVuz
 .Fl c Ar channel
 .Fl o Ar out-addr
 .Fl s Ar SRA-server
@@ -35,9 +35,9 @@
 .Op Fl n Ar config-file
 .Op Fl P Ar pidfile
 .Op Fl r Ar rate-limit
+.Op Fl S Ar size
 .Op Fl T Ar secs
 .Op Fl Z Ar size
-.Op Fl I Ar size
 .Sh DESCRIPTION
 .Nm sratunnel
 transfers selected Security Information Exchange (SIE) data
@@ -85,14 +85,9 @@ enable debugging reports or increase them after the first
 specifies a list ciphers for TLS connections.
 .It Fl h
 display options summary.
-.It Fl I Ar size
-sets the maximum index size (in multiples of the system pagesize) for the timestamp
-index. The default for this setting is 2560, which given a 4096 pagesize,
-results in the maximum index being 10MB.
-There is no specific correlation between the amount of data generated
-and the size of the index needed. The recommendation is to set the
-maximum size to "as large as possible". The disk space will not automatically
-be allocated, this parameter will only constrain the maximum amount that can be used.
+.It Fl I
+enables insecure mode for apikey authentication. When enabled,
+client connections will not be performed via TLS.
 .It Fl i Ar interval
 enables timestamp indexing every
 .Ar interval
@@ -192,6 +187,14 @@ The file will be deleted upon program exit.
 tells the server to send at most
 .Ar rate-limit
 SIE messages and raw IP packets per second.
+.It Fl S Ar size
+sets the maximum index size (in multiples of the system pagesize) for the timestamp
+index. The default for this setting is 2560, which given a 4096 pagesize,
+results in the maximum index being 10MB.
+There is no specific correlation between the amount of data generated
+and the size of the index needed. The recommendation is to set the
+maximum size to "as large as possible". The disk space will not automatically
+be allocated, this parameter will only constrain the maximum amount that can be used.
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:

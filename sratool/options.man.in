@@ -14,6 +14,9 @@ Additional
 turn on more messages.
 .It Fl E Ar ciphers
 specifies the TLS encryption ciphers to use with apikey connections.
+.It Fl I
+enables insecure mode for apikey authentication. When enabled, client
+connections will not be performed via TLS.
 .It Fl n Ar config
 overrides the default location of the
 .Pa config

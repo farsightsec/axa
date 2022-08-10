@@ -222,7 +222,7 @@ usage(const char *msg, ...)
 	}
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2014-2021 Farsight Security, Inc.\n");
+	printf("(c) 2014-2022 Farsight Security, Inc.\n");
 	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
@@ -242,7 +242,7 @@ usage(const char *msg, ...)
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
 	printf("[-h]\t\t\tdisplay this help and exit\n");
 	printf("[-i interval]\t\twrite timestamp indexes every interval nmsgs\n");
-	printf("[-I maxsize]\t\tset max timestamp index to %d*maxsize (default 2560)\n", getpagesize());
+	printf("[-I]\t\t\tenter insecure mode for apikey authentication\n");
 	printf("[-k cmd]\t\tmake -C or -T continuous; run cmd on new files\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
@@ -251,6 +251,7 @@ usage(const char *msg, ...)
 	printf("[-P file]\t\twrite PID to pidfile\n");
 	printf("[-p]\t\t\tappend to output file (only valid for file outputs)\n");
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
+	printf("[-S maxsize]\t\tset max timestamp index to %d*maxsize (default 2560)\n", getpagesize());
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	printf("[-T secs]\t\tstop or reopen after secs have elapsed\n");
 	printf("[-u]\t\t\tunbuffer nmsg container output\n");
@@ -288,7 +289,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "T:k:hi:I:a:pA:VdtOC:r:E:P:o:s:c:w:m:n:uzZ:")) != -1) {
+	while ((i = getopt(argc, argv, "T:k:hi:Ia:pA:VdtOC:r:E:P:o:s:S:c:w:m:n:uzZ:")) != -1) {
 		switch (i) {
 		case 'A':
 			acct_interval = atoi(optarg);
@@ -316,12 +317,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'I':
-			tsindex_map_size = atoi(optarg);
-			if (tsindex_map_size <= 0) {
-				axa_error_msg("invalid \"-I %s\"", optarg);
-				exit(EX_USAGE);
-			}
-			tsindex_set = true;
+			client.io.insecure_conn = true;
 			break;
 
 		case 'k':
@@ -394,6 +390,15 @@ main(int argc, char **argv)
 		case 'E':
 			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
 				axa_error_msg("%s", emsg.c);
+			break;
+
+		case 'S':
+			tsindex_map_size = atoi(optarg);
+			if (tsindex_map_size <= 0) {
+				axa_error_msg("invalid \"-I %s\"", optarg);
+				exit(EX_USAGE);
+			}
+			tsindex_set = true;
 			break;
 
 		case 's':

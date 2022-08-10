@@ -2126,11 +2126,12 @@ usage(void)
 	const char *rad = "Real-time Anomaly Detection Tool (radtool)\n";
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2018 Farsight Security, Inc.\n");
+	printf("(c) 2013-2022 Farsight Security, Inc.\n");
 	printf("%s [options] [commands]\n", axa_prog_name);
 	printf("[-c file]\t\tspecify commands file\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
+	printf("[-I]\t\t\tenter insecure mode for apikey authentication\n");
 	printf("[-F file]\t\tspecify AXA fields file\n");
 	printf("[-n file]\t\tspecify AXA config file\n");
 	printf("[-N]\t\t\tdisable command-line prompt\n");

@@ -21,7 +21,7 @@
 .Nm radtool
 .Nd Realtime Anomaly Detector (RAD) tool
 .Sh SYNOPSIS
-.Op Fl dhNV
+.Op Fl dhINV
 .Op Fl c Ar cfile
 .Op Fl n Ar config
 .Op Fl E Ar ciphers
