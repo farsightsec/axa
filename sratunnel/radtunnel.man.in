@@ -29,13 +29,11 @@
 .Op Fl A Ar interval
 .Op Fl C Ar count
 .Op Fl E Ar ciphers
-.Op Fl i Ar interval
 .Op Fl k Ar cmd
 .Fl m Ar sampling-rate
 .Op Fl n Ar config-file
 .Op Fl P Ar pidfile
 .Op Fl r Ar rate-limit
-.Op Fl S Ar size
 .Op Fl T Ar secs
 .Op Fl Z Ar size
 .br
@@ -81,53 +79,6 @@ enable debugging reports or increase them after the first
 specifies a list ciphers for apikey connections.
 .It Fl h
 display options summary.
-.It Fl i Ar interval
-enables timestamp indexing every
-.Ar interval
-nmsgs. This mode writes to a pre-existing (or creates an) lmdb-backed key-value
-store of nmsg timestamp/file offset pairs. The keys are the epoch portion of the
-nmsg timestamp for which the offsets refer back to. It is intended to be used
-as a hints file to speed subsequent cherry-picking of nmsgs from the nmsg data
-file it backs. It is most useful when the corresponding nmsg data file is
-anticipated to grow large.
-
-This mode may only be used with nmsg file-based outputs and, because
-.Nm
-needs to know when filesystem writes have occurred, it must be run in
-unbuffered mode (
-.Fl u
-). If you specify the append option (
-.Fl p
-), it is assumed you are continuing a previous session so you must also specify
-a previously created nmsg file which must also have a corresponding previously
-created timestamp index mdb file.
-
-.Nm
-will always write an index for the first nmsg and every
-.Ar interval
-nmsgs thereafter. Note that because currently only the epoch portion of
-the timestamp is significant,
-.Nm
-will only write entries at most, once per second. So for modules where
-anomaly hits can show up many times per second, a low
-.Ar interval
-value may not be honored and indexes would instead only be written once per
-second. To achieve this desired balance between index coverage and channel
-velocity, some experimentation with different
-.Ar interval
-values may be required.
-
-If
-.Nm
-finds a previously created tsindex file and is not in append mode, it will
-clobber the file.
-
-Note that in an effort to keep the file-system clean,
-.Nm
-will remove the lmdb-generated lock files after execution (or when using
-.Fl k ,
-after rotation).
-
 .It Fl k Ar cmd
 enables
 .Cm kicker
@@ -153,9 +104,7 @@ This option must be combined with either
 ,
 .Fl T
 or
-.Fl Z
-but may not be used with
-.Fl i .
+.Fl Z .
 Only nmsg file-based outputs are supported.
 
 .It Fl m Ar sampling-rate
@@ -181,14 +130,6 @@ The file will be deleted upon program exit.
 tells the server to send at most
 .Ar rate-limit
 SIE messages and raw IP packets per second.
-.It Fl S Ar size
-sets the maximum index size (in multiples of the system pagesize) for the timestamp
-index. The default for this setting is 2560, which given a 4096 pagesize,
-results in the maximum index being 10MB.
-There is no specific correlation between the amount of data generated
-and the size of the index needed. The recommendation is to set the
-maximum size to "as large as possible". The disk space will not automatically
-be allocated, this parameter will only constrain the maximum amount that can be used.
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
@@ -289,11 +230,6 @@ information such as apikeys, it must not be readable or writeable to anybody
 other than "owner" or
 .Nm radtunnel
 will not load.
-.It Ar foo.mdb
-is an lmdb key-value store containing nmsg timestamp/file offset pairs (a
-"tsindex" file). See the
-.Fl i
-option for details.
 .El
 .Sh ENVIRONMENT VARIABLES
 If set, AXACONF specifies the AXA configuration directory instead of the

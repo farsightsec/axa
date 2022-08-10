@@ -21,7 +21,6 @@
 /* extern: output.c */
 extern bool out_bar_on;
 extern bool nmsg_zlib;
-extern uint output_tsindex_write_interval;
 
 /* extern: axalib/open_nmsg_out.c */
 extern bool axa_out_file_append;
@@ -54,7 +53,6 @@ unsigned long interval_prev;		/* the previous interval */
 off_t max_file_size;			/* stop or reopen after output file is this large */
 nmsg_input_t nmsg_input;		/* NMSG input object */
 FILE *fp_pidfile = NULL;		/* PID file FILE pointer */
-FILE *fp_tsindex = NULL;		/* timestamp index file pointer */
 const char *pidfile;			/* PID file file name */
 const char *srvr_addr;			/* SRA/RAD server string */
 axa_mode_t mode;			/* SRA or RAD */
@@ -64,146 +62,20 @@ arg_t *watches = NULL;			/* watches */
 arg_t *anomalies = NULL;		/* anomalies */
 const char *out_addr;			/* output address */
 double sample = 0.0;			/* sampling rate */
-MDB_env *mdb_env;			/* timestamp index db environment */
-MDB_dbi mdb_dbi;			/* timestamp index db handle */
-MDB_txn *mdb_txn;			/* timestamp index transaction handle */
-bool lmdb_call_exit_handler = true;	/* is false when a fatal lmdb is encountered */
 
 /* private */
 static bool version;
 static struct timeval time_out_flush;
 static uint acct_interval;
 static struct timeval acct_timer;
-static struct axa_kickfile *lmdb_kf;
-static bool lmdb_kickfile = false;
-static char lmdb_filename[BUFSIZ];
-static size_t tsindex_map_size = 2560;
-static bool tsindex_set = false;
 
 void print_status(void);
-
-static bool
-lmdb_init(void)
-{
-	int rc;
-	const char *filename;
-
-	filename = lmdb_kickfile ? lmdb_kf->file_tmpname : lmdb_filename;
-
-	if ((rc = mdb_env_create(&mdb_env)) != 0) {
-		axa_error_msg("mdb_env_create(): %s", mdb_strerror(rc));
-		return (false);
-	}
-
-	/* lmdb is a memory mapped database. The mapsize should be a
-	 * multiple of the OS page size (usually 4,096 bytes). The
-	 * size of the memory map is also the maximum size of the
-	 * database. As such, we should periodically check to see if
-	 * we're close to running out of space and resize.
-	 */
-	if ((rc = mdb_env_set_mapsize(mdb_env, getpagesize() * tsindex_map_size)) !=0 ) {
-		axa_error_msg("mdb_env_set_mapsize(): %s", mdb_strerror(rc));
-		return (false);
-	}
-	if ((rc = mdb_env_open(mdb_env, filename, MDB_NOSUBDIR, 0664)) != 0) {
-		axa_error_msg("mdb_env_open(): %s", mdb_strerror(rc));
-		return (false);
-	}
-	if ((rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn)) != 0) {
-		axa_error_msg("mdb_txn_begin(): %s", mdb_strerror(rc));
-		return (false);
-	}
-	if ((rc = mdb_dbi_open(mdb_txn, NULL, MDB_INTEGERKEY, &mdb_dbi)) != 0) {
-		axa_error_msg("mdb_dbi_open(): %s", mdb_strerror(rc));
-		return (false);
-	}
-	if ((rc = mdb_set_compare(mdb_txn, mdb_dbi, axa_tsi_mdb_cmp)) != 0) {
-		axa_error_msg("mdb_set_compare(): %s", mdb_strerror(rc));
-		return (false);
-	}
-
-	return (true);
-}
-
-static void
-do_lmdb_kickfile(void AXA_UNUSED *blob)
-{
-	int rc;
-	size_t n;
-	char lmdb_lock_filename[BUFSIZ];
-
-	if ((rc = mdb_txn_commit(mdb_txn)) != 0) {
-		fprintf(stderr, "%s() couldn't perform final commit: "
-		    "mdb_txn_commit(): %s\n", __func__, mdb_strerror(rc));
-	}
-
-	mdb_dbi_close(mdb_env, mdb_dbi);
-	mdb_env_close(mdb_env);
-
-	n = strlcpy(lmdb_lock_filename, lmdb_kf->file_tmpname, sizeof (lmdb_lock_filename));
-	strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
-	if (unlink(lmdb_lock_filename) != 0) {
-		axa_error_msg("%s(): can't unlink lmdb lock file \"%s\": %s\n",
-			__func__, lmdb_lock_filename, strerror(errno));
-	}
-	axa_kickfile_exec(lmdb_kf);
-	axa_kickfile_rotate(lmdb_kf, axa_kickfile_get_kt(axa_kf));
-
-	if (lmdb_init() == false) {
-		axa_error_msg("can't (re)initialize lmdb\n");
-		exit(EX_SOFTWARE);
-	}
-}
 
 static void
 kickfile_finish(void)
 {
 	axa_kickfile_exec(axa_kf);
 	axa_kickfile_destroy(&axa_kf);
-}
-
-static void
-lmdb_kickfile_finish(void)
-{
-	size_t n;
-	char lmdb_lock_filename[BUFSIZ];
-
-	axa_kickfile_exec(lmdb_kf);
-
-	n = strlcpy(lmdb_lock_filename, lmdb_kf->file_tmpname, sizeof (lmdb_lock_filename));
-	strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
-	if ((unlink(lmdb_lock_filename)) != 0)
-		fprintf(stderr,
-			"%s(): can't unlink lmdb lock file \"%s\": %s\n",
-			__func__, lmdb_lock_filename, strerror(errno));
-
-	axa_kickfile_destroy(&lmdb_kf);
-}
-
-static void
-lmdb_shutdown(void)
-{
-	int rc;
-	size_t n;
-	char lmdb_lock_filename[BUFSIZ];
-
-	if (lmdb_call_exit_handler == false)
-		return;
-
-	/* try to commit any outstanding data before closing the env */
-	if ((rc = mdb_txn_commit(mdb_txn)) != 0)
-		fprintf(stderr, "lmdb_shutdown() couldn't perform final commit: mdb_txn_commit(): %s\n",
-				mdb_strerror(rc));
-
-	mdb_dbi_close(mdb_env, mdb_dbi);
-	mdb_env_close(mdb_env);
-	if (!lmdb_kickfile) {
-		n = strlcpy(lmdb_lock_filename, lmdb_filename, sizeof (lmdb_lock_filename));
-		strlcpy(lmdb_lock_filename + n, "-lock", sizeof (lmdb_lock_filename) - n);
-		if (unlink(lmdb_lock_filename) != 0)
-			fprintf(stderr, "%s(): can't unlink lmdb lock file \"%s\": %s\n",
-					__func__, lmdb_lock_filename, strerror(errno));
-	}
 }
 
 static void AXA_NORETURN AXA_PF(1,2)
@@ -272,7 +144,6 @@ main(int argc, char **argv)
 	axa_emsg_t emsg;
 	char *p;
 	int i;
-	size_t n = 0;
 	char out_filename[BUFSIZ];
 
 	axa_set_me(argv[0]);
@@ -289,7 +160,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "T:k:hi:Ia:pA:VdtOC:r:E:P:o:s:S:c:w:m:n:uzZ:")) != -1) {
+	while ((i = getopt(argc, argv, "T:k:hIa:pA:VdtOC:r:E:P:o:s:c:w:m:n:uzZ:")) != -1) {
 		switch (i) {
 		case 'A':
 			acct_interval = atoi(optarg);
@@ -310,10 +181,6 @@ main(int argc, char **argv)
 
 		case 'd':
 			++axa_debug;
-			break;
-
-		case 'i':
-			output_tsindex_write_interval = atoi(optarg);
 			break;
 
 		case 'I':
@@ -390,15 +257,6 @@ main(int argc, char **argv)
 		case 'E':
 			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
 				axa_error_msg("%s", emsg.c);
-			break;
-
-		case 'S':
-			tsindex_map_size = atoi(optarg);
-			if (tsindex_map_size <= 0) {
-				axa_error_msg("invalid \"-I %s\"", optarg);
-				exit(EX_USAGE);
-			}
-			tsindex_set = true;
 			break;
 
 		case 's':
@@ -482,9 +340,6 @@ main(int argc, char **argv)
 	if (watches == NULL) {
 		usage("no watches specified with \"-w\"");
 	}
-	if (tsindex_set && !output_tsindex_write_interval) {
-		usage("\"-I\" needs \"-i\"");
-	}
 	if (mode == RAD) {
 		if (anomalies == NULL)
 			usage("anomalies specified with \"-a\"");
@@ -535,7 +390,7 @@ main(int argc, char **argv)
 #endif
 	/* When appending, demand that the output file exists. */
 	if (axa_out_file_append) {
-		n = strlcpy(out_filename, strrchr(out_addr, ':') + 1,
+		strlcpy(out_filename, strrchr(out_addr, ':') + 1,
 				sizeof (out_filename));
 
 		if (access(out_filename, F_OK) == -1) {
@@ -566,88 +421,8 @@ main(int argc, char **argv)
 		pidfile_write();
 	}
 
-	if (output_tsindex_write_interval > 0) {
-		int rc = 0;
-		bool idx_exists = false;
-
-		/* Timestamp indexing requires unbuffered filesystem writes. */
-		if (output_buffering == true) {
-			axa_error_msg("can't store timestamp indexes when buffering output (need `-u`)\n");
-			exit(EX_SOFTWARE);
-		}
-
-		n = strlcpy(lmdb_filename, strrchr(out_addr, ':') + 1,
-				sizeof (lmdb_filename));
-		strlcpy(lmdb_filename + n, ".mdb", sizeof (lmdb_filename) - n);
-
-		/* Try to find a tsindex file that would correspond to the
-		 * name of the data file.
-		 */
-		rc = access(lmdb_filename, F_OK);
-		if (rc == 0)
-			idx_exists = true;
-		else if (rc == -1 && errno != ENOENT) {
-			axa_error_msg("can't access: \"%s\": %s\n",
-					lmdb_filename, strerror(errno));
-			exit(EX_SOFTWARE);
-		}
-
-		/* Timestamp indexing + appending requires a previously created
-		 * tsindex file (which should correspond in name to the output
-		 * file being appended to).
-		 */
-		if (axa_out_file_append == true) {
-			if (idx_exists == true) {
-				if (axa_debug > 0)
-					axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
-			} else {
-				axa_error_msg("tsindex mode expected to find tsindex file \"%s\": %s\n",
-					lmdb_filename, strerror(errno));
-				exit(EX_SOFTWARE);
-			}
-		}
-		else {
-			/* This orphaned tsindex file is clobbered lest we write
-			 * to it and end up mixing with timestamps and offsets
-			 * from a previous unrelated session.
-			 */
-			if (idx_exists) {
-				if (unlink(lmdb_filename) == -1) {
-					axa_error_msg("found orphan tsindex file \"%s\" but can't delete it: %s\n",
-							lmdb_filename, strerror(errno));
-					exit(EX_SOFTWARE);
-				}
-				else if (axa_debug > 0)
-					axa_trace_msg("found and deleted orphan tsindex file \"%s\"\n",
-							lmdb_filename);
-			}
-		}
-
-		if (axa_kickfile) {
-			lmdb_kickfile = true;
-			lmdb_kf = axa_zalloc(sizeof (*axa_kf));
-			axa_kickfile_register_cb(axa_kf, do_lmdb_kickfile);
-			lmdb_kf->file_basename = strdup(lmdb_filename);
-			lmdb_kf->file_suffix = strdup(".mdb");
-
-			axa_kickfile_rotate(lmdb_kf, axa_kickfile_get_kt(axa_kf));
-		}
-
-		if (!lmdb_init())
-			exit(EX_SOFTWARE);
-
-		if (axa_debug != 0)
-			axa_trace_msg("writing timestamp offsets to %s every %u nmsgs\n",
-					lmdb_filename,
-					output_tsindex_write_interval);
-
-		atexit(lmdb_shutdown);
-	}
-
 	if (axa_kickfile) {
 		atexit(kickfile_finish);
-		if (lmdb_kickfile)
-			atexit(lmdb_kickfile_finish);
 	}
 
 	/*

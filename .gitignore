@@ -42,8 +42,6 @@ tools/axa_make_cert
 tools/axa_make_cert.man
 tools/axa_server_cert
 tools/axa_server_cert.man
-tools/axa_tsindextool
-tools/axa_tsindextool.man
 *.log
 *.trs
 cscope*

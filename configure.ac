@@ -98,8 +98,6 @@ PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
 AC_CHECK_HEADERS([libgen.h])
 
-AC_CHECK_LIB([lmdb], [mdb_env_open], [], [ AC_MSG_ERROR([required library not found]) ])
-
 AC_ARG_WITH([yajl], AS_HELP_STRING([--without-yajl], [Disable yajl support]))
 if test "x$with_yajl" != "xno"; then
 	PKG_CHECK_MODULES([yajl], [yajl >= 2.1.0])
@@ -149,7 +147,7 @@ AC_CONFIG_FILES([Makefile axa/libaxa.pc axa/version.h])
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
 		sratunnel/sratunnel.man sratunnel/radtunnel.man
                 tools/axa_link_certs.man tools/axa_make_cert.man
-		tools/axa_server_cert.man tools/axa_tsindextool.man])
+		tools/axa_server_cert.man])
 
 AC_CONFIG_FILES([tools/axa_link_certs],
 		[chmod +x tools/axa_link_certs])

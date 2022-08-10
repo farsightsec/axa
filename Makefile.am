@@ -65,8 +65,7 @@ man_MANS =  \
 	sratunnel/radtunnel.1 \
 	tools/axa_link_certs.8 \
 	tools/axa_make_cert.8 \
-	tools/axa_server_cert.8 \
-	tools/axa_tsindextool.8
+	tools/axa_server_cert.8
 DISTCLEANFILES += $(man_MANS)
 
 #
@@ -90,7 +89,6 @@ nobase_include_HEADERS = \
 	axa/json.h \
 	axa/kickfile.h \
 	axa/open_nmsg_out.h \
-	axa/mdb.h \
 	axa/protocol.h \
 	axa/socket.h \
 	axa/strbuf.h \
@@ -111,7 +109,6 @@ axa_libaxa_la_SOURCES = \
 	axa/fields.h \
 	axa/json.h \
 	axa/kickfile.h \
-	axa/mdb.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/socket.h \
@@ -143,7 +140,6 @@ axa_libaxa_la_SOURCES = \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \
 	axalib/wire.c \
-	axalib/mdb.c \
 	libmy/b64_encode.c libmy/b64_encode.h
 
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
@@ -245,11 +241,6 @@ bin_PROGRAMS += sratunnel/radtunnel
 sratunnel_radtunnel_SOURCES = ${sratunnel_sratunnel_SOURCES}
 sratunnel_radtunnel_LDADD = ${sratunnel_sratunnel_LDADD}
 sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
-
-bin_PROGRAMS += tools/axa_tsindextool
-tools_axa_tsindextool_SOURCES = tools/axa_tsindextool.c
-tools_axa_tsindextool_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${strlcpy_LIBS}
-tools_axa_tsindextool_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS}
 
 #
 ##

@@ -170,15 +170,6 @@ $ make
 $ sudo make install
 ~~~
 
- * [liblmdb](http://lmdb.tech): Used by {rad,sra}tunnel to write timestamp index files
-
-~~~
-$ git clone https://github.com/LMDB/lmdb
-$ cd lmdb/libraries/liblmdb
-$ make
-$ sudo make install
-~~~
-
 Optional dependencies:
 
  * [doxygen](http://www.stack.nl/~dimitri/doxygen/): Optional, used to build htmlized API documentation.
@@ -552,57 +543,7 @@ rdata: CNAME 13 3 300 1522876195 1522696195 35273 vn.city. xU5jsRsbUQFzegFol6xhW
  3. `nmsgtool -l 127.0.0.1/8000 -c 3`: `nmsgtool` is invoked to listen on the loopback interface on `UDP/8000` and three nmsgs are emitted to stdout.
 
 
-### 6. Use sratunnel's Timestamp Indexing Feature
-The following example shows how to use `sratunnel` to capture 10,000,000 nmsgs from channel 204 to a newline delimited JSON file and create a companion "time stamp index" file. This time stamp index file is intended to be used to provide hints to speed subsequent
-cherry-picking of nmsgs from the data file it backs. It is most useful when the corresponding nmsg data file is anticipated to grow large. We run sratunnel below, bookending its execution in invocations of the `date` command (this will aid us later when we want to extract specific data).
-
-~~~
-$ date +%s ; sratunnel -s sra-apikey -c 204 -w ch=204 -o nmsg:file_json:204.jsonl -i 100 -u -dd -C 10000000; date +%s
-1540415096
-writing timestamp offsets to 204.jsonl.mdb every 100 nmsgs
-connecting to apikey:<apikey elided>@axa-1.dev.fsi.io,1011
-connected to apikey:<apikey elided>@axa-1.dev.fsi.io,1011
-forwarded 10000000 messages
-1540415549
-~~~
-
- 1. `date +%s`: Emit epoch timestamp so we know when sratunnel started.
- 2. `sratunnel -s sra-apikey -c 204 -w ch=204 -o nmsg:file_json:213.jsonl -i 100 -u -dd -C 10000000`: We invoked `sratunnel` and connected to SRA using the apikey transport. Channel 204 is enabled, and a 204 "all watch" is set. nmsgs are
-then written to a file as new-line delimited json. We specify time stamp indexing interval of every 100 nmsgs, unbuffered mode, and two levels of debug messaging. Finally, we specify that we want 10,000,000 watch hits.
- 3. `date +%s`: Emit epoch timestamp so we know when sratunnel stopped.
-
-From the differences in the timestamps, we see sratunnel took ~7.5 minutes to complete; let's take a look at the files created:
-
-~~~
-$ ls -l 204.jsonl*
--rw-r--r-- 1 username username 3912958424 Oct 24 21:12 204.jsonl
--rw-r--r-- 1 username username      57344 Oct 24 21:12 204.jsonl.mdb
--rw-r--r-- 1 username username       8192 Oct 24 21:11 204.jsonl.mdb-lock
-~~~
-
-The 3.7G file `204.jsonl` contains the output from the session, the `204.jsonl.mdb` file contains its indexed timestamps while `204.jsonl.mdb-lock` is a lock file used to mediate access to the timestamp index database file. To quickly access a select range of nmsgs from this rather
-large file we'll use the example time stamp index tool program that ships with axa to extract them:
-
-~~~
-$ axa_tsindextool -c 10 -s 1540415300 -j 204.jsonl -f 204.jsonl.mdb -vv
-Found 1540415300 at offset 0x1866137600.
-{"time":"2018-10-24 21:08:20.002873700","vname":"SIE","mname":"dnsdedupe","message":{"type":"EXPIRATION","count":1,"time_first":"2018-10-24 12:34:30","time_last":"2018-10-24 12:34:30","bailiwick":"com.br.","rrname":"jpbqfvilksvmami5bbjl6j9j33jl0gc4.com.br.","rrclass":"IN","rrtype":"NSEC3","rrttl":900,"rdata":["1 1 10 69811154eac0e5b7cd4f JPBTFHUVU3GGSQLDLFJ0HRCRNMV6V0LH NS DS RRSIG"]}}
-{"time":"2018-10-24 21:08:20.002877019","vname":"SIE","mname":"dnsdedupe","message":{"type":"EXPIRATION","count":1,"time_first":"2018-10-24 18:46:04","time_last":"2018-10-24 18:46:04","bailiwick":"bjljme.com.","rrname":"bjljme.com.","rrclass":"IN","rrtype":"NS","rrttl":1800,"rdata":["dns1.registrar-servers.com.","dns2.registrar-servers.com."]}}
-{"time":"2018-10-24 21:08:20.001785447","vname":"SIE","mname":"dnsdedupe","message":{"type":"INSERTION","count":1,"time_first":"2018-10-24 15:00:12","time_last":"2018-10-24 15:00:12","response_ip":"205.251.199.8","bailiwick":"app.link.","rrname":"qq0u-alternate.app.link.","rrclass":"IN","rrtype":"AAAA","rrttl":60,"rdata":["2600:9000:201d:1a00:19:9934:6a80:93a1","2600:9000:201d:3000:19:9934:6a80:93a1","2600:9000:201d:4e00:19:9934:6a80:93a1","2600:9000:201d:6c00:19:9934:6a80:93a1","2600:9000:201d:7400:19:9934:6a80:93a1","2600:9000:201d:7c00:19:9934:6a80:93a1","2600:9000:201d:ce00:19:9934:6a80:93a1","2600:9000:201d:d600:19:9934:6a80:93a1"]}}
-{"time":"2018-10-24 21:08:20.002895331","vname":"SIE","mname":"dnsdedupe","message":{"type":"EXPIRATION","count":1,"time_first":"2018-10-24 18:46:04","time_last":"2018-10-24 18:46:04","bailiwick":"wilson-benesch.com.","rrname":"www.wilson-benesch.com.","rrclass":"IN","rrtype":"A","rrttl":43200,"rdata":["205.186.183.165"]}}
-{"time":"2018-10-24 21:08:20.001818340","vname":"SIE","mname":"dnsdedupe","message":{"type":"INSERTION","count":1,"time_first":"2018-10-24 21:07:12","time_last":"2018-10-24 21:07:12","response_ip":"208.78.71.16","bailiwick":"catsurplus.com.","rrname":"catsurplus.com.","rrclass":"IN","rrtype":"A","rrttl":3600,"rdata":["192.56.231.67"]}}
-{"time":"2018-10-24 21:08:20.002917696","vname":"SIE","mname":"dnsdedupe","message":{"type":"EXPIRATION","count":1,"time_first":"2018-10-24 18:46:04","time_last":"2018-10-24 18:46:04","bailiwick":"bjliuti.com.","rrname":"bjliuti.com.","rrclass":"IN","rrtype":"A","rrttl":3600,"rdata":["142.234.57.142"]}}
-{"time":"2018-10-24 21:08:20.001835511","vname":"SIE","mname":"dnsdedupe","message":{"type":"INSERTION","count":1,"time_first":"2018-10-24 21:07:15","time_last":"2018-10-24 21:07:15","response_ip":"203.119.95.53","bailiwick":"153.in-addr.arpa.","rrname":"63.242.153.in-addr.arpa.","rrclass":"IN","rrtype":"NS","rrttl":86400,"rdata":["ns-kg001.ocn.ad.jp.","ns-kn001.ocn.ad.jp."]}}
-{"time":"2018-10-24 21:08:20.002924021","vname":"SIE","mname":"dnsdedupe","message":{"type":"EXPIRATION","count":1,"time_first":"2018-10-24 18:46:04","time_last":"2018-10-24 18:46:04","bailiwick":"bjliuti.com.","rrname":"bjliuti.com.","rrclass":"IN","rrtype":"NS","rrttl":3600,"rdata":["ns1.dnsdun.com.","ns1.dnsdun.net."]}}
-{"time":"2018-10-24 21:08:20.001839669","vname":"SIE","mname":"dnsdedupe","message":{"type":"INSERTION","count":1,"time_first":"2018-10-24 15:00:57","time_last":"2018-10-24 15:00:57","response_ip":"192.12.94.30","bailiwick":"com.","rrname":"gaselys.com.","rrclass":"IN","rrtype":"NS","rrttl":172800,"rdata":["a.ns.mailclub.fr.","b.ns.mailclub.eu.","c.ns.mailclub.com."]}}
-{"time":"2018-10-24 21:08:20.002941544","vname":"SIE","mname":"dnsdedupe","message":{"type":"EXPIRATION","count":1,"time_first":"2018-10-24 12:33:26","time_last":"2018-10-24 12:33:26","bailiwick":"whitetriangle.agency.","rrname":"whitetriangle.agency.","rrclass":"IN","rrtype":"A","rrttl":3600,"rdata":["198.185.159.144"]}}
-Wrote 10 nmsgs to 213.jsonl-tsindex.7259.json.
-~~~
-
- 1. `axa_tsindextool -s 1540415300 -c 10 -j 213.jsonl -f 213.jsonl.mdb -vv`: We invoke the helper tool telling it we want to start at epoch timestamp 1540415300, asking for 10 nmsgs, specify the data file and corresponding timestamp index file, and ask for two levels of
-verbosity (which results in the messages being written to stdout in addition to the on-disk file).
-
-### 7. Use sratunnel's Kickfile Feature
+### 6. Use sratunnel's Kickfile Feature
 Both `sratunnel` and `radtunnel` support a "kicker" feature where it will continuously rotate the output file and optionally run a command on the rotated file. In this mode output file names are suffixed with a timestamp and `{rad,sra}tunnel` runs continuously,
 rotating output files as payload counts or time intervals expire.  Optionally, a shell command may be specified to run against files after rotation (if the command is set to an empty string '', then no command is executed and only file rotation is performed).
 
