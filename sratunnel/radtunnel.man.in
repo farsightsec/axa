@@ -79,6 +79,9 @@ enable debugging reports or increase them after the first
 specifies a list ciphers for apikey connections.
 .It Fl h
 display options summary.
+.It Fl I
+enables insecure mode for apikey authentication. When enabled,
+client connections will not be performed via TLS.
 .It Fl k Ar cmd
 enables
 .Cm kicker
