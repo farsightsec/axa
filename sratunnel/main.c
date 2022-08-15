@@ -113,7 +113,6 @@ usage(const char *msg, ...)
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
 	printf("[-h]\t\t\tdisplay this help and exit\n");
-	printf("[-i interval]\t\twrite timestamp indexes every interval nmsgs\n");
 	printf("[-I]\t\t\tenter insecure mode for apikey authentication\n");
 	printf("[-k cmd]\t\tmake -C or -T continuous; run cmd on new files\n");
 	printf("[-V]\t\t\tprint version and quit\n");
@@ -123,7 +122,6 @@ usage(const char *msg, ...)
 	printf("[-P file]\t\twrite PID to pidfile\n");
 	printf("[-p]\t\t\tappend to output file (only valid for file outputs)\n");
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
-	printf("[-S maxsize]\t\tset max timestamp index to %d*maxsize (default 2560)\n", getpagesize());
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
 	printf("[-T secs]\t\tstop or reopen after secs have elapsed\n");
 	printf("[-u]\t\t\tunbuffer nmsg container output\n");
