@@ -159,9 +159,6 @@ void print_whit(axa_p_whit_t *whit, size_t whit_len, const char *title_sep,
 void print_ahit(void);
 void print_channel(void);
 void wlist_alist(void);
-void print_raw(const uint8_t *pkt, size_t pkt_len);
-bool print_dns_pkt(const uint8_t *data, size_t data_len, const char *str);
-void print_raw_ip(const uint8_t *data, size_t data_len, axa_p_ch_t ch);
 void print_stats(_axa_p_stats_rsp_t *stats, uint32_t len);
 void print_kill(_axa_p_kill_t *kill, size_t len);
 
