@@ -98,7 +98,8 @@ out_flush(void)
 			    && errno != EINTR) {
 				axa_error_msg("write(%s): %s",
 					      out_addr, strerror(errno));
-				stop(EX_IOERR);
+                                // Can't call stop as it recurses....
+				exit(EX_IOERR);
 			}
 		} else {
 			out_buf_base += wlen;
@@ -590,10 +591,10 @@ out_ip_pcap_file(const uint8_t *pkt, size_t caplen, size_t len,
 		return;
 	}
 
-	if (caplen + sizeof(sf_hdr) > sizeof(out_buf) - out_buf_len
+	if (caplen + sizeof(sf_hdr) + out_buf_len > sizeof(out_buf) / 2
 	    || out_buf_base != 0) {
 		out_flush();
-		if (caplen > sizeof(out_buf) - sizeof(sf_hdr) - out_buf_len) {
+		if (caplen + sizeof(sf_hdr) + out_buf_len > sizeof(out_buf)) {
 			out_error("forwarding output stalled; dropping");
 			return;
 		}
