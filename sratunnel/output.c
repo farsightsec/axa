@@ -59,7 +59,12 @@ static bool out_nmsg_mod_checked = false;
 void
 out_close(void)
 {
-	out_flush();
+        // Try to flush for up to 10 seconds
+        int n = 0;
+        do {
+	        out_flush();
+                usleep(10000);
+        } while (out_buf_len > 0 && n++ < 1000);
 
 	if (out_pcap_dumper != NULL) {
 		pcap_dump_close(out_pcap_dumper);
