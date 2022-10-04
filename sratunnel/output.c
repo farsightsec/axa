@@ -88,6 +88,14 @@ out_flush(void)
 {
 	nmsg_res res;
 	ssize_t wlen;
+	static bool stopping = false;
+
+	/*
+	 * Break out_flush() -> stop() -> out_close() -> out_flush() -> stop()
+	 * recursion when the flush operation encounters an error.
+	 */
+	if (stopping)
+		return;
 
 	if (out_buf_len != 0) {
 		wlen = write(out_fd, &out_buf[out_buf_base],
@@ -98,6 +106,7 @@ out_flush(void)
 			    && errno != EINTR) {
 				axa_error_msg("write(%s): %s",
 					      out_addr, strerror(errno));
+				stopping = true;
 				stop(EX_IOERR);
 			}
 		} else {
@@ -115,6 +124,7 @@ out_flush(void)
 			 || !AXA_IGNORED_UDP_ERRNO(errno))) {
 			axa_error_msg("nmsg_output_flush(forward): %s",
 				      nmsg_res_lookup(res));
+			stopping = true;
 			stop(EX_IOERR);
 		}
 	}
