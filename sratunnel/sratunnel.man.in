@@ -175,15 +175,6 @@ There must be at least one
 with an SRA or RAD watch to specify the interesting SIE messages or IP packets.
 .so srawatch.man
 .El
-.Pp
-In addition,
-.Ar (shared)
-can be appended to
-.Ar IP
-and
-.Ar
-dns
-watches to indicate addresses or domains that are not used exclusively.
 .It Fl u
 disable nmsg output buffering.
 .It Fl z
