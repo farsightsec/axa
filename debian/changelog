@@ -1,3 +1,11 @@
+axa (2.2.2-1) debian-fsi; urgency=medium
+
+  * sratunnel: catch stop() recursion on flush error
+
+  * sratunnel: fix pcap out buffer space calculation
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Fri, 07 Oct 2022 13:23:07 -0400
+
 axa (2.2.1-1) debian-fsi; urgency=medium
 
   * To work with higher SSL/TLS security levels, increase the length of
