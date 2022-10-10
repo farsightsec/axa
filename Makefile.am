@@ -21,6 +21,31 @@ AM_LDFLAGS = \
 configdir = ${CONFDIR}
 dist_config_DATA = etc/fields
 
+EXTRA_DIST += \
+	autogen.sh \
+	axalib/README \
+	axa/README \
+	COPYRIGHT \
+	debian/axa-tools.install \
+	debian/changelog \
+	debian/compat \
+	debian/control \
+	debian/gbp.conf \
+	debian/libaxa1.install \
+	debian/libaxa-dev.install \
+	debian/rules \
+	DoxygenLayout.xml \
+	fwd.man \
+	json-schema.yaml \
+	LICENSE \
+	radwatch.man \
+	README.md \
+	sratool/cmds.man \
+	sratool/README \
+	sratunnel/README \
+	srawatch.man \
+	watch.man
+
 #
 ##
 ### documentation 
@@ -39,24 +64,6 @@ sratool/radtool.1: sratool/radtool.man \
 	fwd.man watch.man radwatch.man sratool/options.man sratool/cmds.man
 sratunnel/sratunnel.1: sratunnel/sratunnel.man fwd.man srawatch.man watch.man
 sratunnel/radtunnel.1: sratunnel/radtunnel.man fwd.man srawatch.man watch.man
-
-EXTRA_DIST += \
-	fwd.man \
-	watch.man \
-	srawatch.man \
-	radwatch.man \
-	sratool/cmds.man \
-	README.md \
-	DoxygenLayout.xml \
-	json-schema.yaml \
-	debian/axa-tools.install \
-	debian/changelog \
-	debian/compat \
-	debian/control \
-	debian/gbp.conf \
-	debian/libaxa1.install \
-	debian/libaxa-dev.install \
-	debian/rules
 
 man_MANS =  \
 	sratool/sratool.1 \
@@ -269,14 +276,6 @@ bin_SCRIPTS = \
 ### documentation 
 ##
 #
-
-EXTRA_DIST += \
-	autogen.sh \
-	copyright \
-	axalib/README \
-	axa/README \
-	sratool/README \
-	sratunnel/README
 
 if HAVE_DOXYGEN
 stamp-html: $(DOXYGEN_INPUT) $(top_builddir)/Doxyfile $(top_srcdir)/DoxygenLayout.xml $(include_HEADERS) $(nobase_include_HEADERS)

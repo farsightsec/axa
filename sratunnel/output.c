@@ -1,6 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
+ *  Copyright (c) 2022 DomainTools LLC
  *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,6 +89,14 @@ out_flush(void)
 {
 	nmsg_res res;
 	ssize_t wlen;
+	static bool stopping = false;
+
+	/*
+	 * Break out_flush() -> stop() -> out_close() -> out_flush() -> stop()
+	 * recursion when the flush operation encounters an error.
+	 */
+	if (stopping)
+		return;
 
 	if (out_buf_len != 0) {
 		wlen = write(out_fd, &out_buf[out_buf_base],
@@ -98,6 +107,7 @@ out_flush(void)
 			    && errno != EINTR) {
 				axa_error_msg("write(%s): %s",
 					      out_addr, strerror(errno));
+				stopping = true;
 				stop(EX_IOERR);
 			}
 		} else {
@@ -115,6 +125,7 @@ out_flush(void)
 			 || !AXA_IGNORED_UDP_ERRNO(errno))) {
 			axa_error_msg("nmsg_output_flush(forward): %s",
 				      nmsg_res_lookup(res));
+			stopping = true;
 			stop(EX_IOERR);
 		}
 	}
@@ -593,7 +604,7 @@ out_ip_pcap_file(const uint8_t *pkt, size_t caplen, size_t len,
 	if (caplen + sizeof(sf_hdr) > sizeof(out_buf) - out_buf_len
 	    || out_buf_base != 0) {
 		out_flush();
-		if (caplen > sizeof(out_buf) - sizeof(sf_hdr) - out_buf_len) {
+		if (caplen + sizeof(sf_hdr) > sizeof(out_buf) - out_buf_len) {
 			out_error("forwarding output stalled; dropping");
 			return;
 		}
