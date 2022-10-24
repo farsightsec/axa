@@ -1,4 +1,4 @@
-libaxa.so.1 libaxa1 #MINVER#
+libaxa.so.3 libaxa3 #MINVER#
  axa_apikey_cleanup@Base 2.0.0
  axa_apikey_init@Base 2.0.0
  axa_apikey_load_and_check_key@Base 2.0.0

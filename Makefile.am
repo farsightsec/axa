@@ -54,7 +54,7 @@ EXTRA_DIST += \
 	debian/compat \
 	debian/control \
 	debian/gbp.conf \
-	debian/libaxa1.install \
+	debian/libaxa3.install \
 	debian/libaxa-dev.install \
 	debian/rules
 

@@ -50,7 +50,9 @@ axa (3.0.0-1) debian-fsi; urgency=medium
 
   * Remove direct zlib and protobuf-c dependencies.
 
- -- Farsight Security, Inc. <software@farsightsecurity.com>  Mon, 17 Oct 2022 19:56:56 +0000
+  * Interfaces changes, library package changed to libaxa3.
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Mon, 24 Oct 2022 16:23:16 +0000
 
 axa (2.2.1-1) debian-fsi; urgency=medium
 
