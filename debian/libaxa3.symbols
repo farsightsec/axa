@@ -1,4 +1,6 @@
 libaxa.so.3 libaxa3 #MINVER#
+ axa_apikey_certs_dir@Base 3.0.0-1
+ axa_apikey_cipher_list@Base 3.0.0-1
  axa_apikey_cleanup@Base 2.0.0
  axa_apikey_init@Base 2.0.0
  axa_apikey_load_and_check_key@Base 2.0.0
@@ -71,6 +73,8 @@ libaxa.so.3 libaxa3 #MINVER#
  axa_null_field@Base 2.0.0
  axa_op_to_str@Base 2.0.0
  axa_open_nmsg_out@Base 2.0.0
+ axa_openssl_read@Base 3.0.0
+ axa_openssl_write@Base 3.0.0
  axa_opt_to_str@Base 2.0.0
  axa_out_file_append@Base 2.1.0
  axa_p_to_str@Base 2.0.0
@@ -106,8 +110,6 @@ libaxa.so.3 libaxa3 #MINVER#
  axa_syslog_init@Base 2.0.0
  axa_tag_op_to_str@Base 2.0.0
  axa_tag_to_str@Base 2.0.0
- axa_openssl_read@Base 3.0.0
- axa_openssl_write@Base 3.0.0
  axa_trace_msg@Base 2.0.0
  axa_trie_node_delete@Base 2.0.0
  axa_trie_node_free@Base 2.0.0
