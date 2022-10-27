@@ -2160,7 +2160,7 @@ axa_send_flush(axa_emsg_t *emsg, axa_io_t *io)
 {
 	ssize_t done;
 
-	if (io->type == AXA_IO_TYPE_APIKEY)
+	if (io->type == AXA_IO_TYPE_APIKEY && !io->insecure_conn)
 		return (axa_openssl_write(emsg, io));
 
 	/* Repeat other transports until nothing flows. */
