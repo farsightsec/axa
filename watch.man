@@ -24,8 +24,7 @@ unless a prefix length is specified.
 .Xc
 watches for the domain
 anywhere in the IP packets or SIE messages
-on the channels selected with
-.Fl c .
+on the enabled channels.
 A wild card watches for occurrences of the domain and all sub-domains.
 .\"
 .\" end of watch.man
