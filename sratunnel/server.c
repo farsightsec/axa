@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -67,7 +67,6 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 	       axa_p_op_t orig_op)	/* to this */
 {
 	bool result, done;
-	const char *cp;
 	axa_emsg_t emsg;
 
 	result = false;
@@ -81,14 +80,6 @@ srvr_wait_resp(axa_p_op_t resp_op,	/* look for this response */
 			if (first_time || axa_debug != 0)
 				axa_error_msg("%s", emsg.c);
 			goto out;
-		case AXA_IO_TUNERR:
-			for (;;) {
-				cp = axa_io_tunerr(&client.io);
-				if (cp == NULL)
-					break;
-				axa_error_msg("%s", cp);
-			}
-			continue;
 		case AXA_IO_BUSY:
 			continue;
 		case AXA_IO_KEEPALIVE:
@@ -239,7 +230,6 @@ srvr_connect(void)
 	if (axa_debug != 0)
 		axa_trace_msg("connecting to %s", srvr_addr);
 	switch (axa_client_open(&emsg, &client, srvr_addr, mode == RAD,
-				axa_debug > AXA_DEBUG_TRACE,
 				256*1024, false)) {
 	case AXA_CONNECT_ERR:
 		if (axa_debug != 0 || first_time)
@@ -264,6 +254,9 @@ srvr_connect(void)
 			return;
 		break;
 	}
+
+	if (axa_debug != 0)
+		axa_trace_msg("connected to %s", srvr_addr);
 
 	/* Immediately start server tracing to log the tunnel commands. */
 	if (trace != 0) {

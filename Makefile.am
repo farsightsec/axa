@@ -28,10 +28,10 @@ EXTRA_DIST += \
 	COPYRIGHT \
 	debian/axa-tools.install \
 	debian/changelog \
-	debian/compat \
 	debian/control \
+	debian/copyright \
 	debian/gbp.conf \
-	debian/libaxa1.install \
+	debian/libaxa3.install \
 	debian/libaxa-dev.install \
 	debian/rules \
 	DoxygenLayout.xml \
@@ -48,7 +48,7 @@ EXTRA_DIST += \
 
 #
 ##
-### documentation 
+### documentation
 ##
 #
 
@@ -72,8 +72,7 @@ man_MANS =  \
 	sratunnel/radtunnel.1 \
 	tools/axa_link_certs.8 \
 	tools/axa_make_cert.8 \
-	tools/axa_server_cert.8 \
-	tools/axa_tsindextool.8
+	tools/axa_server_cert.8
 DISTCLEANFILES += $(man_MANS)
 
 #
@@ -82,9 +81,9 @@ DISTCLEANFILES += $(man_MANS)
 ##
 #
 
-LIBAXA_CURRENT=2
-LIBAXA_REVISION=1
-LIBAXA_AGE=1
+LIBAXA_CURRENT=3
+LIBAXA_REVISION=0
+LIBAXA_AGE=0
 
 nobase_include_HEADERS = \
 	axa/axa.h \
@@ -95,8 +94,8 @@ nobase_include_HEADERS = \
 	axa/axa_endian.h \
 	axa/fields.h \
 	axa/json.h \
+	axa/kickfile.h \
 	axa/open_nmsg_out.h \
-	axa/mdb.h \
 	axa/protocol.h \
 	axa/socket.h \
 	axa/strbuf.h \
@@ -116,7 +115,7 @@ axa_libaxa_la_SOURCES = \
 	axa/axa_endian.h \
 	axa/fields.h \
 	axa/json.h \
-	axa/mdb.h \
+	axa/kickfile.h \
 	axa/open_nmsg_out.h \
 	axa/protocol.h \
 	axa/socket.h \
@@ -135,6 +134,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/get_field_name.c \
 	axalib/hash_divisor.c \
 	axalib/json.c \
+	axalib/kickfile.c \
 	axalib/open_nmsg_out.c \
 	axalib/parse_ch.c \
 	axalib/socket.c \
@@ -147,9 +147,7 @@ axa_libaxa_la_SOURCES = \
 	axalib/wdns_rtype.c \
 	axalib/whit2nmsg.c \
 	axalib/wire.c \
-	axalib/mdb.c \
-	libmy/b64_encode.c libmy/b64_encode.h libmy/my_alloc.h \
-	libmy/ubuf.h libmy/ubuf-pb.h libmy/vector.h
+	libmy/b64_encode.c libmy/b64_encode.h
 
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBAXA_CURRENT):$(LIBAXA_REVISION):$(LIBAXA_AGE) \
@@ -167,7 +165,6 @@ axa_libaxa_la_CFLAGS = \
 	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
 	${libwdns_CFLAGS} \
-	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${strlcpy_CFLAGS} \
 	${yajl_CFLAGS}
@@ -177,7 +174,7 @@ pkgconfig_DATA = axa/libaxa.pc
 
 #
 ##
-### programs 
+### programs
 ##
 #
 
@@ -199,7 +196,6 @@ sratool_sratool_LDADD = \
 	${libssl_LIBS} \
 	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
-	${libprotobuf_c_LIBS} \
 	${libnmsg_LIBS} \
 	${libz_LIBS} \
 	${libwdns_LIBS} \
@@ -212,7 +208,6 @@ sratool_sratool_CFLAGS = \
 	${libssl_CFLAGS} \
 	${libcrypto_CFLAGS} \
 	${libpcap_CFLAGS} \
-	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${libz_CFLAGS} \
 	${libwdns_CFLAGS} \
@@ -244,7 +239,6 @@ sratunnel_sratunnel_LDADD = \
 
 sratunnel_sratunnel_CFLAGS = \
 	${AM_CFLAGS} \
-	${libprotobuf_c_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${libssl_CFLAGS} \
 	${libcrypto_CFLAGS} \
@@ -254,11 +248,6 @@ bin_PROGRAMS += sratunnel/radtunnel
 sratunnel_radtunnel_SOURCES = ${sratunnel_sratunnel_SOURCES}
 sratunnel_radtunnel_LDADD = ${sratunnel_sratunnel_LDADD}
 sratunnel_radtunnel_CFLAGS = ${sratunnel_sratunnel_CFLAGS}
-
-bin_PROGRAMS += tools/axa_tsindextool
-tools_axa_tsindextool_SOURCES = tools/axa_tsindextool.c
-tools_axa_tsindextool_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${strlcpy_LIBS}
-tools_axa_tsindextool_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS}
 
 #
 ##
@@ -273,7 +262,7 @@ bin_SCRIPTS = \
 
 #
 ##
-### documentation 
+### documentation
 ##
 #
 
@@ -333,10 +322,20 @@ tests_test_kill_SOURCES = tests/test-kill.c
 tests_test_kill_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
 tests_test_kill_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
 
+TESTS += tests/test-kickfile
+check_PROGRAMS += tests/test-kickfile
+tests_test_kickfile_SOURCES = tests/test-kickfile.c
+tests_test_kickfile_LDADD = axa/libaxa.la ${libnmsg_LIBS} ${check_LIBS} ${strlcpy_LIBS}
+tests_test_kickfile_CFLAGS = ${AM_CFLAGS} ${libnmsg_CFLAGS} ${check_CFLAGS} ${libssl_CFLAGS} ${strlcpy_CFLAGS}
+
 EXTRA_DIST += tests/tool-tests-data/001000-single-command \
 tests/tool-tests-data/002210-valid-before-and-after-unrecognized-command \
 tests/tool-tests-data/002000-multiple-commands \
 tests/tool-tests-data/002200-valid-then-unrecognized-command \
 tests/tool-tests-data/002100-unrecognized-command \
-tests/tool-tests-data/001010-multiple-commands-on-single-line
-TESTS += tests/test-tools-without-server.sh
+tests/tool-tests-data/001010-multiple-commands-on-single-line \
+tests/tool-tests-data/with-server/001000-connect \
+tests/tool-tests-data/with-server/001010-invalid-username
+
+TESTS += tests/test-tools-without-server.sh \
+	 tests/test-tools-with-server.sh

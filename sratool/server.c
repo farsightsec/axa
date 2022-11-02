@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -89,7 +89,6 @@ read_srvr(void)
 			break;		/* deal with the input */
 		case AXA_IO_BUSY:
 			return;		/* wait for the rest */
-		case AXA_IO_TUNERR:	/* impossible */
 		case AXA_IO_KEEPALIVE:	/* impossible */
 			AXA_FAIL("impossible axa_recv_buf() result");
 		}
@@ -239,15 +238,6 @@ read_srvr(void)
 void
 disconnect(bool announce)
 {
-	const char *cp;
-
-	for (;;) {
-		cp = axa_io_tunerr(&client.io);
-		if (cp == NULL)
-			break;
-		error_msg("%s", cp);
-	}
-
 	if (announce && AXA_CLIENT_OPENED(&client)) {
 		clear_prompt();
 		printf("disconnected\n");

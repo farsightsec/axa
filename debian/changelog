@@ -1,3 +1,55 @@
+axa (3.0.0-1) debian-fsi; urgency=medium
+
+  * Add sratunnel/radtunnel -K kickfile option to allow rotating
+    new output files based on -C packet count, -T elapsed seconds, or
+    -Z file size.
+
+  * Allow sratunnel/radtunnel -k (kickfile) to work with -i (interval).
+
+  * Add sratunnel/radtunnel -Z option to clamp an output file size.
+
+  * Add sratunnel/radtunnel -T option to stop output after elapsed seconds.
+
+  * Add sratunnel/radtunnel -I option to allow non-TLS (insecure mode)
+    for apikey method.
+
+  * Fix various compiler warnings.
+
+  * Remove various now-deprecated code.
+
+  * Allow axa config file to be optional.
+
+  * Remove SSH authentication and tunneling method.
+
+  * Remove TLS authentication method. Remove the -S certs option.
+    (TLS is still available using the apikey method.)
+
+  * Add sratool/radtool -I option to allow non-TLS (insecure mode)
+    for apikey method.
+
+  * Remove unused time formatting code from tool stats.
+
+  * Change the default TLS cipher to ECDHE-RSA-AES256-GCM-SHA384.
+
+  * Use libwdns string formatting routines for sratool/radtool
+    outputs for DNS rdata and dnsdedupe.
+
+  * Use libnmsg JSON formatting routines for sratool/radtool
+    NMSG outputs.
+
+  * Improve built-in tools documentation.
+
+  * Fix incorrect display of "buffering" command to use more specific
+    description "forwarding mode".
+
+  * Use UTC time for missed packet display (instead of local time).
+
+  * Remove direct zlib and protobuf-c dependencies.
+
+  * Interfaces changes, library package changed to libaxa3.
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Mon, 24 Oct 2022 16:23:16 +0000
+
 axa (2.2.2-1) debian-fsi; urgency=medium
 
   * sratunnel: catch stop() recursion on flush error

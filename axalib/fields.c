@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) semantics for nmsg fields
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017,2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -492,7 +492,7 @@ next_line:
 
 			} else if (field->enm.idx == AXA_NMSG_IDX_NONE
 				   && strcasecmp(subtype, "enum") == 0
-				   && (p = get_subsubval(subval)) != '\0') {
+				   && ((p = get_subsubval(subval)) != NULL) && *p != '\0') {
 				field->enm.idx = get_field_idx(mod,
 							subtype, subval,
 							line_num, fields_file);
@@ -505,7 +505,7 @@ next_line:
 
 			} else if (field->fc == AXA_FC_JSON
 				   && strcasecmp(subtype, "sfield") == 0
-				   && (p = get_subsubval(subval)) != '\0') {
+				   && ((p = get_subsubval(subval)) != NULL) && *p != '\0') {
 				sf = axa_zalloc(sizeof(axa_nmsg_sf_t)
 						+strlen(subval)+1);
 				sf->next = field->sf;

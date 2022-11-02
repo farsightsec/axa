@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) definitions
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -337,11 +337,6 @@ extern void axa_syslog_init(void);
  *  non-routine AXA messages
  */
 #define AXA_DEBUG_TRACE		3
-/**
- *  also generate trace syslog messages about routine AXA messages
- *  and transport related messages such as from `ssh`
- */
-#define AXA_DEBUG_MORE_TRACE	4
 /**
  *  also generate trace syslog messages from libnmsg and client-to-server
  *  rate limiting or congestion

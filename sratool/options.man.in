@@ -13,7 +13,10 @@ Additional
 .Fl d
 turn on more messages.
 .It Fl E Ar ciphers
-specifies the TLS encryption ciphers to use with TLS connections.
+specifies the TLS encryption ciphers to use with apikey connections.
+.It Fl I
+enables insecure mode for apikey authentication. When enabled, client
+connections will not be performed via TLS.
 .It Fl n Ar config
 overrides the default location of the
 .Pa config
@@ -36,17 +39,6 @@ display options summary.
 instructs
 .Nm
 to not display a command line prompt.
-.It Fl S Ar certs
-specifies the directory containing SSL certificates and keys.
-If
-.Fl S
-is not used,
-.Nm
-uses the first directory among
-.Pa $AXACONF/certs ,
-.Pa ~/.axa/certs ,
-and
-.Pa @CONFDIR@/certs .
 .It Fl V
 displays the version of
 .Nm

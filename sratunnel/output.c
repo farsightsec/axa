@@ -23,9 +23,6 @@
 extern uint axa_debug;
 extern nmsg_input_t nmsg_input;
 extern const char *out_addr;
-extern MDB_env *mdb_env;
-extern MDB_txn *mdb_txn;
-extern MDB_dbi mdb_dbi;
 
 /* extern: axalib/open_nmsg_out.c */
 extern bool axa_nmsg_out_json;
@@ -35,7 +32,6 @@ extern bool axa_nmsg_output_fd;
 nmsg_output_t out_nmsg_output;		/* NSMG output object */
 pcap_t *out_pcap;			/* pcap output object */
 bool nmsg_zlib = false;			/* NMSG zlib container compression */
-uint output_tsindex_write_interval = 0;	/* output write interval */
 
 /* private */
 static struct timeval out_complaint_last;
@@ -307,29 +303,14 @@ out_open(bool output_buffering)
 	axa_emsg_t emsg;
 
 	if (AXA_CLITCMP(out_addr, "pcap:")) {
-		if (output_tsindex_write_interval > 0) {
-			axa_error_msg("output type \"%s\" does not support timestamp indexing\n",
-					out_addr);
-			return (false);
-		}
 		return (out_cmd_pcap_file(strchr(out_addr, ':')+1, false));
 	}
 
 	if (AXA_CLITCMP(out_addr, "pcap-fifo:")) {
-		if (output_tsindex_write_interval > 0) {
-			axa_error_msg("output type \"%s\" does not support timestamp indexing\n",
-					out_addr);
-			return (false);
-		}
 		return (out_cmd_pcap_file(strchr(out_addr, ':')+1, true));
 	}
 
 	if (AXA_CLITCMP(out_addr, "pcap-if:")) {
-		if (output_tsindex_write_interval > 0) {
-			axa_error_msg("output type \"%s\" does not support timestamp indexing\n",
-					out_addr);
-			return (false);
-		}
 		return (out_cmd_pcap_if(strchr(out_addr, ':')+1));
 	}
 
@@ -338,18 +319,9 @@ out_open(bool output_buffering)
 			      out_addr);
 		return (false);
 	}
-	/* only file-based nmsg outputs support timestamp indexing */
-	if (output_tsindex_write_interval > 0) {
-		if (!AXA_CLITCMP(out_addr, "nmsg:file") &&
-				!AXA_CLITCMP(out_addr, "nmsg:file_json")) {
-			axa_error_msg("output type \"%s\" does not support timestamp indexing\n",
-					out_addr);
-			return (false);
-		}
-	}
 
 	if (0 >= axa_open_nmsg_out(&emsg, &out_nmsg_output, &out_sock_type,
-				   strchr(out_addr, ':')+1, output_buffering)) {
+				strchr(out_addr, ':')+1, output_buffering)) {
 		axa_error_msg("%s", emsg.c);
 		return (false);
 	}
@@ -426,18 +398,13 @@ void
 out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 {
 	nmsg_message_t msg;
-	struct timespec ts, ts_idx;
+	struct timespec ts;
 	static const union {
 		uint    e;
 		uint8_t	c[0];
 	} pkt_enum = { .e = NMSG__BASE__PACKET_TYPE__IP };
 	size_t len;
 	nmsg_res res;
-	int rc;
-	off_t offset;
-	MDB_val key, data;
-	static uint output_tsindex_write_cnt = 0;
-	static struct timespec ts_idx_prev = {0};
 
 	switch ((axa_p_whit_enum_t)whit->hdr.type) {
 	case AXA_P_WHIT_NMSG:
@@ -500,9 +467,6 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 #pragma clang diagnostic pop
 	}
 
-	if (output_tsindex_write_interval > 0)
-		 offset = lseek(axa_nmsg_output_fd, 0, SEEK_CUR);
-
 	res = nmsg_output_write(out_nmsg_output, msg);
 
 	/* Stop on non-UDP errors. */
@@ -514,68 +478,6 @@ out_whit_nmsg(axa_p_whit_t *whit, size_t whit_len)
 		stop(EX_IOERR);
 	}
 
-	/* Check to see if we're building a timestamp:index key-value store.
-	 * When in this mode, {sra,rad}tunnel will write the nmsg timestamp
-	 * and offset of where that nmsg is stored in file to an lmdb database.
-	 * This creates an index file that is used to provide hints to
-	 * applications that want to perform time-based searches for one or
-	 * more nmsgs. It supports only file-based nmsg outputs (binary or
-	 * JSON).
-	 */
-	if (output_tsindex_write_interval > 0) {
-		/* Always write an index for the first one and every
-		 * output_tsindex_write_interval cnt writes thereafter.
-		 */
-		if (output_tsindex_write_cnt == 0 ||
-				(output_tsindex_write_cnt %
-				output_tsindex_write_interval) == 0) {
-
-			key.mv_size = sizeof (ts_idx);
-			ts_idx.tv_sec = whit->nmsg.hdr.ts.tv_sec;
-			ts_idx.tv_nsec = whit->nmsg.hdr.ts.tv_nsec;
-			key.mv_data = &ts_idx;
-
-			data.mv_size = sizeof (off_t);
-			data.mv_data = &offset;
-
-			/* Add a key/data pair. Duplicate keys (timestamps) are
-			 * ignored, we only save the first observed
-			 * timestamp/offset. This provides the desired behavior
-			 * of being able to quickly locate the first instance
-			 * of a key, not the last.
-			 */
-			rc = mdb_put(mdb_txn, mdb_dbi, &key, &data,
-					MDB_NOOVERWRITE);
-			if (rc != MDB_KEYEXIST && rc != 0) {
-				out_error("cannot write timestamp index: %s\n",
-						mdb_strerror(rc));
-				goto done;
-			}
-
-			/* Always commit the first transaction; commit
-			 * subsequent transactions to disk no more than once
-			 * per second.
-			 */
-			if (ts_idx_prev.tv_sec == 0 ||
-					ts_idx_prev.tv_sec < ts_idx.tv_sec) {
-				rc = mdb_txn_commit(mdb_txn);
-				if (rc != 0) {
-					out_error("cannot commit lmdb txn: %s\n",
-							mdb_strerror(rc));
-					goto done;
-				}
-				rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn);
-				if (rc != 0) {
-					axa_error_msg("mdb_txn_begin(): %s",
-							mdb_strerror(rc));
-					exit(EX_SOFTWARE);
-				}
-				ts_idx_prev.tv_sec = ts_idx.tv_sec;
-			}
-		}
-		output_tsindex_write_cnt++;
-	}
-done:
 	nmsg_message_destroy(&msg);
 	if (time_out_flush.tv_sec == 0)
 		gettimeofday(&time_out_flush, NULL);

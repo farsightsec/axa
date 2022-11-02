@@ -1,7 +1,8 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2022 DomainTools LLC
+ *  Copyright (c) 2014-2019,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,13 +22,17 @@
 /* extern: output.c */
 extern bool out_bar_on;
 extern bool nmsg_zlib;
-extern uint output_tsindex_write_interval;
 
 /* extern: axalib/open_nmsg_out.c */
 extern bool axa_out_file_append;
+extern bool axa_kickfile;
+extern struct axa_kickfile *axa_kf;
 
 /* extern: server.c */
 extern axa_client_t client;
+
+/* extern: axalib/client_config.c */
+extern bool axa_config_file_found;
 
 /* extern signal.c */
 extern int terminated;
@@ -35,17 +40,20 @@ extern int give_status;
 
 /* global */
 uint axa_debug;				/* debug level */
-int count;				/* limit to this many */
 unsigned long count_messages_sent = 0;  /* how many messages we have sent */
 unsigned long count_messages_rcvd = 0;  /* how many messages we have received */
-unsigned long count_hits = 0;           /* how many hits received */
+unsigned long count_hits = 0;		/* how many hits received */
 int trace = 0;				/* server-side trace level */
+int count;				/* stop or reopen after this many pkts */
 int initial_count;			/* initial count */
 bool counting = false;			/* true == limiting packets to count */
 bool first_time;			/* true == first time connecting */
+bool output_buffering = true;		/* true == buffer nmsg output */
+unsigned long interval;			/* stop or reopen after this many secs */
+unsigned long interval_prev;		/* the previous interval */
+off_t max_file_size;			/* stop or reopen after output file is this large */
 nmsg_input_t nmsg_input;		/* NMSG input object */
 FILE *fp_pidfile = NULL;		/* PID file FILE pointer */
-FILE *fp_tsindex = NULL;		/* timestamp index file pointer */
 const char *pidfile;			/* PID file file name */
 const char *srvr_addr;			/* SRA/RAD server string */
 axa_mode_t mode;			/* SRA or RAD */
@@ -55,9 +63,6 @@ arg_t *watches = NULL;			/* watches */
 arg_t *anomalies = NULL;		/* anomalies */
 const char *out_addr;			/* output address */
 double sample = 0.0;			/* sampling rate */
-MDB_env *mdb_env;			/* timestamp index db environment */
-MDB_dbi mdb_dbi;			/* timestamp index db handle */
-MDB_txn *mdb_txn;			/* timestamp index transaction handle */
 
 /* private */
 static bool version;
@@ -68,18 +73,10 @@ static struct timeval acct_timer;
 void print_status(void);
 
 static void
-lmdb_shutdown(void)
+kickfile_finish(void)
 {
-	int rc;
-
-	/* try to commit any outstanding data before closing the env */
-	rc = mdb_txn_commit(mdb_txn);
-	if (rc != 0)
-		fprintf(stderr, "lmdb_shutdown() couldn't perform final commit: mdb_txn_commit(): %s\n",
-				mdb_strerror(rc));
-
-	mdb_dbi_close(mdb_env, mdb_dbi);
-	mdb_env_close(mdb_env);
+	axa_kickfile_exec(axa_kf);
+	axa_kickfile_destroy(&axa_kf);
 }
 
 static void AXA_NORETURN AXA_PF(1,2)
@@ -98,7 +95,7 @@ usage(const char *msg, ...)
 	}
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2014-2018 Farsight Security, Inc.\n");
+	printf("(c) 2014-2022 Farsight Security, Inc.\n");
 	printf("Usage: %s [options]\n", axa_prog_name);
 	if (mode == SRA) {
 		printf("-c channel\t\tenable channel\n");
@@ -113,11 +110,12 @@ usage(const char *msg, ...)
 		printf("-w watch\t\tset watch\n");
 	}
 	printf("\n[-A interval]\t\temit acct messages to stdout every interval seconds\n");
-	printf("[-C count]\t\tstop after processing count messages\n");
+	printf("[-C count]\t\tstop or reopen after count packets are received\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
 	printf("[-h]\t\t\tdisplay this help and exit\n");
-	printf("[-i interval]\t\twrite timestamp indexes every interval nmsgs\n");
+	printf("[-I]\t\t\tenter insecure mode for apikey authentication\n");
+	printf("[-k cmd]\t\tmake -C or -T continuous; run cmd on new files\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[-m rate]\t\tsampling %% of packets over 1 second, 0.01 - 100.0\n");
 	printf("[-n file]\t\tspecify AXA config file\n");
@@ -125,9 +123,10 @@ usage(const char *msg, ...)
 	printf("[-P file]\t\twrite PID to pidfile\n");
 	printf("[-p]\t\t\tappend to output file (only valid for file outputs)\n");
 	printf("[-r limit]\t\trate limit to this many packets per second\n");
-	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-t]\t\t\tincrement server trace level, -ttt > -tt > -t\n");
+	printf("[-T secs]\t\tstop or reopen after secs have elapsed\n");
 	printf("[-u]\t\t\tunbuffer nmsg container output\n");
+	printf("[-Z size]\t\tstop or reopen when output file grows past size\n");
 	printf("[-z]\t\t\tenable nmsg zlib container compression\n");
 
 	exit(EX_USAGE);
@@ -143,11 +142,8 @@ main(int argc, char **argv)
 	nmsg_res res;
 	axa_emsg_t emsg;
 	char *p;
-	const char *cp;
 	int i;
-	size_t n = 0;
-	bool output_buffering = true;
-	char out_filename[BUFSIZ], lmdb_filename[BUFSIZ];
+	char out_filename[BUFSIZ];
 
 	axa_set_me(argv[0]);
 	AXA_ASSERT(axa_parse_log_opt(&emsg, "trace,off,stdout"));
@@ -163,8 +159,7 @@ main(int argc, char **argv)
 
 	version = false;
 	pidfile = NULL;
-	while ((i = getopt(argc, argv, "hi:a:pA:VdtOC:r:E:P:S:o:s:c:w:m:n:uz"))
-			!= -1) {
+	while ((i = getopt(argc, argv, "T:k:hIa:pA:VdtOC:r:E:P:o:s:c:w:m:n:uzZ:")) != -1) {
 		switch (i) {
 		case 'A':
 			acct_interval = atoi(optarg);
@@ -187,12 +182,14 @@ main(int argc, char **argv)
 			++axa_debug;
 			break;
 
-		case 'h':
-			usage(NULL);
+		case 'I':
+			client.io.insecure_conn = true;
 			break;
 
-		case 'i':
-			output_tsindex_write_interval = atoi(optarg);
+		case 'k':
+			axa_kickfile = true;
+			axa_kf = axa_zalloc(sizeof (*axa_kf));
+			axa_kf->cmd = optarg;
 			break;
 
 		case 't':
@@ -202,7 +199,7 @@ main(int argc, char **argv)
 		case 'm':
 			sample = atof(optarg);
 			if (sample <= 0.0 || sample > 100.0) {
-				axa_error_msg("invalid \"-a %s\"", optarg);
+				axa_error_msg("invalid \"-m %s\"", optarg);
 				exit(EX_USAGE);
 			}
 			break;
@@ -234,6 +231,18 @@ main(int argc, char **argv)
 			counting = true;
 			break;
 
+		case 'T':
+			interval = strtoul(optarg, &p, 10);
+			if (*optarg == '\0'
+			    || *p != '\0'
+			    || interval < 1) {
+				axa_error_msg("invalid \"-T %s\"", optarg);
+				exit(EX_USAGE);
+			}
+			gettimeofday(&now, NULL);
+			interval_prev = now.tv_sec - (now.tv_sec % interval);
+			break;
+
 		case 'r':
 			rlimit = strtoul(optarg, &p, 10);
 			if (*optarg == '\0'
@@ -245,12 +254,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'E':
-			if (axa_tls_cipher_list(&emsg, optarg) == NULL)
-				axa_error_msg("%s", emsg.c);
-			break;
-
-		case 'S':
-			if (!axa_tls_certs_dir(&emsg, optarg))
+			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
 				axa_error_msg("%s", emsg.c);
 			break;
 
@@ -283,9 +287,21 @@ main(int argc, char **argv)
 			output_buffering = false;
 			break;
 
+		case 'Z':
+			max_file_size = strtoul(optarg, &p, 10);
+			if (*optarg == '\0'
+			    || *p != '\0'
+			    || max_file_size < 1) {
+				axa_error_msg("invalid \"-Z %s\"", optarg);
+				exit(EX_USAGE);
+			}
+			break;
+
 		case 'z':
 			nmsg_zlib = true;
 			break;
+
+		case 'h':
 		default:
 			usage(NULL);
 		}
@@ -310,15 +326,22 @@ main(int argc, char **argv)
 		    && anomalies == NULL)
 			exit(0);
 	}
-	if (srvr_addr == NULL)
-		usage("server not specified with -s");
-	if (out_addr == NULL)
-		usage("output not specified with -o");
-	if (watches == NULL)
-		usage("no watches specified with -w");
+	if ((count != 0 && (interval != 0 || max_file_size != 0)) ||
+	    (interval != 0 && (count != 0 || max_file_size != 0))) {
+		usage("can't specify \"-C\" and \"-T\" and/or \"-Z\"");
+	}
+	if (srvr_addr == NULL) {
+		usage("server not specified with \"-s\"");
+	}
+	if (out_addr == NULL) {
+		usage("output not specified with \"-o\"");
+	}
+	if (watches == NULL) {
+		usage("no watches specified with \"-w\"");
+	}
 	if (mode == RAD) {
 		if (anomalies == NULL)
-			usage("anomalies specified with -a");
+			usage("anomalies specified with \"-a\"");
 		if (chs != NULL) {
 			axa_error_msg("\"-c %s\" not allowed in RAD mode",
 					chs->c);
@@ -339,10 +362,19 @@ main(int argc, char **argv)
 			exit(0);
 		}
 	}
+	if (axa_kickfile == true)
+		if (count == 0 && interval == 0 && max_file_size == 0)
+			usage("\"-k\" needs \"-C\" or \"-T\" or \"-Z\"");
 
 	if (!axa_load_client_config(&emsg, config_file)) {
+		if (axa_config_file_found == false) {
+			if (axa_debug != 0)
+				axa_error_msg("can't load config file: %s", emsg.c);
+		}
+		else {
 			axa_error_msg("can't load config file: %s", emsg.c);
 			exit(EXIT_FAILURE);
+		}
 	}
 
 	signal(SIGPIPE, SIG_IGN);
@@ -353,11 +385,11 @@ main(int argc, char **argv)
 	signal(SIGXFSZ, SIG_IGN);
 #endif
 #ifdef SIGINFO
-        signal(SIGINFO, siginfo);
+	signal(SIGINFO, siginfo);
 #endif
 	/* When appending, demand that the output file exists. */
 	if (axa_out_file_append) {
-		n = strlcpy(out_filename, strrchr(out_addr, ':') + 1,
+		strlcpy(out_filename, strrchr(out_addr, ':') + 1,
 				sizeof (out_filename));
 
 		if (access(out_filename, F_OK) == -1) {
@@ -388,108 +420,8 @@ main(int argc, char **argv)
 		pidfile_write();
 	}
 
-	if (output_tsindex_write_interval > 0) {
-		int rc = 0, pagesize = 0;
-		bool idx_exists = false;
-
-		/* Timestamp indexing requires unbuffered filesystem writes. */
-		if (output_buffering == true) {
-			axa_error_msg("can't store timestamp indexes when buffering output (need `-u`)\n");
-			exit(EX_SOFTWARE);
-		}
-
-		n = strlcpy(lmdb_filename, strrchr(out_addr, ':') + 1,
-				sizeof (lmdb_filename));
-		strlcpy(lmdb_filename + n, ".mdb", sizeof (lmdb_filename) - n);
-
-		/* Try to find a tsindex file that would correspond to the
-		 * name of the data file.
-		 */
-		rc = access(lmdb_filename, F_OK);
-		if (rc == 0)
-			idx_exists = true;
-		else if (rc == -1 && errno != ENOENT) {
-			axa_error_msg("can't access: \"%s\": %s\n",
-					lmdb_filename, strerror(errno));
-			exit(EX_SOFTWARE);
-		}
-
-		/* Timestamp indexing + appending requires a previously created
-		 * tsindex file (which should correspond in name to the output
-		 * file being appended to).
-		 */
-		if (axa_out_file_append == true) {
-			if (idx_exists == true) {
-                                if (axa_debug > 0)
-				        axa_trace_msg("found tsindex file \"%s\"\n", lmdb_filename);
-			} else {
-				axa_error_msg("tsindex mode expected to find tsindex file \"%s\": %s\n",
-					lmdb_filename, strerror(errno));
-				exit(EX_SOFTWARE);
-			}
-		}
-		else {
-			/* This orphaned tsindex file is clobbered lest we write
-			 * to it and end up mixing with timestamps and offsets
-			 * from a previous unrelated session.
-			 */
-			if (idx_exists) {
-				if (unlink(lmdb_filename) == -1) {
-					axa_error_msg("found orphan tsindex file \"%s\" but can't delete it: %s\n",
-							lmdb_filename, strerror(errno));
-					exit(EX_SOFTWARE);
-				}
-				else if (axa_debug > 0)
-					axa_trace_msg("found and deleted orphan tsindex file \"%s\"\n",
-							lmdb_filename);
-			}
-		}
-
-		rc = mdb_env_create(&mdb_env);
-		if (rc != 0) {
-			axa_error_msg("mdb_env_create(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-		pagesize = getpagesize();
-		/* lmdb is a memory mapped database. The mapsize should be a
-		 * multiple of the OS page size (usually 4,096 bytes). The
-		 * size of the memory map is also the maximum size of the
-		 * database. As such, we should periodically check to see if
-		 * we're close to running out of space and resize.
-		 */
-		rc = mdb_env_set_mapsize(mdb_env, pagesize * 2560);
-		if (rc != 0) {
-			axa_error_msg("mdb_env_set_mapsize(): %s",
-					mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-
-		if (axa_debug != 0)
-			axa_trace_msg("writing timestamp offsets to %s every %u nmsgs\n",
-					lmdb_filename,
-					output_tsindex_write_interval);
-		rc = mdb_env_open(mdb_env, lmdb_filename,
-				MDB_NOSUBDIR, 0664);
-		if (rc != 0) {
-			axa_error_msg("mdb_env_open(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-		rc = mdb_txn_begin(mdb_env, NULL, 0, &mdb_txn);
-		if (rc != 0) {
-			axa_error_msg("mdb_txn_begin(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-		rc = mdb_dbi_open(mdb_txn, NULL, MDB_INTEGERKEY, &mdb_dbi);
-		if (rc != 0) {
-			axa_error_msg("mdb_dbi_open(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-		rc = mdb_set_compare(mdb_txn, mdb_dbi, axa_tsi_mdb_cmp);
-		if (rc != 0) {
-			axa_error_msg("mdb_set_compare(): %s", mdb_strerror(rc));
-			exit(EX_SOFTWARE);
-		}
-		atexit(lmdb_shutdown);
+	if (axa_kickfile) {
+		atexit(kickfile_finish);
 	}
 
 	/*
@@ -499,10 +431,10 @@ main(int argc, char **argv)
 	for (;;) {
 		if (terminated != 0)
 			stop(terminated);
-                if (give_status != 0) {
-                        give_status = 0;
-                        print_status();
-                }
+		if (give_status != 0) {
+			give_status = 0;
+			print_status();
+		}
 
 		/* (Re)connect to the server if it is time. */
 		if (!AXA_CLIENT_CONNECTED(&client)) {
@@ -541,18 +473,10 @@ main(int argc, char **argv)
 				acct_timer.tv_sec = now.tv_sec;
 			}
 		}
-		switch (axa_io_wait(&emsg, &client.io, OUT_FLUSH_MS,
-				    true, true)) {
+
+		switch (axa_io_wait(&emsg, &client.io, OUT_FLUSH_MS, true)) {
 		case AXA_IO_ERR:
 			disconnect(true, "%s", emsg.c);
-			break;
-		case AXA_IO_TUNERR:
-			for (;;) {
-				cp = axa_io_tunerr(&client.io);
-				if (cp == NULL)
-					break;
-				axa_error_msg("%s", cp);
-			}
 			break;
 		case AXA_IO_BUSY:
 			break;
@@ -609,16 +533,16 @@ stop(int s)
 
 void print_status(void)
 {
-        printf("%s ", mode == SRA ? "sra" : "rad");
-        if (!AXA_CLIENT_CONNECTED(&client))
-                printf("NOT-");
-        printf("connected, ");
+	printf("%s ", mode == SRA ? "sra" : "rad");
+	if (!AXA_CLIENT_CONNECTED(&client))
+		printf("NOT-");
+	printf("connected, ");
 
-        /* print with the proper pluralization */
-        printf("sent %lu message%s, received %lu message%s, %lu hit%s\n",
-               count_messages_sent, count_messages_sent != 1 ? "s" : "",
-               count_messages_rcvd, count_messages_rcvd != 1 ? "s" : "",
-               count_hits, count_hits != 1 ? "s" : "");
+	/* print with the proper pluralization */
+	printf("sent %lu message%s, received %lu message%s, %lu hit%s\n",
+	       count_messages_sent, count_messages_sent != 1 ? "s" : "",
+	       count_messages_rcvd, count_messages_rcvd != 1 ? "s" : "",
+	       count_hits, count_hits != 1 ? "s" : "");
 }
 
 

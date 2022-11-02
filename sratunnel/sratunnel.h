@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 #include <axa/axa_endian.h>
 #include <axa/fields.h>
 #include <axa/open_nmsg_out.h>
-#include <axa/mdb.h>
+#include <axa/kickfile.h>
 
 #include <nmsg.h>
 #include <nmsg/base/defs.h>
@@ -44,8 +44,6 @@
 #include <sysexits.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <lmdb.h>
 
 #define OUT_FLUSH_MS    10		/* flush output this often */
 

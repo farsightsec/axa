@@ -1,4 +1,5 @@
-.\" Copyright (c) 2014-2018 by Farsight Security, Inc.
+.\" Copyright (c) 2022 DomainTools LLC
+.\" Copyright (c) 2014-2021 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
@@ -20,7 +21,7 @@
 .Nd Realtime Anomaly Detection (RAD) Tunnel
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhOptVz
+.Op Fl dhIOptVz
 .Fl a Ar anomaly
 .Fl o Ar out-addr
 .Fl s Ar RAD-server
@@ -29,21 +30,22 @@
 .Op Fl A Ar interval
 .Op Fl C Ar count
 .Op Fl E Ar ciphers
-.Op Fl i Ar interval
+.Op Fl k Ar cmd
 .Fl m Ar sampling-rate
 .Op Fl n Ar config-file
 .Op Fl P Ar pidfile
 .Op Fl r Ar rate-limit
-.Op Fl S Ar certs
+.Op Fl T Ar secs
+.Op Fl Z Ar size
 .br
 .Sh DESCRIPTION
-.Nm Radtunnel
+.Nm radtunnel
 transfers selected Security Information Exchange (SIE) data
 from Real-time Anomaly Detector (RAD) servers to the local network.
 The connection to the server is created and restored after problems
 with binary exponential delays between retries.
 .Pp
-.Nm Radtunnel
+.Nm radtunnel
 is a tool for tunneling SIE data using the Advanced Exchange Access (AXA)
 protocol. It also demonstrates the use of the AXA helper library,
 .Pa libaxa.a .
@@ -63,42 +65,52 @@ There must be at least one
 .Fl a
 in RAD mode.
 .It Fl C Ar count
-stops
+stop
 .Nm
-after
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output after
 .Ar count
-SIE messages and raw IP packets.
+payloads have been processed.
 .It Fl d
 enable debugging reports or increase them after the first
 .Fl d .
 .It Fl E Ar ciphers
-specifies a list ciphers for TLS connections.
+specifies a list ciphers for apikey connections.
 .It Fl h
 display options summary.
-.It Fl i Ar interval
-enables timestamp indexing every
-.Ar interval
-nmsgs. This mode writes to a pre-existing (or creates an) lmdb-backed key-value
-store of nmsg timestamp/file offset pairs. The keys are the epoch portion of the
-nmsg timestamp for which the offsets refer back to. It is intended to be used
-as a hints file to speed subsequent cherry-picking of nmsgs from the nmsg data
-file it backs. It is most useful when the corresponding nmsg data file is
-anticipated to grow large.
-
-This mode may only be used with nmsg file-based outputs and, because
+.It Fl I
+enables insecure mode for apikey authentication. When enabled,
+client connections will not be performed via TLS.
+.It Fl k Ar cmd
+enables
+.Cm kicker
+mode and makes
+.Fl C
+,
+.Fl T
+or
+.Fl Z
+continuous. In this mode output file names are suffixed with a timestamp and
 .Nm
-needs to know when filesystem writes have occurred, it must be run in
-unbuffered mode (
-.Fl u
-). If you specify the append option (
-.Fl p
-), it is assumed you are continuing a previous session so you must also specify
-a previously created nmsg file which must also have a corresponding previously
-created timestamp index mdb file.
+runs continuously, rotating output files as payload counts or the output file size
+exceeds a threshold or time intervals expire.
+.Ar cmd
+specifies the command to run on output files after rotation. If
+.Ar cmd
+is set to the empty string
+.Cm '' ,
+then no command is executed and only file rotation is performed.
 
-It will always write an index for the first nmsg and every
-.Ar interval
-nmsgs thereafter.
+This option must be combined with either
+.Fl C
+,
+.Fl T
+or
+.Fl Z .
+Only nmsg file-based outputs are supported.
+
 .It Fl m Ar sampling-rate
 specifies the sampling rate. Sets the percentage (between 0.1 and 100.0) that
 the RAD server will send.
@@ -110,7 +122,7 @@ enable a spinning bar output indicator on stdout.
 append output to specified file (only valid for nmsg file-based outputs).
 .It Fl o Ar out-addr
 specifies the destination of the SIE data.
-It can be forwarded as NMSG messages to a UDP or TCP port
+It can be forwarded as nmsg messages to a UDP or TCP port
 or as raw IP packets to a file, FIFO, or network interface.
 .ds CT
 .so fwd.man
@@ -122,10 +134,6 @@ The file will be deleted upon program exit.
 tells the server to send at most
 .Ar rate-limit
 SIE messages and raw IP packets per second.
-.It Fl S Ar certs
-overrides the default directory containing SSL certificates and keys.
-Its default is
-.Pa @CONFDIR@/certs .
 .It Fl s Ar server
 specifies the server that is the source of the SIE data.
 The server can be specified with any of the following:
@@ -134,34 +142,24 @@ The server can be specified with any of the following:
 Connect to a server using an alias shortcut mnemonic (see FILES section for
 more information).
 .It Sm off Ar apikey: Ar <users_apikey>@ Ar host,port Sm on
-Identify and authenticate the user via a Farsight Security provided apikey.
-The connection will be encrypted using the same TLS semantics as the tls
-transport below.
-.It Sm off Ar ssh: Oo Ar user@ Oc Ar host Sm on
-The server will be contacted using the ssh protocol.
-These connections usually use default ssh
-.Xr ssh_config 1
-files to specify the required public keys
-and optionally the fully qualified host name and user names associated
-with the public key.
-Use
-.Fl dddd
-to diagnose ssh connection problems.
+Identify and authenticate the user via a Farsight Security provided apikey. The connection will be encrypted using the TLS protocol.
 .It Sm off Ar tcp: Ar user@ Ar host,port Sm on
 The connection will be made with the host name or IP address and port number
 using clear text over TCP/IP.
 .It Sm off Ar unix: Ar user@ Ar /ud/socket Sm on
 This connection uses a UNIX domain socket connected to a local server.
-.It Ar tls:cert,key@host,port
-Use the TLS protocol with the certificate in the
-.Ar cert
-file and the private key in the
-.Ar key
-file.
-If not absolute, the files are in the
-.Fl S Ar certs
-directory.
 .El
+.It Fl T Ar secs
+stop
+.Nm
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output on a time interval modulo the
+.Ar secs
+parameter. For example,
+.Ar -t 3600
+means an hour after started or reopened.
 .It Fl t
 enable tracing reports on the server or increase them after the first
 .Fl t .
@@ -186,24 +184,35 @@ and
 dns
 watches to indicate addresses or domains that are not used exclusively.
 .It Fl z
-enable NMSG zlib container compression.
+enable nmsg zlib container compression.
+.It Fl Z Ar size
+stop
+.Nm
+or (with
+.Fl k
+specified)
+close the current output and reopen a new output after the output file meets
+or exceeds
+.Ar size .
+This mode may only be used with file-based outputs. Additionally,
+because nmsg-based file outputs are by default buffered, it is
+recommended when writing to one that this option be used in
+unbuffered mode (
+.Fl u
+).
 .El
 .Sh EXAMPLES
-The following connects to a RAD server at example.com, loads the Brand Sentry
-module looking for the brand "farsight", and sends all anomaly hit NMSGs to
+The following connects to a RAD server at example.com, loads the Brand
+module looking for the brand "farsight", and sends all anomaly hit nmsgs to
 the local UDP port 8000 on 127.0.0.1:
 .Bd -literal -offset 4n
 radtunnel -s apikey:<yourapikey>@example.com,1012 -o nmsg:127.1,8000 \\
-	-w dns=*. -a brand_sentry brand=farsight
+	-w dns=*. -a brand brand=farsight
 .Ed
 .Sh FILES
 .Bl -tag -width config
-.It Ar certs
-is the directory set with
-.Fl S
-that contains TLS certificate and key files.
 .It Ar ~/.axa/config
-is a required file that contains AXA client configuration data. Currently supported are connection
+contains AXA client configuration data. Currently supported are connection
 aliases that provide the user with a facility to create shortcut mnemonics to
 specify the RAD server connection string. For example:
 .Bd -literal -offset 4n
@@ -225,18 +234,6 @@ information such as apikeys, it must not be readable or writeable to anybody
 other than "owner" or
 .Nm radtunnel
 will not load.
-.It Ar ~/.ssh/config
-is the
-.Xr ssh_config 5
-configuration file used with
-.Ar connect\ ssh:...
-connections.
-"Host" stanzas in the file can simplify connections to AXA servers.
-.It Ar foo.mdb
-is an lmdb key-value store containing nmsg timestamp/file offset pairs (a
-"tsindex" file). See the
-.Fl i
-option for details.
 .El
 .Sh ENVIRONMENT VARIABLES
 If set, AXACONF specifies the AXA configuration directory instead of the

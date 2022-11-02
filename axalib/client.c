@@ -1,7 +1,8 @@
 /*
  * radd, radtool, and sratool common client code
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2022 DomainTools LLC
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,8 +22,6 @@
 #include <axa/strbuf.h>
 #include <axa/json.h>
 #include <axa/yajl_shortcuts.h>
-
-#include <libmy/ubuf-pb.h>		/* query protobuf version */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -123,122 +122,6 @@ axa_client_close(axa_client_t *client)
 	client->clnt_id = 0;
 }
 
-static bool
-connect_ssh(axa_emsg_t *emsg, axa_client_t *client,
-	    bool nonblock, bool ssh_debug)
-{
-	int in_fildes[2], out_fildes[2], err_fildes[2];
-
-	if (0 > pipe(in_fildes)) {
-		axa_pemsg(emsg, "pipe(%s): %s",
-			  client->io.label, strerror(errno));
-		return (false);
-	}
-	if (0 > pipe(out_fildes)) {
-		axa_pemsg(emsg, "pipe(%s): %s",
-			  client->io.label, strerror(errno));
-		close(in_fildes[0]);
-		close(in_fildes[1]);
-		return (false);
-	}
-	if (0 > pipe(err_fildes)) {
-		axa_pemsg(emsg, "pipe(%s): %s",
-			  client->io.label, strerror(errno));
-		close(in_fildes[0]);
-		close(in_fildes[1]);
-		close(out_fildes[0]);
-		close(out_fildes[1]);
-		return (false);
-	}
-	client->io.tun_pid = fork();
-	if (client->io.tun_pid == -1) {
-		axa_pemsg(emsg, "ssh fork(%s): %s",
-			  client->io.label, strerror(errno));
-		close(in_fildes[0]);
-		close(in_fildes[1]);
-		close(out_fildes[0]);
-		close(out_fildes[1]);
-		close(err_fildes[0]);
-		close(err_fildes[1]);
-		return (false);
-	}
-	if (client->io.tun_pid == 0) {
-		/* Run ssh in the child process. */
-		signal(SIGPIPE, SIG_IGN);
-		signal(SIGHUP, SIG_IGN);
-		signal(SIGTERM, SIG_IGN);
-		signal(SIGINT, SIG_IGN);
-#ifdef SIGXFSZ
-		signal(SIGXFSZ, SIG_IGN);
-#endif
-
-		if (0 > dup2(in_fildes[1], STDOUT_FILENO)
-		    || 0 > dup2(out_fildes[0], STDIN_FILENO)
-		    || 0 > dup2(err_fildes[1], STDERR_FILENO)) {
-			axa_error_msg("ssh dup2(%s): %s",
-				      client->io.label, strerror(errno));
-			exit(EX_OSERR);
-		}
-		close(in_fildes[0]);
-		close(out_fildes[1]);
-		close(err_fildes[0]);
-
-		/*
-		 * -v	only when debugging is enabled
-		 * -T	no pseudo-tty
-		 * -a	disable forwarding of the authentication agent
-		 *	    connection
-		 * -x	no X11 forwarding
-		 * -oBatchMode=yes  no interactive passphrase/password querying
-		 * -oStrictHostKeyChecking=no do not look for the server's key
-		 *	    in the known_hosts file and so do not worry about
-		 *	    men in the middle to prevent user interaction when
-		 *	    the server's key changes
-		 * -oCheckHostIP=no do not check for the server's IP address
-		 *	    in the known_hosts file
-		 * -enone for no escape character because we are moving binary
-		 */
-		if (ssh_debug)
-			execlp("ssh", "ssh", "-v",
-			       "-Tax", "-oBatchMode=yes",
-			       "-oStrictHostKeyChecking=no",
-			       "-oCheckHostIP=no",
-			       "-enone",
-			       client->io.addr, NULL);
-		else
-			execlp("ssh", "ssh",
-			       "-Tax", "-oBatchMode=yes",
-			       "-oStrictHostKeyChecking=no",
-			       "-oCheckHostIP=no",
-			       "-enone",
-			       client->io.addr, NULL);
-		axa_error_msg("exec(ssh %s): %s",
-			      client->io.addr, strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	/* Finish setting up links to the ssh child in this the parent. */
-	client->io.i_fd = in_fildes[0];
-	client->io.i_events = AXA_POLL_IN;
-	client->io.o_fd = out_fildes[1];
-	client->io.o_events = 0;
-	client->io.tun_fd = err_fildes[0];
-	close(in_fildes[1]);
-	close(out_fildes[0]);
-	close(err_fildes[1]);
-
-	if (!axa_set_sock(emsg, client->io.i_fd, client->io.label,
-			  0, nonblock)
-	    || !axa_set_sock(emsg, client->io.o_fd, client->io.label,
-			     0, nonblock)
-	    || !axa_set_sock(emsg, client->io.tun_fd, client->io.label,
-			     0, true))  {
-		return (false);
-	}
-
-	return (true);
-}
-
 static axa_connect_result_t
 socket_connect(axa_emsg_t *emsg, axa_client_t *client)
 {
@@ -327,9 +210,8 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 	axa_io_pvers_get(&client->io, &pvers_save);
 	axa_io_pvers_set(&client->io, AXA_P_PVERS1);
 
-	switch (client->io.type) {
-	case AXA_IO_TYPE_UNIX:
-	case AXA_IO_TYPE_TCP:
+	if (client->io.type == AXA_IO_TYPE_UNIX || client->io.type == AXA_IO_TYPE_TCP ||
+			(client->io.type == AXA_IO_TYPE_APIKEY && client->io.insecure_conn)) {
 		connect_result = socket_connect(emsg, client);
 		if (connect_result != AXA_CONNECT_DONE) {
 			axa_io_pvers_set(&client->io, pvers_save);
@@ -353,45 +235,8 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_USER);
 		}
-		break;
 
-	case AXA_IO_TYPE_SSH:
-		if (!AXA_CLIENT_OPENED(client)) {
-			if (!connect_ssh(emsg, client, client->io.nonblock,
-					 client->io.tun_debug)) {
-				axa_client_backoff_max(client);
-				axa_io_pvers_set(&client->io, pvers_save);
-				return (AXA_CONNECT_ERR);
-			}
-			client->io.connected_tcp = true;
-			client->io.connected = true;
-		}
-		break;
-
-	case AXA_IO_TYPE_TLS:
-		connect_result = socket_connect(emsg, client);
-		if (connect_result != AXA_CONNECT_DONE) {
-			axa_io_pvers_set(&client->io, pvers_save);
-			return (connect_result);
-		}
-		switch (axa_tls_start(emsg, &client->io)) {
-		case AXA_IO_OK:
-			break;
-		case AXA_IO_ERR:
-			axa_client_backoff_max(client);
-			axa_io_pvers_set(&client->io, pvers_save);
-			return (AXA_CONNECT_ERR);
-		case AXA_IO_BUSY:
-			AXA_ASSERT(client->io.nonblock);
-			axa_io_pvers_set(&client->io, pvers_save);
-			return (connect_result);
-		case AXA_IO_TUNERR:
-		case AXA_IO_KEEPALIVE:
-			AXA_FAIL("impossible axa_tls_start() result");
-		}
-		break;
-
-	case AXA_IO_TYPE_APIKEY:
+	} else if (client->io.type == AXA_IO_TYPE_APIKEY) {
 		connect_result = socket_connect(emsg, client);
 		if (connect_result != AXA_CONNECT_DONE) {
 			axa_io_pvers_set(&client->io, pvers_save);
@@ -413,7 +258,6 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 				     (axa_p_body_t *)&client->io.user);
 			axa_io_pvers_set(&client->io, pvers_save);
 			return (AXA_CONNECT_USER);
-			break;
 		case AXA_IO_ERR:
 			axa_client_backoff_max(client);
 			axa_io_pvers_set(&client->io, pvers_save);
@@ -422,14 +266,11 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 			AXA_ASSERT(client->io.nonblock);
 			axa_io_pvers_set(&client->io, pvers_save);
 			return (connect_result);
-		case AXA_IO_TUNERR:
 		case AXA_IO_KEEPALIVE:
 			AXA_FAIL("impossible axa_apikey_start() result");
 		}
-		break;
 
-	case AXA_IO_TYPE_UNKN:
-	default:
+	} else  {
 		axa_pemsg(emsg, "impossible client type");
 		axa_client_backoff_max(client);
 		axa_io_pvers_set(&client->io, pvers_save);
@@ -450,7 +291,7 @@ axa_client_connect(axa_emsg_t *emsg, axa_client_t *client)
 
 axa_connect_result_t
 axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
-		bool is_rad, bool tun_debug, int bufsize, bool nonblock)
+		bool is_rad, int bufsize, bool nonblock)
 {
 	struct addrinfo *ai;
 	const char *p;
@@ -460,7 +301,6 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 
 	client->io.is_rad = is_rad;
 	client->io.is_client = true;
-	client->io.tun_debug = tun_debug;
 	client->io.nonblock = nonblock;
 	client->io.bufsize = bufsize;
 	gettimeofday(&client->retry, NULL);
@@ -495,16 +335,14 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 	} else {
 		i = p - addr;
 		/* Collect the user name from protocols that provide it. */
-		if (client->io.type != AXA_IO_TYPE_TLS) {
-			if (i >= (int)sizeof(client->io.user.name)) {
-				axa_pemsg(emsg,
-					  "server user name \"%.*s\" too long",
-					  i, addr);
-				axa_client_backoff_max(client);
-				return (AXA_CONNECT_ERR);
-			}
-			memcpy(client->io.user.name, addr, i);
+		if (i >= (int)sizeof(client->io.user.name)) {
+			axa_pemsg(emsg,
+				  "server user name \"%.*s\" too long",
+				  i, addr);
+			axa_client_backoff_max(client);
+			return (AXA_CONNECT_ERR);
 		}
+		memcpy(client->io.user.name, addr, i);
 		++i;
 	}
 	if (addr[0] == '-' || addr[0] == '\0'
@@ -528,26 +366,6 @@ axa_client_open(axa_emsg_t *emsg, axa_client_t *client, const char *addr,
 
 	case AXA_IO_TYPE_TCP:
 		client->io.addr = axa_strdup(addr+i);
-		client->io.label = axa_strdup(client->io.addr);
-		if (!axa_get_srvr(emsg, client->io.addr, false, &ai)) {
-			axa_client_backoff(client);
-			return (AXA_CONNECT_ERR);
-		}
-		memcpy(&client->io.su.sa, ai->ai_addr, ai->ai_addrlen);
-		freeaddrinfo(ai);
-		break;
-
-	case AXA_IO_TYPE_SSH:
-		client->io.addr = axa_strdup(addr);
-		client->io.label = axa_strdup(addr);
-		break;
-
-	case AXA_IO_TYPE_TLS:
-		if (!axa_tls_parse(emsg, &client->io.cert_file,
-				   &client->io.key_file,
-				   &client->io.addr,
-				   addr))
-			return (AXA_CONNECT_ERR);
 		client->io.label = axa_strdup(client->io.addr);
 		if (!axa_get_srvr(emsg, client->io.addr, false, &ai)) {
 			axa_client_backoff(client);
@@ -599,7 +417,6 @@ axa_client_send(axa_emsg_t *emsg, axa_client_t *client,
 		return (false);
 	case AXA_IO_ERR:
 		return (false);
-	case AXA_IO_TUNERR:
 	case AXA_IO_KEEPALIVE:
 	default:
 		AXA_FAIL("impossible axa_send() result");
@@ -683,8 +500,6 @@ axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin,
 	add_yajl_integer(g, yajl_version());
 	add_yajl_string(g, "OpenSSL");
 	add_yajl_string(g, SSLeay_version(SSLEAY_VERSION));
-	add_yajl_string(g, "libprotobuf-c");
-	add_yajl_string(g, PROTOBUF_C_VERSION);
 
 	add_yajl_string(g, "AXA protocol");
 	add_yajl_integer(g, client->io.pvers);

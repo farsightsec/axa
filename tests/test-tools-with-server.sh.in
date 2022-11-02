@@ -1,0 +1,73 @@
+#
+# Copyright (c) 2022 DomainTools LLC
+# Copyright (c) 2021 Farsight Security, Inc.
+#
+
+#!/bin/sh
+
+SRATOOL=@builddir@/sratool/sratool
+SRATUNNEL=@builddir@/sratunnel/sratunnel
+DATADIR=@abs_top_srcdir@/tests/tool-tests-data/with-server
+
+#
+# This test requires that a local SRA server be up, listening for new
+# connections on port 9999 and configured with access to a pre-defined
+# test user.
+#
+pgrep srad &> /dev/null
+if [ $? -ne 0 ]; then
+	printf "SRA server doesn't seem to be running, skipping tests.."
+	exit 0
+fi
+
+#
+# Exit on failure
+#
+set -o errexit
+
+printf "001000 test a successful connection to the SRA server\n"
+$SRATOOL -c $DATADIR/001000-connect | grep "OK USER valid"
+
+printf "\n001010 test an unsuccessful connection to the SRA server\n"
+$SRATOOL -c $DATADIR/001010-invalid-username | grep "ERROR USER invalid"
+
+printf "\n001020 test channel listing\n"
+$SRATOOL -c $DATADIR/001020-list | grep "ch"
+
+printf "\n001030 test setting a channel watch\n"
+$SRATOOL -c $DATADIR/001030-set-watch| grep "OK WATCH"
+
+printf "\n001040 test setting a watch on an invalid channel\n"
+$SRATOOL -c $DATADIR/001040-watch-invalid-channel | grep "ERROR WATCH unknown"
+
+printf "\n001050 test watching a channel\n"
+$SRATOOL -c $DATADIR/001050-watch-channel | egrep "OK CHANNEL ON|packet count limit exceeded"
+
+printf "\n001060 test watching a DNS tag\n"
+$SRATOOL -c $DATADIR/001060-watch-dns | egrep "OK CHANNEL ON|packet count limit exceeded"
+
+SRA_SERVER=tcp:valid-user@127.0.0.1,9999
+OUT_FILE=/tmp/sratunnel-test-nmsg.out
+NMSG_FILE=nmsg:file:$OUT_FILE
+NMSG_UDP=nmsg:udp:127.0.0.1,8888
+PID_FILE=/tmp/sratunnel-test.pid
+ARCHIVE_FILE=/tmp/sratunnel-test.tar
+
+printf "\n002000 test a simple sratunnel(1) transfer to a UDP port\n"
+$SRATUNNEL -s $SRA_SERVER -w ch=221 -c 221 -o $NMSG_UDP -C 3 -ddd | grep "OK USER valid"
+
+printf "\n002010 test a simple sratunnel(1) transfer to a nmsg file\n"
+$SRATUNNEL -s $SRA_SERVER -w ch=221 -c 221 -o $NMSG_FILE -C 3 -ddd | grep "OK USER valid"
+grep NMSG $OUT_FILE
+rm $OUT_FILE
+
+printf "\n002020 test the -P (pidfile) option in sratunnel(1)\n"
+$SRATUNNEL -s $SRA_SERVER -w ch=221 -c 221 -o $NMSG_UDP -dd -P $PID_FILE | grep "connected" & sleep 3; kill `cat $PID_FILE`
+
+printf "\n002080 test the -k (kickfile) option in sratunnel(1)\n"
+$SRATUNNEL -s $SRA_SERVER -w ch=221 -c 221 -o $NMSG_FILE -dd -C 1000 -P $PID_FILE -k 'tar uvf '$ARCHIVE_FILE' --remove-files -P' & sleep 1; kill `cat $PID_FILE`
+sleep 1
+test -e $ARCHIVE_FILE
+rm $ARCHIVE_FILE
+
+printf "\nTests concluded without issues.\n"

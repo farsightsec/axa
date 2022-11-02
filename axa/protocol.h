@@ -3,7 +3,7 @@
  *
  * This file is used outside the AXA programs.
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -621,7 +621,7 @@ typedef struct _PK {
 /** Request the output sampling ratio */
 #define	AXA_P_OPT_SAMPLE_SCALE	10000
 /** maximum scaled output sampling ratio */
-#define	AXA_P_OPT_SAMPLE_MAX	(AXA_P_OPT_SAMPLE_SCALE*100)
+#define	AXA_P_OPT_SAMPLE_MAX	(AXA_P_OPT_SAMPLE_SCALE*100.0)
 
 /** Request the TCP buffer size ratio */
 #define	AXA_P_OPT_SNDBUF_REQ	0
@@ -1030,17 +1030,6 @@ typedef union {
 
 	uint8_t		b[1];		/**< ... */
 } axa_p_body_t;
-
-/**< @cond */
-/* Handshake from the program run by sshd, axaproxy, to srad or radd. */
-typedef struct {			/**< not packed because it is local */
-	char		magic[16];
-#	 define AXA_PROXY_SSH_MAGIC "PROXY_SSH_0"
-	axa_socku_t	su;
-	char		peer[INET6_ADDRSTRLEN];
-	axa_p_user_t	user;
-} axa_proxy_ssh_t;
-/**< @endcond */
 
 /**@}*/
 

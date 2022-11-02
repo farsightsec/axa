@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) send, receive, or validate SRA data
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -280,24 +280,14 @@ extern bool axa_ck_body(axa_emsg_t *emsg, axa_p_op_t op,
  *  AXA I/O type prefix: UNIX domain socket
  *  unix:/path/to/socket
  */
-#define	AXA_IO_TYPE_UNIX_STR "unix"	
+#define	AXA_IO_TYPE_UNIX_STR "unix"
 /**
  *  AXA I/O type prefix: TCP connection
  *  tcp:hostname,port
  */
 #define AXA_IO_TYPE_TCP_STR "tcp"
 /**
- *  AXA I/O type prefix: ssh connection
- *  ssh:[user\@]host
- */
-#define AXA_IO_TYPE_SSH_STR "ssh"
-/**
- *  AXA I/O type prefix: tls connection
- *  tls:certfile,keyfile[,certdir]\@host[,port]
- */
-#define AXA_IO_TYPE_TLS_STR "tls"
-/**
- *  AXA I/O type prefix: apikey/tls
+ *  AXA I/O type prefix: apikey
  *  apikey:hostname,port
  */
 #define AXA_IO_TYPE_APIKEY_STR "apikey"
@@ -307,8 +297,6 @@ typedef enum {
 	AXA_IO_TYPE_UNKN = 0,		/**< invalid */
 	AXA_IO_TYPE_UNIX,		/**< UNIX domain socket */
 	AXA_IO_TYPE_TCP,		/**< TCP/IP socket */
-	AXA_IO_TYPE_SSH,		/**< ssh pipe */
-	AXA_IO_TYPE_TLS,		/**< TLS connection */
 	AXA_IO_TYPE_APIKEY		/**< apikey/TLS */
 } axa_io_type_t;
 
@@ -332,29 +320,13 @@ typedef struct axa_io {
 	int		o_fd;		/**< output from server */
 	int		o_events;	/**< needed poll(2) events */
 
-	char		*cert_file;	/**< TLS certificate file */
-	char		*key_file;	/**< TLS key file name */
 	SSL		*ssl;		/**< TLS OpenSSL ssl */
-	char		*tls_info;	/**< TLS cipher, compression, etc. */
+	char		*openssl_info;	/**< TLS cipher, compression, etc. */
 
 	axa_p_user_t    user;           /**< TLS, TCP or UNIX domain socket */
 	axa_p_user_t    apikey;         /**< apikey */
 	bool		connected_tcp;	/**< false if connect() in progress */
 	bool		connected;	/**< TLS or other connection made */
-
-	/**
-	 *  In an AXA client using an ssh pipe and so type==CLIENT_TYPE_SSH_STR,
-	 *  this FD gets error messages from ssh.  In a server, it keeps the
-	 *  sshd process from closing the sshd-ssh connection.
-	 */
-	int		tun_fd;
-	pid_t		tun_pid;	/**< ssh PID */
-	bool		tun_debug;	/**< enable tunnel debugging */
-
-	char		*tun_buf;	/**< transport error or trace buffer */
-	size_t		tun_buf_size;	/**< length of tun_buf */
-	size_t		tun_buf_len;	/**< data data in tun_buf */
-	size_t		tun_buf_bol;	/**< start of next line in tun_buf */
 
 	axa_p_pvers_t	pvers;		/**< protocol version for this server */
 
@@ -373,6 +345,7 @@ typedef struct axa_io {
 	size_t		send_bytes;	/**< number of unsent bytes */
 
 	struct timeval	alive;		/**< AXA protocol keepalive timer */
+	bool		insecure_conn;	/**< do not use TLS */
 } axa_io_t;
 
 /**
@@ -437,7 +410,6 @@ typedef enum {
 	AXA_IO_ERR,			/**< print emsg */
 	AXA_IO_OK,			/**< operation finished */
 	AXA_IO_BUSY,			/**< incomplete; poll() & try again */
-	AXA_IO_TUNERR,			/**< get text via axa_io_tunerr() */
 	AXA_IO_KEEPALIVE,		/**< need to send keepalive NOP */
 /*	AXA_IO_AUTHERR,			**< authentication error */
 } axa_io_result_t;
@@ -520,12 +492,11 @@ extern void axa_send_save(axa_io_t *io, size_t done, const axa_p_hdr_t *hdr,
  *  \param[in] io address of the AXA I/O context
  *  \param[in] wait_ms wait no longer than this many milliseconds
  *  \param[in] keepalive true to wake up to send a keep-alive
- *  \param[in] tun true to pay attention if possible to tunnel messages
  *
  *  \retval one of #axa_io_result_t
  */
 extern axa_io_result_t axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
-				      time_t wait_ms, bool keepalive, bool tun);
+				      time_t wait_ms, bool keepalive);
 
 /**
  *  Wait for and read an AXA message from the server into the client context.
@@ -542,41 +513,22 @@ extern axa_io_result_t axa_io_wait(axa_emsg_t *emsg, axa_io_t *io,
 extern axa_io_result_t axa_input(axa_emsg_t *emsg, axa_io_t *io,
 				    time_t wait_ms);
 
-/**
- *  Get error or debugging messages from the tunnel (e.g. ssh).
- *
- *  \param[in] io address of the AXA I/O context
- *
- *  \retval NULL or pointer to '\0' terminated text
- */
-extern const char *axa_io_tunerr(axa_io_t *io);
-
-
 /** @cond */
 
 extern axa_io_type_t axa_io_type_parse(const char **addr);
 extern const char *axa_io_type_to_str(axa_io_type_t type);
 
 /* Internal functions to clean up TLS when shutting down a connection. */
-extern void axa_tls_cleanup(void);
 extern void axa_apikey_cleanup(void);
-
-/* Internal function to parse "certfile,keyfile@host,port" */
-extern bool axa_tls_parse(axa_emsg_t *emsg,
-			  char **cert_filep, char **key_filep, char **addr,
-			  const char *spec);
 
 extern bool axa_apikey_load_and_check_key(axa_emsg_t *emsg,
 			  const char *key_file, const char *cert_file);
 /* Internal functions */
-extern axa_io_result_t axa_tls_start(axa_emsg_t *emsg, axa_io_t *io);
 extern axa_io_result_t axa_apikey_start(axa_emsg_t *emsg, axa_io_t *io);
-extern void axa_tls_stop(axa_io_t *io);
 extern void axa_apikey_stop(axa_io_t *io);
-extern axa_io_result_t axa_tls_write(axa_emsg_t *emsg, axa_io_t *io,
-				     const void *b, size_t b_len);
-extern axa_io_result_t axa_tls_flush(axa_emsg_t *emsg, axa_io_t *io);
-extern axa_io_result_t axa_tls_read(axa_emsg_t *emsg, axa_io_t *io);
+
+extern axa_io_result_t axa_openssl_write(axa_emsg_t *emsg, axa_io_t *io);
+extern axa_io_result_t axa_openssl_read(axa_emsg_t *emsg, axa_io_t *io);
 
 /* Parse apikey specification. */
 extern bool axa_apikey_parse(axa_emsg_t *emsg, char **addr, axa_p_user_t *u,
@@ -588,7 +540,7 @@ extern bool axa_apikey_parse_srvr(axa_emsg_t *emsg,
 /** @endcond */
 
 /**
- *  Get or set TLS certificates directory.
+ *  Get or set TLS certificates directory for apikey transport.
  *
  *  \param[out] emsg the reason if something went wrong
  *  \param[in] dir directory containing TLS certificate key files or NULL
@@ -596,18 +548,7 @@ extern bool axa_apikey_parse_srvr(axa_emsg_t *emsg,
  *  \retval true success
  *  \retval false error; check emsg
  */
-extern bool axa_tls_certs_dir(axa_emsg_t *emsg, const char *dir);
-
-/**
- *  Get or set cipher list for TLS transport.
- *
- *  \param[out] emsg the reason if something went wrong
- *  \param[in] list OpenSSL format cipher list or NULL
- *
- *  \retval NULL implies an error; check emsg
- *  \retval new value if not NULL
- */
-extern const char *axa_tls_cipher_list(axa_emsg_t *emsg, const char *list);
+extern bool axa_apikey_certs_dir(axa_emsg_t *emsg, const char *dir);
 
 /**
  *  Get or set TLS cipher list for apikey transport.
@@ -618,20 +559,7 @@ extern const char *axa_tls_cipher_list(axa_emsg_t *emsg, const char *list);
  *  \retval NULL implies an error; check emsg
  *  \retval new value if not NULL
  */
-extern const char *axa_apikey_cipher_list(axa_emsg_t *emsg,
-		const char *list);
-
-/**
- * Initialize the AXA TLS code including creating an SSL_CTX.
- *
- *  \param[out] emsg the reason if something went wrong
- *  \param[in] srvr true if running as a server.
- *  \param[in] threaded true if using pthreads.
- *
- *  \retval true success
- *  \retval false error; check emsg
- */
-extern bool axa_tls_init(axa_emsg_t *emsg, bool srvr, bool threaded);
+extern const char *axa_apikey_cipher_list(axa_emsg_t *emsg, const char *list);
 
 /**
  * Initialize the AXA TLS code including creating an SSL_CTX for the

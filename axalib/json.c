@@ -3,7 +3,7 @@
  *
  * This file is used outside the AXA programs.
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -293,7 +293,7 @@ add_whit(axa_emsg_t *emsg, yajl_gen g, struct axa_strbuf *yajl_sb, nmsg_input_t 
 		case AF_INET6: {
 			struct ip6_hdr *ip6_hdr;
 			char addr_str[INET6_ADDRSTRLEN];
-			
+
 			add_yajl_string(g, "IPv6");
 
 			if (dg.network != NULL && dg.len_network >= sizeof(ip6_hdr)) {
@@ -410,6 +410,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	runits_t ru;
 	_axa_p_stats_user_t *user_obj;
 	_axa_p_stats_user_rad_an_t *an_obj;
+	axa_ch_mask_t mask;
 
 	switch(AXA_P2H16(hdr->op)) {
 	case AXA_P_OP_MISSED_RAD:
@@ -669,7 +670,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 					add_yajl_string(g, "requested");
 				} else {
 					axa_strbuf_reset(sb_tmp);
-					axa_strbuf_append(sb_tmp, "%0.6f", ((double)AXA_P2H64(body->opt.u.sample)) / AXA_P_OPT_SAMPLE_MAX);
+					axa_strbuf_append(sb_tmp, "%0.6f", AXA_P2H64(body->opt.u.sample) / AXA_P_OPT_SAMPLE_MAX);
 					add_yajl_number_sb(g, sb_tmp);
 				}
 				break;
@@ -840,8 +841,9 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 					add_yajl_string(g, "sra_channels");
 					add_yajl_array(g);
+					mask = sys->srvr.sra.ch_mask;
 					for (int j = 0; j <= AXA_NMSG_CH_MAX; j++) {
-						if (axa_get_bitwords(sys->srvr.sra.ch_mask.m, j)) {
+						if (axa_get_bitwords(mask.m, j)) {
 							axa_strbuf_reset(sb_tmp);
 							axa_strbuf_append(sb_tmp, "ch%d", (j));
 							add_yajl_string(g, (const char*)sb_tmp->data);
@@ -904,14 +906,6 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 						add_yajl_string(g,
 							AXA_IO_TYPE_TCP_STR);
 						break;
-					case AXA_IO_TYPE_SSH:
-						add_yajl_string(g,
-							AXA_IO_TYPE_SSH_STR);
-						break;
-					case AXA_IO_TYPE_TLS:
-						add_yajl_string(g,
-							AXA_IO_TYPE_TLS_STR);
-						break;
 					case AXA_IO_TYPE_APIKEY:
 						add_yajl_string(g,
 							AXA_IO_TYPE_APIKEY_STR);
@@ -957,7 +951,7 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 				add_yajl_string(g, "sample");
 				axa_strbuf_reset(sb_tmp);
 				axa_strbuf_append(sb_tmp, "%0.2f",
-					((double)AXA_P2H64(user_obj->sample)));
+					AXA_P2H64(user_obj->sample) * 1.0);
 				add_yajl_number_sb(g, sb_tmp);
 				add_yajl_string(g, "last_count_update");
 				t = AXA_P2H32(user_obj->last_cnt_update.tv_sec);
@@ -1003,8 +997,9 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 
 						add_yajl_string(g, "channels");
 						add_yajl_array(g);
+						mask = user_obj->srvr.sra.ch_mask;
 						for (int j = 0; j <= AXA_NMSG_CH_MAX; j++) {
-							if (axa_get_bitwords(user_obj->srvr.sra.ch_mask.m, j)) {
+							if (axa_get_bitwords(mask.m, j)) {
 								axa_strbuf_reset(sb_tmp);
 								axa_strbuf_append(sb_tmp, "ch%d", (j));
 								add_yajl_string(g, (const char*)sb_tmp->data);
@@ -1063,8 +1058,9 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 								add_yajl_string(g,
 									"channels");
 								add_yajl_array(g);
+								mask = an_obj->ch_mask;
 								for (int j = 0; j <= AXA_NMSG_CH_MAX; j++) {
-									if (axa_get_bitwords(an_obj->ch_mask.m, j)) {
+									if (axa_get_bitwords(mask.m, j)) {
 										axa_strbuf_reset(sb_tmp);
 										axa_strbuf_append(sb_tmp, "ch%d", (j));
 										add_yajl_string(g, (const char*)sb_tmp->data);

@@ -183,8 +183,7 @@ echo 060040 partial command and arguments that matches single command should run
 echo "err mo d ; err" | $SRATOOL -n $CONF 2>&1 | grep "error mode disconnect"
 
 echo 060050 command with too many arguments will fail
-# NOTE: this error message is to unclear so if it is fixed, change this:
-echo "count 5 10" | $SRATOOL -n $CONF 2>&1 | grep "No matching help topic could be found"
+echo "count 5 10" | $SRATOOL -n $CONF 2>&1 | fgrep 'Arguments provided seemed to be invalid for command "count"'
 
 echo 060060 command missing argument will show help output
 # NOTE: later could have a real error message
@@ -214,18 +213,18 @@ echo $after - $before = $delay
 if [ $delay -gt 3 -o $delay -le 1 ] ; then exit 1 ; fi
 
 # tools require a subscriber-side configuration file
-echo 070200 using radtool with non-existing configuration file should fail
-echo "mode" | $RADTOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "can't load config file: cannot open"
+echo 070200 using radtool with non-existing configuration file should not fail
+echo "mode" | $RADTOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "RAD mode"
 
 echo 070300 using sratool with non-existing configuration file should fail
-echo "mode" | $SRATOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "can't load config file: cannot open"
+echo "mode" | $SRATOOL -n ${DATADIR}/does/not/exist 2>&1 | grep "SRA mode"
 
 # the tools' configuration file must not be group or world readable
 echo 070400 using radtool with configuration file of mode 640 should fail
 echo "mode" | $RADTOOL -n ${CONF}-badperms 2>&1 | grep "has permissions set for group/other"
 
 echo 070500 using sratool with configuration file of mode 640 should fail
-echo "mode" | $RADTOOL -n ${CONF}-badperms 2>&1 | grep "has permissions set for group/other"
+echo "mode" | $SRATOOL -n ${CONF}-badperms 2>&1 | grep "has permissions set for group/other"
 
 # 
 # These are also tested in the various above tests:

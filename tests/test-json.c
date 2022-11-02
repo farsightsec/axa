@@ -29,6 +29,27 @@ nmsg_input_t nmsg_input;
 	case AXA_P_OP_STOP: \
 		hdr.tag = AXA_H2P_TAG(1); \
 		break; \
+	case AXA_P_OP_ACCT: \
+	case AXA_P_OP_AGET: \
+	case AXA_P_OP_ALIST: \
+	case AXA_P_OP_ALL_STOP: \
+	case AXA_P_OP_CGET: \
+	case AXA_P_OP_CHANNEL: \
+	case AXA_P_OP_CLIST: \
+	case AXA_P_OP_ERROR: \
+	case AXA_P_OP_GO: \
+	case AXA_P_OP_HELLO: \
+	case AXA_P_OP_JOIN: \
+	case AXA_P_OP_MISSED: \
+	case AXA_P_OP_MISSED_RAD: \
+	case AXA_P_OP_NOP: \
+	case AXA_P_OP_OK: \
+	case AXA_P_OP_OPT: \
+	case AXA_P_OP_PAUSE: \
+	case AXA_P_OP_RADU: \
+	case AXA_P_OP_USER: \
+	case AXA_P_OP_WGET: \
+		break; \
 	default: \
 		break; \
 	} \
@@ -55,6 +76,27 @@ nmsg_input_t nmsg_input;
 	case AXA_P_OP_ANOM: \
 	case AXA_P_OP_STOP: \
 		hdr.tag = AXA_H2P_TAG(1); \
+		break; \
+        case AXA_P_OP_ACCT: \
+        case AXA_P_OP_AGET: \
+        case AXA_P_OP_ALIST: \
+        case AXA_P_OP_ALL_STOP: \
+        case AXA_P_OP_CGET: \
+        case AXA_P_OP_CHANNEL: \
+        case AXA_P_OP_CLIST: \
+        case AXA_P_OP_ERROR: \
+        case AXA_P_OP_GO: \
+        case AXA_P_OP_HELLO: \
+        case AXA_P_OP_JOIN: \
+        case AXA_P_OP_MISSED: \
+        case AXA_P_OP_MISSED_RAD: \
+        case AXA_P_OP_NOP: \
+        case AXA_P_OP_OK: \
+        case AXA_P_OP_OPT: \
+        case AXA_P_OP_PAUSE: \
+        case AXA_P_OP_RADU: \
+        case AXA_P_OP_USER: \
+        case AXA_P_OP_WGET: \
 		break; \
 	default: \
 		break; \
@@ -437,7 +479,7 @@ END_TEST
 
 START_TEST(test_watch_dns)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io\"}";
+	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io.\"}";
 	axa_emsg_t emsg;
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, 0, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
@@ -454,7 +496,7 @@ END_TEST
 
 START_TEST(test_watch_dns_wildcard)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=*.fsi.io\"}";
+	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=*.fsi.io.\"}";
 	axa_emsg_t emsg;
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, AXA_P_WATCH_FG_WILD, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
@@ -486,7 +528,7 @@ END_TEST
 
 START_TEST(test_watch_dns_shared)
 {
-	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io(shared)\"}";
+	const char *expected = "{\"tag\":1,\"op\":\"WATCH\",\"watch_type\":\"dns\",\"watch\":\"dns=fsi.io.(shared)\"}";
 	axa_emsg_t emsg;
 	axa_p_watch_t watch = { AXA_P_WATCH_DNS, 0, AXA_P_WATCH_FG_SHARED, 0, { .dns="\x03""fsi\x02io" } };
 	size_t watch_len = offsetof(axa_p_watch_t, pat) + strlen((const char*)watch.pat.dns) + 1;
@@ -1006,6 +1048,8 @@ START_TEST(test_stats_rsp_sra_one_user)
 	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
+	axa_ch_mask_t sys_mask = { 0 };
+	axa_ch_mask_t users_mask = { 0 };
 
 	memset(&hdr, 0, sizeof (hdr));
 	memset(&stats_rsp, 0, sizeof (stats_rsp));
@@ -1045,8 +1089,9 @@ START_TEST(test_stats_rsp_sra_one_user)
 	stats_sys.srvr.sra.watches.dns_cnt = 0;
 	stats_sys.srvr.sra.watches.ch_cnt = 0;
 	stats_sys.srvr.sra.watches.err_cnt = 0;
-	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 213);
-	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 255);
+	axa_set_bitwords(sys_mask.m, 213);
+	axa_set_bitwords(sys_mask.m, 255);
+	stats_sys.srvr.sra.ch_mask = sys_mask;
 
 	stats_users[0].type = _AXA_P_STATS_TYPE_USER;
 	stats_users[0].server_type = _AXA_STATS_SRVR_TYPE_SRA;
@@ -1066,7 +1111,10 @@ START_TEST(test_stats_rsp_sra_one_user)
 	stats_users[0].sent = 0;
 	stats_users[0].rlimit = 0;
 	stats_users[0].congested = 0;
-	axa_set_bitwords(stats_users[0].srvr.sra.ch_mask.m, 255);
+
+	axa_set_bitwords(users_mask.m, 255);
+	stats_users[0].srvr.sra.ch_mask = users_mask;
+
 	stats_users[0].srvr.sra.watches.ipv4_cnt = 0;
 	stats_users[0].srvr.sra.watches.ipv6_cnt = 0;
 	stats_users[0].srvr.sra.watches.dns_cnt = 0;
@@ -1169,7 +1217,7 @@ END_TEST
 
 START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 {
-	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"version\":1,\"result\":\"success\",\"load\":[6300,6200,7100],\"cpu_usage\":0,\"uptime\":19449048,\"starttime\":19373104,\"vmsize\":91680768,\"vmrss\":4968448,\"thread_cnt\":2,\"user_cnt\":1,\"server_type\":\"rad\",\"rad_anomaly_cnt\":1,\"users\":[\"user_obj\",{\"server_type\":\"rad\",\"user\":\"mschiffm\",\"is_admin\":true,\"io_type\":\"apikey\",\"address\":\"73.170.71.223\",\"sn\":2,\"connected_since\":\"2018-01-05T20:40:31Z\",\"ratelimit\":0,\"sample\":100.00,\"last_count_update\":\"2018-01-05T20:40:31Z\",\"filtered\":0,\"missed\":0,\"collected\":0,\"sent\":0,\"rlimit\":0,\"congested\":0,\"anomaly_count_in_flight\":1,\"anomaly_count_total\":1,\"anomalies\":[\"an_obj\",{\"name\":\"brand_sentry\",\"options\":\"b=farsight,fsi;m=hgl,lit\",\"ru_original\":\"unlimited\",\"ru_current\":\"unlimited\",\"ru_cost\":0,\"channels\":[\"ch204\"]}]}]}";
+	const char *expected = "{\"tag\":\"*\",\"op\":\"STATS RSP\",\"version\":1,\"result\":\"success\",\"load\":[6300,6200,7100],\"cpu_usage\":0,\"uptime\":19449048,\"starttime\":19373104,\"vmsize\":91680768,\"vmrss\":4968448,\"thread_cnt\":2,\"user_cnt\":1,\"server_type\":\"rad\",\"rad_anomaly_cnt\":1,\"users\":[\"user_obj\",{\"server_type\":\"rad\",\"user\":\"mschiffm\",\"is_admin\":true,\"io_type\":\"apikey\",\"address\":\"73.170.71.223\",\"sn\":2,\"connected_since\":\"2018-01-05T20:40:31Z\",\"ratelimit\":0,\"sample\":100.00,\"last_count_update\":\"2018-01-05T20:40:31Z\",\"filtered\":0,\"missed\":0,\"collected\":0,\"sent\":0,\"rlimit\":0,\"congested\":0,\"anomaly_count_in_flight\":1,\"anomaly_count_total\":1,\"anomalies\":[\"an_obj\",{\"name\":\"brand\",\"options\":\"b=farsight,fsi;m=hgl,lit\",\"ru_original\":\"unlimited\",\"ru_current\":\"unlimited\",\"ru_cost\":0,\"channels\":[\"ch204\"]}]}]}";
 	axa_emsg_t emsg;
 	axa_p_hdr_t hdr;
 	_axa_p_stats_rsp_t stats_rsp;
@@ -1181,6 +1229,7 @@ START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
+	axa_ch_mask_t channel_mask = { 0 };
 
 	memset(&hdr, 0, sizeof (hdr));
 	memset(&stats_rsp, 0, sizeof (stats_rsp));
@@ -1233,12 +1282,13 @@ START_TEST(test_stats_rsp_rad_one_user_one_anomaly)
 	stats_users[0].srvr.rad.an_obj_cnt = 1;
 	stats_users[0].srvr.rad.an_obj_cnt_total = 1;
 
-	strcpy(an_obj.name, "brand_sentry");
+	strcpy(an_obj.name, "brand");
 	strcpy(an_obj.opt, "b=farsight,fsi;m=hgl,lit");
 	an_obj.ru_original = INT_MAX;
 	an_obj.ru_current = INT_MAX;
 	an_obj.ru_cost = 0;
-	axa_set_bitwords(an_obj.ch_mask.m, 204);
+	axa_set_bitwords(channel_mask.m, 204);
+	an_obj.ch_mask = channel_mask;
 
 	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
 	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,
@@ -1267,6 +1317,7 @@ START_TEST(test_stats_rsp_sra_no_users)
 	uint8_t stats[stats_len];
 	axa_json_res_t res;
 	char *out = NULL;
+	axa_ch_mask_t sys_mask = { 0 };
 
 	memset(&hdr, 0, sizeof (hdr));
 	memset(&stats_rsp, 0, sizeof (stats_rsp));
@@ -1305,8 +1356,9 @@ START_TEST(test_stats_rsp_sra_no_users)
 	stats_sys.srvr.sra.watches.dns_cnt = 0;
 	stats_sys.srvr.sra.watches.ch_cnt = 0;
 	stats_sys.srvr.sra.watches.err_cnt = 0;
-	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 213);
-	axa_set_bitwords(stats_sys.srvr.sra.ch_mask.m, 255);
+	axa_set_bitwords(sys_mask.m, 213);
+	axa_set_bitwords(sys_mask.m, 255);
+	stats_sys.srvr.sra.ch_mask = sys_mask;
 
 	memcpy((uint8_t *)stats, (uint8_t *)&stats_rsp, sizeof (stats_rsp));
 	memcpy((uint8_t *)stats + sizeof (stats_rsp), (uint8_t *)&stats_sys,

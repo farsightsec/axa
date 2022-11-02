@@ -1,7 +1,8 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2022 DomainTools LLC
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -39,7 +40,7 @@ extern bool packet_counting;
 extern int out_fd;
 extern pcap_t *out_pcap;
 extern int out_pcap_datalink;
-extern int8_t *out_buf;
+extern uint8_t out_buf[AXA_P_WHIT_IP_MAX*4];
 extern size_t out_buf_base;
 extern int output_count;
 extern int output_count_total;
@@ -60,7 +61,7 @@ extern bool terminated;
 extern axa_client_t client;
 
 /* global */
-bool eclose = false;            	/* disconnect on error */
+bool eclose = false;	    	/* disconnect on error */
 History *el_history;			/* command history */
 HistEvent el_event;			/* command history event */
 char *history_savefile = NULL;		/* fq path to history savefile */
@@ -82,7 +83,7 @@ static struct timeval connect_time;
 static struct {
 	struct ether_addr   dst;
 	struct ether_addr   src;
-	uint16_t            etype;
+	uint16_t	    etype;
 } out_mac;
 
 /* commands */
@@ -108,7 +109,7 @@ static cmd_t list_cmd;
 static cmd_t delete_cmd;
 static cmd_t channel_cmd;
 static cmd_t anom_cmd;
-static cmd_t rlimits_cmd;
+static cmd_t rlimit_cmd;
 static cmd_t sample_cmd;
 static cmd_t sndbuf_cmd;
 static cmd_t acct_cmd;
@@ -154,14 +155,14 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "List available connection aliases."
 },
 {"anomaly",		anom_cmd,		RAD, YES, YES,
-    "tag anomaly name [parameters]",
+    "<tag> anomaly name [parameters]",
     "Start the named anomaly detector module.\n"
-    " \"Tag\" is the number labeling the module."
+    " <tag> is the number labeling the module."
 },
 {"buffering",		buffer_cmd,		BOTH, NO, NO,
-    "nmsg output buffering",
+    "buffering",
     "Toggle nmsg container buffering.\nFor this option to have any"
-    " effect, output mode must be enabled in nmsg socket mode. "
+    " effect, forwarding mode must be enabled in nmsg socket mode. "
     "When enabled, (by default) nmsg containers will fill with payloads"
     " before being emitted. When disabled, nmsg payloads will be emitted as"
     " rapidly as possible.\n"
@@ -181,10 +182,9 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"connect",		connect_cmd,		BOTH, MB, NO,
     "connect [server]",
     "Show the current connection"
-    " or connect with 'tcp:user@host,port',"
+    " or connect with 'tcp:[user@]host,port',"
     " 'unix:[user@]/socket'] through a UNIX domain socket,"
-    " 'ssh:[user@]host' via SSH"
-    " or with 'tls:user@host,port."
+    " 'apikey:apikey@hostname,port' via apikey/tls"
 },
 {"count",		count_cmd,		BOTH, MB, NO,
     "count [#packets | off]",
@@ -318,10 +318,10 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "radd",
     "Change to RAD mode (must not be connected to a server)."
 },
-{"rate limits",		rlimits_cmd,		BOTH, MB, YES,
-    "rate limits [-|MAX|per-sec] [-|NEVER|report-secs]",
-    "Ask the server to report its rate limits"
-    " or to set rate limits and the interval between rate limit reports."
+{"rate limit",		rlimit_cmd,		BOTH, MB, YES,
+    "rate limit [-|MAX|per-sec] [-|NEVER|report-secs]",
+    "Ask the server to report its rate limit"
+    " or to set rate limit and the minimum interval between rate limit reports."
 },
 {"runits",		radunit_cmd,		RAD, NO, YES,
     "runits",
@@ -353,17 +353,17 @@ const cmd_tbl_entry_t cmds_tbl[] = {
     "Stop watches or anomalies."
 },
 {"watch",		rad_watch_cmd,		RAD, MB, YES,
-    "tag watch {ip=IP[/n] | dns=[*.]dom}",
+    "<tag> watch {ip=IP[/n] | dns=[*.]dom}",
     "Tell the RAD server about address and domains of interest."
 },
 {"watch",		sra_watch_cmd,		SRA, MB, YES,
-    "tag watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
+    "<tag> watch {ip=IP[/n] | dns=[*.]dom | ch=chN | errors}",
     "Tell the SRA server to send nmsg messages or IP packets that are to,"
     " from, or contain the specified IP addresses,"
     " that contain the specified domain name,"
     " that arrived at the server on the specified SIE channel,"
     " or are SIE messages that could not be decoded."
-    " The \"tag\" is the integer labeling the watch."
+    " <tag> is the integer labeling the watch."
 },
 {"trace",		trace_cmd,		BOTH, YES, YES,
     "trace N",
@@ -372,9 +372,7 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 {"user",		user_cmd,		BOTH, YES, YES,
     "user name",
     "Send the user name required by the server on a TCP/IP connection or"
-    " a UNIX domain socket.\n"
-    " TLS/SSH connections do not use this command but use the"
-    " name negotiated with the tls or ssh protocol."
+    " a UNIX domain socket."
 },
 {"verbose",		verbose_cmd,		BOTH, MB, NO,
     "verbose [on | off | N]",
@@ -387,16 +385,15 @@ const cmd_tbl_entry_t cmds_tbl[] = {
 },
 {"window",		sndbuf_cmd,		BOTH, MB, YES,
     "window [bytes]",
-    "Ask the server to report its current TCP output buffer size on TLS and"
+    "Ask the server to report its current TCP output buffer size on"
     " TCP connections or to set its output buffer size."
 },
 {"zlib",		nmsg_zlib_cmd,		BOTH, NO, NO,
     "zlib",
     "Toggle nmsg container compression.\nFor this option to have any"
-    " effect, output mode must be enabled in nmsg file or socket mode."
+    " effect, forwarding mode must be enabled in nmsg file or socket mode."
 },
 };
-
 
 const char *
 el_prompt(EditLine *e AXA_UNUSED)
@@ -526,7 +523,7 @@ history_get_savefile(void)
 	int n;
 	struct passwd *pw;
 	const char *histfile_name  = ".sratool_history";
-	static char buf[MAXPATHLEN + 1];
+	static char buf[PATH_MAX + 1];
 
 	pw = getpwuid(getuid());
 	if (pw == NULL)
@@ -635,9 +632,14 @@ run_cmd(axa_tag_t tag, const char *op, const char *arg,
 	if (i > 0)
 		return (true);
 
-	if (i < 0)
-		error_help_cmd(tag, op);
-	else
+	if (i < 0) {
+		if (i == -1) {
+			error_close(true);
+			printf("Arguments provided seemed to be invalid for command \"%s\"\n",
+				ce->cmd);
+		} else
+			error_help_cmd(tag, op);
+	} else
 		error_close(true);
 	return (false);
 }
@@ -1107,8 +1109,8 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
 			       client.io.addr, client.io.pvers);
 			printf("    connected for: %s\n",
 				convert_timeval(&connect_time));
-			if (client.io.tls_info != NULL)
-				printf("    %s\n", client.io.tls_info);
+			if (client.io.openssl_info != NULL)
+				printf("    %s\n", client.io.openssl_info);
 			count_print(false);
 			if (mode == RAD)
 				return (srvr_send(tag, AXA_P_OP_RADU, NULL, 0));
@@ -1125,7 +1127,6 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
 
 	axa_client_backoff_reset(&client);
 	switch (axa_client_open(&emsg, &client, arg, mode == RAD,
-				axa_debug > AXA_DEBUG_TRACE,
 				256*1024, true)) {
 	case AXA_CONNECT_ERR:
 	case AXA_CONNECT_TEMP:
@@ -1346,17 +1347,17 @@ ciphers_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	const char *cipher;
 
 	if (arg[0] == '\0') {
-		cipher = axa_tls_cipher_list(&emsg, NULL);
+		cipher = axa_apikey_cipher_list(&emsg, NULL);
 		if (cipher == NULL || *cipher == '\0')
 			printf("next TLS cipher: \"\"\n");
 		else
 			printf("next TLS cipher: %s\n",
 			       cipher);
-		if (client.io.tls_info != NULL)
+		if (client.io.openssl_info != NULL)
 			printf("    current: %s\n",
-			       client.io.tls_info);
+			       client.io.openssl_info);
 
-	} else if (axa_tls_cipher_list(&emsg, arg) == NULL) {
+	} else if (axa_apikey_cipher_list(&emsg, arg) == NULL) {
 		error_msg("%s", emsg.c);
 		return (0);
 	}
@@ -1379,16 +1380,16 @@ mode_cmd(axa_tag_t tag AXA_UNUSED, const char *arg,
 	setting = arg;
 	if (setting[0] != '\0') {
 		if (word_cmp(&setting, "sra")) {
-            if (mode == RAD && AXA_CLIENT_CONNECTED(&client)) {
-                printf("  can't change mode while connected to server\n");
-                return (-1);
-            }
+	    if (mode == RAD && AXA_CLIENT_CONNECTED(&client)) {
+		printf("  can't change mode while connected to server\n");
+		return (-1);
+	    }
 			mode = SRA;
 		} else if (word_cmp(&setting, "rad")) {
-            if (mode == SRA && AXA_CLIENT_CONNECTED(&client)) {
-                printf("  can't change mode while connected to server\n");
-                return (-1);
-            }
+	    if (mode == SRA && AXA_CLIENT_CONNECTED(&client)) {
+		printf("  can't change mode while connected to server\n");
+		return (-1);
+	    }
 			mode = RAD;
 		} else {
 			return (-1);
@@ -1628,7 +1629,7 @@ get_rlimit(axa_cnt_t *rlimit, const char *word)
 }
 
 static int
-rlimits_cmd(axa_tag_t tag, const char *arg,
+rlimit_cmd(axa_tag_t tag, const char *arg,
 	    const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	char sec_buf[32];
@@ -1703,8 +1704,7 @@ sndbuf_cmd(axa_tag_t tag, const char *arg,
 	memset(&opt, 0, sizeof(opt));
 	opt.type = AXA_P_OPT_SNDBUF;
 
-	if (client.io.type != AXA_IO_TYPE_TCP
-	    && client.io.type != AXA_IO_TYPE_TLS) {
+	if (client.io.type != AXA_IO_TYPE_TCP) {
 		error_msg("cannot change the buffer size on %s connections",
 			  axa_io_type_to_str(client.io.type));
 		return (0);
@@ -1799,11 +1799,11 @@ nmsg_zlib_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	if (out_on == false) {
-	printf("    output mode not enabled\n");
+	printf("    forwarding mode not enabled\n");
 		return (0);
 	}
 	if (out_on_nmsg == false) {
-		printf("    output mode not emitting nmsgs\n");
+		printf("    forwarding mode not emitting nmsgs\n");
 		return (0);
 	}
 	if (nmsg_zlib == false) {
@@ -2004,11 +2004,11 @@ buffer_cmd(axa_tag_t tag AXA_UNUSED, const char *arg AXA_UNUSED,
 	 const cmd_tbl_entry_t *ce AXA_UNUSED)
 {
 	if (out_on == false) {
-		printf("    output mode not enabled\n");
+		printf("    forwarding mode not enabled\n");
 		return (0);
 	}
 	if (out_on_nmsg == false) {
-		printf("    output mode not emitting nmsgs\n");
+		printf("    forwarding mode not emitting nmsgs\n");
 		return (0);
 	}
 	if (output_buffering == false) {
@@ -2127,15 +2127,15 @@ usage(void)
 	const char *rad = "Real-time Anomaly Detection Tool (radtool)\n";
 
 	printf("%s", mode == SRA ? sra : rad);
-	printf("(c) 2013-2018 Farsight Security, Inc.\n");
+	printf("(c) 2013-2022 Farsight Security, Inc.\n");
 	printf("%s [options] [commands]\n", axa_prog_name);
 	printf("[-c file]\t\tspecify commands file\n");
 	printf("[-d]\t\t\tincrement debug level, -ddd > -dd > -d\n");
 	printf("[-E ciphers]\t\tuse these TLS ciphers\n");
+	printf("[-I]\t\t\tenter insecure mode for apikey authentication\n");
 	printf("[-F file]\t\tspecify AXA fields file\n");
 	printf("[-n file]\t\tspecify AXA config file\n");
 	printf("[-N]\t\t\tdisable command-line prompt\n");
-	printf("[-S dir]\t\tspecify TLS certificates directory\n");
 	printf("[-V]\t\t\tprint version and quit\n");
 	printf("[commands]\t\tquoted string of commands to execute\n");
 	exit(EX_USAGE);

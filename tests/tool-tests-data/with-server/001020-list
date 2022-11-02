@@ -1,0 +1,4 @@
+connect tcp:valid-user@127.0.0.1,9999
+list
+sleep 1
+quit
