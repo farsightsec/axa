@@ -1,3 +1,9 @@
+axa (3.0.1-1) debian-fsi; urgency=medium
+
+  * Miscellaneous updates to README and manpages.
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Mon, 10 Apr 2023 13:24:41 -0400
+
 axa (3.0.0-1) debian-fsi; urgency=medium
 
   * Add sratunnel/radtunnel -K kickfile option to allow rotating

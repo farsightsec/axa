@@ -1,4 +1,4 @@
-.\" Copyright (c) 2022 DomainTools LLC
+.\" Copyright (c) 2022,2023 DomainTools LLC
 .\" Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
 .\"
 .\" Licensed under the Apache License, Version 2.0 (the "License");
@@ -126,8 +126,8 @@ The "dns=*." watch or pattern was matched by the "nflxso.net"
 domain in DNS NS rdata.
 .Bd -literal -offset 4n
 $ sratool
-sra> connect apikey:<yourapikey>@axa.sie-remote.net,1011
-* HELLO srad v2.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
+sra> connect apikey:<yourapikey>@axa-sie.domaintools.com,49500
+* HELLO srad v3.0.1 prod-sie-axa-1 supporting AXA protocols v1 to v2; currently using v1
 * Using AXA protocol 2
 * OK USER mschiffm authorized
 sra> count 1
@@ -150,7 +150,7 @@ specify the SRA server connection string. For example:
 .Bd -literal -offset 4n
 $ cat ~/.axa/config
 # SRA
-alias:sra-apikey=apikey:<elided>@axa.sie-remote.net,1011
+alias:sra-apikey=apikey:<elided>@axa-sie.domaintools.com,49500
 
 .Ed
 

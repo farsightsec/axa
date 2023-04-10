@@ -1,10 +1,10 @@
 # Farsight Advanced Exchange Access Toolkit
-This is the Advanced Exchange Access (AXA) toolkit. It contains tools and a C library to bring Farsight's real-time data and services directly from the [Farsight Security Information Exchange (SIE)](https://www.farsightsecurity.com/solutions/security-information-exchange/) to the subscriber's network edge.
+This is the Advanced Exchange Access (AXA) toolkit. It contains tools and a C library to bring DomainTools' real-time data and services directly from the [Farsight Security Information Exchange (SIE)](https://www.farsightsecurity.com/solutions/security-information-exchange/) to the subscriber's network edge.
 
 AXA-based solutions are often preferable over procuring a direct, physical connection to the SIE, usually via a co-located blade.
 
-## You Must Be A Farsight Security Customer To Use This Toolkit
-In order to use the tools and C library to access Farsight Security's data, you must have a previously provisioned account. If are you not yet a customer, but are interested, please reach out to [Farsight Security Sales](sales@farsightsecurity.com) for more information.
+## You Must Be A DomainTools Customer To Use This Toolkit
+In order to use the tools and C library to access DomainTools's data, you must have a previously provisioned account. If are you not yet a customer, but are interested, please reach out to [DomainTools Technical Support](https://www.domaintools.com/contact/) for more information.
 
 ## SRA and RAD
 AXA enables subscribers to connect to Farsight's subscription-based SRA (SIE Remote Access) and RAD (Real-time Anomaly Detector) servers.  These servers provide access to data and services built from Farsight's SIE.  SRA streams real-time SIE data while RAD streams real-time anomaly detection data.
@@ -38,7 +38,7 @@ Filtering can take one of the following forms:
 
 Finally, AXA is a deliberately lossy protocol. If a subscriber requests
 more data than the network can carry, data overruns will occur. When
-this happens, loss markers are transmitted reliably within the AXA stream to inform the subscriber via [the AXA accounting subsystem](https://www.farsightsecurity.com/2015/09/24/mschiffm-axa-accounting/). At this point, the subscriber's possible mitigation strategies include:
+this happens, loss markers are transmitted reliably within the AXA stream to inform the subscriber via [the AXA accounting subsystem](https://www.domaintools.com/resources/blog/farsights-advanced-exchange-access-internals-understanding-accounting/). At this point, the subscriber's possible mitigation strategies include:
 
  * ask for less data via rate limiting,
  * increase their network capacity, or
@@ -52,7 +52,7 @@ AXA should compile on most modern Unix-like operating systems with little or no 
 getting it built.
 
 This guide assumes the following support programs are installed (most of the which can be installed via your operating system's package management system).
-If you need help with any of the following, please reach out to Farsight Security.
+If you need help with any of the following, please reach out to DomainTools.
 
  * [gcc](https://gcc.gnu.org/) or [clang](https://clang.llvm.org/): Compiles C cpde
  * [g++](https://gcc.gnu.org/): Compiles C++ code
@@ -222,7 +222,7 @@ If you installed libcheck you can run the unit tests by the following command:
 $ make check
 ~~~
 
-Please report any errors to Farsight Security.
+Please report any errors to DomainTools.
 
 If you installed Doxygen you can build the API documentation (including an HTMLized version of this document):
 
@@ -236,7 +236,7 @@ Congratulations, you're ready to stream data! You can proceed to the "AXA Transp
 
 ### Debian package install
 The binary packages of AXA and its dependencies are available from
-[a Debian package repository maintained by Farsight Security](https://archive.farsightsecurity.com/SIE_Software_Installation_Debian/). These packages should be used instead of building from source on Debian-based systems.
+[a Debian package repository maintained by DomainTools](https://www.farsightsecurity.com/technical/SIE-user-guide/sie-debian/). These packages should be used instead of building from source on Debian-based systems.
 
 To install the AXA Tools `sratool`, `radtool`, `sratunnel`, `radtunnel`:
 
@@ -250,26 +250,26 @@ To install AXA development files (if you wish to use the libaxa C API):
 # apt-get install libaxa-dev
 ~~~
 
-Once axa-tools is installed, you'll need to work with your Farsight account manager to obtain your access credentials. In most cases, this will be an apikey.
+Once axa-tools is installed, you'll need to work with your DomainTools account manager to obtain your access credentials. In most cases, this will be an apikey.
 
 ## The AXA Transport Layer
 AXA offers an encrypted transport for setting up sessions and tunneling data:
 
  1. **Apikey**: Subscriber identifies and authenticates via a previously
-    (Farsight) provided alphanumeric "apikey". Session is encrypted via TLS using the `ECDHE-RSA-AES256-GCM-SHA384` suite offering "currently infeasible to break" encryption and
+    (DomainTools) provided alphanumeric "apikey". Session is encrypted via TLS using the `ECDHE-RSA-AES256-GCM-SHA384` suite offering "currently infeasible to break" encryption and
     [perfect forward secrecy](https://en.wikipedia.org/wiki/Forward_secrecy).
 
 AXA compresses all [nmsgs](https://www.github.com/farsightsec/nmsg) before transmission across the network using nmsg's built-in compression capability. IP packets are not compressed.
 
 ### Setting up and using AXA Apikey
-Your Farsight Security account manager will provide you with an alphanumeric apikey string. This apikey is used to both identify you and authenticate your session to the AXA servers.
+Your DomainTools account manager will provide you with an alphanumeric apikey string. This apikey is used to both identify you and authenticate your session to the AXA servers.
 
 The AXA apikey transport listens at the following URIs:
 
- * **SRA**: `apikey:<your_apikey_here>@axa.sie-remote.net,1011`
+ * **SRA**: `apikey:<your_apikey_here>@axa-sie.domaintools.com,49500`
  * **RAD**: `apikey:<your_apikey_here>@axa.sie-remote.net,1012`
 
-SRA listens on `TCP/1011` and RAD listens on `TCP/1012` and both transit standard TLS data.
+SRA listens on `TCP/49500` and RAD listens on `TCP/1012` and both transit standard TLS data.
 
 You can connect as per the following:
 
@@ -277,7 +277,7 @@ You can connect as per the following:
 
   ~~~
   $ sratool
-  sra> connect apikey:<your_apikey_here>@axa.sie-remote.net,1011
+  sra> connect apikey:<your_apikey_here>@axa-sie.domaintools.com,49500
   * HELLO srad v3.0.0 dev-axa-multi-1 supporting AXA protocols v1 to v2; currently using v1
   * Using AXA protocol 2
   * OK USER johndoe authorized
@@ -298,7 +298,7 @@ You can connect as per the following:
 **Connecting via sratunnel**
 
   ~~~
-  $ sratunnel -s apikey:<your_apikey_here>@axa.sie-remote.net,1011 ...
+  $ sratunnel -s apikey:<your_apikey_here>@axa-sie.domaintools.com,49500 ...
   ...
   ~~~
 
@@ -320,7 +320,7 @@ $ cat >> ~/.axa/config < EOF
 # Aliases are of the form alias:<name>=<connection URI>
 
 # SRA apikey
-alias:sra-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1011
+alias:sra-apikey=apikey:<your_apikey_here>@axa-sie.domaintools.com,49500
 # RAD apikey
 alias:rad-apikey=apikey:<your_apikey_here>@axa.sie-remote.net,1012
 EOF
@@ -354,7 +354,7 @@ The following are a few examples of how to use `sratool`, `sratunnel` and `radto
 
 ### 1. Stream SIE Traffic with sratool
 Here's a simple example using `sratool` to stream five nmsgs seen on the
-[Newly Observed Hostnames (NOH)](https://www.farsightsecurity.com/solutions/threat-intelligence-team/newly-observed-hostnames/) channel (channel 213):
+[Newly Observed Hostnames (NOH)](https://www.domaintools.com/products/threat-intelligence-feeds/domain-visibility/farsight-noh/) channel (channel 213):
 
 ~~~
 $ sratool
@@ -538,7 +538,7 @@ rrttl: 300
 rdata: CNAME 13 3 300 1522876195 1522696195 35273 vn.city. xU5jsRsbUQFzegFol6xhWCSUSbX8CXUSCRV9ge5WCe6/fy8jgDMt6Zyt YZTDNd7wYoi/O5hemCRQXJvYSJ7JWQ==
 ~~~
 
- 1. `sratunnel -s sra-apikey -c 204 -w ch=204 -o nmsg:127.0.0.1,8000 &`: invoke `sratunnel` and stream all of channel 204 ([Passive DNS traffic that has been de-duplicated, filtered, and verified](https://www.farsightsecurity.com/assets/media/download/fsi-sie-channel-guide.pdf)). The output is set to be nmsgs to the loopback interface on port UDP/8000 (UDP is the default nmsg transport protocol).
+ 1. `sratunnel -s sra-apikey -c 204 -w ch=204 -o nmsg:127.0.0.1,8000 &`: invoke `sratunnel` and stream all of channel 204 ([Passive DNS traffic that has been de-duplicated, filtered, and verified](https://www.domaintools.com/resources/user-guides/security-information-exchange-channel-guide/)). The output is set to be nmsgs to the loopback interface on port UDP/8000 (UDP is the default nmsg transport protocol).
  2. `tcpdump -n -c 3 -i lo udp port 8000`: tcpdump is used to verify packets are being received.
  3. `nmsgtool -l 127.0.0.1/8000 -c 3`: `nmsgtool` is invoked to listen on the loopback interface on `UDP/8000` and three nmsgs are emitted to stdout.
 
@@ -692,8 +692,12 @@ See the [JSON schema](json-schema.yaml) describing the JSON output format.
 ## API Workflow
 
 For a detailed walkthrough of a "Hello World", AXA-style, please see the
-following Farsight Security Blog articles:
+following AXA API Reference:
 
- * [Farsight's Advanced Exchange Access: The C Programming API, Part One](https://www.farsightsecurity.com/2015/07/30/mschiffm-axa-api-c-1/)
- * [Farsight's Advanced Exchange Access: The C Programming API, Part Two](https://www.farsightsecurity.com/2015/08/07/mschiffm-axa-api-c-2/)
- * [Farsight's Advanced Exchange Access: The C Programming API, Part Three](https://www.farsightsecurity.com/2015/08/11/mschiffm-axa-api-c-3/)
+ * https://www.domaintools.com/resources/user-guides/the-axa-api-reference/
+
+The online AXA User Guide and AXA Technical Overview are at:
+
+ * https://www.domaintools.com/resources/user-guides/the-axa-user-guide/
+ * https://www.domaintools.com/resources/user-guides/the-axa-technical-overview/
+
