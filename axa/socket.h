@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) socket and IP address code
  *
- *  Copyright (c) 2014-2017 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2017,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -240,7 +240,6 @@ extern bool axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
  *  network details and the user's whim, AXA may use:
  *      - Unix domain (unix:/foo/bar)
  *      - TCP  (tcp:10.0.0.1,123)
- *      - SSH  (ssh:10.0.0.1,123)
  *      - UDP  (udp:10.0.0.1,123)
  *      - NMSG over TCP (nmsg:tcp:10.0.0.1,123)
  *      - NMSG over UDP (nmsg:udp:10.0.0.1,123)

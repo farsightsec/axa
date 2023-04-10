@@ -22,10 +22,6 @@ contents of the list.
 .Sm off Ar tcp: Oo Ar user@ Oc Ar host,port Sm on
 |
 .Sm off Ar unix: Oo Ar user@ Oc Ar /ud/socket Sm on
-|
-.Sm off Ar ssh: Oo Ar user@ Oc Ar host Sm on
-|
-.Sm off Ar tls:cert,key@host,port Sm on
 .Oc
 .Xc
 By itself
@@ -38,35 +34,12 @@ use a connection alias specified in the AXA config file (see FILES).
 .Pp
 .Ic apikey:
 identify and authenticate the user via a Farsight Security provided apikey.
-The connection will be encrypted using the same TLS semantics as the tls
-transport below.
-.Pp
-.Ic ssh:
-connections use
-.Xr ssh 1
-configuration files including
-.Xr ssh_config 5
-to specify the required public keys
-and optionally the fully qualified host names and user names associated
-with the public key.
-Use the "debug 4" command to diagnose ssh connection problems. Note that SSH
-transport is deprecated and users are encouraged to use TLS.
-.Pp
-.Ic tls:
-connections use the SSL certificate in the
-.Ar cert
-file and the private key in the
-.Ar key
-file.
-If not absolute, the files are in the
-.Fl S Ar certs
-directory.
 .Pp
 .Ic tcp:
-unused.
+identify the user for clear text communication via the TCP/IP host,port pair.
 .Pp
 .Ic unix:
-unused.
+identify the user for communication over a local UNIX domain socket.
 .Pp
 .It Ic count Op N | off
 sets terminal output to stop displaying packets after a
@@ -120,8 +93,8 @@ Tell the \*(SR server to stop sending data.
 .Op Ar -|MAX|per-sec
 .Op Ar -|NEVER|report-secs
 .Oc
-Tell the \*(SR server to report its rate limits
-or set rate limits and the interval between rate limit reports.
+Tell the \*(SR server to report its per-second packet rate limit
+or set the rate limit and the minimum interval between rate limit reports.
 Hits in excess of the rate limit are discarded by the server.
 .It Ic radd
 Change to RAD mode.
@@ -138,7 +111,7 @@ Show information about the current connection state including time connected.
 .It Ic trace Ar N
 Set the server trace level to N.
 .It Ic user Ar name
-sends a username to the server (not used for SSH/TLS-based connections).
+sends a username to the server.
 .It Ic verbose Op on | off | N
 controls the length of SIE message and IP packet descriptions.
 The default,

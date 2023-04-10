@@ -1,7 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2019,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,8 +23,13 @@ extern int count;
 extern unsigned long count_messages_rcvd;
 extern unsigned long count_hits;
 extern bool counting;
+extern bool output_buffering;
 extern uint axa_debug;
 extern int initial_count;
+extern unsigned long interval;
+extern unsigned long interval_prev;
+extern off_t max_file_size;
+extern const char *out_addr;
 
 /* extern: output.c */
 extern nmsg_output_t out_nmsg_output;
@@ -32,6 +37,10 @@ extern pcap_t *out_pcap;
 
 /* extern: server.c */
 extern axa_client_t client;
+
+/* extern: axalib/open_nmsg_out.c */
+extern bool axa_kickfile;
+extern struct axa_kickfile *axa_kf;
 
 /* global */
 bool out_bar_on = false;                /* true == turn output bar spinner on */
@@ -44,9 +53,25 @@ static uint out_bar_idx;
 #define PROGRESS_MS (1000/AXA_DIM(out_bar_strs)) /* 2 revolutions/second */
 static struct timeval out_bar_time;
 
+static inline void
+do_kickfile(void)
+{
+	if (nmsg_output_close(&out_nmsg_output) != nmsg_res_success) {
+		axa_error_msg("can't close output");
+		stop(0);
+	}
+	axa_kickfile_exec(axa_kf);
+	/* file is rotated in out_open() --> axa_open_nmsg_out() */
+	if (!out_open(output_buffering)) {
+		axa_error_msg("can't reopen output");
+		stop(0);
+	}
+}
+
 static void
 forward_hit(axa_p_whit_t *whit, size_t whit_len)
 {
+	struct stat stat_buf = {0};
 	struct timeval now;
 	time_t ms;
 
@@ -69,9 +94,63 @@ forward_hit(axa_p_whit_t *whit, size_t whit_len)
 		}
 	}
 	if (counting && --count <= 0) {
+		if (axa_kickfile) {
+			if (axa_debug > 1)
+				axa_trace_msg("forwarded %d messages, rotating %s and running %s",
+						initial_count, axa_kf->file_curname,
+						axa_kf->cmd[0] != '\0' ? axa_kf->cmd : "<no command>");
+			do_kickfile();
+			count = initial_count;
+			return;
+		}
 		if (axa_debug != 0)
 			axa_trace_msg("forwarded %d messages", initial_count);
 		stop(0);
+	}
+	if (!out_bar_on)
+		gettimeofday(&now, NULL);
+	if (interval > 0 && now.tv_sec - interval_prev >= interval) {
+		if (axa_kickfile) {
+			if (axa_debug > 1)
+				axa_trace_msg("stopped at %s, rotating kickfile and running %s",
+						ctime((time_t *)&now.tv_sec),
+						axa_kf->cmd[0] != '\0' ? axa_kf->cmd : "<no command>");
+			do_kickfile();
+			interval_prev = now.tv_sec - (now.tv_sec % interval);
+			return;
+		}
+		if (axa_debug != 0)
+			axa_trace_msg("stopped at %s",
+					ctime((time_t *)&now.tv_sec));
+		stop(0);
+	}
+	if (max_file_size > 0) {
+		const char *fname = NULL;
+
+		if (axa_kickfile)
+			fname = axa_kf->file_tmpname;
+		else
+			fname = strrchr(out_addr, ':') + 1;
+
+		if (stat(fname, &stat_buf) == -1) {
+			axa_error_msg("can't stat output file \"%s\": %s", fname, strerror(errno));
+			stop(0);
+		}
+
+		if (stat_buf.st_size >= max_file_size) {
+			if (axa_kickfile) {
+				if (axa_debug > 1)
+					axa_trace_msg("output file is %"PRIu64" bytes, rotating kickfile and running %s",
+							stat_buf.st_size,
+							axa_kf->cmd[0] != '\0' ? axa_kf->cmd : "<no command>");
+				do_kickfile();
+				return;
+			}
+			if (axa_debug != 0)
+				axa_trace_msg("output file is %"PRIu64" bytes",
+						stat_buf.st_size);
+			stop(0);
+		}
 	}
 }
 
@@ -89,7 +168,6 @@ forward(void)
 		return;
 	case AXA_IO_BUSY:
 		return;			/* wait for the rest */
-	case AXA_IO_TUNERR:
 	case AXA_IO_KEEPALIVE:
 		AXA_FAIL("impossible axa_recv_buf() result");
 	}

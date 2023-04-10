@@ -1,7 +1,8 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2022 DomainTools LLC
+ *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,6 +44,9 @@ extern bool interrupted;		/* true when asynch-interrupted */
 /* extern: output.c */
 extern bool out_on;
 extern char *out_addr;
+
+/* extern: axalib/client_config.c */
+extern bool axa_config_file_found;
 
 /* global */
 axa_emsg_t emsg;			/* AXA error message blob */
@@ -139,47 +143,37 @@ main(int argc, char **argv)
 		el_set(el_e, EL_GETCFN, getcfn);
 	}
 
-	while ((i = getopt(argc, argv, "hVdNF:E:S:c:n:")) != -1) {
+	while ((i = getopt(argc, argv, "hIVdNF:E:c:n:")) != -1) {
 		switch (i) {
+		case 'I':
+			client.io.insecure_conn = true;
+			break;
 		case 'n':
 			config_file = optarg;
 			break;
 		case 'V':
 			version = true;
 			break;
-
-		case 'h':
-			usage();
-			break;
 		case 'd':
 			++axa_debug;
 			break;
-
 		case 'N':
 			no_prompt = true;
 			break;
-
 		case 'F':
 			fields_file = optarg;
 			break;
-
 		case 'E':
-			if (axa_tls_cipher_list(&emsg, optarg) == NULL)
+			if (axa_apikey_cipher_list(&emsg, optarg) == NULL)
 				error_msg("%s", emsg.c);
 			break;
-
-		case 'S':
-			if (!axa_tls_certs_dir(&emsg, optarg))
-				error_msg("%s", emsg.c);
-			break;
-
 		case 'c':
 			if (cfile != NULL)
 				error_msg("only one -c allowed;"
 					  " ignoring all but the last");
 			cfile = optarg;
 			break;
-
+		case 'h':
 		default:
 			usage();
 		}
@@ -212,8 +206,14 @@ main(int argc, char **argv)
 
 	axa_load_fields(fields_file);
 	if (!axa_load_client_config(&emsg, config_file)) {
+		if (axa_config_file_found == false) {
+			if (axa_debug != 0)
+				axa_error_msg("can't load config file: %s", emsg.c);
+		}
+		else {
 			axa_error_msg("can't load config file: %s", emsg.c);
 			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* Answer commands from the control file. */

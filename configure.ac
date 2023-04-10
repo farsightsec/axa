@@ -1,8 +1,8 @@
 AC_PREREQ(2.60)
 
-m4_define(axa_major_version, 2)
-m4_define(axa_minor_version, 2)
-m4_define(axa_patchlevel_version, 2)
+m4_define(axa_major_version, 3)
+m4_define(axa_minor_version, 0)
+m4_define(axa_patchlevel_version, 1)
 m4_define(axa_version,
           axa_major_version.axa_minor_version.axa_patchlevel_version)
 
@@ -65,8 +65,6 @@ LT_LIB_M
 
 MY_CHECK_LIBPCAP
 
-MY_CHECK_LIBPROTOBUF_C
-
 save_LIBS="$LIBS"
 AC_SEARCH_LIBS([strlcpy],
                [bsd],
@@ -80,7 +78,7 @@ PKG_CHECK_MODULES([libedit], [libedit], [], [MY_CHECK_LIBEDIT])
 
 save_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$libedit_CFLAGS"
-AC_MSG_CHECKING(libedit has unicode) 
+AC_MSG_CHECKING(libedit has unicode)
 AC_CHECK_TYPES([el_rfunc_t],
 		AC_DEFINE([LIBEDIT_IS_UNICODE], [1],
 			[Define if libedit has unicode support.]),
@@ -98,9 +96,7 @@ PKG_CHECK_MODULES([libssl], [libssl])
 
 PKG_CHECK_MODULES([libcrypto], [libcrypto])
 
-AC_CHECK_HEADER([zlib.h], [], [ AC_MSG_ERROR([required header file not found]) ])
-AC_CHECK_LIB([z], [deflate], [], [ AC_MSG_ERROR([required library not found]) ])
-AC_CHECK_LIB([lmdb], [mdb_env_open], [], [ AC_MSG_ERROR([required library not found]) ])
+AC_CHECK_HEADERS([libgen.h])
 
 AC_ARG_WITH([yajl], AS_HELP_STRING([--without-yajl], [Disable yajl support]))
 if test "x$with_yajl" != "xno"; then
@@ -137,7 +133,7 @@ else
 fi
 
 save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$libnmsg_CFLAGS $libprotobuf_c_CFLAGS"
+CPPFLAGS="$libnmsg_CFLAGS"
 AC_CHECK_HEADERS([nmsg/base/dnsqr.pb-c.h nmsg/base/encode.pb-c.h nmsg/base/packet.pb-c.h nmsg/sie/newdomain.pb-c.h],
                  [],
                  [AC_MSG_ERROR([required header file not found])])
@@ -151,7 +147,7 @@ AC_CONFIG_FILES([Makefile axa/libaxa.pc axa/version.h])
 AC_CONFIG_FILES([sratool/sratool.man sratool/radtool.man sratool/options.man
 		sratunnel/sratunnel.man sratunnel/radtunnel.man
                 tools/axa_link_certs.man tools/axa_make_cert.man
-		tools/axa_server_cert.man tools/axa_tsindextool.man])
+		tools/axa_server_cert.man])
 
 AC_CONFIG_FILES([tools/axa_link_certs],
 		[chmod +x tools/axa_link_certs])
@@ -162,6 +158,9 @@ AC_CONFIG_FILES([tools/axa_server_cert],
 
 AC_CONFIG_FILES([tests/test-tools-without-server.sh],
 		[chmod +x tests/test-tools-without-server.sh])
+
+AC_CONFIG_FILES([tests/test-tools-with-server.sh],
+		[chmod +x tests/test-tools-with-server.sh])
 
 AC_CONFIG_FILES([tests/test-config],
 		[chmod 600 tests/test-config])

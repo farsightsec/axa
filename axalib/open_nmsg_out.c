@@ -1,7 +1,7 @@
 /*
  * Open an output nmsg stream for output or forwarding by sratunnel or sratool.
  *
- *  Copyright (c) 2014-2018 by Farsight Security, Inc.
+ *  Copyright (c) 2014-2019 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,15 +18,22 @@
 
 #include <axa/open_nmsg_out.h>
 #include <axa/socket.h>
+#include <axa/kickfile.h>
 
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 
+/* global */
 bool axa_nmsg_out_json = false;		/* true == emit nmsgs as jsonl blobs */
 bool axa_out_file_append = false;	/* true == append to output file */
 int axa_nmsg_output_fd = 0;		/* fd for nmsg file-based outputs */
+bool axa_kickfile = false;		/* true == kickfile mode active */
+struct axa_kickfile *axa_kf = NULL;	/* kickfile data */
+
+/* private */
+static bool kickfile_first_time = true;	/* true == first time doing kickfile */
 
 
 /*
@@ -75,8 +82,26 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 		return (-1);
 	}
 
+	/* only file-based nmsg outputs support kickfiles */
+	if (axa_kickfile) {
+		if (!isfile) {
+			axa_pemsg(emsg,
+				"output type \"%s\" does not support kickfiles\n",
+				addr0);
+			return (-1);
+		}
+
+		if (kickfile_first_time) {
+			axa_kf->file_basename = strdup(addr);
+			axa_kf->file_suffix = strdup(json == true ? ".jsonl" : ".nmsg");
+			kickfile_first_time = false;
+		}
+		axa_kickfile_rotate(axa_kf, NULL);
+	}
+
 	if (isfile) {
-		s = open(addr, axa_out_file_append ?
+		s = open(axa_kickfile ? axa_kf->file_tmpname : addr,
+				axa_out_file_append ?
 				O_WRONLY | O_CREAT | O_APPEND :
 				O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if (s < 0) {

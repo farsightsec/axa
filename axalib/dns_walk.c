@@ -1,6 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) semantics for DNS packets and fields.
  *
+ *  Copyright (c) 2022 DomainTools LLC
  *  Copyright (c) 2014-2017 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,10 +20,10 @@
 #include <axa/fields.h>
 #include <axa/dns_walk.h>
 
+#include <wdns.h>
 #include <nmsg/message.h>
 
 #include <string.h>
-#include <arpa/nameser.h>
 
 
 static void AXA_PF(3,6)
@@ -239,18 +240,18 @@ axa_walk_rdata(void *ctxt, axa_walk_ops_t *ops,
 	eod = rdata+rdlength;
 
 	switch (rtype) {
-	case ns_t_cname:
-	case ns_t_mb:
-	case ns_t_mg:
-	case ns_t_mr:
-	case ns_t_ns:
-	case ns_t_ptr:
-	case ns_t_dname:
+	case WDNS_TYPE_CNAME:
+	case WDNS_TYPE_MB:
+	case WDNS_TYPE_MG:
+	case WDNS_TYPE_MR:
+	case WDNS_TYPE_NS:
+	case WDNS_TYPE_PTR:
+	case WDNS_TYPE_DNAME:
 		if (!walk_domain(ctxt, ops, pkt_base, &rdata, pkt_lim,
 				 AXA_WALK_DOM_RDATA1, rtype, s))
 			return (false);
 		break;
-	case ns_t_soa:
+	case WDNS_TYPE_SOA:
 		if (!walk_domain(ctxt, ops, pkt_base, &rdata, pkt_lim,
 				 AXA_WALK_DOM_RDATA1, rtype, s)
 		    || !walk_domain(ctxt, ops, pkt_base, &rdata, pkt_lim,
@@ -258,15 +259,15 @@ axa_walk_rdata(void *ctxt, axa_walk_ops_t *ops,
 		    || !skip(4*5, ctxt, ops, &rdata, pkt_lim, s))
 			return (false);
 		break;
-	case ns_t_mx:
-	case ns_t_afsdb:
-	case ns_t_rt:
+	case WDNS_TYPE_MX:
+	case WDNS_TYPE_AFSDB:
+	case WDNS_TYPE_RT:
 		if (!skip(2, ctxt, ops, &rdata, pkt_lim, s)
 		    || !walk_domain(ctxt, ops, pkt_base, &rdata, pkt_lim,
 				    AXA_WALK_DOM_RDATA1, rtype, s))
 			return (false);
 		break;
-	case ns_t_px:
+	case WDNS_TYPE_PX:
 		if (!skip(2, ctxt, ops, &rdata, pkt_lim, s)
 		    || !walk_domain(ctxt, ops, pkt_base, &rdata, pkt_lim,
 				    AXA_WALK_DOM_RDATA1, rtype, s)
@@ -274,25 +275,25 @@ axa_walk_rdata(void *ctxt, axa_walk_ops_t *ops,
 				    AXA_WALK_DOM_RDATA2, rtype, s))
 			return (false);
 		break;
-	case ns_t_srv:
+	case WDNS_TYPE_SRV:
 		if (!skip(2*3, ctxt, ops, &rdata, pkt_lim, s)
 		    || !walk_domain(ctxt, ops, pkt_base, &rdata, pkt_lim,
 				    AXA_WALK_DOM_RDATA1, rtype, s))
 			return (false);
 		break;
-	case ns_t_minfo:
-	case ns_t_rp:
+	case WDNS_TYPE_MINFO:
+	case WDNS_TYPE_RP:
 		if (!walk_domain(ctxt, ops, pkt_base, &rdata, pkt_lim,
 				 AXA_WALK_DOM_RDATA1, rtype, s)
 		    || !walk_domain(ctxt, ops, pkt_base, &rdata, pkt_lim,
 				    AXA_WALK_DOM_RDATA2, rtype, s))
 			return (false);
 		break;
-	case ns_t_a:
+	case WDNS_TYPE_A:
 		if (!walk_ip(ctxt, ops, &rdata, rdlength, rtype, 4, s))
 			return (false);
 		break;
-	case ns_t_aaaa:
+	case WDNS_TYPE_AAAA:
 		if (!walk_ip(ctxt, ops, &rdata, rdlength, rtype, 16, s))
 			return (false);
 		break;
@@ -439,7 +440,7 @@ axa_walk_dns(void *ctxt, axa_walk_ops_t *ops,
 	if (rcode >= BAD_UNPACK16)
 		return;
 	/* do not try to parse FORMERRs */
-	if ((rcode & 0xf)== ns_r_formerr)
+	if ((rcode & 0xf)== WDNS_R_FORMERR)
 		return;
 
 	/* also skip if:
