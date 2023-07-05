@@ -102,7 +102,7 @@ nobase_include_HEADERS = \
 	axa/trie.h \
 	axa/version.h \
 	axa/wire.h \
-	axa/yajl_shortcuts.h \
+	axa/json_c_shortcuts.h \
 	libmy/b64_encode.h
 lib_LTLIBRARIES = axa/libaxa.la
 
@@ -158,8 +158,7 @@ axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	${libwdns_LIBS} \
 	${libnmsg_LIBS} \
 	${strlcpy_LIBS} \
-	${yajl_LIBS}
-
+	${json_c_LIBS}
 axa_libaxa_la_CFLAGS = \
 	${AM_CFLAGS} \
 	${libssl_CFLAGS} \
@@ -168,7 +167,7 @@ axa_libaxa_la_CFLAGS = \
 	${libwdns_CFLAGS} \
 	${libnmsg_CFLAGS} \
 	${strlcpy_CFLAGS} \
-	${yajl_CFLAGS}
+	${json_c_CFLAGS}
 
 pkgconfig_DATA = axa/libaxa.pc
 
@@ -293,7 +292,7 @@ spotless: distclean
 
 EXTRA_DIST += tests/test-config tests/test-config-badperms
 
-if HAVE_YAJL
+if HAVE_JSON_C
 TESTS += tests/test-json
 check_PROGRAMS += tests/test-json
 tests_test_json_SOURCES = tests/test-json.c

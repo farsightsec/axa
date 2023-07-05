@@ -14,7 +14,7 @@ Build-Depends:
  nmsg-msg-module-sie-dev (>= 1.0.0),
  libssl-dev,
  libbsd-dev,
- libyajl-dev (>= 2.1.0),
+ libjson-c-dev (>= 0.13.0),
  check,
 Standards-Version: 4.5.0
 

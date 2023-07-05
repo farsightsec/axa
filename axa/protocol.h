@@ -289,7 +289,7 @@ typedef uint64_t axa_p_clnt_id_t;
  *  - libaxa version
  *  - libnmsg version
  *  - libwdns version
- *  - libyajl version
+ *  - libjson-c version
  *  - openssl version
  *  - libprotobuf version
  *  - AXA protocol version in current use

@@ -19,9 +19,8 @@
 
 #include <axa/client.h>
 #include <axa/socket.h>
-#include <axa/strbuf.h>
 #include <axa/json.h>
-#include <axa/yajl_shortcuts.h>
+#include <axa/json_c_shortcuts.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -36,8 +35,8 @@
 #include <unistd.h>
 #include <wdns.h>
 
-#include <yajl/yajl_version.h>
-#include <yajl/yajl_gen.h>
+#include <json-c/json_object.h>
+#include <json-c/json_c_version.h>
 
 #define	MIN_BACKOFF_MS	(1*1000)
 #define	MAX_BACKOFF_MS	(60*1000)
@@ -429,96 +428,54 @@ bool
 axa_client_get_hello_string(axa_emsg_t *emsg, const char *origin,
 		axa_client_t *client, char **out)
 {
-	int yajl_rc;
-	yajl_gen g = NULL;
-	struct axa_strbuf *sb = NULL;
+	struct json_object *g = NULL;
 	char hostname[HOST_NAME_MAX] = {0};
 	struct utsname utsbuf;
 
-	sb = axa_strbuf_init();
-	if (sb == NULL) {
-		axa_pemsg(emsg, "could not allocate axa_strbuf");
-		return (false);
-	}
-
-	g = yajl_gen_alloc(NULL);
-	AXA_ASSERT (g != NULL);
-
-	yajl_rc = yajl_gen_config(g,
-			yajl_gen_print_callback,
-			_callback_print_yajl_axa_strbuf,
-			sb);
-	AXA_ASSERT(yajl_rc != 0);
-
-	add_yajl_map(g);
+	g = json_object_new_object();
+	AXA_ASSERT(g != NULL);
 
 	if (0 > gethostname(hostname, sizeof(hostname) - 1)) {
 		axa_pemsg(emsg, "gethostname(): %s", strerror(errno));
 		goto err;
 	}
-	add_yajl_string(g, "hostname");
-	add_yajl_string(g, hostname);
+	json_c_add_string(g, "hostname", hostname);
 
 	if (uname(&utsbuf) < 0) {
 		axa_pemsg(emsg, "uname(): %s", strerror(errno));
 		goto err;
 	} else {
-		add_yajl_string(g, "uname_sysname");
-		add_yajl_string(g, utsbuf.sysname);
-		add_yajl_string(g, "uname_release");
-		add_yajl_string(g, utsbuf.release);
-		add_yajl_string(g, "uname_version");
-		add_yajl_string(g, utsbuf.version);
-		add_yajl_string(g, "uname_machine");
-		add_yajl_string(g, utsbuf.machine);
+		json_c_add_string(g, "uname_sysname", utsbuf.sysname);
+		json_c_add_string(g, "uname_release", utsbuf.release);
+		json_c_add_string(g, "uname_version", utsbuf.version);
+		json_c_add_string(g, "uname_machine", utsbuf.machine);
 	}
 
-	add_yajl_string(g, "origin");
-	if (origin == NULL) {
-		add_yajl_string(g, "unknown");
-	}
-	else {
-		add_yajl_string(g, origin);
-	}
+	json_c_add_string(g, "origin", (origin ? origin : "unknown"));
+	json_c_add_string(g, "libaxa", axa_get_version());
 
-	add_yajl_string(g, "libaxa");
-	add_yajl_string(g, axa_get_version());
-
-	add_yajl_string(g, "libnmsg");
 #ifdef NMSG_LIBRARY_VERSION
-	add_yajl_string(g, nmsg_get_version());
+	json_c_add_string(g, "libnmsg", nmsg_get_version());
 #else
-	add_yajl_string(g, "<=0.13.2");
+	json_c_add_string(g, "libnmsg", "<=0.13.2");
 #endif
-	add_yajl_string(g, "libwdns");
+
 #ifdef WDNS_LIBRARY_VERSION
-	add_yajl_string(g, wdns_get_version());
+	json_c_add_string(g, "libwdns", wdns_get_version());
 #else
-	add_yajl_string(g, "<=0.9.1");
+	json_c_add_string(g, "libwdns", "<=0.9.1");
 #endif
-	add_yajl_string(g, "libyajl");
-	add_yajl_integer(g, yajl_version());
-	add_yajl_string(g, "OpenSSL");
-	add_yajl_string(g, SSLeay_version(SSLEAY_VERSION));
 
-	add_yajl_string(g, "AXA protocol");
-	add_yajl_integer(g, client->io.pvers);
+	json_c_add_string(g, "libjson-c", json_c_version());
+	json_c_add_string(g, "OpenSSL", SSLeay_version(SSLEAY_VERSION));
+	json_c_add_number(g, "AXA protocol", client->io.pvers);
 
-	close_yajl_map(g);
-
-	yajl_gen_reset(g, "");
-	yajl_gen_free(g);
-
-	*out = sb->data;
-	/* Don't call axa_strbuf_destroy() here, rather, free the wrapper
-	 * structure now and leave it to the caller to release sb->data. */
-	free(sb);
-
+	*out = strdup(json_object_to_json_string_ext(g, JSON_C_TO_STRING_PLAIN|JSON_C_TO_STRING_NOSLASHESCAPE));
+	json_object_put(g);
 	return (true);
 err:
 	if (g != NULL)
-		yajl_gen_free(g);
-	axa_strbuf_destroy(&sb);
+		json_object_put(g);
 	return (false);
 }
 

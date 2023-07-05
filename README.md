@@ -92,11 +92,11 @@ $ make
 $ sudo make install
 ~~~
 
- * [yajl](https://lloyd.github.io/yajl/): Used to serialize and deserialize json objects.
+ * [json-c](https://github.com/json-c/json-c): Used to serialize and deserialize json objects.
 
 ~~~
-$ git clone https://www.github.com/lloyd/yajl
-$ cd yajl
+$ git clone https://github.com/json-c/json-c
+$ cd json-c
 $ mkdir build
 $ cd build
 $ cmake ..
