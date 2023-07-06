@@ -36,7 +36,6 @@
 #include <axa/axa.h>
 #include <axa/axa_endian.h>
 #include <axa/fields.h>
-#include <axa/strbuf.h>
 #include <axa/wire.h>
 #include <axa/json_c_shortcuts.h>
 #include <string.h>
@@ -116,7 +115,6 @@ add_whit(axa_emsg_t *emsg, struct json_object *g, nmsg_input_t nmsg_input, axa_p
 
 	switch (whit->hdr.type) {
 	case AXA_P_WHIT_NMSG: {
-		struct axa_strbuf *sb;
 		nmsg_message_t msg;
 		axa_w2n_res_t wres;
 		nmsg_res nres;
@@ -124,7 +122,7 @@ add_whit(axa_emsg_t *emsg, struct json_object *g, nmsg_input_t nmsg_input, axa_p
 		char *nmsg_json = NULL;
 		struct tm tm;
 		time_t t;
-		char when[32];
+		char when[32], tbuf[64];
 
 		if (whit_len < sizeof(axa_p_whit_nmsg_t)) {
 			axa_pemsg(emsg, "whit_len %zu < %zu", whit_len, sizeof(axa_p_whit_nmsg_t));
@@ -134,12 +132,6 @@ add_whit(axa_emsg_t *emsg, struct json_object *g, nmsg_input_t nmsg_input, axa_p
 		wres = axa_whit2nmsg(emsg, nmsg_input, &msg, whit, whit_len);
 		if (wres != AXA_W2N_RES_SUCCESS) {
 			return (AXA_JSON_RES_FAILURE);
-		}
-
-		sb = axa_strbuf_init();
-		if (sb == NULL) {
-			axa_pemsg(emsg, "could not allocate axa_strbuf");
-			return (AXA_JSON_RES_MEMFAIL);
 		}
 
 		if(AXA_P2H_IDX(whit->nmsg.hdr.field_idx) < AXA_NMSG_IDX_RSVD) {
@@ -171,9 +163,8 @@ add_whit(axa_emsg_t *emsg, struct json_object *g, nmsg_input_t nmsg_input, axa_p
 		gmtime_r(&t, &tm);
 		strftime(when, sizeof(when), "%Y-%m-%d %T", &tm);
 
-		axa_strbuf_reset(sb);
-		axa_strbuf_append(sb, "%s.%09u", when, AXA_P2H32(whit->nmsg.hdr.ts.tv_nsec));
-		json_c_add_string(g, "time", sb->data);
+		snprintf(tbuf, sizeof(tbuf), "%s.%09u", when, AXA_P2H32(whit->nmsg.hdr.ts.tv_nsec));
+		json_c_add_string(g, "time", tbuf);
 
 		nres = nmsg_message_to_json(msg, &nmsg_json);
 		if (nres == nmsg_res_success) {
@@ -187,7 +178,6 @@ add_whit(axa_emsg_t *emsg, struct json_object *g, nmsg_input_t nmsg_input, axa_p
 			free(nmsg_json);
 		}
 
-		axa_strbuf_destroy(&sb);
 		nmsg_message_destroy(&msg);
 
 		return (AXA_JSON_RES_SUCCESS);
@@ -495,7 +485,6 @@ get_user_obj(axa_p_body_t *body, _axa_p_stats_user_t *user_obj)
 axa_json_res_t
 axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, axa_p_body_t *body, size_t body_len, char **out)
 {
-	struct axa_strbuf *sb = NULL;
 	axa_json_res_t res;
 	struct json_object *g = NULL;
 	char op_str[AXA_P_OP_STRLEN];
@@ -863,14 +852,11 @@ axa_body_to_json(axa_emsg_t *emsg, nmsg_input_t nmsg_input, axa_p_hdr_t *hdr, ax
 	*out = strdup(json_object_to_json_string_ext(g, JSON_C_TO_STRING_PLAIN|JSON_C_TO_STRING_NOSLASHESCAPE));
 	json_object_put(g);
 
-	free(sb);
-
 	return (AXA_JSON_RES_SUCCESS);
 
 err:
 	if (g != NULL)
 		json_object_put(g);
-	axa_strbuf_destroy(&sb);
 	return (res);
 }
 
