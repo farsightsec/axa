@@ -1,6 +1,7 @@
 /*
  * Socket utilities
  *
+ *  Copyright (c) 2023 DomainTools LLC
  *  Copyright (c) 2014-2018 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -388,7 +389,13 @@ axa_get_srvr(axa_emsg_t *emsg, const char *addr_port,
 	return (true);
 }
 
-/* Set socket or other communications file descriptor options */
+/*
+ * Set socket or other communications file descriptor options.
+ *
+ * WARNING: It is strongly recommended that callers pass only a value of zero
+ * for req_bufsize and defer to the wisdom of the kernel, rather than risk
+ * inadvertently clamping auto-sizing and hurting performance.
+  */
 bool					/* false=emsg has an error message */
 axa_set_sock(axa_emsg_t *emsg, int s, const char *label,
 	     int req_bufsize, bool nonblock)

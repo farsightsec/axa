@@ -1,6 +1,7 @@
 /*
  * Tunnel SIE data from an SRA or RAD server.
  *
+ *  Copyright (c) 2023 DomainTools LLC
  *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -230,7 +231,7 @@ srvr_connect(void)
 	if (axa_debug != 0)
 		axa_trace_msg("connecting to %s", srvr_addr);
 	switch (axa_client_open(&emsg, &client, srvr_addr, mode == RAD,
-				256*1024, false)) {
+				0, false)) {
 	case AXA_CONNECT_ERR:
 		if (axa_debug != 0 || first_time)
 			axa_error_msg("%s", emsg.c);

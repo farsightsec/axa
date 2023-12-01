@@ -1,7 +1,7 @@
 /*
  * SIE Remote Access (SRA) ASCII tool
  *
- *  Copyright (c) 2022 DomainTools LLC
+ *  Copyright (c) 2022-2023 DomainTools LLC
  *  Copyright (c) 2014-2018,2021 by Farsight Security, Inc.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1126,8 +1126,7 @@ connect_cmd(axa_tag_t tag AXA_UNUSED, const char *arg0,
 		disconnect(false);
 
 	axa_client_backoff_reset(&client);
-	switch (axa_client_open(&emsg, &client, arg, mode == RAD,
-				256*1024, true)) {
+	switch (axa_client_open(&emsg, &client, arg, mode == RAD, 0, true)) {
 	case AXA_CONNECT_ERR:
 	case AXA_CONNECT_TEMP:
 		error_msg("%s", emsg.c);
