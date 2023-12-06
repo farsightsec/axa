@@ -1,3 +1,10 @@
+axa (3.0.2-1) debian-fsi; urgency=medium
+
+  * Remove default explicit setting of socket snd/rcv buffers resulting in network performance degradation.
+  * Fix MacOS compilation on Apple silicon using brew
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Mon, 04 Dec 2023 15:30:32 -0500
+
 axa (3.0.1-1) debian-fsi; urgency=medium
 
   * Miscellaneous updates to README and manpages.

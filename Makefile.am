@@ -82,7 +82,7 @@ DISTCLEANFILES += $(man_MANS)
 #
 
 LIBAXA_CURRENT=3
-LIBAXA_REVISION=0
+LIBAXA_REVISION=1
 LIBAXA_AGE=0
 
 nobase_include_HEADERS = \
@@ -159,6 +159,7 @@ axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	${libnmsg_LIBS} \
 	${strlcpy_LIBS} \
 	${yajl_LIBS}
+
 axa_libaxa_la_CFLAGS = \
 	${AM_CFLAGS} \
 	${libssl_CFLAGS} \
@@ -191,6 +192,7 @@ sratool_sratool_SOURCES = \
 	sratool/print.c \
 	sratool/time.c \
 	sratool/sratool.h
+
 sratool_sratool_LDADD = \
 	axa/libaxa.la \
 	${libssl_LIBS} \
@@ -228,6 +230,7 @@ sratunnel_sratunnel_SOURCES = \
 	sratunnel/server.c \
 	sratunnel/signal.c \
 	sratunnel/sratunnel.h
+
 sratunnel_sratunnel_LDADD = \
 	axa/libaxa.la \
 	${libnmsg_LIBS} \
