@@ -1,7 +1,7 @@
 /*
  * Advanced Exchange Access (AXA) json-c shortcut macros
  *
- *  Copyright (c) 2023 by Farsight Security, Inc.
+ *  Copyright (c) 2023 DomainTools LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
