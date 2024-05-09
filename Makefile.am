@@ -152,11 +152,11 @@ axa_libaxa_la_SOURCES = \
 axa_libaxa_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(LIBAXA_CURRENT):$(LIBAXA_REVISION):$(LIBAXA_AGE) \
 	-export-symbols-regex "^(axa_[a-z].*)" \
+	${libnmsg_LIBS} \
+	${libwdns_LIBS} \
 	${libssl_LIBS} \
 	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
-	${libwdns_LIBS} \
-	${libnmsg_LIBS} \
 	${strlcpy_LIBS} \
 	${json_c_LIBS}
 axa_libaxa_la_CFLAGS = \
@@ -194,12 +194,12 @@ sratool_sratool_SOURCES = \
 
 sratool_sratool_LDADD = \
 	axa/libaxa.la \
+	${libnmsg_LIBS} \
+	${libwdns_LIBS} \
 	${libssl_LIBS} \
 	${libcrypto_LIBS} \
 	${libpcap_LIBS} \
-	${libnmsg_LIBS} \
 	${libz_LIBS} \
-	${libwdns_LIBS} \
 	${libedit_LIBS} \
 	${strlcpy_LIBS} \
 	${LIBM}

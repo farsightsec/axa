@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 /* global */
@@ -53,6 +54,9 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 	axa_socku_t su;
 	struct addrinfo *ai;
 	bool isfile, json = false;
+#ifdef HAVE_KAFKA
+	bool iskafka = false;
+#endif
 	int s;
 
 	if (AXA_CLITCMP(addr0, "tcp:")) {
@@ -71,6 +75,17 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 		isfile = true;
 		json = true;
 		axa_nmsg_out_json = true;
+#ifdef HAVE_KAFKA
+	} else if (AXA_CLITCMP(addr0, "kafka_nmsg:")) {
+		addr = strchr(addr0, ':')+1;
+		isfile = false;
+		iskafka = true;
+	} else if (AXA_CLITCMP(addr0, "kafka_json:")) {
+		addr = strchr(addr0, ':')+1;
+		isfile = false;
+		json = true;
+		iskafka = true;
+#endif
 	} else {
 		addr = addr0;
 		*out_sock_type = SOCK_DGRAM;
@@ -99,6 +114,24 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 		axa_kickfile_rotate(axa_kf, NULL);
 	}
 
+#ifdef HAVE_KAFKA
+	if (iskafka) {
+
+		if (json)
+			*out_nmsg_output = nmsg_output_open_kafka_json(addr, NULL);
+		else
+			*out_nmsg_output = nmsg_output_open_kafka_endpoint(addr, NMSG_WBUFSZ_MAX);
+
+		if (*out_nmsg_output == NULL) {
+			const char *fn = json ? "nmsg_output_open_kafka_json" :
+				"nmsg_output_open_kafka_endpoint";
+			axa_pemsg(emsg, "%s(%s) failed", fn, addr);
+			return (0);
+		}
+
+		goto ok;
+	} else
+#endif
 	if (isfile) {
 		s = open(axa_kickfile ? axa_kf->file_tmpname : addr,
 				axa_out_file_append ?
@@ -140,7 +173,7 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 
 	if (!isfile && *out_sock_type == SOCK_DGRAM) {
 		*out_nmsg_output = nmsg_output_open_sock(s, NMSG_WBUFSZ_ETHER);
-		if (out_nmsg_output == NULL) {
+		if (*out_nmsg_output == NULL) {
 			axa_pemsg(emsg, "nmsg_output_open_sock(%s): failed",
 				  addr);
 			close(s);
@@ -151,7 +184,7 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 			*out_nmsg_output = nmsg_output_open_json(s);
 		else
 			*out_nmsg_output = nmsg_output_open_file(s, NMSG_WBUFSZ_MAX);
-		if (out_nmsg_output == NULL) {
+		if (*out_nmsg_output == NULL) {
 			axa_pemsg(emsg, "nmsg_output_open_file(%s) failed",
 				  addr);
 			close(s);
@@ -159,6 +192,7 @@ axa_open_nmsg_out(axa_emsg_t *emsg,
 		}
 	}
 
+ok:
 	if (output_buffering == false)
 		/* unbuffer all nmsg outputs */
 		nmsg_output_set_buffered(*out_nmsg_output, false);

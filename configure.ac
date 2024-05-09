@@ -87,14 +87,22 @@ CPPFLAGS="$save_CPPFLAGS"
 
 PKG_CHECK_MODULES([libnmsg], [libnmsg >= 0.9.1])
 
-#AC_CHECK_FUNCS([nmsg_get_version])
-#AC_CHECK_FUNCS([wdns_get_version])
-
 PKG_CHECK_MODULES([libwdns], [libwdns])
 
 PKG_CHECK_MODULES([libssl], [libssl])
 
 PKG_CHECK_MODULES([libcrypto], [libcrypto])
+
+save_LIBS="$LIBS"
+LIBS="$libnmsg_LIBS"
+AC_CHECK_LIB(nmsg, nmsg_output_open_kafka_endpoint,
+    [
+        USE_KAFKA="yes"
+        AC_DEFINE([HAVE_KAFKA], [1], [Define to 1 if libnmsg is compiled with kafka support.])
+    ],
+    [ USE_KAFKA="no" ]
+)
+LIBS="$save_LIBS"
 
 AC_CHECK_HEADERS([libgen.h])
 
@@ -187,5 +195,6 @@ AC_MSG_RESULT([
         building html docs:     ${DOC_HTML_MSG}
 
 	json-c support:         ${use_json_c}
+	nmsg/kafka support:     ${USE_KAFKA}
 	make check available:   ${CHECK_MOD_MSG}
 ])

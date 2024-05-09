@@ -401,11 +401,11 @@ main(int argc, char **argv)
 			axa_trace_msg("appending to nmsg file \"%s\"\n", out_filename);
 	}
 
+	res = nmsg_init();
+	AXA_DEBUG_TO_NMSG(axa_debug);
 	if (!out_open(output_buffering))
 		exit(EX_IOERR);
 
-	AXA_DEBUG_TO_NMSG(axa_debug);
-	res = nmsg_init();
 	if (res != nmsg_res_success) {
 		axa_error_msg("nmsg_init(): %s", nmsg_res_lookup(res));
 		exit(EX_SOFTWARE);
